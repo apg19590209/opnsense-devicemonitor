@@ -11,6 +11,7 @@ Plugin pro automatické sledování síťových zařízení v OPNsense firewallu
 ## 📋 Obsah
 
 - [Co plugin dělá](#co-plugin-dělá)
+- [Verze](#verze)
 - [Funkce](#funkce)
 - [Instalace](#instalace)
   - [Metoda 1: WinSCP + Ruční instalace](#metoda-1-winscp--ruční-instalace-doporučeno)
@@ -32,6 +33,51 @@ Plugin automaticky sleduje síť a upozorňuje na:
 - 📊 **Historie zařízení** s časovými údaji první/poslední detekce
 - 📧 **Email notifikace** s profesionálním HTML designem
 - 🔔 **Webhook notifikace** (ntfy.sh, Discord, custom)
+
+---
+
+## Verze
+
+Změny opravy v plugginu
+
+- opnsense-devicemonitor31012026_1358.zip
+  **Oprava kompatibility s OPNsense 26.x:**
+
+    Po přechodu na OPNsense verzi 26.0 a vyšší měl plugin problémy kvůli volání funkce `$this->sessionClose()`, která byla v nových verzích odstraněna. Od verze 26.0 systém automaticky provádí uzavírání sessions, a pokud funkce zůstane v kódu, plugin způsobí CRASH systému.
+
+    **Řešení:**
+    Controller `DevicesController.php` byl doplněn o automatickou detekci verze OPNsense:
+
+    ```php
+    /**
+     * Zjistí verzi OPNsense jako číslo (např. 26 pro verzi 26.x)
+    */
+    private function getOPNsenseVersion()
+    {
+        exec("opnsense-version | awk '{print $2}' | cut -d. -f1", $output, $return_code);
+        
+        if ($return_code === 0 && !empty($output[0])) {
+            return (int)$output[0];
+        }
+        
+        // Pro zpětnou kompatibilitu předpokládáme verzi 25
+        return 25;
+    }
+    ```
+
+    Tato metoda je volána před každým použitím `sessionClose()`:
+
+    ```php
+    public function searchAction()
+    {
+        $version = $this->getOPNsenseVersion();
+        if ($version < 26) {
+            $this->sessionClose();  // Volá se pouze na OPNsense 25.x a starších
+        }
+        
+        // ... zbytek kódu
+    }
+    ```
 
 ---
 
