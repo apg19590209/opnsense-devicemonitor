@@ -11,6 +11,7 @@ Plugin for automatic network device monitoring in OPNsense firewall. Detects new
 ## 📋 Table of Contents
 
 - [What the plugin does](#what-the-plugin-does)
+- [Version](#version)
 - [Features](#features)
 - [Installation](#installation)
   - [Method 1: WinSCP + Manual installation](#method-1-winscp--manual-installation-recommended)
@@ -33,6 +34,50 @@ The plugin automatically monitors the network and alerts you about:
 - 📧 **Email notifications** with professional HTML design
 - 🔔 **Webhook notifications** (ntfy.sh, Discord, custom)
 
+---
+
+## Version
+
+Version History and Important Changes
+
+- opnsense-devicemonitor31012026_1358.zip
+  **OPNsense 26.x Compatibility Fix:**
+
+  After upgrading to OPNsense version 26.0 and higher, the plugin experienced crashes due to calls to the `$this->sessionClose()` function, which was removed in newer versions. Starting from version 26.0, the system automatically handles session closing, and if the function remains in the code, it causes the plugin to CRASH the system.
+
+  **Solution:**
+  The `DevicesController.php` controller has been enhanced with automatic OPNsense version detection:
+
+  ```php
+  /**
+   * Detects OPNsense version as a number (e.g., 26 for version 26.x)
+   */
+  private function getOPNsenseVersion()
+  {
+      exec("opnsense-version | awk '{print $2}' | cut -d. -f1", $output, $return_code);
+      
+      if ($return_code === 0 && !empty($output[0])) {
+          return (int)$output[0];
+      }
+      
+      // For backward compatibility, assume version 25
+      return 25;
+  }
+  ```
+
+  This method is called before each use of `sessionClose()`:
+
+  ```php
+  public function searchAction()
+  {
+      $version = $this->getOPNsenseVersion();
+      if ($version < 26) {
+          $this->sessionClose();  // Only called on OPNsense 25.x and older
+      }
+      
+      // ... rest of the code
+  }
+  ```
 ---
 
 ## Features
