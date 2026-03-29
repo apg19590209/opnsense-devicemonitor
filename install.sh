@@ -297,18 +297,5 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  ✓ Device Monitor úspěšně nainstalován!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "📍 Přístup:"
-echo "   GUI: Services > Device Monitor"
-echo ""
-echo "⚙️  Doporučené kroky:"
-echo "   1. Nakonfiguruj SMTP: System > Settings > Notifications > SMTP"
-echo "   2. Nastav email: Services > Device Monitor > Settings"
-echo "   3. Stáhni OUI databázi: Settings > OUI Database > Stáhnout nyní"
-echo ""
-echo "🌍 Jazyky:"
-echo "   System > Settings > Administration > Language"
-echo "   - English (výchozí)"
-echo "   - Čeština"
-echo ""
 
 exit 0

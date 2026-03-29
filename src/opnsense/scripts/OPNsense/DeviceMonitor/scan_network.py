@@ -212,6 +212,11 @@ def init_db():
         c.execute('ALTER TABLE devices ADD COLUMN first_seen DATETIME DEFAULT CURRENT_TIMESTAMP')
     except:
         pass
+
+    try:
+        c.execute('ALTER TABLE devices ADD COLUMN custom_hostname TEXT DEFAULT NULL')
+    except:
+        pass
     
     conn.commit()
     conn.close()
@@ -623,14 +628,16 @@ def full_scan():
             if is_active:
                 cursor.execute('''
                     UPDATE devices 
-                    SET ip = ?, hostname = ?, vendor = ?, vlan = ?, last_seen = ?, is_active = ?
+                    SET ip = ?, hostname = CASE WHEN custom_hostname IS NOT NULL AND custom_hostname != '' THEN hostname ELSE ? END,
+                        vendor = ?, vlan = ?, last_seen = ?, is_active = ?
                     WHERE mac = ?
                 ''', (device['ip'], device['hostname'], device['vendor'], device['vlan'], now, is_active, mac))
             else:
                 # Neaktivní - aktualizuj jen IP/hostname/vendor a is_active
                 cursor.execute('''
                     UPDATE devices 
-                    SET ip = ?, hostname = ?, vendor = ?, vlan = ?, is_active = ?
+                    SET ip = ?, hostname = CASE WHEN custom_hostname IS NOT NULL AND custom_hostname != '' THEN hostname ELSE ? END,
+                        vendor = ?, vlan = ?, is_active = ?
                     WHERE mac = ?
                 ''', (device['ip'], device['hostname'], device['vendor'], device['vlan'], is_active, mac))
         else:

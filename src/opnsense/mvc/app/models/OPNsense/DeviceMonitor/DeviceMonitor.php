@@ -115,6 +115,31 @@ class DeviceMonitor
         return self::getPath('configFile');
     }
     
+    public function updateHostname($mac, $hostname)
+    {
+        $db = $this->getDb();
+        $hostname = trim($hostname);
+        
+        if ($hostname === '') {
+            // Prázdný hostname = smaž custom_hostname (vrátí se DNS)
+            $stmt = $db->prepare('UPDATE devices SET custom_hostname = NULL, hostname = ? WHERE mac = :mac');
+            // Zkus DNS lookup
+            $row = $db->querySingle("SELECT ip FROM devices WHERE mac = '" . SQLite3::escapeString($mac) . "'");
+            $stmt = $db->prepare('UPDATE devices SET custom_hostname = NULL WHERE mac = :mac');
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        } else {
+            // Nastav custom_hostname a zároveň hostname (zobrazuje se)
+            $stmt = $db->prepare('UPDATE devices SET custom_hostname = :hn, hostname = :hn WHERE mac = :mac');
+            $stmt->bindValue(':hn', $hostname, SQLITE3_TEXT);
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        }
+        
+        $stmt->execute();
+        $changes = $db->changes();
+        $db->close();
+        return $changes > 0;
+    }
+
 
     /**
      * Uložení konfigurace (včetně OUI)
@@ -187,7 +212,7 @@ class DeviceMonitor
         )');
         
         $db->exec('CREATE INDEX IF NOT EXISTS idx_last_seen ON devices(last_seen)');
-        $db->exec('CREATE INDEX IF NOT EXISTS idx_vlan ON devices(vlan)');
+        $db->exec('ALTER TABLE devices ADD COLUMN custom_hostname TEXT DEFAULT NULL');
         
         $db->close();
         chmod($file_mame, 0644);

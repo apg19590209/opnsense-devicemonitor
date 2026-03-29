@@ -13,7 +13,7 @@
                 <tr>
                     <th data-column-id="mac" data-type="string" data-identifier="true" data-sortable="true">{{ lang._('MAC Address') }}</th>
                     <th data-column-id="ip" data-type="string" data-sortable="true">{{ lang._('IP Address') }}</th>
-                    <th data-column-id="hostname" data-type="string" data-sortable="true">{{ lang._('Hostname') }}</th>
+                    <th data-column-id="hostname" data-formatter="hostnameEdit" data-sortable="true">{{ lang._('Hostname') }}</th>
                     <th data-column-id="vendor" data-type="string" data-sortable="true">{{ lang._('Vendor') }}</th>
                     <th data-column-id="vlan" data-type="string" data-sortable="true">{{ lang._('VLAN') }}</th>
                     <th data-column-id="status" data-formatter="status" data-sortable="true">{{ lang._('Status') }}</th>
@@ -80,6 +80,12 @@ $(document).ready(function() {
                         return '<span style="color: #999; font-weight: bold;"><i class="fa fa-circle-o"></i> OFFLINE</span>';
                     }
                 },
+                hostnameEdit: function(column, row) {
+                    var hn = row.hostname ? row.hostname : '';
+                    return '<span class="hostname-display" data-mac="' + row.mac + '" ' +
+                        'title="Klikni pro úpravu" style="cursor:pointer; border-bottom: 1px dashed #aaa;">' +
+                        (hn ? hn : '<em style="color:#aaa">—</em>') + '</span>';
+                },
                 commands: function(column, row) {
                     return '<button class="btn btn-xs btn-danger command-delete" data-row-mac="' + row.mac + '">' +
                         '<i class="fa fa-trash"></i></button>';
@@ -115,6 +121,51 @@ $(document).ready(function() {
         });
     });
     
+    // Inline edit hostname
+    $(document).on('click', '.hostname-display', function() {
+        var $span = $(this);
+        if ($span.find('input').length) return; // už edituje
+        
+        var mac = $span.data('mac');
+        var current = $span.text().trim();
+        if (current === '—') current = '';
+        
+        var $input = $('<input type="text" class="form-control input-sm">')
+            .val(current)
+            .css({'width': '130px', 'display': 'inline-block'});
+        
+        $span.html($input);
+        $input.focus().select();
+        
+        function save() {
+            var newVal = $input.val().trim();
+            $.ajax({
+                url: '/api/devicemonitor/devices/updatehostname',
+                type: 'POST',
+                data: {mac: mac, hostname: newVal},
+                success: function(resp) {
+                    if (resp.result === 'saved') {
+                        showToast('Hostname uložen', 'success');
+                        grid.bootgrid('reload');
+                    } else {
+                        showToast('Chyba při ukládání', 'error');
+                        grid.bootgrid('reload');
+                    }
+                },
+                error: function() {
+                    showToast('Chyba při ukládání', 'error');
+                    grid.bootgrid('reload');
+                }
+            });
+        }
+        
+        $input.on('keydown', function(e) {
+            if (e.key === 'Enter') save();
+            if (e.key === 'Escape') grid.bootgrid('reload');
+        }).on('blur', function() {
+            setTimeout(save, 150);
+        });
+    });
     $('#btn-clear').click(function() {
         //if (!confirm(translations.clear_confirm)) {
         //    return;

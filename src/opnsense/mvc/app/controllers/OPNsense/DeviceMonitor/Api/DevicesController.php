@@ -12,6 +12,22 @@ use OPNsense\DeviceMonitor\DeviceMonitor;
  */
 class DevicesController extends ApiControllerBase
 {
+    /**
+     * Zjistí verzi OPNsense jako číslo (např. 26 pro verzi 26.x)
+     */
+    private function getOPNsenseVersion()
+    {
+        // Zkusíme načíst verzi z příkazu opnsense-version
+        exec("opnsense-version | awk '{print $2}' | cut -d. -f1", $output, $return_code);
+
+        if ($return_code === 0 && !empty($output[0])) {
+            return (int)$output[0];
+        }
+
+        // Pokud se nepodaří zjistit verzi, předpokládáme verzi 25 (pro zpětnou kompatibilitu)
+        return 25;
+    }
+
     private function getPaths()
     {
         $defaultsFile = '/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json';
@@ -25,6 +41,27 @@ class DevicesController extends ApiControllerBase
         return [-1];
     }
 
+    /**
+     * Aktualizace custom hostname
+     * POST /api/devicemonitor/devices/updatehostname
+     */
+    public function updatehostnameAction()
+    {
+        if ($this->request->isPost()) {
+            $mac = $this->request->getPost('mac');
+            $hostname = $this->request->getPost('hostname');
+            
+            if (empty($mac)) {
+                return ['result' => 'failed', 'error' => 'MAC required'];
+            }
+            
+            $model = new DeviceMonitor();
+            if ($model->updateHostname($mac, $hostname)) {
+                return ['result' => 'saved'];
+            }
+        }
+        return ['result' => 'failed'];
+    }
 
     /**
      * Vyhledání zařízení (pro Bootgrid tabulku)
@@ -32,7 +69,11 @@ class DevicesController extends ApiControllerBase
      */
     public function searchAction()
     {
-        $this->sessionClose();
+        //$this->sessionClose();
+        $version = $this->getOPNsenseVersion();
+        if ($version < 26) {
+            $this->sessionClose();
+        }
         
         try {
             $model = new DeviceMonitor();
@@ -155,7 +196,11 @@ class DevicesController extends ApiControllerBase
      */
     public function statsAction()
     {
-        $this->sessionClose();
+        //$this->sessionClose();
+        $version = $this->getOPNsenseVersion();
+        if ($version < 26) {
+            $this->sessionClose();
+        }
         
         $paths = $this->getPaths();
         $result = ['total' => 0, 'online' => 0];
@@ -187,7 +232,11 @@ class DevicesController extends ApiControllerBase
      */
     public function updatestatusAction()
     {
-        $this->sessionClose();
+        //$this->sessionClose();
+        $version = $this->getOPNsenseVersion();
+        if ($version < 26) {
+            $this->sessionClose();
+        }
         
         $paths = $this->getPaths();
         
