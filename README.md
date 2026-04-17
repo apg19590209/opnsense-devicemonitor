@@ -2,6 +2,8 @@
 
 **[🇨🇿 Czech version](README_CZ.md)** | **[👨‍💻 More projects by the author](https://github.com/hacesoft?tab=repositories)**
 
+<img width="1407" height="870" alt="image" src="https://github.com/user-attachments/assets/536c0041-d9f7-4237-9c38-5657156500e0" />
+
 ---
 
 Plugin for automatic network device monitoring in OPNsense firewall. Detects new devices on the network using the native OPNsense hostwatch database and sends email or webhook notifications.
