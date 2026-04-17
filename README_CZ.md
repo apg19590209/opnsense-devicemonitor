@@ -2,6 +2,8 @@
 
 **[🇬🇧 English version](README.md)** | **[👨‍💻 Další projekty autora](https://github.com/hacesoft?tab=repositories)**
 
+<img width="1407" height="870" alt="image" src="https://github.com/user-attachments/assets/8ed01ee0-1d0f-480e-907b-594945f051c7" />
+
 ---
 
 Plugin pro automatické sledování síťových zařízení v OPNsense firewallu. Detekuje nová zařízení pomocí nativní OPNsense hostwatch databáze a odesílá emailová nebo webhook upozornění.
