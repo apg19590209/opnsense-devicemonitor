@@ -1,13 +1,14 @@
 #!/usr/local/bin/python3
 
 import sqlite3
-import subprocess
-import re
 from datetime import datetime
 import os
 import json
 import sys
 import argparse
+import subprocess
+import re
+import xml.etree.ElementTree as ET
 
 # ================================================================
 # KONFIGURACE - ZAPNI/VYPNI FUNKCE
@@ -31,14 +32,12 @@ _defaults = load_defaults()
 PATHS = _defaults['paths']
 
 # Cesty (místo hardcoded)
+HOSTWATCH_DB = PATHS['hostwatchDb']
 CONFIG_FILE = PATHS['configFile']
 DB_FILE = PATHS['dbFile']
-OUI_FILE = PATHS['ouiFile']
 DEFAULT_CONFIG = _defaults['config']
 # ================================================================
 
-# Cache pro OUI lookup
-oui_cache = {}
 
 def log(message):
     """Standardní append logging (rychlé!)"""
@@ -62,9 +61,10 @@ def load_config():
             'email_from': DEFAULT_CONFIG.get('email_from', 'devicemonitor@opnsense.local'),
             'webhook_enabled': DEFAULT_CONFIG.get('webhook_enabled', '0') == '1',
             'webhook_url': DEFAULT_CONFIG.get('webhook_url', ''),
-            'scan_interval': int(DEFAULT_CONFIG.get('scan_interval', 300)),
-            'show_domain': DEFAULT_CONFIG.get('show_domain', '0') == '1',
-            'apiEmailUrl': PATHS.get('apiEmailUrl', 'apiEmailUrl'),
+            'scan_interval': int(config.get('scan_interval', 300)),
+            'email_vlans':  config.get('email_vlans', ''),
+            'webhook_vlans': config.get('webhook_vlans', ''),
+            'apiEmailUrl': PATHS.get('apiEmailUrl'),
             'apiWebhookUrl': PATHS.get('apiWebhookUrl', 'apiWebhookUrl')
         }
     
@@ -79,9 +79,10 @@ def load_config():
                 'email_from': config.get('email_from', 'devicemonitor@opnsense.local'),
                 'webhook_enabled': config.get('webhook_enabled', '0') == '1',
                 'webhook_url': config.get('webhook_url', ''),
-                'scan_interval': int(config.get('scan_interval', 300)),
-                'show_domain': config.get('show_domain', '0') == '1',
-                'apiEmailUrl': PATHS.get('apiEmailUrl'),
+                'scan_interval': int(DEFAULT_CONFIG.get('scan_interval', 300)),
+                'email_vlans':  DEFAULT_CONFIG.get('email_vlans', ''),
+                'webhook_vlans': DEFAULT_CONFIG.get('webhook_vlans', ''),
+                'apiEmailUrl': PATHS.get('apiEmailUrl', 'apiEmailUrl'),
                 'apiWebhookUrl': PATHS.get('apiWebhookUrl')
             }
     except Exception as e:
@@ -95,80 +96,14 @@ def load_config():
             'webhook_enabled': False,
             'webhook_url': '',
             'scan_interval': 300,
-            'show_domain': False,
+            'email_vlans':  '',
+            'webhook_vlans': '',
             'apiEmailUrl': PATHS.get('apiEmailUrl'),
             'apiWebhookUrl': PATHS.get('apiWebhookUrl')
         }
 
-def load_oui_database():
-    """Načtení OUI databáze do paměti"""
-    global oui_cache
     
-    if oui_cache:
-        return
     
-    if not os.path.exists(OUI_FILE):
-        log("OUI database not found, vendor lookup disabled")
-        return
-    
-    try:
-        with open(OUI_FILE, 'r', encoding='utf-8', errors='ignore') as f:
-            for line in f:
-                if '(base 16)' in line or '(hex)' in line:
-                    parts = line.split('(hex)')
-                    if len(parts) >= 2:
-                        oui = parts[0].strip().upper().replace('-', '').replace(':', '')
-                        vendor = parts[-1].strip()
-                        if oui and vendor:
-                            oui_cache[oui] = vendor
-        
-        log(f"OUI database loaded: {len(oui_cache)} vendors")
-    except Exception as e:
-        log(f"Error loading OUI database: {e}")
-    
-def is_locally_administered(mac_address):
-    """
-    Detekuje jestli je MAC adresa lokálně administrovaná (virtuální/náhodná)
-    Kontroluje druhý bit prvního oktetu (bit 1 zleva)
-    
-    Příklady:
-    - 76:d1:1d:a6:a0:56 → True (lokální)
-    - 00:1a:2b:3c:4d:5e → False (výrobce)
-    """
-    try:
-        # Převeď první oktet (první 2 hex znaky) na integer
-        first_byte = int(mac_address.replace(':', '').replace('-', '')[:2], 16)
-        
-        # Testuj bit 1 (druhý zleva): 0x02 = 00000010
-        # Pokud je nastavený → lokálně administrovaná
-        return (first_byte & 0x02) != 0
-    except:
-        return False
-    
-def lookup_vendor(mac_address):
-    """Zjistí výrobce z MAC adresy"""
-    
-    # NEJDŘÍV zkontroluj jestli je to lokální MAC
-    if is_locally_administered(mac_address):
-        return 'Locally Administered (Virtual/Random)'
-    
-    # Pokud ne, hledej v OUI databázi
-    if not oui_cache:
-        load_oui_database()
-    
-    if not oui_cache:
-        return 'Unknown'
-    
-    try:
-        oui = mac_address.replace(':', '').replace('-', '').upper()[:6]
-        vendor = oui_cache.get(oui, 'Unknown')
-        
-        if len(vendor) > 40:
-            vendor = vendor[:37] + '...'
-        
-        return vendor
-    except:
-        return 'Unknown'
 
 def init_db():
     """Inicializace databáze"""
@@ -187,27 +122,7 @@ def init_db():
         notification_pending INTEGER DEFAULT 0
     )''')
     
-    # Přidej sloupce pokud neexistují
-    try:
-        c.execute('ALTER TABLE devices ADD COLUMN notified INTEGER DEFAULT 0')
-    except:
-        pass
-    
-    try:
-        c.execute('ALTER TABLE devices ADD COLUMN vendor TEXT')
-    except:
-        pass
-    
-    try:
-        c.execute('ALTER TABLE devices ADD COLUMN is_active INTEGER DEFAULT 0')
-    except:
-        pass
-    
-    try:
-        c.execute('ALTER TABLE devices ADD COLUMN notification_pending INTEGER DEFAULT 0')
-    except:
-        pass
-    
+    # Přidej sloupce pokud neexistují (pro zpětnou kompatibilitu)   
     try:
         c.execute('ALTER TABLE devices ADD COLUMN first_seen DATETIME DEFAULT CURRENT_TIMESTAMP')
     except:
@@ -221,92 +136,114 @@ def init_db():
     conn.commit()
     conn.close()
 
-def get_active_interfaces():
-    """
-    Automaticky zjistí všechny aktivní VLAN interfacy
-    Vrací seznam jako ['vlan0.11', 'vlan0.20', 'vlan0.30', ...]
-    """
-    interfaces = []
-    
-    try:
-        output = subprocess.check_output(['ifconfig'], text=True)
-        
-        for line in output.splitlines():
-            # Hledej VLAN interfacy (vlan0.11, vlan0.20, atd.)
-            match = re.match(r'^(vlan\d+\.\d+):', line)
-            if match:
-                iface = match.group(1)
-                
-                # Kontrola že je UP a RUNNING
-                if 'UP' in line and 'RUNNING' in line:
-                    interfaces.append(iface)
-    except:
-        pass
-    
-    if not interfaces:
-        # Fallback - pokud nejsou VLANy, použij hlavní interface
-        interfaces = ['igc0']
-    
-    log(f"Monitoring interfaces: {', '.join(interfaces)}")
-    return interfaces
 
-def get_vlan_from_line(line):
-    """Detekce VLAN"""
-    match = re.search(r'on\s+(\S+)', line)
-    if match:
-        interface = match.group(1)
-        
-        if '.' in interface:
-            vlan_num = interface.split('.')[-1]
-            if vlan_num.isdigit():
-                return 'VLAN' + vlan_num
-        
-        vlan_match = re.search(r'vlan(\d+)', interface, re.I)
-        if vlan_match:
-            return 'VLAN' + vlan_match.group(1)
-        
-        if interface not in ['em0', 'igb0', 'eth0']:
-            return interface.upper()
-    
-    return 'LAN'
-
-def get_arp_table():
-    """ARP tabulka - zařízení s IP adresou"""
+def get_hostwatch_devices():
+    """Načte zařízení přímo z OPNsense hostwatch databáze"""
     devices = []
-    load_oui_database()
+    
+    if not os.path.exists(HOSTWATCH_DB):
+        log("CHYBA: hostwatch databáze neexistuje: " + HOSTWATCH_DB)
+        return devices
     
     try:
-        output = subprocess.check_output(['/usr/sbin/arp', '-an'], text=True)
+        conn = sqlite3.connect(f'file:{HOSTWATCH_DB}?mode=ro', uri=True)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
         
-        for line in output.splitlines():
-            match = re.search(r'\(([0-9\.]+)\)\s+at\s+([0-9a-f:]+)', line, re.I)
-            if match:
-                ip = match.group(1)
-                mac = match.group(2).lower()
-                vlan = get_vlan_from_line(line)
-                vendor = lookup_vendor(mac)
-                
-                hostname = ''
-                try:
-                    result = subprocess.run(['host', ip], capture_output=True, text=True, timeout=1)
-                    if result.returncode == 0:
-                        parts = result.stdout.split()
-                        if len(parts) >= 5:
-                            hostname = parts[4].rstrip('.')
-                except:
-                    pass
-                
-                devices.append({
-                    'mac': mac,
-                    'ip': ip,
-                    'hostname': hostname,
-                    'vendor': vendor,
-                    'vlan': vlan
-                })
+        cursor.execute('''
+            SELECT 
+                interface_name,
+                ip_address,
+                ether_address,
+                first_seen,
+                last_seen,
+                organization_name
+            FROM v_hosts
+            WHERE protocol = 'inet'
+              AND ether_address NOT IN ('ff:ff:ff:ff:ff:ff', '00:00:00:00:00:00')
+              AND ip_address NOT LIKE '169.254.%'
+            ORDER BY last_seen DESC
+        ''')
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        for row in rows:
+            # Mapuj interface_name na VLAN popis
+            iface = row['interface_name'] or ''
+            vlan = map_interface_to_vlan(iface)
+            
+            vendor = row['organization_name'] or 'Unknown'
+            if len(vendor) > 40:
+                vendor = vendor[:37] + '...'
+            
+            devices.append({
+                'mac': (row['ether_address'] or '').lower(),
+                'ip': row['ip_address'] or '',
+                'hostname': '',
+                'vendor': vendor,
+                'vlan': vlan,
+                'first_seen': row['first_seen'] or '',
+                'last_seen': row['last_seen'] or '',
+            })
+        
+        log(f"Hostwatch DB: načteno {len(devices)} zařízení")
+        
     except Exception as e:
-        log(f"ARP error: {e}")
+        log(f"Chyba čtení hostwatch DB: {e}")
     
     return devices
+
+
+def map_interface_to_vlan(interface_name):
+    """Převede interface_name (vlan0.11) na čitelný název (VLAN11)"""
+    if not interface_name:
+        return 'Unknown'
+    
+    # vlan0.11 → VLAN11
+    match = re.search(r'vlan\d+\.(\d+)', interface_name, re.I)
+    if match:
+        return 'VLAN' + match.group(1)
+    
+    # igc0, igc1 → interface název
+    return interface_name.upper()
+
+
+def get_dhcp_descriptions():
+    """Načte popisky zařízení z DHCP statických přiřazení (/conf/config.xml)"""
+    descriptions = {}
+    try:
+        tree = ET.parse('/conf/config.xml')
+        root = tree.getroot()
+        dhcpd = root.find('dhcpd')
+        if dhcpd is None:
+            return descriptions
+
+        for iface in dhcpd:
+            for staticmap in iface.findall('staticmap'):
+                mac_el = staticmap.find('mac')
+                descr_el = staticmap.find('descr')
+                if mac_el is not None and mac_el.text and descr_el is not None and descr_el.text:
+                    mac = mac_el.text.lower().strip()
+                    descriptions[mac] = descr_el.text.strip()
+
+        log(f"DHCP popisky: {len(descriptions)} záznamů")
+    except Exception as e:
+        log(f"Chyba čtení config.xml: {e}")
+    return descriptions
+
+
+def is_recently_seen(last_seen_str, minutes=15):
+    """True pokud bylo zařízení viděno v posledních N minutách (porovnání v UTC)"""
+    if not last_seen_str:
+        return False
+    try:
+        last_seen = datetime.strptime(last_seen_str, '%Y-%m-%d %H:%M:%S')
+        now_utc = datetime.utcnow()
+        return (now_utc - last_seen).total_seconds() < minutes * 60
+    except:
+        return False
+    
 
 def send_email_via_php_api(new_devices):
     """Označ zařízení v DB pro odeslání emailu"""
@@ -383,293 +320,119 @@ def send_webhook_via_php_api(new_devices):
     except Exception as e:
         log(f"[WEBHOOK] Error: {e}")
     
-def get_dhcp_and_l2_devices():
-    """
-    Kombinovaný scan - najde zařízení bez IP:
-    1. DHCP requesty (zařízení co se snaží získat IP)
-    2. L2 aktivity (ostatní packety)
-    
-    Toto zachytí i zařízení odmítnutá "Deny unknown clients"
-    """
-    devices = []
-    load_oui_database()
-    
-    interfaces = get_active_interfaces()
-    all_seen_macs = set()
-    
-    # Scan každého interface
-    for interface in interfaces:
-        try:
-            # Sleduj DHCP (port 67/68) + ARP + ICMP
-            cmd = [
-                'timeout', '5',
-                '/usr/sbin/tcpdump',
-                '-i', interface,
-                '-e',  # Ethernet header (MAC adresy)
-                '-n',  # No DNS
-                '-l',  # Line buffered
-                '-c', '200',  # Max 200 packetů
-                '(port 67 or port 68 or arp or icmp)'
-            ]
-            
-            output = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=6
-            ).stdout
-            
-            # Parse všechny MAC adresy
-            mac_pattern = re.compile(r'([0-9a-f]{2}:){5}[0-9a-f]{2}', re.I)
-            
-            for match in mac_pattern.finditer(output):
-                mac = match.group(0).lower()
-                
-                # Ignoruj broadcast/multicast/spanning tree
-                if mac.startswith(('ff:ff:', '01:00:5e:', '33:33:', '01:80:c2:')):
-                    continue
-                
-                all_seen_macs.add(mac)
-                
-        except subprocess.TimeoutExpired:
-            pass
-        except Exception as e:
-            log(f"L2 scan error on {interface}: {e}")
-    
-    # Získej MAC adresy z ARP (ty mají IP)
-    arp_output = subprocess.run(
-        ['/usr/sbin/arp', '-an'],
-        capture_output=True,
-        text=True
-    ).stdout
-    
-    arp_macs = set()
-    for match in re.finditer(r'at ([0-9a-f:]{17})', arp_output, re.I):
-        arp_macs.add(match.group(1).lower())
-    
-    # Zařízení BEZ IP = viděli jsme na síti, ale NENÍ v ARP
-    devices_without_ip = all_seen_macs - arp_macs
-    
-    # Vytvoř záznamy
-    for mac in devices_without_ip:
-        vendor = lookup_vendor(mac)
-        
-        devices.append({
-            'mac': mac,
-            'ip': None,
-            'hostname': '',
-            'vendor': vendor,
-            'vlan': ''
-        })
-        
-        log(f"⚠️  Device without IP: {mac} ({vendor})")
-    
-    return devices
-
-def check_device_activity_pfctl():
-    """
-    Načte aktivní IP z pfctl -ss
-    Vrací set() IP adres které jsou ONLINE (mají aktivní spojení)
-    """
-    active_ips = set()
-    
-    try:
-        result = subprocess.run(
-            ['pfctl', '-ss'],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        
-        if result.returncode != 0:
-            log(f"pfctl warning: returned code {result.returncode}")
-            return active_ips
-        
-        # Parsuj každý řádek
-        for line in result.stdout.split('\n'):
-            # Formát 1: "nat_ip (LOCAL_IP:port) -> external"
-            # Hledej IP v závorce
-            match = re.search(r'\((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):\d+\)', line)
-            if match:
-                ip = match.group(1)
-                # Jen lokální IP
-                if (ip.startswith('192.168.') or 
-                    ip.startswith('10.') or 
-                    re.match(r'^172\.(1[6-9]|2[0-9]|3[0-1])\.', ip)):
-                    active_ips.add(ip)
-                continue
-            
-            # Formát 2: "external <- LOCAL_IP:port"
-            # Hledej IP za šipkou <-
-            match = re.search(r'<-\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):\d+', line)
-            if match:
-                ip = match.group(1)
-                # Jen lokální IP
-                if (ip.startswith('192.168.') or 
-                    ip.startswith('10.') or 
-                    re.match(r'^172\.(1[6-9]|2[0-9]|3[0-1])\.', ip)):
-                    active_ips.add(ip)
-                continue
-            
-            # Formát 3: "LOCAL_IP:port -> internal" (lokální komunikace)
-            # Hledej IP před ->
-            match = re.search(r'^\s*all\s+\S+\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):\d+\s+->', line)
-            if match:
-                ip = match.group(1)
-                # Jen lokální IP
-                if (ip.startswith('192.168.') or 
-                    ip.startswith('10.') or 
-                    re.match(r'^172\.(1[6-9]|2[0-9]|3[0-1])\.', ip)):
-                    active_ips.add(ip)
-        
-        log(f"pfctl: {len(active_ips)} active IPs")
-        return active_ips
-    
-    except subprocess.TimeoutExpired:
-        log("pfctl timeout")
-        return set()
-    except Exception as e:
-        log(f"pfctl error: {e}")
-        return set()
 
 # ================================================================
 # HLAVNÍ FUNKCE - REFAKTOROVANÉ
 # ================================================================
 
 def update_status_only():
-    """
-    Režim --update-only: Rychlá aktualizace online/offline statusu
-    Používá pouze pfctl (bez ARP/DHCP/L2 scanu)
-    Rychlost: ~100ms
-    """
-    log("Quick status update mode (pfctl only)")
-    
+    """Rychlá aktualizace online/offline statusu z hostwatch DB"""
+    log("Quick status update (hostwatch DB)")
     init_db()
-    
-    # Získej aktivní IPs z pfctl
-    active_ips = check_device_activity_pfctl()
-    log(f"Update_Active IPs detected: {len(active_ips)}")
-    
-    # Aktualizuj databázi
+
+    devices = get_hostwatch_devices()
+    if not devices:
+        log("Žádná data z hostwatch DB")
+        print("ERROR: No hostwatch data")
+        return 1
+
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    
-    # Nastav všechny na offline
     cursor.execute("UPDATE devices SET is_active = 0")
-    
-    # Aktivní na online + update last_seen
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    for ip in active_ips:
-        cursor.execute(
-            "UPDATE devices SET is_active = 1, last_seen = ? WHERE ip = ?",
-            (now, ip)
-        )
-    
+
+    for d in devices:
+        if is_recently_seen(d.get('last_seen', '')):
+            cursor.execute(
+                "UPDATE devices SET is_active = 1, last_seen = ? WHERE mac = ?",
+                (now, d['mac'])
+            )
+
     conn.commit()
-    
-    # Získej počty
-    online_count = cursor.execute("SELECT COUNT(*) FROM devices WHERE is_active = 1").fetchone()[0]
-    total_count = cursor.execute("SELECT COUNT(*) FROM devices").fetchone()[0]
-    
+    online = conn.execute("SELECT COUNT(*) FROM devices WHERE is_active = 1").fetchone()[0]
+    total = conn.execute("SELECT COUNT(*) FROM devices").fetchone()[0]
     conn.close()
-    
-    log(f"Status updated: {online_count}/{total_count} devices online")
-    print(f"OK: {online_count}/{total_count} online")
-    
+
+    log(f"Status: {online}/{total} online")
+    print(f"OK: {online}/{total} online")
     return 0
 
 
 def full_scan():
-    """
-    Režim normální: Kompletní scan sítě
-    ARP + DHCP + L2 + pfctl + vendor lookup + email
-    Rychlost: ~10-15 sekund
-    """
-    log("Starting full network scan...")
-    
+    """Kompletní scan z OPNsense hostwatch DB + DHCP popisky"""
+    log("Spouštím full scan (hostwatch DB)...")
     config = load_config()
     init_db()
-    db = sqlite3.connect(DB_FILE)
-    
-    # 1. Načti aktivní IP z pfctl (rychlé!)
-    log("Checking device activity via pfctl...")
-    active_ips = check_device_activity_pfctl()
-    log(f"FullScan_Active IPs detected: {len(active_ips)}")
-    
-    # 2. Získej všechna zařízení z ARP
-    devices_with_ip = get_arp_table()
-    log(f"ARP scan: {len(devices_with_ip)} devices with IP")
-    
-    # 3. Zařízení BEZ IP
-    devices_without_ip = get_dhcp_and_l2_devices()
-    log(f"L2 scan: {len(devices_without_ip)} devices without IP")
 
-    # 4. Zpracuj - aktualizuj last_seen JEN pro AKTIVNÍ
+    # 1. Data z hostwatch
+    devices = get_hostwatch_devices()
+    if not devices:
+        log("CHYBA: Žádná data z hostwatch DB")
+        return 1
+
+    # 2. DHCP popisky
+    dhcp_descriptions = get_dhcp_descriptions()
+
+    # 3. Aktualizace vlastní DB
     new_devices = []
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    cursor = db.cursor()
+    conn = sqlite3.connect(DB_FILE)
+    conn.execute('UPDATE devices SET is_active = 0, notification_pending = 0')
 
-    # NEJDŘÍV resetuj příznaky (online + notifikace)
-    cursor.execute('UPDATE devices SET is_active = 0, notification_pending = 0')
-
-    for device in (devices_with_ip + devices_without_ip):
+    for device in devices:
         mac = device['mac']
-        
-        # Zkontroluj jestli existuje
-        cursor.execute('SELECT mac FROM devices WHERE mac = ?', (mac,))
-        exists = cursor.fetchone()
-        
-        # Je zařízení AKTIVNÍ? (kontroluj IP v pfctl)
-        device_ip = device.get('ip')
-        is_active = 1 if (device_ip and device_ip in active_ips) else 0
-        
-        if exists:
-            # UPDATE - aktualizuj is_active VŽDY, last_seen JEN pokud je aktivní
-            if is_active:
-                cursor.execute('''
-                    UPDATE devices 
-                    SET ip = ?, hostname = CASE WHEN custom_hostname IS NOT NULL AND custom_hostname != '' THEN hostname ELSE ? END,
-                        vendor = ?, vlan = ?, last_seen = ?, is_active = ?
-                    WHERE mac = ?
-                ''', (device['ip'], device['hostname'], device['vendor'], device['vlan'], now, is_active, mac))
-            else:
-                # Neaktivní - aktualizuj jen IP/hostname/vendor a is_active
-                cursor.execute('''
-                    UPDATE devices 
-                    SET ip = ?, hostname = CASE WHEN custom_hostname IS NOT NULL AND custom_hostname != '' THEN hostname ELSE ? END,
-                        vendor = ?, vlan = ?, is_active = ?
-                    WHERE mac = ?
-                ''', (device['ip'], device['hostname'], device['vendor'], device['vlan'], is_active, mac))
-        else:
-            # INSERT nového zařízení
-            cursor.execute('''
-                INSERT INTO devices (mac, ip, hostname, vendor, vlan, first_seen, last_seen, is_active, notification_pending)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-            ''', (mac, device['ip'], device['hostname'], device['vendor'], device['vlan'], now, now, is_active))
-            # Přidej do new_devices pro email
-            device['first_seen'] = now
-            new_devices.append(device)
-            # log(f"New device: {mac} - {device['vendor']}")
+        if not mac:
+            continue
 
-    db.commit()
-    
-    log(f"[NOTIFY] {len(new_devices)} new devices detected!")
-    # 5. Notifikace - volá PHP API (řeší emoji)
+        # Obohacení o DHCP popis
+        if mac in dhcp_descriptions:
+            device['hostname'] = dhcp_descriptions[mac]
+
+        is_active = 1 if is_recently_seen(device.get('last_seen', '')) else 0
+        last_seen = device.get('last_seen') or now
+        first_seen = device.get('first_seen') or now
+
+        row = conn.execute(
+            'SELECT mac, custom_hostname FROM devices WHERE mac = ?', (mac,)
+        ).fetchone()
+
+        if row:
+            hostname = row[1] if row[1] else device['hostname']
+            conn.execute('''
+                UPDATE devices
+                SET ip = ?, hostname = ?, vendor = ?, vlan = ?,
+                    last_seen = ?, is_active = ?
+                WHERE mac = ?
+            ''', (device['ip'], hostname, device['vendor'],
+                  device['vlan'], last_seen, is_active, mac))
+        else:
+            conn.execute('''
+                INSERT INTO devices
+                    (mac, ip, hostname, vendor, vlan, first_seen, last_seen,
+                     is_active, notification_pending)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            ''', (mac, device['ip'], device['hostname'], device['vendor'],
+                  device['vlan'], first_seen, last_seen, is_active))
+            device['first_seen'] = first_seen
+            new_devices.append(device)
+
+    conn.commit()
+    online = conn.execute(
+        "SELECT COUNT(*) FROM devices WHERE is_active = 1"
+    ).fetchone()[0]
+    conn.close()
+
+    # 4. Notifikace (s filtrováním podle VLAN)
+    log(f"Nová zařízení: {len(new_devices)}, Online: {online}/{len(devices)}")
     if new_devices and config['enabled']:
-        # log(f"[NOTIFY] {len(new_devices)} new devices detected")
-        
-        # Email (pokud enabled)
-        if config.get('email_enabled') and config.get('email_to'):
-            send_email_via_php_api(new_devices)
-        
-        # Webhook (pokud enabled)
-        if config.get('webhook_enabled') and config.get('webhook_url'):
-            send_webhook_via_php_api(new_devices)
-    
-    db.close()
-    log(f"Scan completed. Active: {len(active_ips)}, New: {len(new_devices)}")
-    # print(f"Scan complete: {len(active_ips)} active, {len(new_devices)} new")
-    
+        email_vlans   = set(v.strip() for v in config.get('email_vlans',  '').split(',') if v.strip())
+        webhook_vlans = set(v.strip() for v in config.get('webhook_vlans', '').split(',') if v.strip())
+        email_devs    = [d for d in new_devices if not email_vlans   or d.get('vlan','') in email_vlans]
+        webhook_devs  = [d for d in new_devices if not webhook_vlans or d.get('vlan','') in webhook_vlans]
+        if email_devs and config.get('email_enabled') and config.get('email_to'):
+            send_email_via_php_api(email_devs)
+        if webhook_devs and config.get('webhook_enabled') and config.get('webhook_url'):
+            send_webhook_via_php_api(webhook_devs)
     return 0
 
 
@@ -683,7 +446,7 @@ def main():
         epilog='''
 Examples:
   %(prog)s                    # Full scan (default)
-  %(prog)s --update-only      # Quick status update (pfctl only)
+  %(prog)s --update-only      # Quick status update (hostwatch DB)
   %(prog)s --verbose          # Full scan with verbose output
   %(prog)s --help             # Show this help
         '''
@@ -692,7 +455,7 @@ Examples:
     parser.add_argument(
         '--update-only',
         action='store_true',
-        help='Quick mode: only update online/offline status via pfctl (~100ms)'
+        help='Quick mode: only update online/offline status via hostwatch DB'
     )
     
     parser.add_argument(

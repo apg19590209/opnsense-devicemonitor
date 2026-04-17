@@ -12,22 +12,6 @@ use OPNsense\DeviceMonitor\DeviceMonitor;
  */
 class DevicesController extends ApiControllerBase
 {
-    /**
-     * Zjistí verzi OPNsense jako číslo (např. 26 pro verzi 26.x)
-     */
-    private function getOPNsenseVersion()
-    {
-        // Zkusíme načíst verzi z příkazu opnsense-version
-        exec("opnsense-version | awk '{print $2}' | cut -d. -f1", $output, $return_code);
-
-        if ($return_code === 0 && !empty($output[0])) {
-            return (int)$output[0];
-        }
-
-        // Pokud se nepodaří zjistit verzi, předpokládáme verzi 25 (pro zpětnou kompatibilitu)
-        return 25;
-    }
-
     private function getPaths()
     {
         $defaultsFile = '/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json';
@@ -69,11 +53,6 @@ class DevicesController extends ApiControllerBase
      */
     public function searchAction()
     {
-        //$this->sessionClose();
-        $version = $this->getOPNsenseVersion();
-        if ($version < 26) {
-            $this->sessionClose();
-        }
         
         try {
             $model = new DeviceMonitor();
@@ -196,11 +175,6 @@ class DevicesController extends ApiControllerBase
      */
     public function statsAction()
     {
-        //$this->sessionClose();
-        $version = $this->getOPNsenseVersion();
-        if ($version < 26) {
-            $this->sessionClose();
-        }
         
         $paths = $this->getPaths();
         $result = ['total' => 0, 'online' => 0];
@@ -227,16 +201,11 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
-     * Rychlá aktualizace online/offline statusu (pfctl only)
+    * Rychlá aktualizace online/offline statusu (hostwatch DB)
      * POST /api/devicemonitor/devices/updatestatus
      */
     public function updatestatusAction()
     {
-        //$this->sessionClose();
-        $version = $this->getOPNsenseVersion();
-        if ($version < 26) {
-            $this->sessionClose();
-        }
         
         $paths = $this->getPaths();
         
@@ -267,6 +236,53 @@ class DevicesController extends ApiControllerBase
             }
         }
 
+        return ['result' => 'failed'];
+    }
+
+    /**
+     * Ping zařízení a aktualizuj jeho status
+     * POST /api/devicemonitor/devices/pingdevice
+     */
+    public function pingdeviceAction()
+    {
+        if ($this->request->isPost()) {
+            $ip  = $this->request->getPost('ip',  'string', '');
+            $mac = $this->request->getPost('mac',  'string', '');
+
+            if (empty($ip) || empty($mac)) {
+                return ['result' => 'failed', 'error' => 'IP and MAC required'];
+            }
+
+            // Validace IP adresy
+            if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+                return ['result' => 'failed', 'error' => 'Invalid IP'];
+            }
+
+            // Ping - 2 pakety, timeout 1s
+            exec('ping -c 2 -W 1 ' . escapeshellarg($ip) . ' > /dev/null 2>&1', $out, $ret);
+            $online = ($ret === 0) ? 1 : 0;
+
+            // Aktualizuj DB
+            $paths = $this->getPaths();
+            try {
+                $db = new \SQLite3($paths['dbFile']);
+                $stmt = $db->prepare(
+                    'UPDATE devices SET is_active = :active WHERE mac = :mac'
+                );
+                $stmt->bindValue(':active', $online, SQLITE3_INTEGER);
+                $stmt->bindValue(':mac',    $mac,    SQLITE3_TEXT);
+                $stmt->execute();
+                $db->close();
+            } catch (\Exception $e) {
+                return ['result' => 'failed', 'error' => $e->getMessage()];
+            }
+
+            return [
+                'result' => $online ? 'online' : 'offline',
+                'ip'     => $ip,
+                'mac'    => $mac
+            ];
+        }
         return ['result' => 'failed'];
     }
 

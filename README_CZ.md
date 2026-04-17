@@ -4,23 +4,22 @@
 
 ---
 
-Plugin pro automatické sledování síťových zařízení v OPNsense firewallu. Detekuje nová zařízení pomocí ARP skenování a odesílá emailová nebo webhook upozornění o nových zařízeních v síti.
+Plugin pro automatické sledování síťových zařízení v OPNsense firewallu. Detekuje nová zařízení pomocí nativní OPNsense hostwatch databáze a odesílá emailová nebo webhook upozornění.
 
 ---
 
 ## 📋 Obsah
 
 - [Co plugin dělá](#co-plugin-dělá)
-- [Verze](#verze)
+- [Historie verzí](#historie-verzí)
 - [Funkce](#funkce)
+- [Požadavky](#požadavky)
 - [Instalace](#instalace)
-  - [Metoda 1: WinSCP + Ruční instalace](#metoda-1-winscp--ruční-instalace-doporučeno)
-  - [Metoda 2: Přímá SSH instalace](#metoda-2-přímá-ssh-instalace)
 - [Nastavení](#nastavení)
 - [Použití](#použití)
 - [Struktura pluginu](#struktura-pluginu)
+- [Jak daemon funguje](#jak-daemon-funguje)
 - [Řešení problémů](#řešení-problémů)
-- [Verzování](#verzování)
 - [Odinstalace](#odinstalace)
 
 ---
@@ -30,686 +29,527 @@ Plugin pro automatické sledování síťových zařízení v OPNsense firewallu
 Plugin automaticky sleduje síť a upozorňuje na:
 
 - 🆕 **Nová zařízení** připojující se do sítě
-- 📊 **Historie zařízení** s časovými údaji první/poslední detekce
-- 📧 **Email notifikace** s profesionálním HTML designem
-- 🔔 **Webhook notifikace** (ntfy.sh, Discord, custom)
+- 📊 **Historii zařízení** s časovými údaji první/poslední detekce
+- 📧 **Emailová upozornění** s profesionálním HTML designem
+- 🔔 **Webhook upozornění** (ntfy.sh, Discord, vlastní)
+- 🖥️ **Dashboard widget** na stránce Lobby v OPNsense
 
 ---
 
-## Verze
+## Historie verzí
 
-Změny opravy v plugginu
+### v2.0 (duben 2026) — Kompletní přepracování
 
-- opnsense-devicemonitor31012026_1358.zip
-  **Oprava kompatibility s OPNsense 26.x:**
+Tato verze je kompletní má těsnějsi integraci s OPNsense 26.x. Mnoho komponent, které byly dříve vytvořeny na míru, je nyní nahrazeno nativními mechanismy OPNsense.
 
-    Po přechodu na OPNsense verzi 26.0 a vyšší měl plugin problémy kvůli volání funkce `$this->sessionClose()`, která byla v nových verzích odstraněna. Od verze 26.0 systém automaticky provádí uzavírání sessions, a pokud funkce zůstane v kódu, plugin způsobí CRASH systému.
+#### Co se změnilo a proč
 
-    **Řešení:**
-    Controller `DevicesController.php` byl doplněn o automatickou detekci verze OPNsense:
+**1. Registrace služby — `plugins.inc.d/devicemonitor.inc`**
 
-    ```php
-    /**
-     * Zjistí verzi OPNsense jako číslo (např. 26 pro verzi 26.x)
-    */
-    private function getOPNsenseVersion()
-    {
-        exec("opnsense-version | awk '{print $2}' | cut -d. -f1", $output, $return_code);
-        
-        if ($return_code === 0 && !empty($output[0])) {
-            return (int)$output[0];
-        }
-        
-        // Pro zpětnou kompatibilitu předpokládáme verzi 25
-        return 25;
-    }
-    ```
+V předchozích verzích byl daemon pro OPNsense zcela neviditelný. Neobjevoval se v *System → Diagnostics → Services*, takže nebylo možné ho spustit/zastavit/restartovat z GUI.
 
-    Tato metoda je volána před každým použitím `sessionClose()`:
+Opravou je nový soubor `src/etc/inc/plugins.inc.d/devicemonitor.inc`, který registruje službu pomocí nativního mechanismu OPNsense `plugins_services()`.
 
-    ```php
-    public function searchAction()
-    {
-        $version = $this->getOPNsenseVersion();
-        if ($version < 26) {
-            $this->sessionClose();  // Volá se pouze na OPNsense 25.x a starších
-        }
-        
-        // ... zbytek kódu
-    }
-    ```
+```php
+function devicemonitor_services()
+{
+    $services = [];
+    $services[] = [
+        'description' => gettext('Device Monitor - network device tracking'),
+        'configd' => [
+            'restart' => ['devicemonitor restart'],
+            'start'   => ['devicemonitor start'],
+            'stop'    => ['devicemonitor stop'],
+        ],
+        'name'    => 'devicemonitor',
+        'pidfile' => '/var/run/devicemonitor.pid',
+    ];
+    return $services;
+}
+```
+
+**2. Kontrola stavu daemona — `daemon_status.sh`**
+
+Předchozí přístup používal `service devicemonitor status` v configd akci `[status]`. Na FreeBSD tento příkaz vrací exit kód 1 i tehdy, když služba normálně běží (vrací 1 = "není spravováno rc.d tradičním způsobem"). Protože configd typ `script_output` považuje jakýkoliv nenulový exit za chybu, každá kontrola stavu skončila `Execute error`.
+
+Opravou je dedikovaný shell skript, který přímo kontroluje pidfile:
+
+```sh
+#!/bin/sh
+PIDFILE="/var/run/devicemonitor.pid"
+if [ -f "$PIDFILE" ]; then
+    PID=$(cat "$PIDFILE")
+    if kill -0 "$PID" 2>/dev/null; then
+        echo "running"
+        exit 0
+    fi
+    rm -f "$PIDFILE"   # vyčistí stale pidfile
+fi
+echo "stopped"
+exit 0
+```
+
+**3. `actions_devicemonitor.conf` — `|| true` u start/stop/restart**
+
+Bez `|| true`, pokud daemon již běžel a configd se pokusil ho znovu spustit, `service devicemonitor start` vrátil nenulový exit kód (daemon already running), který configd interpretoval jako chybu a zobrazil `Error (1)`. Přidání `|| true` zajistí, že configd vždy vidí úspěch.
+
+Akce `[status]` nyní volá `daemon_status.sh` místo `service devicemonitor status`.
+
+**4. `rc.d/devicemonitor` — přidán `procname`, opravena výchozí hodnota**
+
+Dvě opravy:
+- Výchozí hodnota změněna z `"YES"` na `"NO"` — FreeBSD konvence: skript sám musí být výchozí disabled; aktivaci řídí `/etc/rc.conf.d/devicemonitor`
+- Přidán `procname="/usr/local/bin/python3"` — bez tohoto `rc.d` nemůže najít běžící proces, a každý `start` vytvořil nový zombie proces.
+
+**5. `service.xml` — oprava názvu tagu, přidán `<pidfile>`, opraveny `<commands>`**
+
+Tři chyby v jednom souboru:
+- `<n>DeviceMonitor</n>` → `<name>DeviceMonitor</name>` — OPNsense tag `<n>` nerozpoznal
+- Přidán `<pidfile>/var/run/devicemonitor.pid</pidfile>` — nutný pro zobrazení zelené/červené tečky stavu
+- `<commands>` změněno ze shell příkazů (`service devicemonitor start`) na názvy configd akcí (`devicemonitor start`)
+
+**6. `ServiceController.php` — start/stop/restart přes `configdRun()`**
+
+Dříve PHP API controller volal `exec('service devicemonitor start')` přímo. Tím obchází privilege model OPNsense. Veškeré řízení služby nyní prochází přes `$backend->configdRun('devicemonitor start')`.
+
+**7. Dashboard widget — oprava odpojeného DOM elementu**
+
+Metoda `onWidgetTick()` widgetu aktualizovala `this.$container.find('.dm-total')`. Widget framework OPNsense však kopíruje markup do DOMu místo vložení původního jQuery objektu, takže `this.$container` ukazoval na odpojený element — `.find()` fungovalo tiše, ale změny nebyly na obrazovce nikdy vidět.
+
+Opraveno přidáním unikátního `id` každému elementu a výběrem přímo z dokumentu:
+
+```javascript
+// Dříve (rozbité — aktualizuje odpojený element)
+this.$container.find('.dm-total').text(stats.total);
+
+// Po opravě (správně — vybírá z živého DOM)
+$('#dm-total').text(stats.total);
+```
+
+Také opraveno: widget volal `/api/devicemonitor/service/status` pro počty zařízení (který vrací stav daemona, nikoliv statistiky). Nyní správně volá `/api/devicemonitor/devices/stats`.
+
+**8. `install.sh` — kompletní přepis**
+
+Klíčové změny:
+- Čištění zombie procesů před spuštěním daemona (`pkill -f monitor_daemon.py`)
+- Daemon spouštěn přes `configctl devicemonitor start` místo `service devicemonitor start`
+- Daemon ověřen přes pidfile + `kill -0` místo `service devicemonitor status`
+- Odstraněno rozbité `service php-fpm restart` a `configctl webgui restart`
+- Přidán krok instalace `plugins.inc.d/devicemonitor.inc`
+- Opraveno číslování kroků (bylo `[6/11]` následováno `[6/10]`)
+
+**9. `uninstall.sh` — opraveno zastavení daemona**
+
+Dříve používal `service devicemonitor status`, který vrátil exit 1, čímž zastavení selhalo. Nyní používá `pkill -f monitor_daemon.py`, které vždy funguje bez ohledu na stav pidfile.
+
+Také odstraněno rozbité `configctl webgui restart` a `service php-fpm restart` — tyto příkazy buď nejsou dostupné nebo jsou zbytečné na OPNsense 26.x.
+
+---
+
+### v1.x (leden 2026)
+
+- **Oprava kompatibility s OPNsense 26.x:** Odstraněna volání `$this->sessionClose()` z controllerů. Tato funkce byla odstraněna v OPNsense 26.0 a způsobovala crash při zavolání. Přidána automatická detekce verze pro zachování zpětné kompatibility s 25.x.
 
 ---
 
 ## Funkce
 
-### 🎯 **Základní funkce**
+### 🎯 Základní funkce
 
-✅ **Automatické ARP skenování** - detekce zařízení každých 5-30 minut  
-✅ **Emailová upozornění** - krásné HTML emaily s profesionálním designem  
-✅ **Webhook upozornění** - podpora pro ntfy.sh, Discord a custom webhooky  
-✅ **Historie zařízení** - sledování první a poslední detekce  
-✅ **Vendor lookup** - automatická detekce výrobce z MAC adresy  
+✅ **Detekce zařízení** přes OPNsense hostwatch SQLite databázi (`/var/db/hostwatch/hosts.db`)
+✅ **Emailová upozornění** — profesionální HTML emaily s inline CSS
+✅ **Webhook upozornění** — ntfy.sh, Discord, vlastní HTTP POST endpointy
+✅ **Historie zařízení** — časy první/poslední detekce
+✅ **Vendor lookup** — výrobce z MAC adresy (IEEE OUI databáze)
 
-### 📧 **Notifikace**
+### 🖥️ Webové rozhraní
 
-✅ **Krásné HTML emaily** - profesionální design s inline CSS (funguje všude!)  
-✅ **Test tlačítka** - ověření emailů i webhooků přímo z GUI  
-✅ **Detailní logování** - sledování úspěchu/neúspěchu odesílání  
-✅ **Webhook podpora**:
-  - **ntfy.sh** - jednoduchý notification server
-  - **Discord** - webhooky do Discord kanálů
-  - **Generic** - jakýkoliv HTTP webhook endpoint
+✅ **Dashboard widget** — zobrazuje celkový/online počet zařízení a stav daemona na stránce Lobby
+✅ **Seznam zařízení** — prohledávatelná, řaditelná tabulka s akcemi mazání
+✅ **Stránka nastavení** — vše na jednom místě s testovacími tlačítky
+✅ **Řízení služby** — viditelné v *System → Diagnostics → Services* s tlačítky start/stop/restart
 
-### 🖥️ **Webové rozhraní**
+### 📊 Technické
 
-✅ **Dashboard** - přehled statistik, ruční spuštění skenování  
-✅ **Správa zařízení** - mazání jednotlivých zařízení nebo celé databáze  
-✅ **Nastavitelné intervaly** - skenování každých 5, 10, 15 nebo 30 minut  
-✅ **Responzivní design** - funguje na mobilu i tabletu  
+✅ **SQLite databáze** — rychlé ukládání, není potřeba externí databáze
+✅ **Daemon na pozadí** — Python proces spravovaný FreeBSD rc.d
+✅ **Integrace configd** — všechny akce služby procházejí přes OPNsense configd
+✅ **Logování** — `/var/log/devicemonitor.log`
 
-### 📊 **Technické funkce**
+---
 
-✅ **SQLite databáze** - rychlé ukládání a vyhledávání  
-✅ **Vendor lookup** - automatická detekce výrobce z MAC adresy (IEEE OUI databáze)  
-✅ **Daemon proces** - běží na pozadí jako systémová služba  
-✅ **Logování** - detailní logy v `/var/log/devicemonitor.log`  
+## Požadavky
 
-### 🚀 **Plánované funkce (budoucí verze)**
+- **OPNsense 26.1.5 nebo novější**
+- **SSH přístup** (System → Settings → Administration → Secure Shell)
+- **Root účet** nebo admin s přístupem do CLI
 
-🔜 **VLAN filtrování** - sledování jen vybraných síťových segmentů  
-🔜 **GUI pro logy** - prohlížení logů přímo z webového rozhraní  
-🔜 **Historie IP adres** - sledování změn IP pro každé zařízení  
+> ⚠️ Verze starší než 26.1.5 nejsou podporovány. Plugin používá API a mechanismy zavedené ve verzi 26.x.
 
 ---
 
 ## Instalace
 
-### Požadavky
+### Metoda 1: WinSCP + SSH (doporučeno)
 
-- **OPNsense 24.x nebo novější**
-- **SSH přístup povolen** (System → Settings → Administration → Secure Shell)
-- **Admin účet** s přístupem do CLI (přes PuTTY, Terminál apod.)
-- **Funkční SMTP nastavení** (System → Settings → Notifications) - **nutné pro provoz pluginu**
+**Krok 1:** Stáhni nejnovější ZIP z [Releases](../../releases).
 
-**Poznámka:** Plugin vyžaduje funkční SMTP pro odesílání notifikací. Bez SMTP nastavení plugin nebude fungovat správně.
-
----
-
-### Metoda 1: WinSCP + Ruční instalace (Doporučeno)
-
-Tato metoda je nejjednodušší pro uživatele, kteří nejsou zvyklí na příkazovou řádku.
-
-#### Krok 1: Stáhni nejnovější verzi
-
-Jdi na [**Releases**](../../releases) a stáhni nejnovější archiv:
-
+**Krok 2:** Povol SSH na OPNsense:
 ```
-opnsense-devicemonitor31122025_1339.zip
+System → Settings → Administration → Secure Shell → Enable
 ```
 
-**Název souboru:**
-- `opnsense-devicemonitor` = název pluginu
-- `31122025` = datum (DD.MM.RRRR)
-- `1339` = čas (HH:MM)
-- `.zip` = formát archivu
+**Krok 3:** Nahraj přes WinSCP do `/tmp/` na OPNsense.
 
-**Příklad:** `opnsense-devicemonitor31122025_1254.zip` = 31. prosince 2025 ve 13:39
-
-**Poznámka:** Starší verze najdeš ve složce `/old/` v releases.
-
-#### Krok 2: Povolit SSH na OPNsense
-
-```
-1. Přihlas se do webového rozhraní OPNsense (jako admin)
-2. Jdi na: System → Settings → Administration
-3. Zapni "Secure Shell"
-4. Zaškrtni "Permit root user login" (nebo použij admin účet)
-5. Login Shell: /bin/csh (výchozí je OK)
-6. Ulož
-```
-
-**Poznámka:** Můžeš se přihlásit buď jako `root` nebo jako `admin` - oba mají plná oprávnění pro instalaci.
-
-#### Krok 3: Nahraj soubor přes WinSCP
-
-**Stáhni WinSCP:** https://winscp.net/
-
-**Připoj se k OPNsense:**
-```
-Host:     tvoje.opnsense.ip.adresa
-Port:     22
-Uživatel: root (nebo admin)
-Heslo:    tvoje-heslo
-```
-
-**Poznámka:** Použij buď `root` nebo `admin` účet - oba fungují.
-
-**Postup nahrání:**
-1. Ve WinSCP jdi do `/tmp/`
-2. Přetáhni `opnsense-devicemonitor31122025_1254.zip` do okna
-
-#### Krok 4: Instalace přes SSH
-
-Použij PuTTY (Windows) nebo Terminál (Mac/Linux) pro připojení:
-
+**Krok 4:** Připoj se přes SSH a nainstaluj:
 ```bash
-ssh root@tvoje.opnsense.ip
-```
-
-Pak spusť:
-
-```bash
-# Přejdi do složky s archivem
 cd /tmp
-
-# Rozbal archiv
-unzip opnsense-devicemonitor31122025_1254.zip
+unzip opnsense-devicemonitor*.zip
 cd opnsense-devicemonitor
-
-# Spusť instalaci
 sh install.sh
 ```
 
-**Poznámka:** Restart OPNsense **NENÍ potřeba** - instalační script se o vše postará!
+Restart není potřeba. Instalační skript se postará o vše.
 
 ---
 
 ### Metoda 2: Přímá SSH instalace
 
-Pro pokročilé uživatele znalé příkazové řádky:
-
 ```bash
-# Připoj se přes SSH
 ssh root@tvoje.opnsense.ip
-
-# Stáhni nejnovější verzi (UPRAV URL!)
 cd /tmp
-fetch https://github.com/hacesoft/opnsense-devicemonitor/releases/download/v31122025_1254/opnsense-devicemonitor31122025_1254.zip
-
-# Rozbal
-unzip opnsense-devicemonitor31122025_1254.zip
+fetch https://github.com/hacesoft/opnsense-devicemonitor/releases/latest/download/opnsense-devicemonitor.zip
+unzip opnsense-devicemonitor.zip
 cd opnsense-devicemonitor
-
-# Instaluj
 sh install.sh
 ```
 
-**Pro starší verze:**
+---
 
-Pokud chceš nainstalovat starší verzi, uprav URL:
+### Co dělá install.sh
 
-```bash
-fetch https://github.com/hacesoft/opnsense-devicemonitor/releases/download/old/opnsense-devicemonitorDDMMRRRR_HHMM.zip
-```
+1. Zkontroluje verzi OPNsense (minimum 26.1.5)
+2. Spustí `uninstall.sh --silent` pokud je detekována stará instalace (zachová databázi)
+3. Vytvoří všechny potřebné adresáře
+4. Zkopíruje RC skript a zaregistruje službu v `plugins.inc.d`
+5. Nainstaluje dashboard widget
+6. Zkompiluje překladové soubory
+7. Zkopíruje MVC controllery, modely, views
+8. Zkopíruje Python, shell a PHP skripty
+9. Zkopíruje configd akce
+10. Zabije zombie procesy daemona, spustí čerstvou instanci přes `configctl devicemonitor start`
 
 ---
 
 ## Nastavení
 
-Po instalaci jdi na: **Services → DeviceMonitor → Settings**
+Jdi na: **Services → DeviceMonitor → Settings**
 
-### Základní konfigurace
+### Základní
 
-| Nastavení | Popis | Příklad |
-|-----------|-------|---------|
-| **Enable Device Monitor** | Zapnout/vypnout sledování | ✅ Zaškrtnuto |
-| **Scan Interval** | Jak často skenovat | `5 minutes` |
-| **Show .local Domain** | Zobrazit `.local` v hostname | ❌ Nezaškrtnuto |
+| Nastavení | Popis |
+|-----------|-------|
+| Enable Device Monitor | Zapnout/vypnout skenování |
+| Scan Interval | Jak často skenovat (5–30 minut) |
 
----
+### Emailová upozornění
 
-### Email notifikace
+Vyžaduje funkční SMTP: **System → Settings → Notifications → E-Mail**
 
-**⚠️ DŮLEŽITÉ:** Plugin vyžaduje funkční SMTP konfiguraci! Bez SMTP nebudou chodit notifikace.
+| Nastavení | Popis |
+|-----------|-------|
+| Enable Email | Zapnout emailová upozornění |
+| Email (To) | Adresa příjemce |
+| Email (From) | Adresa odesílatele |
+| Test Email | Odeslat testovací zprávu |
 
-**SMTP nastavení:**
-```
-System → Settings → Notifications → E-Mail
-```
-Zde nastav SMTP server, port, autentizaci (uživatel/heslo).
+### Webhook upozornění
 
-| Nastavení | Popis | Příklad |
-|-----------|-------|---------|
-| **Enable Email** | Zapnout email notifikace | ✅ Zaškrtnuto |
-| **Email (To)** | Tvůj email pro upozornění | `admin@example.com` |
-| **Email (From)** | Email odesílatele | `opnsense@tvojadomena.cz` |
-| **Test Email** | Odeslat testovací email | 🧪 Tlačítko |
-
-**Formát emailu:**
-- 🎨 **Profesionální HTML design** s OPNsense barvami
-- 📱 **Responzivní** - funguje na všech zařízeních
-- 🎯 **Inline CSS** - zobrazí se správně v Gmail, Outlook, Seznam...
-- 📊 **Přehledná tabulka** s MAC, Vendor, IP, Hostname
-- 🔔 **Krásný header** s gradientem a ikonami
-
-### Webhook notifikace
-
-| Nastavení | Popis | Příklad |
-|-----------|-------|---------|
-| **Enable Webhook** | Zapnout webhook notifikace | ✅ Zaškrtnuto |
-| **Webhook URL** | URL pro webhook | `https://ntfy.sh/mytopic` |
-| **Test Webhook** | Odeslat testovací webhook | 🧪 Tlačítko |
+| Nastavení | Popis |
+|-----------|-------|
+| Enable Webhook | Zapnout webhook upozornění |
+| Webhook URL | Cílová URL |
+| Test Webhook | Odeslat testovací payload |
 
 **Podporované typy webhooků:**
 
-#### 1. **ntfy.sh** (Doporučeno pro začátečníky)
-```
-https://ntfy.sh/mojeTajneSlovo123
-```
-- ✅ Zdarma, bez registrace
-- ✅ Mobilní app (iOS/Android)
-- ✅ Webové rozhraní
-- 📱 Instant push notifikace na mobil
-
-**Jak nastavit:**
-1. Vymysli si unikátní jméno (např. `mojeTajneSlovo123`)
-2. URL: `https://ntfy.sh/mojeTajneSlovo123`
-3. Stáhni si ntfy app: https://ntfy.sh/
-4. Přidej topic `mojeTajneSlovo123`
-5. Hotovo! Teď dostaneš notifikace na mobil 📱
-
-#### 2. **Discord**
-```
-https://discord.com/api/webhooks/1234567890/AbCdEfGhIjKlMnOpQrStUvWxYz
-```
-- ✅ Notifikace do Discord kanálu
-- ✅ Embed zprávy s formátováním
-- ✅ Ideální pro týmy
-
-**Jak získat Discord webhook:**
-1. Jdi do Discord serveru
-2. Klikni na kanál → Upravit kanál → Integrace → Webhooky
-3. Vytvoř nový webhook
-4. Zkopíruj URL
-
-#### 3. **Generic (Custom)**
-Jakýkoliv HTTP POST endpoint:
-```
-https://moje.domena.cz/webhook
-```
-- ✅ Vlastní webhook server
-- ✅ JSON payload s daty o zařízeních
-- ✅ Pro pokročilé uživatele
-
-### Test konfigurace
-
-**Tlačítka v GUI:**
-- 🧪 **Test Email** - odešle testovací email (ověří SMTP nastavení)
-- 🧪 **Test Webhook** - odešle testovací webhook (ověří URL a dostupnost)
-
-**Co se testuje:**
-- ✅ Správnost konfigurace
-- ✅ Dostupnost SMTP serveru / webhook URL
-- ✅ Formát zprávy
-- ✅ Logování výsledku
-
-**Výsledek testu:**
-- ✅ **Success** - vše funguje správně
-- ❌ **Failed** - zkontroluj konfiguraci (viz logy)
+- **ntfy.sh** — `https://ntfy.sh/tvojeSecretTema`
+- **Discord** — `https://discord.com/api/webhooks/...`
+- **Generic** — jakýkoliv HTTP POST endpoint přijímající JSON
 
 ---
 
 ## Použití
 
-### Dashboard
+### Widget na Lobby dashboardu
 
-**Services → DeviceMonitor → Dashboard**
-
-**Zobrazuje:**
-- 📊 **Celkový počet zařízení**
-- 🆕 **Nová zařízení (dnes)**
-- 🔔 **Čekající notifikace**
-- ⏰ **Poslední skenování**
-
-**Akce:**
-- 🔄 **Scan Now** - okamžité spuštění skenování
-- 📧 **Send Notifications** - manuální odeslání notifikací
+Po instalaci přidej widget **Device Monitor** na Lobby dashboard. Zobrazuje:
+- Stav daemona (Running / Stopped)
+- Celkový počet zařízení
+- Počet online zařízení
 
 ### Seznam zařízení
 
 **Services → DeviceMonitor → Devices**
 
-**Tabulka:**
-| Sloupec | Popis |
-|---------|-------|
-| **MAC** | MAC adresa zařízení (s vendor info) |
-| **Vendor** | Výrobce (z IEEE OUI databáze) |
-| **IP** | Aktuální IP adresa |
-| **Hostname** | Název zařízení (z DNS) |
-| **First Seen** | První detekce |
-| **Last Seen** | Poslední aktivita |
-| **Actions** | 🗑️ Smazat zařízení |
+Sloupce: MAC, Vendor, IP, Hostname, First Seen, Last Seen, Akce
 
-**Funkce:**
-- 🔍 **Vyhledávání** - filtruj podle MAC, IP, Vendor...
-- 📊 **Řazení** - klikni na sloupec pro seřazení
-- 🗑️ **Mazání** - smaž jednotlivá zařízení nebo všechny najednou
+### Řízení služby
 
-### Logování
+**System → Diagnostics → Services → devicemonitor**
 
-**Všechny operace se logují do:**
-```
-/var/log/devicemonitor.log
-```
+Spusť, zastav, restartuj daemon přímo z GUI. Zelená/červená tečka odráží skutečný stav procesu přes pidfile.
 
-**Typy logů:**
-- `[DAEMON]` - daemon proces (spouštění, skenování...)
-- `[EMAIL]` - emailové notifikace (úspěch/chyba)
-- `[WEBHOOK]` - webhook notifikace (úspěch/chyba)
-- `[SCAN]` - skenování sítě
-- `[DATABASE]` - databázové operace
+### Logy
 
-**Příklad logu:**
-```
-[2026-01-10 15:34:25] [PHP-EMAIL] Preparing email for 38 devices
-[2026-01-10 15:34:26] [PHP-EMAIL] SUCCESS: Email sent (REAL mode, 38 devices)
-[2026-01-10 15:35:00] [PHP-WEBHOOK] SUCCESS: Webhook sent (REAL mode, 38 devices) - HTTP 200
-```
-
-**Zobrazení logů:**
 ```bash
-# Poslední záznamy
-tail -50 /var/log/devicemonitor.log
-
-# Sledování v real-time
+# Sledování v reálném čase
 tail -f /var/log/devicemonitor.log
 
-# Filtrace jen email logů
+# Filtrování podle typu
 grep EMAIL /var/log/devicemonitor.log
+grep WEBHOOK /var/log/devicemonitor.log
+grep SCAN /var/log/devicemonitor.log
 ```
 
 ---
 
 ## Struktura pluginu
 
-### Soubory pluginu
-
 ```
-/usr/local/opnsense/
-├── mvc/app/
-│   ├── controllers/OPNsense/DeviceMonitor/
-│   │   ├── IndexController.php           # GUI stránky
-│   │   └── Api/
-│   │       ├── ConfigController.php       # API konfigurace
-│   │       ├── DevicesController.php      # API zařízení
-│   │       ├── ServiceController.php      # API služby
-│   │       ├── DashboardController.php    # API dashboard
-│   │       └── OuiController.php          # API OUI databáze
-│   ├── models/OPNsense/DeviceMonitor/
-│   │   ├── DeviceMonitor.php             # Model
-│   │   ├── DeviceMonitor.xml             # Konfigurace
-│   │   ├── defaults.json                 # Výchozí hodnoty
-│   │   ├── Menu/Menu.xml                 # Menu
-│   │   └── ACL/ACL.xml                   # Oprávnění
-│   └── views/OPNsense/DeviceMonitor/
-│       ├── index.volt                    # Dashboard
-│       ├── settings.volt                 # Nastavení
-│       └── devices.volt                  # Seznam zařízení
-├── scripts/OPNsense/DeviceMonitor/
-│   ├── monitor_daemon.py                 # Hlavní daemon
-│   ├── scan_network.py                   # Skenovací script
-│   ├── NotificationHandler.php           # Email/Webhook handler
-│   ├── notify_email.php                  # Email CLI script
-│   ├── notify_webhook.php                # Webhook CLI script
-│   └── download_oui.py                   # OUI databáze download
-├── service/conf/actions.d/
-│   └── actions_devicemonitor.conf        # Configd akce
-└── /var/db/devicemonitor/
-    ├── devices.db                        # SQLite databáze
-    ├── config.json                       # Runtime konfigurace
-    └── oui.txt                           # IEEE OUI databáze
-```
-
-### Databázová struktura
-
-**devices.db (SQLite3):**
-```sql
-CREATE TABLE devices (
-    id INTEGER PRIMARY KEY,
-    mac TEXT UNIQUE NOT NULL,
-    vendor TEXT,
-    ip TEXT,
-    hostname TEXT,
-    vlan TEXT,
-    first_seen TEXT,
-    last_seen TEXT,
-    notification_pending INTEGER DEFAULT 1
-);
+src/
+├── etc/
+│   ├── rc.d/
+│   │   └── devicemonitor              # FreeBSD rc.d servisní skript
+│   └── inc/
+│       └── plugins.inc.d/
+│           └── devicemonitor.inc      # Registrace služby pro Diagnostics → Services
+├── opnsense/
+│   ├── mvc/app/
+│   │   ├── controllers/OPNsense/DeviceMonitor/
+│   │   │   ├── IndexController.php
+│   │   │   └── Api/
+│   │   │       ├── ConfigController.php
+│   │   │       ├── DevicesController.php
+│   │   │       └── ServiceController.php
+│   │   ├── models/OPNsense/DeviceMonitor/
+│   │   │   ├── DeviceMonitor.php
+│   │   │   ├── DeviceMonitor.xml
+│   │   │   ├── defaults.json
+│   │   │   ├── Metadata/
+│   │   │   │   └── service.xml        # MVC service metadata
+│   │   │   ├── Menu/Menu.xml
+│   │   │   └── ACL/ACL.xml
+│   │   └── views/OPNsense/DeviceMonitor/
+│   │       ├── devices.volt
+│   │       ├── settings.volt
+│   │       └── service_widget.volt
+│   ├── scripts/OPNsense/DeviceMonitor/
+│   │   ├── monitor_daemon.py          # Hlavní daemon
+│   │   ├── scan_network.py            # Skenovací skript
+│   │   ├── daemon_status.sh           # Spolehlivá kontrola stavu přes pidfile
+│   │   ├── NotificationHandler.php
+│   │   ├── notify_email.php
+│   │   └── notify_webhook.php
+│   ├── service/conf/actions.d/
+│   │   └── actions_devicemonitor.conf # Definice configd akcí
+│   └── www/js/widgets/
+│       ├── DeviceMonitor.js           # Lobby dashboard widget
+│       └── Metadata/
+│           └── DeviceMonitor.xml      # Metadata a endpointy widgetu
 ```
 
-### API Endpointy
+### Runtime soubory
 
-**Konfigurace:**
-- `GET  /api/devicemonitor/config/get` - Načíst konfiguraci
-- `POST /api/devicemonitor/config/set` - Uložit konfiguraci
-- `POST /api/devicemonitor/config/testemail` - Test emailu
-- `POST /api/devicemonitor/config/testwebhook` - Test webhooku
+```
+/var/run/devicemonitor.pid             # PID daemona
+/var/log/devicemonitor.log             # Log soubor
+/var/db/devicemonitor/
+├── devices.db                         # SQLite databáze zařízení
+└── config.json                        # Runtime konfigurace
+/etc/rc.conf.d/devicemonitor           # Příznak autostartu
+```
 
-**Zařízení:**
-- `GET  /api/devicemonitor/devices/list` - Seznam zařízení
-- `POST /api/devicemonitor/devices/delete` - Smazat zařízení
-- `POST /api/devicemonitor/devices/deleteall` - Smazat všechny
+### API endpointy
 
-**Dashboard:**
-- `GET  /api/devicemonitor/dashboard/stats` - Statistiky
+| Metoda | Endpoint | Popis |
+|--------|----------|-------|
+| GET | `/api/devicemonitor/devices/stats` | Celkový a online počet zařízení |
+| GET | `/api/devicemonitor/service/status` | Stav daemona (running/stopped) |
+| POST | `/api/devicemonitor/service/start` | Spustit daemon |
+| POST | `/api/devicemonitor/service/stop` | Zastavit daemon |
+| POST | `/api/devicemonitor/service/restart` | Restartovat daemon |
+| POST | `/api/devicemonitor/service/scan` | Spustit ruční skenování |
+| GET | `/api/devicemonitor/config/get` | Načíst konfiguraci |
+| POST | `/api/devicemonitor/config/set` | Uložit konfiguraci |
+| POST | `/api/devicemonitor/config/testemail` | Odeslat testovací email |
+| POST | `/api/devicemonitor/config/testwebhook` | Odeslat testovací webhook |
 
-**Služba:**
-- `POST /api/devicemonitor/service/start` - Start daemon
-- `POST /api/devicemonitor/service/stop` - Stop daemon
-- `POST /api/devicemonitor/service/restart` - Restart daemon
-- `GET  /api/devicemonitor/service/status` - Status daemon
-- `POST /api/devicemonitor/service/scan` - Manuální skenování
+---
+
+## Jak daemon funguje
+
+```
+monitor_daemon.py (proces na pozadí)
+    │
+    ├── čte /var/db/devicemonitor/config.json   (scan interval, příznak enabled)
+    ├── čte /var/db/hostwatch/hosts.db           (nativní detekce OPNsense)
+    ├── zapisuje /var/db/devicemonitor/devices.db (known devices, fronta notifikací)
+    └── zapisuje /var/log/devicemonitor.log
+
+configd (konfigurační daemon OPNsense)
+    │
+    ├── devicemonitor start   → service devicemonitor start || true
+    ├── devicemonitor stop    → service devicemonitor stop || true
+    ├── devicemonitor restart → service devicemonitor restart || true
+    └── devicemonitor status  → daemon_status.sh (kontrola pidfile, vždy exit 0)
+
+rc.d/devicemonitor
+    │
+    ├── používá /usr/sbin/daemon -f -p /var/run/devicemonitor.pid python3 monitor_daemon.py
+    ├── procname="/usr/local/bin/python3"   (potřebné aby stop našel proces)
+    └── výchozí: devicemonitor_enable="NO"  (aktivováno přes /etc/rc.conf.d/devicemonitor)
+```
 
 ---
 
 ## Řešení problémů
 
-### Plugin se neobjevuje v menu
+### Plugin se neobjevuje v Services
 
 ```bash
-# Restart configd
-service configd restart
+# Ověř že .inc soubor existuje (NE .php!)
+ls /usr/local/etc/inc/plugins.inc.d/devicemonitor.inc
 
-# Restart web interface
-service php-fpm restart
+# Ověř že PHP může načíst funkci
+php -r "require_once('/usr/local/etc/inc/plugins.inc.d/devicemonitor.inc'); var_dump(devicemonitor_services());"
 
-# Vyčisti cache
-rm -rf /tmp/templates_c/*
+# Znovu načti registry pluginů
+/usr/local/etc/rc.configure_plugins
+```
+
+### Řízení daemona zobrazuje "Execute error"
+
+```bash
+# Zkontroluj že daemon_status.sh existuje a je spustitelný
+ls -la /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
+
+# Otestuj ručně (musí vypsat "running" nebo "stopped", nikdy chybu)
+sh /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
+
+# Zkontroluj že configd akce jsou načteny
+configctl configd actions | grep devicemonitor
+```
+
+### Více zombie procesů daemona
+
+```bash
+# Zkontroluj kolik jich běží
+ps aux | grep monitor_daemon | grep -v grep
+
+# Zabij všechny instance
+pkill -f monitor_daemon.py
+rm -f /var/run/devicemonitor.pid
+
+# Spusť čerstvou instanci
+configctl devicemonitor start
+```
+
+Příčina: RC skriptu chyběl `procname`, takže `rc.d` nemohl detekovat běžící proces a spustil nový při každém volání. Opraveno ve v2.0 přidáním `procname="/usr/local/bin/python3"` do RC skriptu.
+
+### Widget zobrazuje pomlčky, žádná data
+
+```bash
+# Ověř že stats endpoint funguje
+curl -k -u "APIKEY:APISECRET" https://localhost/api/devicemonitor/devices/stats
+# Mělo by vrátit: {"total": N, "online": N}
+
+# Ověř že status endpoint funguje
+curl -k -u "APIKEY:APISECRET" https://localhost/api/devicemonitor/service/status
+# Mělo by vrátit: {"result": "running", ...}
+```
+
+Pokud endpointy vrací data ale widget stále zobrazuje pomlčky, vyčisti cache prohlížeče (Ctrl+Shift+R) a zkontroluj konzoli prohlížeče pro JavaScript chyby.
+
+### Emailová upozornění nefungují
+
+```bash
+# Test z příkazové řádky
+php /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_email.php
+
+# Zkontroluj logy
+grep EMAIL /var/log/devicemonitor.log
 ```
 
 ### Daemon se nespustí
 
 ```bash
-# Zkontroluj status
-service devicemonitor status
+# Zkontroluj log pro chyby při startu
+tail -30 /var/log/devicemonitor.log
 
-# Zkontroluj logy
-tail -50 /var/log/devicemonitor.log
+# Spusť daemon ručně a sleduj chyby
+/usr/local/bin/python3 /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py
 
-# Ruční start
-/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py
+# Zkontroluj že defaults.json je čitelný
+cat /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
 ```
 
-### Email notifikace nefungují
-
-**1. Zkontroluj SMTP nastavení:**
-```
-System → Settings → Notifications
-```
-
-**2. Test emailu z GUI:**
-```
-Services → DeviceMonitor → Settings → Test Email
-```
-
-**3. Zkontroluj logy:**
-```bash
-tail -50 /var/log/devicemonitor.log | grep EMAIL
-```
-
-**Časté problémy:**
-- ❌ **SMTP server není dostupný** - zkontroluj firewall pravidla
-- ❌ **Neplatný email** - zkontroluj formát emailové adresy
-- ❌ **Autentizace selhala** - zkontroluj SMTP credentials
-
-### Webhook notifikace nefungují
-
-**1. Test webhooku z GUI:**
-```
-Services → DeviceMonitor → Settings → Test Webhook
-```
-
-**2. Zkontroluj logy:**
-```bash
-tail -50 /var/log/devicemonitor.log | grep WEBHOOK
-```
-
-**3. Zkontroluj dostupnost:**
-```bash
-# Test ntfy.sh
-curl -d "test" https://ntfy.sh/mojeTajneSlovo123
-
-# Test Discord (UPRAV URL!)
-curl -X POST -H "Content-Type: application/json" \
-     -d '{"content": "test"}' \
-     https://discord.com/api/webhooks/TVOJE_WEBHOOK_URL
-```
-
-**Časté problémy:**
-- ❌ **URL není dostupná** - zkontroluj firewall, internet připojení
-- ❌ **Neplatný formát URL** - zkontroluj že začíná `https://`
-- ❌ **Discord webhook vypršel** - vytvoř nový
-
-### Zařízení se nedetekují
-
-**1. Ruční test skenování:**
-```bash
-/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py
-```
-
-**2. Zkontroluj ARP tabulku:**
-```bash
-arp -an
-```
-
-**3. Zkontroluj logy:**
-```bash
-tail -50 /var/log/devicemonitor.log | grep SCAN
-```
-
-**4. Zkontroluj že daemon běží:**
-```bash
-service devicemonitor status
-```
-
----
+### Poškozená databáze
 
 ```bash
-# Zálohuj současnou databázi
 cp /var/db/devicemonitor/devices.db /var/db/devicemonitor/devices.db.backup
-
-# Smaž poškozenou databázi
 rm /var/db/devicemonitor/devices.db
-
-# Restart daemon (vytvoří novou)
-service devicemonitor restart
-```
-
-### Databáze je poškozená
-
-```bash
-# Zálohuj současnou databázi
-cp /var/db/devicemonitor/devices.db /var/db/devicemonitor/devices.db.backup
-
-# Smaž poškozenou databázi
-rm /var/db/devicemonitor/devices.db
-
-# Restart daemon (vytvoří novou)
-service devicemonitor restart
-```
-
----
-
-### Vysoká zátěž CPU
-
-**Prodluž scan interval:**
-```
-Services → DeviceMonitor → Settings → Scan Interval
-```
-Nastav na 15 nebo 30 minut místo 5.
-
----
-
-## Verzování
-
-**Formát verze:**
-```
-DDMMYYYY_HHMM
-```
-
-**Příklad:**
-- `31122025_1339` = 31. prosince 2025, 13:39
-- `01012026_0900` = 1. ledna 2026, 09:00
-
-**Kde najít verzi:**
-```bash
-# V GUI
-Services → DeviceMonitor → Settings (v zápatí)
-
-# V souborech
-head -10 /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py
+configctl devicemonitor restart
 ```
 
 ---
 
 ## Odinstalace
 
-### Metoda 1: Uninstall script (Doporučeno)
+### Metoda 1: uninstall.sh (doporučeno)
 
 ```bash
-ssh root@opnsense
-
-cd /tmp
-# Stáhni plugin (nebo použij existující)
-unzip opnsense-devicemonitor*.zip
-cd opnsense-devicemonitor
-
-# Spusť uninstall
+cd /cesta/k/opnsense-devicemonitor
 sh uninstall.sh
 ```
 
-### Metoda 2: Manuální odinstalace
+Odstraní všechny soubory, zastaví daemon, vypne autostart a vyčistí cache. Databáze `/var/db/devicemonitor/devices.db` je smazána.
+
+### Metoda 2: Tichá odinstalace (zachová databázi)
 
 ```bash
-# Stop daemon
-service devicemonitor stop
+sh uninstall.sh --silent
+```
 
-# Smaž soubory
+Používá interně `install.sh` při upgrade. Odstraní všechny soubory, ale zachová databázi.
+
+### Metoda 3: Ruční
+
+```bash
+pkill -f monitor_daemon.py
+rm -f /var/run/devicemonitor.pid
+rm -f /etc/rc.conf.d/devicemonitor
+rm -f /usr/local/etc/rc.d/devicemonitor
+rm -f /etc/rc.d/devicemonitor
+rm -f /usr/local/etc/inc/plugins.inc.d/devicemonitor.inc
 rm -rf /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor
 rm -rf /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor
 rm -rf /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor
 rm -rf /usr/local/opnsense/scripts/OPNsense/DeviceMonitor
 rm -f /usr/local/opnsense/service/conf/actions.d/actions_devicemonitor.conf
-rm -f /etc/rc.d/devicemonitor
-
-# Smaž data (VOLITELNÉ - ztratíš databázi!)
-rm -rf /var/db/devicemonitor
+rm -f /usr/local/opnsense/www/js/widgets/DeviceMonitor.js
+rm -f /usr/local/opnsense/www/js/widgets/Metadata/DeviceMonitor.xml
+rm -rf /var/db/devicemonitor        # POZOR: smaže databázi zařízení
 rm -f /var/log/devicemonitor.log
-
-# Restart služeb
+/usr/local/etc/rc.configure_plugins
 service configd restart
-service php-fpm restart
 ```
-
-**Poznámka:** Po odinstalaci zmizí plugin z menu. Může být potřeba vyčistit cache prohlížeče (Ctrl+Shift+R).
 
 ---
 
 ## Podpora
 
-**GitHub Issues:**
-https://github.com/hacesoft/opnsense-devicemonitor/issues
+**GitHub Issues:** https://github.com/hacesoft/opnsense-devicemonitor/issues
 
 **Autor:**
 - GitHub: [@hacesoft](https://github.com/hacesoft)
@@ -717,10 +557,6 @@ https://github.com/hacesoft/opnsense-devicemonitor/issues
 
 ---
 
-## License
+## Licence
 
-MIT License - viz [LICENSE](LICENSE) soubor
-
----
-
-**🎉 Hotovo! Užij si automatické sledování zařízení v OPNsense!**
+MIT License — viz [LICENSE](LICENSE)

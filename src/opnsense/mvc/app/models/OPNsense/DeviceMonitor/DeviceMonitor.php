@@ -12,11 +12,6 @@ class DeviceMonitor
     // ================================================================
     private static $defaultsFile = '/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json';
     private static $data = null;
-    
-    //private $dbFile = '/var/db/devicemonitor/devices.db';       // Databáze zařízení
-    //private $ouiFile = '/var/db/devicemonitor/oui.txt';         // OUI databáze vendorů
-    //private $configFile = '/var/db/devicemonitor/config.json';  // Konfigurace (včetně OUI)
-    //private $cronFile = '/etc/cron.d/devicemonitor_oui';        // Cron soubor pro auto-update
 
     private static function loadDefaults()
     {
@@ -67,13 +62,6 @@ class DeviceMonitor
     // GETTERY PRO CESTY (pro Controllery)
     // ========================================
 
-    /**
-     * Vrátí cestu k download OUI scriptu
-     */
-    public function getOuiDownloadScriptPath()
-    {
-        return self::getPath('ouiDownloadScript');
-    }
 
     /**
      * Vrátí cestu k PID souboru
@@ -82,22 +70,7 @@ class DeviceMonitor
     {
         return self::getPath('pidFile');
     }
-    
-    /**
-     * Vrátí cestu k OUI souboru
-     */
-    public function getOuiFilePath()
-    {
-        return self::getPath('ouiFile');
-    }
-    
-    /**
-     * Vrátí cestu k cron souboru
-     */
-    public function getCronFilePath()
-    {
-        return self::getPath('cronFile');
-    }
+
     
     /**
      * Vrátí cestu k databázi
@@ -116,28 +89,28 @@ class DeviceMonitor
     }
     
     public function updateHostname($mac, $hostname)
-{
-    $db = $this->getDb();
-    $hostname = trim($hostname);
-    
-    if ($hostname === '') {
-        $stmt = $db->prepare('UPDATE devices SET custom_hostname = NULL WHERE mac = :mac');
-        $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
-    } else {
-        $stmt = $db->prepare('UPDATE devices SET custom_hostname = :hn, hostname = :hn WHERE mac = :mac');
-        $stmt->bindValue(':hn', $hostname, SQLITE3_TEXT);
-        $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+    {
+        $db = $this->getDb();
+        $hostname = trim($hostname);
+        
+        if ($hostname === '') {
+            $stmt = $db->prepare('UPDATE devices SET custom_hostname = NULL WHERE mac = :mac');
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        } else {
+            $stmt = $db->prepare('UPDATE devices SET custom_hostname = :hn, hostname = :hn WHERE mac = :mac');
+            $stmt->bindValue(':hn', $hostname, SQLITE3_TEXT);
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        }
+        
+        $stmt->execute();
+        $changes = $db->changes();
+        $db->close();
+        return $changes > 0;
     }
-    
-    $stmt->execute();
-    $changes = $db->changes();
-    $db->close();
-    return $changes > 0;
-}
 
 
     /**
-     * Uložení konfigurace (včetně OUI)
+     * Uložení konfigurace
      * @param array $data Data k uložení
      * @return bool True pokud se podařilo uložit
      */
@@ -203,46 +176,17 @@ class DeviceMonitor
             vlan TEXT,
             last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
             notified INTEGER DEFAULT 0,
-            is_active INTEGER DEFAULT 0
+            is_active INTEGER DEFAULT 0,
+            notification_pending INTEGER DEFAULT 0
         )');
-        
+
         $db->exec('CREATE INDEX IF NOT EXISTS idx_last_seen ON devices(last_seen)');
-        $db->exec('ALTER TABLE devices ADD COLUMN custom_hostname TEXT DEFAULT NULL');
+        // Migration: add columns for older databases
+        @$db->exec('ALTER TABLE devices ADD COLUMN first_seen DATETIME DEFAULT CURRENT_TIMESTAMP');
+        @$db->exec('ALTER TABLE devices ADD COLUMN custom_hostname TEXT DEFAULT NULL');
         
         $db->close();
         chmod($file_mame, 0644);
-    }
-
-    // ========================================
-    // OUI VENDOR LOOKUP
-    // ========================================
-    
-    private function lookupVendor($mac)
-    {
-        $file_mame = self::getPath('ouiFile');
-        if (!file_exists($file_mame)) {
-            return 'Unknown';
-        }
-        
-        // Vezmi prvních 6 hex znaků (bez oddělovačů)
-        $prefix = strtoupper(str_replace([':', '-', '.'], '', substr($mac, 0, 8)));
-        $handle = @fopen($file_mame, 'r');
-        if (!$handle) {
-            return 'Unknown';
-        }
-        
-        while (($line = fgets($handle)) !== false) {
-            if (strpos($line, $prefix) === 0) {
-                // Parsuj řádek: "F490EA     (base 16)"
-                if (preg_match('/\(base 16\)\s+(.+)$/i', $line, $matches)) {
-                    fclose($handle);
-                    return trim($matches[1]);
-                }
-            }
-        }
-        
-        fclose($handle);
-        return 'Unknown';
     }
 
     // ========================================
@@ -256,24 +200,13 @@ class DeviceMonitor
     public function getDevices()
     {
         $devices = [];
-        $config = $this->getConfig();
         $file_mame = self::getPath('dbFile');
         
         if (file_exists($file_mame)) {
             $db = new \SQLite3($file_mame);
             $result = $db->query('SELECT * FROM devices ORDER BY last_seen DESC');
             
-            $currentTime = time();
-            
             while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                // Aplikuj show_domain nastavení
-                if (isset($config['show_domain']) && $config['show_domain'] === '0') {
-                    $row['hostname'] = $this->stripDomainFromHostname($row['hostname']);
-                }
-                
-                // Vypočítej status: ONLINE pokud last_seen < 5 minut
-                $lastSeenTimestamp = strtotime($row['last_seen']);
-                $timeDiff = $currentTime - $lastSeenTimestamp;
                 
                 // Status podle is_active sloupce (místo času)
                 $row['status'] = (isset($row['is_active']) && $row['is_active'] == 1) ? 'online' : 'offline';
@@ -300,44 +233,6 @@ class DeviceMonitor
         return $devices;
     }
 
-    public function getDeviceCount()
-    {
-        $db = $this->getDb();
-        $count = $db->querySingle('SELECT COUNT(*) FROM devices');
-        $db->close();
-        return (int)$count;
-    }
-
-    public function getNewDevicesToday()
-    {
-        // Vrátí počet ONLINE zařízení (viděných za posledních 5 minut)
-        $db = $this->getDb();
-        
-        // Vypočítej timestamp před 5 minutami
-        $fiveMinutesAgo = date('Y-m-d H:i:s', strtotime('-5 minutes'));
-        
-        $stmt = $db->prepare('SELECT COUNT(*) FROM devices WHERE last_seen >= :threshold');
-        
-        if ($stmt === false) {
-            $db->close();
-            return 0;
-        }
-        
-        $stmt->bindValue(':threshold', $fiveMinutesAgo, SQLITE3_TEXT);
-        $result = $stmt->execute();
-        
-        if ($result === false) {
-            $db->close();
-            return 0;
-        }
-        
-        $row = $result->fetchArray(SQLITE3_NUM);
-        $count = $row ? (int)$row[0] : 0;
-        
-        $db->close();
-        return $count;
-    }
-
     public function deleteDevice($mac)
     {
         $db = $this->getDb();
@@ -355,23 +250,5 @@ class DeviceMonitor
         $db->exec('DELETE FROM devices');
         $db->close();
         return true;
-    }
-
-    // ========================================
-    // POMOCNÉ FUNKCE
-    // ========================================
-    
-    /**
-     * Odstranění domény z hostname
-     */
-    private function stripDomainFromHostname($hostname)
-    {
-        if (empty($hostname)) {
-            return $hostname;
-        }
-        
-        // Odstraň doménu (.localdomain, .local, atd.)
-        $parts = explode('.', $hostname);
-        return $parts[0];
     }
 }

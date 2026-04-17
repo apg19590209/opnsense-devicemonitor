@@ -1,90 +1,21 @@
 #!/bin/sh
-#
 # PROVIDE: devicemonitor
-# REQUIRE: LOGIN cleanvar
-# BEFORE: DAEMON
+# REQUIRE: LOGIN DAEMON NETWORKING
 # KEYWORD: shutdown
 
 . /etc/rc.subr
 
 name="devicemonitor"
+desc="Device Monitor - network device tracking"
 rcvar="${name}_enable"
 
-load_rc_config $name
+load_rc_config ${name}
 
 : ${devicemonitor_enable:="NO"}
 
 pidfile="/var/run/${name}.pid"
-command="/usr/local/bin/python3"
-command_args="/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py"
-
-start_cmd="${name}_start"
-stop_cmd="${name}_stop"
-status_cmd="${name}_status"
-
-devicemonitor_start()
-{
-    if [ -f "${pidfile}" ]; then
-        if ps -p $(cat ${pidfile}) > /dev/null 2>&1; then
-            echo "${name} is already running as pid $(cat ${pidfile})."
-            return 1
-        else
-            echo "Removing stale pidfile."
-            rm -f "${pidfile}"
-        fi
-    fi
-    
-    echo "Starting ${name}."
-    # ZMĚŇ TENHLE ŘÁDEK - přidej přesměrování do souboru:
-    /usr/sbin/daemon -f -p ${pidfile} \
-        /bin/sh -c "${command} ${command_args} >> /var/log/devicemonitor.log 2>&1"
-}
-
-devicemonitor_stop()
-{
-    if [ ! -f "${pidfile}" ]; then
-        echo "${name} is not running."
-        return 1
-    fi
-    
-    echo "Stopping ${name}."
-    pid=$(cat ${pidfile})
-    kill ${pid} 2>/dev/null
-    
-    # Počkej max 10 sekund
-    timeout=10
-    while [ $timeout -gt 0 ]; do
-        if ! ps -p ${pid} > /dev/null 2>&1; then
-            break
-        fi
-        sleep 1
-        timeout=$((timeout - 1))
-    done
-    
-    # Force kill pokud stále běží
-    if ps -p ${pid} > /dev/null 2>&1; then
-        echo "Sending SIGKILL."
-        kill -9 ${pid} 2>/dev/null
-    fi
-    
-    rm -f ${pidfile}
-}
-
-devicemonitor_status()
-{
-    if [ -f "${pidfile}" ]; then
-        pid=$(cat ${pidfile})
-        if ps -p ${pid} > /dev/null 2>&1; then
-            echo "${name} is running as pid ${pid}."
-            return 0
-        else
-            echo "${name} is not running but pidfile exists."
-            return 1
-        fi
-    else
-        echo "${name} is not running."
-        return 1
-    fi
-}
+procname="/usr/local/bin/python3"
+command="/usr/sbin/daemon"
+command_args="-f -p ${pidfile} /usr/local/bin/python3 /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py"
 
 run_rc_command "$1"

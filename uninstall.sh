@@ -28,27 +28,12 @@ fi
 # ============================================
 
 echo "[1/6] Zastavuji daemon..."
-if service devicemonitor status > /dev/null 2>&1; then
-    service devicemonitor stop 2>/dev/null || true
-    echo "  ✓ Daemon zastaven"
-else
-    echo "  → Daemon neběží"
-fi
-
-# Smaž PID file
+# Zastav přes configd (ne service status který vrací exit 1)
+pkill -f monitor_daemon.py 2>/dev/null || true
+sleep 1
 rm -f /var/run/devicemonitor.pid
+echo "  ✓ Daemon zastaven"
 
-# ============================================
-# 2. ZASTAVENÍ CRONU
-# ============================================
-
-echo "[2/6] Zastavuji OUI cron..."
-if [ -f "/etc/cron.d/devicemonitor_oui" ]; then
-    rm -f /etc/cron.d/devicemonitor_oui
-    echo "  ✓ OUI cron odstraněn"
-else
-    echo "  → OUI cron nenalezen"
-fi
 
 # ============================================
 # 3. AUTOSTART
@@ -70,7 +55,14 @@ echo "  ✓ Autostart vypnut"
 echo "[4/6] Odstraňuji soubory pluginu..."
 
 # RC script
+rm -f /usr/local/etc/rc.d/devicemonitor
 rm -f /etc/rc.d/devicemonitor
+
+# Smazat také nový skript
+rm -f /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
+
+# 
+rm -f /usr/local/etc/inc/plugins.inc.d/devicemonitor.inc
 
 # Models
 rm -rf /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor
@@ -89,7 +81,10 @@ rm -f /usr/local/opnsense/service/conf/actions.d/actions_devicemonitor.conf
 
 # Config files
 rm -f /tmp/devicemonitor_config.json
-rm -f /tmp/devicemonitor_oui_config.json
+
+# Nový JS widget (OPNsense 26.x)
+rm -f /usr/local/opnsense/www/js/widgets/DeviceMonitor.js
+rm -f /usr/local/opnsense/www/js/widgets/Metadata/DeviceMonitor.xml
 
 echo "  ✓ Soubory pluginu odstraněny"
 
@@ -98,25 +93,10 @@ echo "  ✓ Soubory pluginu odstraněny"
 # ============================================
 
 echo "[5/6] Odstraňuji překlady..."
-
-rm -f /usr/local/opnsense/mvc/app/languages/en_US/LC_MESSAGES/devicemonitor.*
-rm -f /usr/local/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES/devicemonitor.*
-
-# Pokud jsou složky prázdné, smaž je
-if [ -d "/usr/local/opnsense/mvc/app/languages/en_US/LC_MESSAGES" ]; then
-    if [ -z "$(ls -A /usr/local/opnsense/mvc/app/languages/en_US/LC_MESSAGES)" ]; then
-        rmdir /usr/local/opnsense/mvc/app/languages/en_US/LC_MESSAGES 2>/dev/null || true
-        rmdir /usr/local/opnsense/mvc/app/languages/en_US 2>/dev/null || true
-    fi
-fi
-
-if [ -d "/usr/local/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES" ]; then
-    if [ -z "$(ls -A /usr/local/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES)" ]; then
-        rmdir /usr/local/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES 2>/dev/null || true
-        rmdir /usr/local/opnsense/mvc/app/languages/cs_CZ 2>/dev/null || true
-    fi
-fi
-
+rm -f /usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po
+rm -f /usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.mo
+rm -f /usr/local/opnsense/mvc/app/languages/en_US_devicemonitor.po
+rm -f /usr/local/opnsense/mvc/app/languages/en_US_devicemonitor.mo
 echo "  ✓ Překlady odstraněny"
 
 # ============================================
@@ -125,16 +105,15 @@ echo "  ✓ Překlady odstraněny"
 
 if [ "$SILENT_MODE" -eq 1 ]; then
     # Tichý režim (reinstalace) - NEMAZAT DATA!
-    echo "[6/6] Ponechávám databázi a OUI (reinstalace)..."
+    echo "[6/6] Ponechávám databázi (reinstalace)..."
     echo "  → /var/db/devicemonitor/devices.db"
-    echo "  → /var/db/devicemonitor/oui.txt"
 else
     # Normální odinstalace - smazat vše
-    echo "[6/6] Odstraňuji databázi a OUI..."
+    echo "[6/6] Odstraňuji databázi ..."
     
     if [ -d "/var/db/devicemonitor" ]; then
         rm -rf /var/db/devicemonitor
-        echo "  ✓ Databáze a OUI smazány"
+        echo "  ✓ Databáze smazána"
     else
         echo "  → Databáze nenalezena"
     fi

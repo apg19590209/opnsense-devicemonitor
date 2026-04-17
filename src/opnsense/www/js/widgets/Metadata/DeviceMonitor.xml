@@ -1,0 +1,18 @@
+<metadata>
+    <devicemonitor>
+        <filename>DeviceMonitor.js</filename>
+        <link>/ui/devicemonitor/index/devices</link>
+        <endpoints>
+            <endpoint>/api/devicemonitor/devices/stats</endpoint>
+            <endpoint>/api/devicemonitor/service/status</endpoint>
+        </endpoints>
+        <translations>
+            <title>Device Monitor</title>
+            <status>Status</status>
+            <total>Total Devices</total>
+            <online>Online</online>
+            <running>Running</running>
+            <stopped>Stopped</stopped>
+        </translations>
+    </devicemonitor>
+</metadata>

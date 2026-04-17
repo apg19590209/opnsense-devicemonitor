@@ -61,35 +61,22 @@ class ServiceController extends ApiControllerBase
     public function startAction()
     {
         if ($this->request->isPost()) {
-            // Zkontroluj jestli už neběží
             $status = $this->statusAction();
             if ($status['result'] === 'running') {
-                return [
-                    'result' => 'already_running',
-                    'message' => 'Daemon is already running'
-                ];
+                return ['result' => 'already_running', 'message' => 'Daemon is already running'];
             }
-            
-            // Spusť daemon
-            exec('service devicemonitor start 2>&1', $output, $return);
-            
-            sleep(1); // Počkej na start
-            
+
+            $backend = new Backend();
+            $backend->configdRun('devicemonitor start');
+            sleep(1);
+
             $status = $this->statusAction();
             if ($status['result'] === 'running') {
-                return [
-                    'result' => 'started',
-                    'message' => 'Daemon started successfully'
-                ];
+                return ['result' => 'started', 'message' => 'Daemon started successfully'];
             } else {
-                return [
-                    'result' => 'failed',
-                    'message' => 'Failed to start daemon',
-                    'output' => implode("\n", $output)
-                ];
+                return ['result' => 'failed', 'message' => 'Failed to start daemon'];
             }
         }
-        
         return ['result' => 'failed'];
     }
 
@@ -99,25 +86,17 @@ class ServiceController extends ApiControllerBase
     public function stopAction()
     {
         if ($this->request->isPost()) {
-            exec('service devicemonitor stop 2>&1', $output, $return);
-            
-            sleep(1); // Počkej na stop
-            
+            $backend = new Backend();
+            $backend->configdRun('devicemonitor stop');
+            sleep(1);
+
             $status = $this->statusAction();
             if ($status['result'] === 'stopped') {
-                return [
-                    'result' => 'stopped',
-                    'message' => 'Daemon stopped successfully'
-                ];
+                return ['result' => 'stopped', 'message' => 'Daemon stopped successfully'];
             } else {
-                return [
-                    'result' => 'failed',
-                    'message' => 'Failed to stop daemon',
-                    'output' => implode("\n", $output)
-                ];
+                return ['result' => 'failed', 'message' => 'Failed to stop daemon'];
             }
         }
-        
         return ['result' => 'failed'];
     }
 
@@ -127,14 +106,11 @@ class ServiceController extends ApiControllerBase
     public function restartAction()
     {
         if ($this->request->isPost()) {
-            // Stop
-            $this->stopAction();
+            $backend = new Backend();
+            $backend->configdRun('devicemonitor restart');
             sleep(2);
-            
-            // Start
-            return $this->startAction();
+            return $this->statusAction();
         }
-        
         return ['result' => 'failed'];
     }
 }

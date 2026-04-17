@@ -22,7 +22,7 @@ class NotificationHandler
      */
     private function loadDevicesFromDb()
     {
-        $db_file = '/var/db/devicemonitor/devices.db';
+        $db_file = \OPNsense\DeviceMonitor\DeviceMonitor::getPath('dbFile');
         
         if (!file_exists($db_file)) {
             return null;
@@ -45,22 +45,7 @@ class NotificationHandler
         }
     }
 
-    
-    /**
-     * Načte konfiguraci
-     */
-    private function loadConfig() {
-        $config_file = '/var/db/devicemonitor/config.json';
-        
-        if (!file_exists($config_file)) {
-            $this->fLog("Config not found", 'CONFIG');
-            return null;
-        }
-        
-        $config = json_decode(file_get_contents($config_file), true);
-        $this->fLog("Config loaded", 'CONFIG');
-        return $config;
-    }
+
     
     /**
      * UNIVERZÁLNÍ EMAIL - test i real - S INLINE STYLES!

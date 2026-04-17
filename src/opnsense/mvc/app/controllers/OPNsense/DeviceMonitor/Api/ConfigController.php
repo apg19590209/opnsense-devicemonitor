@@ -27,6 +27,44 @@ class ConfigController extends ApiControllerBase
     }
 
     /**
+     * Vrátí verzi pluginu z defaults.json
+     * GET /api/devicemonitor/config/getversion
+     */
+    public function getversionAction()
+    {
+        $defaultsFile = '/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json';
+        $defaults = json_decode(file_get_contents($defaultsFile), true);
+        return ['version' => $defaults['version'] ?? '2.0'];
+    }
+
+    /**
+     * Vrátí seznam rozhraní s popisky z config.xml
+     * GET /api/devicemonitor/config/getinterfaces
+     */
+    public function getinterfacesAction()
+    {
+        $result = [];
+        try {
+            $xml = @simplexml_load_file('/conf/config.xml');
+            if ($xml && isset($xml->interfaces)) {
+                foreach ($xml->interfaces->children() as $ifName => $ifData) {
+                    $iface = trim((string)($ifData->if ?? ''));
+                    $descr = trim((string)($ifData->descr ?? ''));
+                    if (empty($iface)) continue;
+                    if (empty($descr)) $descr = strtoupper($ifName);
+                    if (preg_match('/vlan\d+\.(\d+)/i', $iface, $m)) {
+                        $key = 'VLAN' . $m[1];
+                    } else {
+                        $key = strtoupper($iface);
+                    }
+                    $result[$key] = $descr;
+                }
+            }
+        } catch (\Exception $e) {}
+        return $result;
+    }
+
+    /**
      * Uložení konfigurace
      * POST /api/devicemonitor/config/set
      */
@@ -49,7 +87,8 @@ class ConfigController extends ApiControllerBase
         $webhook_enabled = $this->request->getPost('webhook_enabled', 'string', '0');
         $webhook_url = $this->request->getPost('webhook_url', 'string', '');
         $scan_interval = $this->request->getPost('scan_interval', 'int', 300);
-        $show_domain = $this->request->getPost('show_domain', 'string', '0');
+        $email_vlans   = $this->request->getPost('email_vlans',   'string', '');
+        $webhook_vlans = $this->request->getPost('webhook_vlans', 'string', '');
         
         // Validace emailů (jen pokud je email zapnutý)
         if ($email_enabled == '1') {
@@ -93,7 +132,7 @@ class ConfigController extends ApiControllerBase
             ];
         }
         
-        // Načti celý config (zachová OUI sekci)
+        // Načti aktuální config a aktualizuj hodnoty
         $config = $model->getConfig();
         
         // Uprav jen základní sekci
@@ -104,7 +143,8 @@ class ConfigController extends ApiControllerBase
         $config['webhook_enabled'] = $webhook_enabled;
         $config['webhook_url'] = $webhook_url;
         $config['scan_interval'] = (int)$scan_interval;
-        $config['show_domain'] = $show_domain;
+        $config['email_vlans']   = $email_vlans;
+        $config['webhook_vlans'] = $webhook_vlans;
         
         // Ulož pomocí modelu
         if ($model->setConfig($config)) {
