@@ -227,7 +227,7 @@ Také odstraněno rozbité `configctl webgui restart` a `service php-fpm restart
 
 ### Metoda 1: WinSCP + SSH (doporučeno)
 
-**Krok 1:** Stáhni nejnovější ZIP z [Releases](../../releases).
+**Krok 1:** Stáhni nejnovější ZIP z [Release](../../tree/main/release).
 
 **Krok 2:** Povol SSH na OPNsense:
 ```
