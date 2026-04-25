@@ -227,7 +227,7 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 
 ### Method 1: WinSCP + SSH (recommended)
 
-**Step 1:** Download the latest release ZIP from [Releases](../../releases).
+**Step 1:** Download the latest release ZIP from [Release](../../tree/main/release).
 
 **Step 2:** Enable SSH on OPNsense:
 ```
