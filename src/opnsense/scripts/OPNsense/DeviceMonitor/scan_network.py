@@ -220,18 +220,53 @@ def get_dhcp_descriptions():
             return descriptions
 
         for iface in dhcpd:
+            # Přeskočit vypnuté ISC DHCP interfacy
+            enable_el = iface.find('enable')
+            if enable_el is None:
+                continue
             for staticmap in iface.findall('staticmap'):
                 mac_el = staticmap.find('mac')
+                hostname_el = staticmap.find('hostname')
                 descr_el = staticmap.find('descr')
-                if mac_el is not None and mac_el.text and descr_el is not None and descr_el.text:
+                if mac_el is not None and mac_el.text:
                     mac = mac_el.text.lower().strip()
-                    descriptions[mac] = descr_el.text.strip()
+                    # Preferuj hostname, fallback na descr
+                    if hostname_el is not None and hostname_el.text:
+                        descriptions[mac] = hostname_el.text.strip()
+                    elif descr_el is not None and descr_el.text:
+                        descriptions[mac] = descr_el.text.strip()
 
         log(f"DHCP popisky: {len(descriptions)} záznamů")
     except Exception as e:
         log(f"Chyba čtení config.xml: {e}")
     return descriptions
 
+def get_dnsmasq_descriptions():
+    """Načte popisky zařízení z Dnsmasq Host Overrides (/conf/config.xml)"""
+    descriptions = {}
+    try:
+        tree = ET.parse('/conf/config.xml')
+        root = tree.getroot()
+        dnsmasq = root.find('dnsmasq')
+        if dnsmasq is None:
+            return descriptions
+
+        for host in dnsmasq.findall('hosts'):
+            hw_el = host.find('hwaddr')
+            host_el = host.find('host')
+            descr_el = host.find('descr')
+            if hw_el is not None and hw_el.text:
+                mac = hw_el.text.lower().strip()
+                # Preferuj host (hostname), fallback na descr
+                if host_el is not None and host_el.text:
+                    descriptions[mac] = host_el.text.strip()
+                elif descr_el is not None and descr_el.text:
+                    descriptions[mac] = descr_el.text.strip()
+
+        log(f"Dnsmasq popisky: {len(descriptions)} záznamů")
+    except Exception as e:
+        log(f"Chyba čtení Dnsmasq config.xml: {e}")
+    return descriptions
 
 def is_recently_seen(last_seen_str, minutes=15):
     """True pokud bylo zařízení viděno v posledních N minutách (porovnání v UTC)"""
@@ -370,8 +405,10 @@ def full_scan():
         log("CHYBA: Žádná data z hostwatch DB")
         return 1
 
-    # 2. DHCP popisky
+    # 2. DHCP popisky (ISC + Dnsmasq, Dnsmasq má přednost)
     dhcp_descriptions = get_dhcp_descriptions()
+    dnsmasq_descriptions = get_dnsmasq_descriptions()
+    dhcp_descriptions.update(dnsmasq_descriptions)  # Dnsmasq přepíše ISC pokud existuje stejné MAC
 
     # 3. Aktualizace vlastní DB
     new_devices = []
