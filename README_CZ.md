@@ -2,7 +2,7 @@
 
 **[🇬🇧 English version](README.md)** | **[👨‍💻 Další projekty autora](https://github.com/hacesoft?tab=repositories)**
 
-<img width="1407" height="870" alt="image" src="https://github.com/user-attachments/assets/8ed01ee0-1d0f-480e-907b-594945f051c7" />
+<img width="1407" height="870" alt="image" src="https://github.com/user-attachments/assets/536c0041-d9f7-4237-9c38-5657156500e0" />
 
 ---
 
@@ -39,6 +39,48 @@ Plugin automaticky sleduje síť a upozorňuje na:
 ---
 
 ## Historie verzí
+
+### v2.2 (srpen 2026) — Opravy Hostwatch a mazání zařízení
+
+- Pro každou MAC adresu se použije pouze nejnovější záznam Hostwatch.
+- Ručně smazané zařízení se již nevrací kvůli historickému záznamu Hostwatch; znovu se přidá až po skutečně novějším `last_seen`.
+- Opraveno runtime načítání `scan_interval`, `email_vlans` a `webhook_vlans`.
+- Opraveno `notification_pending`, aby VLAN filtry platily správně pro konkrétní kanál notifikace.
+- Rychlá aktualizace stavu zachovává skutečný Hostwatch čas `last_seen`.
+
+
+v2.1 (duben 2026) — Podpora Dnsmasq hostname
+Co se změnilo a proč
+1. Načítání hostname z Dnsmasq — `get_dnsmasq_descriptions()`
+Uživatelé OPNsense, kteří migrovali ze zastaralého ISC DHCPv4 na Dnsmasq DNS & DHCP (doporučená náhrada od OPNsense 25.7+), měli v Device Monitoru prázdné hostname. Předchozí kód četl hostname pouze z `config.xml → dhcpd` (statická mapování ISC DHCP).
+Nová funkce čte hostname z části config.xml určené pro Dnsmasq Host Overrides. Správná XML struktura Dnsmasq záznamu vypadá takto:
+```xml
+<hosts uuid="...">
+  <host>MojeZarizeni</host>              ← pole hostname
+  <hwaddr>aa:bb:cc:dd:ee:ff</hwaddr>     ← MAC adresa (pozor: hwaddr, NE hw)
+  <ip>192.168.1.100</ip>
+  <descr>Popis zařízení</descr>
+</hosts>
+```
+> ⚠️ Pole MAC adresy se jmenuje `<hwaddr>` — nikoliv `<hw>` jak by se dalo očekávat. Potvrzeno přímou inspekcí živého `config.xml`.
+2. Vypnuté ISC DHCP interfacy jsou přeskočeny
+Pokud je ISC DHCP interface vypnutý (checkbox odškrtnutý v UI), OPNsense nenastaví žádný element `<enable>` uvnitř konfiguračního bloku daného interface. Aktualizovaná funkce `get_dhcp_descriptions()` přeskočí každý ISC interface, kterému chybí tag `<enable>`, a zabrání tak tomu, aby se zastaralá data z vypnutých interfaců zobrazovala jako hostname.
+3. Priorita zdrojů hostname
+Překlad hostname nyní sleduje jasný prioritní řetězec:
+```
+1. custom_hostname  (nastaveno ručně v UI Device Monitoru — nejvyšší priorita)
+2. Dnsmasq          (Host Overrides s vazbou MAC → hostname)
+3. ISC DHCP         (statická mapování, preferováno pole hostname před descr)
+```
+Dnsmasq přepíše ISC data pro stejnou MAC adresu pomocí `dict.update()`:
+```python
+dhcp_descriptions = get_dhcp_descriptions()        # ISC DHCP (jen zapnuté interfacy)
+dnsmasq_descriptions = get_dnsmasq_descriptions()  # Dnsmasq Host Overrides
+dhcp_descriptions.update(dnsmasq_descriptions)     # Dnsmasq vyhraje při konfliktu
+```
+4. Preference pole hostname v ISC DHCP
+Dříve čtenář ISC DHCP používal pouze `<descr>` (pole poznámky/popisu). Nyní preferuje `<hostname>` a na `<descr>` se vrací pouze tehdy, když `<hostname>` chybí nebo je prázdné. To odpovídá tomu, jak se hostname skutečně zobrazují v DNS a tabulkách DHCP lease.
+
 
 ### v2.0 (duben 2026) — Kompletní přepracování
 
@@ -194,7 +236,7 @@ Také odstraněno rozbité `configctl webgui restart` a `service php-fpm restart
 
 ### Metoda 1: WinSCP + SSH (doporučeno)
 
-**Krok 1:** Stáhni nejnovější ZIP z [Releases](../../releases).
+**Krok 1:** Stáhni nejnovější ZIP z [Release](../../tree/main/release).
 
 **Krok 2:** Povol SSH na OPNsense:
 ```

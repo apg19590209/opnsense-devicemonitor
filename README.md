@@ -40,6 +40,48 @@ The plugin automatically monitors the network and alerts you about:
 
 ## Version history
 
+### v2.2 (August 2026) — Hostwatch and deletion fixes
+
+- Keep only the newest Hostwatch record for each MAC address.
+- Prevent manually deleted devices from being recreated by historical Hostwatch records; a device is added again only after a newer `last_seen` is observed.
+- Fix runtime loading of `scan_interval`, `email_vlans`, and `webhook_vlans`.
+- Fix notification pending handling so VLAN filters apply to the correct delivery channel.
+- Keep the real Hostwatch `last_seen` timestamp during quick status updates.
+
+
+v2.1 (April 2026) — Dnsmasq hostname support
+What changed and why
+1. Dnsmasq hostname resolution — `get_dnsmasq_descriptions()`
+OPNsense users who migrated from the deprecated ISC DHCPv4 to Dnsmasq DNS & DHCP (the recommended replacement as of OPNsense 25.7+) had empty hostnames in Device Monitor. The previous code only read hostnames from `config.xml → dhcpd` (ISC DHCP static mappings).
+A new function reads hostname data from the Dnsmasq Host Overrides section of `config.xml`. The correct XML structure for Dnsmasq entries is:
+```xml
+<hosts uuid="...">
+  <host>MyDevice</host>          ← hostname field
+  <hwaddr>aa:bb:cc:dd:ee:ff</hwaddr>  ← MAC address (note: hwaddr, NOT hw)
+  <ip>192.168.1.100</ip>
+  <descr>My Device Description</descr>
+</hosts>
+```
+> ⚠️ The MAC address field is `<hwaddr>` — not `<hw>` as one might expect. This was confirmed by inspecting a live `config.xml`.
+2. ISC DHCP disabled interfaces are now skipped
+When an ISC DHCP interface is disabled (checkbox unchecked in the UI), OPNsense sets no `<enable>` child element inside that interface's config block. The updated `get_dhcp_descriptions()` function skips any ISC interface that lacks the `<enable>` tag, preventing stale data from disabled interfaces from appearing as hostnames.
+3. Hostname source priority
+Hostname resolution now follows a clear priority chain:
+```
+1. custom_hostname  (manually set in Device Monitor UI — highest priority)
+2. Dnsmasq          (Host Overrides with MAC → hostname mapping)
+3. ISC DHCP         (static mappings, hostname field preferred over descr)
+```
+Dnsmasq overwrites ISC data for the same MAC address via `dict.update()`:
+```python
+dhcp_descriptions = get_dhcp_descriptions()     # ISC DHCP (enabled interfaces only)
+dnsmasq_descriptions = get_dnsmasq_descriptions()  # Dnsmasq Host Overrides
+dhcp_descriptions.update(dnsmasq_descriptions)  # Dnsmasq wins on conflict
+```
+4. Hostname field preference within ISC DHCP
+Previously, the ISC DHCP reader used only `<descr>` (the description/note field). It now prefers `<hostname>` and falls back to `<descr>` only when `<hostname>` is absent or empty. This matches how hostnames actually appear in DNS and DHCP lease tables.
+
+
 ### v2.0 (April 2026) — Major overhaul
 
 This version is a complete architectural rewrite focused on deep integration with OPNsense 26.x. Many components that were previously custom-built are now replaced by native OPNsense mechanisms.
@@ -194,7 +236,7 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 
 ### Method 1: WinSCP + SSH (recommended)
 
-**Step 1:** Download the latest release ZIP from [Releases](../../releases).
+**Step 1:** Download the latest release ZIP from [Release](../../tree/main/release).
 
 **Step 2:** Enable SSH on OPNsense:
 ```

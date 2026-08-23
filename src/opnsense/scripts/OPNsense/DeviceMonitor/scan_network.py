@@ -61,11 +61,11 @@ def load_config():
             'email_from': DEFAULT_CONFIG.get('email_from', 'devicemonitor@opnsense.local'),
             'webhook_enabled': DEFAULT_CONFIG.get('webhook_enabled', '0') == '1',
             'webhook_url': DEFAULT_CONFIG.get('webhook_url', ''),
-            'scan_interval': int(config.get('scan_interval', 300)),
-            'email_vlans':  config.get('email_vlans', ''),
-            'webhook_vlans': config.get('webhook_vlans', ''),
-            'apiEmailUrl': PATHS.get('apiEmailUrl'),
-            'apiWebhookUrl': PATHS.get('apiWebhookUrl', 'apiWebhookUrl')
+            'scan_interval': int(DEFAULT_CONFIG.get('scan_interval', 300)),
+            'email_vlans': DEFAULT_CONFIG.get('email_vlans', ''),
+            'webhook_vlans': DEFAULT_CONFIG.get('webhook_vlans', ''),
+            'apiEmailUrl': PATHS.get('apiEmailUrl', ''),
+            'apiWebhookUrl': PATHS.get('apiWebhookUrl', '')
         }
     
     try:
@@ -79,11 +79,11 @@ def load_config():
                 'email_from': config.get('email_from', 'devicemonitor@opnsense.local'),
                 'webhook_enabled': config.get('webhook_enabled', '0') == '1',
                 'webhook_url': config.get('webhook_url', ''),
-                'scan_interval': int(DEFAULT_CONFIG.get('scan_interval', 300)),
-                'email_vlans':  DEFAULT_CONFIG.get('email_vlans', ''),
-                'webhook_vlans': DEFAULT_CONFIG.get('webhook_vlans', ''),
-                'apiEmailUrl': PATHS.get('apiEmailUrl', 'apiEmailUrl'),
-                'apiWebhookUrl': PATHS.get('apiWebhookUrl')
+                'scan_interval': int(config.get('scan_interval', DEFAULT_CONFIG.get('scan_interval', 300))),
+                'email_vlans': config.get('email_vlans', DEFAULT_CONFIG.get('email_vlans', '')),
+                'webhook_vlans': config.get('webhook_vlans', DEFAULT_CONFIG.get('webhook_vlans', '')),
+                'apiEmailUrl': PATHS.get('apiEmailUrl', ''),
+                'apiWebhookUrl': PATHS.get('apiWebhookUrl', '')
             }
     except Exception as e:
         if DEBUG_LOGGING:
@@ -132,6 +132,14 @@ def init_db():
         c.execute('ALTER TABLE devices ADD COLUMN custom_hostname TEXT DEFAULT NULL')
     except:
         pass
+
+    # Tombstones for manually deleted devices. Historical Hostwatch records
+    # must not immediately recreate a device that the user removed.
+    c.execute('''CREATE TABLE IF NOT EXISTS deleted_devices (
+        mac TEXT PRIMARY KEY,
+        last_seen DATETIME,
+        deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )''')
     
     conn.commit()
     conn.close()
@@ -168,7 +176,20 @@ def get_hostwatch_devices():
         rows = cursor.fetchall()
         conn.close()
         
+        # The query is sorted newest-first. Keep only the first row for each
+        # MAC so historical Hostwatch records cannot overwrite current data.
+        seen_macs = set()
+        skipped_duplicates = 0
+
         for row in rows:
+            mac = (row['ether_address'] or '').lower().strip()
+            if not mac:
+                continue
+            if mac in seen_macs:
+                skipped_duplicates += 1
+                continue
+            seen_macs.add(mac)
+
             # Mapuj interface_name na VLAN popis
             iface = row['interface_name'] or ''
             vlan = map_interface_to_vlan(iface)
@@ -178,7 +199,7 @@ def get_hostwatch_devices():
                 vendor = vendor[:37] + '...'
             
             devices.append({
-                'mac': (row['ether_address'] or '').lower(),
+                'mac': mac,
                 'ip': row['ip_address'] or '',
                 'hostname': '',
                 'vendor': vendor,
@@ -187,7 +208,10 @@ def get_hostwatch_devices():
                 'last_seen': row['last_seen'] or '',
             })
         
-        log(f"Hostwatch DB: načteno {len(devices)} zařízení")
+        log(
+            f"Hostwatch DB: načteno {len(rows)} záznamů, "
+            f"{len(devices)} unikátních MAC, přeskočeno {skipped_duplicates} historických duplicit"
+        )
         
     except Exception as e:
         log(f"Chyba čtení hostwatch DB: {e}")
@@ -288,6 +312,9 @@ def send_email_via_php_api(new_devices):
     try:
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
+
+        # Pending must represent exactly this delivery channel's filtered set.
+        cursor.execute("UPDATE devices SET notification_pending = 0")
         
         # Označ zařízení pro notifikaci
         for device in new_devices:
@@ -326,6 +353,9 @@ def send_webhook_via_php_api(new_devices):
     try:
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
+
+        # Pending must represent exactly this delivery channel's filtered set.
+        cursor.execute("UPDATE devices SET notification_pending = 0")
         
         # Označ zařízení pro notifikaci
         for device in new_devices:
@@ -374,13 +404,11 @@ def update_status_only():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     cursor.execute("UPDATE devices SET is_active = 0")
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
     for d in devices:
         if is_recently_seen(d.get('last_seen', '')):
             cursor.execute(
                 "UPDATE devices SET is_active = 1, last_seen = ? WHERE mac = ?",
-                (now, d['mac'])
+                (d.get('last_seen', ''), d['mac'])
             )
 
     conn.commit()
@@ -429,6 +457,18 @@ def full_scan():
         last_seen = device.get('last_seen') or now
         first_seen = device.get('first_seen') or now
 
+        # If the user manually deleted this device, ignore the same historical
+        # Hostwatch record. A genuinely newer last_seen means the device has
+        # returned to the network, so remove the tombstone and add it again.
+        deleted_row = conn.execute(
+            'SELECT last_seen FROM deleted_devices WHERE mac = ?', (mac,)
+        ).fetchone()
+        if deleted_row:
+            deleted_last_seen = deleted_row[0] or ''
+            if deleted_last_seen and last_seen <= deleted_last_seen:
+                continue
+            conn.execute('DELETE FROM deleted_devices WHERE mac = ?', (mac,))
+
         row = conn.execute(
             'SELECT mac, custom_hostname FROM devices WHERE mac = ?', (mac,)
         ).fetchone()
@@ -447,7 +487,7 @@ def full_scan():
                 INSERT INTO devices
                     (mac, ip, hostname, vendor, vlan, first_seen, last_seen,
                      is_active, notification_pending)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
             ''', (mac, device['ip'], device['hostname'], device['vendor'],
                   device['vlan'], first_seen, last_seen, is_active))
             device['first_seen'] = first_seen
@@ -457,10 +497,11 @@ def full_scan():
     online = conn.execute(
         "SELECT COUNT(*) FROM devices WHERE is_active = 1"
     ).fetchone()[0]
+    total = conn.execute("SELECT COUNT(*) FROM devices").fetchone()[0]
     conn.close()
 
     # 4. Notifikace (s filtrováním podle VLAN)
-    log(f"Nová zařízení: {len(new_devices)}, Online: {online}/{len(devices)}")
+    log(f"Nová zařízení: {len(new_devices)}, Online: {online}/{total}")
     if new_devices and config['enabled']:
         email_vlans   = set(v.strip() for v in config.get('email_vlans',  '').split(',') if v.strip())
         webhook_vlans = set(v.strip() for v in config.get('webhook_vlans', '').split(',') if v.strip())
@@ -470,6 +511,11 @@ def full_scan():
             send_email_via_php_api(email_devs)
         if webhook_devs and config.get('webhook_enabled') and config.get('webhook_url'):
             send_webhook_via_php_api(webhook_devs)
+
+    # Do not leave stale pending flags between scans/channels.
+    with sqlite3.connect(DB_FILE) as cleanup_conn:
+        cleanup_conn.execute('UPDATE devices SET notification_pending = 0')
+
     return 0
 
 

@@ -159,6 +159,15 @@ class DeviceMonitor
 
         $db = new \SQLite3($file_mame);
         $db->busyTimeout(5000);
+
+        // Migration for existing installations: getDb() is also used by GUI
+        // actions, so do not rely on scan_network.py having run first.
+        $db->exec('CREATE TABLE IF NOT EXISTS deleted_devices (
+            mac TEXT PRIMARY KEY,
+            last_seen DATETIME,
+            deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )');
+
         return $db;
     }
 
@@ -181,6 +190,13 @@ class DeviceMonitor
         )');
 
         $db->exec('CREATE INDEX IF NOT EXISTS idx_last_seen ON devices(last_seen)');
+
+        $db->exec('CREATE TABLE IF NOT EXISTS deleted_devices (
+            mac TEXT PRIMARY KEY,
+            last_seen DATETIME,
+            deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )');
+
         // Migration: add columns for older databases
         @$db->exec('ALTER TABLE devices ADD COLUMN first_seen DATETIME DEFAULT CURRENT_TIMESTAMP');
         @$db->exec('ALTER TABLE devices ADD COLUMN custom_hostname TEXT DEFAULT NULL');
@@ -236,19 +252,60 @@ class DeviceMonitor
     public function deleteDevice($mac)
     {
         $db = $this->getDb();
-        $stmt = $db->prepare('DELETE FROM devices WHERE mac = :mac');
-        $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
-        $stmt->execute();
-        $changes = $db->changes();
-        $db->close();
-        return $changes > 0;
+        $mac = strtolower(trim($mac));
+
+        $db->exec('BEGIN IMMEDIATE TRANSACTION');
+        try {
+            $stmt = $db->prepare('SELECT last_seen FROM devices WHERE mac = :mac');
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+            $result = $stmt->execute();
+            $row = $result ? $result->fetchArray(SQLITE3_ASSOC) : false;
+
+            if (!$row) {
+                $db->exec('ROLLBACK');
+                $db->close();
+                return false;
+            }
+
+            // Remember the newest Hostwatch timestamp already represented by
+            // this row. The same historical record must not recreate it.
+            $stmt = $db->prepare('INSERT OR REPLACE INTO deleted_devices (mac, last_seen, deleted_at) VALUES (:mac, :last_seen, CURRENT_TIMESTAMP)');
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+            $stmt->bindValue(':last_seen', $row['last_seen'] ?? '', SQLITE3_TEXT);
+            $stmt->execute();
+
+            $stmt = $db->prepare('DELETE FROM devices WHERE mac = :mac');
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+            $stmt->execute();
+            $changes = $db->changes();
+
+            $db->exec('COMMIT');
+            $db->close();
+            return $changes > 0;
+        } catch (\Exception $e) {
+            $db->exec('ROLLBACK');
+            $db->close();
+            return false;
+        }
     }
 
     public function clearAll()
     {
         $db = $this->getDb();
-        $db->exec('DELETE FROM devices');
-        $db->close();
-        return true;
+        $db->exec('BEGIN IMMEDIATE TRANSACTION');
+        try {
+            // Treat Clear All like repeated manual deletion: remember the
+            // current last_seen value for every device so old Hostwatch
+            // history does not immediately repopulate the table.
+            $db->exec('INSERT OR REPLACE INTO deleted_devices (mac, last_seen, deleted_at) SELECT mac, last_seen, CURRENT_TIMESTAMP FROM devices');
+            $db->exec('DELETE FROM devices');
+            $db->exec('COMMIT');
+            $db->close();
+            return true;
+        } catch (\Exception $e) {
+            $db->exec('ROLLBACK');
+            $db->close();
+            return false;
+        }
     }
 }
