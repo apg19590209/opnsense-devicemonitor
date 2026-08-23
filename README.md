@@ -49,7 +49,7 @@ The plugin automatically monitors the network and alerts you about:
 - Keep the real Hostwatch `last_seen` timestamp during quick status updates.
 
 
-v2.1 (April 2026) — Dnsmasq hostname support
+### v2.1 (April 2026) — Dnsmasq hostname support
 What changed and why
 1. Dnsmasq hostname resolution — `get_dnsmasq_descriptions()`
 OPNsense users who migrated from the deprecated ISC DHCPv4 to Dnsmasq DNS & DHCP (the recommended replacement as of OPNsense 25.7+) had empty hostnames in Device Monitor. The previous code only read hostnames from `config.xml → dhcpd` (ISC DHCP static mappings).

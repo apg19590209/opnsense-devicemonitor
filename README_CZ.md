@@ -49,7 +49,7 @@ Plugin automaticky sleduje síť a upozorňuje na:
 - Rychlá aktualizace stavu zachovává skutečný Hostwatch čas `last_seen`.
 
 
-v2.1 (duben 2026) — Podpora Dnsmasq hostname
+### v2.1 (duben 2026) — Podpora Dnsmasq hostname
 Co se změnilo a proč
 1. Načítání hostname z Dnsmasq — `get_dnsmasq_descriptions()`
 Uživatelé OPNsense, kteří migrovali ze zastaralého ISC DHCPv4 na Dnsmasq DNS & DHCP (doporučená náhrada od OPNsense 25.7+), měli v Device Monitoru prázdné hostname. Předchozí kód četl hostname pouze z `config.xml → dhcpd` (statická mapování ISC DHCP).
