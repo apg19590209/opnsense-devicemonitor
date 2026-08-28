@@ -2,8 +2,6 @@
 
 **[🇨🇿 Czech version](README_CZ.md)** | **[👨‍💻 More projects by the author](https://github.com/hacesoft?tab=repositories)**
 
-<img width="1407" height="870" alt="image" src="https://github.com/user-attachments/assets/536c0041-d9f7-4237-9c38-5657156500e0" />
-
 ---
 
 Plugin for automatic network device monitoring in OPNsense firewall. Detects new devices on the network using the native OPNsense hostwatch database and sends email or webhook notifications.
@@ -40,16 +38,20 @@ The plugin automatically monitors the network and alerts you about:
 
 ## Version history
 
-### v2.2 (August 2026) — Hostwatch and deletion fixes
+### v2.3 (August 2026) — Direct SMTP and notification improvements
 
-- Keep only the newest Hostwatch record for each MAC address.
-- Prevent manually deleted devices from being recreated by historical Hostwatch records; a device is added again only after a newer `last_seen` is observed.
-- Fix runtime loading of `scan_interval`, `email_vlans`, and `webhook_vlans`.
-- Fix notification pending handling so VLAN filters apply to the correct delivery channel.
-- Keep the real Hostwatch `last_seen` timestamp during quick status updates.
+- Added selectable **Email delivery method** in Device Monitor settings.
+- **Local Sendmail / Postfix** remains the default and preserves existing installations.
+- Added built-in **Direct SMTP** delivery using Python `smtplib`; no additional Python package is required.
+- Direct SMTP supports **STARTTLS**, **SSL/TLS**, and unencrypted SMTP.
+- Added SMTP server, port, username and password configuration to the UI.
+- **Test Email** now uses the currently selected delivery method.
+- Existing configuration files are merged with new defaults automatically, so upgrading does not require a configuration reset.
+- SMTP credentials are read from the protected Device Monitor configuration instead of being passed on the process command line.
+- Configuration containing SMTP credentials is stored with restrictive file permissions.
+- Includes the v2.2 Hostwatch fixes: newest Hostwatch record is selected per MAC, deleted devices no longer return from historical records, VLAN notification filtering was corrected, and real Hostwatch `last_seen` values are preserved during quick status updates.
 
-
-### v2.1 (April 2026) — Dnsmasq hostname support
+v2.1 (April 2026) — Dnsmasq hostname support
 What changed and why
 1. Dnsmasq hostname resolution — `get_dnsmasq_descriptions()`
 OPNsense users who migrated from the deprecated ISC DHCPv4 to Dnsmasq DNS & DHCP (the recommended replacement as of OPNsense 25.7+) had empty hostnames in Device Monitor. The previous code only read hostnames from `config.xml → dhcpd` (ISC DHCP static mappings).
@@ -298,14 +300,25 @@ Go to: **Services → DeviceMonitor → Settings**
 
 ### Email notifications
 
-Requires working SMTP: **System → Settings → Notifications → E-Mail**
+Device Monitor offers two independent email delivery methods:
+
+- **Local Sendmail / Postfix** — the default and backward-compatible method. It uses `/usr/local/sbin/sendmail`, so a working local mail transport such as the OPNsense `os-postfix` plugin must be configured.
+- **Direct SMTP (built into Device Monitor)** — connects directly to the configured SMTP server using Python `smtplib`, without requiring Postfix or Monit for message delivery.
 
 | Setting | Description |
 |---------|-------------|
 | Enable Email | Enable email notifications |
 | Email (To) | Recipient address |
 | Email (From) | Sender address |
-| Test Email | Send a test message |
+| Email delivery method | Select Local Sendmail/Postfix or Direct SMTP |
+| SMTP Server | SMTP hostname or IP address (Direct SMTP only) |
+| SMTP Port | SMTP port, typically 587 for STARTTLS or 465 for SSL/TLS |
+| Encryption | STARTTLS, SSL/TLS, or None |
+| SMTP Username | Optional SMTP authentication username |
+| SMTP Password | Optional SMTP authentication password |
+| Test Email | Save the current settings and test the selected delivery method |
+
+Existing installations continue to use **Local Sendmail / Postfix** after upgrading unless Direct SMTP is explicitly selected.
 
 ### Webhook notifications
 

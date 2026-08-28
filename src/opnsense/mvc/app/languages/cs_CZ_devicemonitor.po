@@ -302,3 +302,66 @@ msgstr "Využívá hostwatch databázi OPNsense"
 #: settings.volt - Status sloupec / hodnota
 msgid "Status"
 msgstr "Stav"
+# ============================================
+# [settings.volt] Email transport
+# ============================================
+
+#: settings.volt - email transport
+msgid "Email delivery method"
+msgstr "Způsob odesílání e-mailu"
+
+#: settings.volt - email transport
+msgid "Local Sendmail / Postfix"
+msgstr "Lokální Sendmail / Postfix"
+
+#: settings.volt - email transport
+msgid "Direct SMTP (built into Device Monitor)"
+msgstr "Přímé SMTP (součást Device Monitoru)"
+
+#: settings.volt - email transport
+msgid "Choose the mail transport that matches your OPNsense installation"
+msgstr "Vyberte způsob odesílání odpovídající vaší instalaci OPNsense"
+
+#: settings.volt - email transport
+msgid "Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured."
+msgstr "Používá /usr/local/sbin/sendmail. Vhodné, pokud je nainstalován a nakonfigurován lokální poštovní systém, například plugin os-postfix."
+
+#: settings.volt - email transport
+msgid "Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit."
+msgstr "Přímé SMTP používá standardní knihovnu Pythonu a nevyžaduje Postfix, sendmail ani Monit."
+
+#: settings.volt - email transport
+msgid "SMTP Server"
+msgstr "SMTP server"
+
+#: settings.volt - email transport
+msgid "SMTP Port"
+msgstr "SMTP port"
+
+#: settings.volt - email transport
+msgid "Encryption"
+msgstr "Šifrování"
+
+#: settings.volt - email transport
+msgid "None"
+msgstr "Žádné"
+
+#: settings.volt - email transport
+msgid "SMTP Username"
+msgstr "SMTP uživatelské jméno"
+
+#: settings.volt - email transport
+msgid "Leave empty if the SMTP server does not require authentication"
+msgstr "Ponechte prázdné, pokud SMTP server nevyžaduje ověření"
+
+#: settings.volt - email transport
+msgid "SMTP Password"
+msgstr "SMTP heslo"
+
+#: settings.volt - email transport
+msgid "The current email settings are saved before the test is sent"
+msgstr "Aktuální nastavení e-mailu se před odesláním testu uloží"
+
+#: settings.volt - email transport
+msgid "Please enter recipient email first"
+msgstr "Nejprve zadejte e-mail příjemce"

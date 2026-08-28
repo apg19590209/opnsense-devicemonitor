@@ -53,17 +53,62 @@
                                     <input type="email" id="email_to" class="form-control" placeholder="admin@example.com" style="max-width:400px;" />
                                     <small class="text-muted">{{ lang._('Where to send notifications') }}</small>
                                     <br><br>
+
                                     <label>{{ lang._('Email Sender') }}:</label>
                                     <input type="email" id="email_from" class="form-control" placeholder="devicemonitor@opnsense.local" style="max-width:400px;" />
                                     <small class="text-muted">{{ lang._('From address') }}</small>
-                                    <div class="alert alert-warning" style="margin-top:12px;">
-                                        <h4><i class="fa fa-exclamation-triangle"></i> {{ lang._('Important - SMTP Configuration') }}</h4>
-                                        <p>{{ lang._('Plugin uses <strong>sendmail (Postfix)</strong> to send emails') }}</p>
-                                        <p>{{ lang._('Must be configured in: <strong>System > Settings > Notifications > SMTP</strong>') }}</p>
+                                    <br><br>
+
+                                    <label>{{ lang._('Email delivery method') }}:</label>
+                                    <select id="email_method" class="form-control" style="max-width:400px;">
+                                        <option value="sendmail">{{ lang._('Local Sendmail / Postfix') }}</option>
+                                        <option value="smtp">{{ lang._('Direct SMTP (built into Device Monitor)') }}</option>
+                                    </select>
+                                    <small class="text-muted">{{ lang._('Choose the mail transport that matches your OPNsense installation') }}</small>
+
+                                    <div id="email_sendmail_config" class="alert alert-info" style="margin-top:12px;max-width:600px;">
+                                        <strong>{{ lang._('Local Sendmail / Postfix') }}</strong><br>
+                                        {{ lang._('Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured.') }}
                                     </div>
-                                    <button type="button" id="btn-test-email" class="btn btn-default btn-sm">
+
+                                    <div id="email_smtp_config" style="margin-top:14px;max-width:600px;display:none;">
+                                        <div class="alert alert-info">
+                                            {{ lang._('Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit.') }}
+                                        </div>
+
+                                        <label>{{ lang._('SMTP Server') }}:</label>
+                                        <input type="text" id="smtp_host" class="form-control" placeholder="smtp.example.com" style="max-width:400px;" />
+                                        <br>
+
+                                        <div style="display:flex;gap:15px;align-items:flex-end;flex-wrap:wrap;">
+                                            <div>
+                                                <label>{{ lang._('SMTP Port') }}:</label>
+                                                <input type="number" id="smtp_port" class="form-control" value="587" min="1" max="65535" style="width:120px;" />
+                                            </div>
+                                            <div>
+                                                <label>{{ lang._('Encryption') }}:</label>
+                                                <select id="smtp_encryption" class="form-control" style="width:180px;">
+                                                    <option value="starttls">STARTTLS</option>
+                                                    <option value="ssl">SSL/TLS</option>
+                                                    <option value="none">{{ lang._('None') }}</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <br>
+
+                                        <label>{{ lang._('SMTP Username') }}:</label>
+                                        <input type="text" id="smtp_username" class="form-control" autocomplete="username" style="max-width:400px;" />
+                                        <small class="text-muted">{{ lang._('Leave empty if the SMTP server does not require authentication') }}</small>
+                                        <br><br>
+
+                                        <label>{{ lang._('SMTP Password') }}:</label>
+                                        <input type="password" id="smtp_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
+                                    </div>
+
+                                    <button type="button" id="btn-test-email" class="btn btn-default btn-sm" style="margin-top:14px;">
                                         🧪 {{ lang._('Test Email') }}
                                     </button>
+                                    <small class="text-muted" style="margin-left:8px;">{{ lang._('The current email settings are saved before the test is sent') }}</small>
                                 </div>
                             </td>
                         </tr>
@@ -260,11 +305,18 @@ $().ready(function() {
             $('#email_enabled').prop('checked', d.email_enabled==='1');
             $('#email_to').val(d.email_to||'');
             $('#email_from').val(d.email_from||'devicemonitor@opnsense.local');
+            $('#email_method').val(d.email_method||'sendmail');
+            $('#smtp_host').val(d.smtp_host||'');
+            $('#smtp_port').val(d.smtp_port||587);
+            $('#smtp_encryption').val(d.smtp_encryption||'starttls');
+            $('#smtp_username').val(d.smtp_username||'');
+            $('#smtp_password').val(d.smtp_password||'');
             $('#webhook_enabled').prop('checked', d.webhook_enabled==='1');
             $('#webhook_url').val(d.webhook_url||'');
             buildVlanCheckList('email-vlan-list',   d.email_vlans   || '');
             buildVlanCheckList('webhook-vlan-list', d.webhook_vlans || '');
             toggleEmailConfig();
+            toggleEmailMethod();
             toggleWebhookConfig();
         }});
     }
@@ -272,29 +324,57 @@ $().ready(function() {
     function toggleEmailConfig() {
         $('#email_enabled').prop('checked') ? $('#email_config').slideDown() : $('#email_config').slideUp();
     }
+    function toggleEmailMethod() {
+        var method = $('#email_method').val() || 'sendmail';
+        if (method === 'smtp') {
+            $('#email_sendmail_config').hide();
+            $('#email_smtp_config').show();
+        } else {
+            $('#email_smtp_config').hide();
+            $('#email_sendmail_config').show();
+        }
+    }
     function toggleWebhookConfig() {
         $('#webhook_enabled').prop('checked') ? $('#webhook_config').slideDown() : $('#webhook_config').slideUp();
     }
     $('#email_enabled').change(toggleEmailConfig);
+    $('#email_method').change(toggleEmailMethod);
     $('#webhook_enabled').change(toggleWebhookConfig);
 
-    function saveConfig($btn) {
+    function collectConfigData() {
+        return {
+            enabled:          $('#enabled').is(':checked')?'1':'0',
+            email_enabled:    $('#email_enabled').is(':checked')?'1':'0',
+            email_to:         $('#email_to').val(),
+            email_from:       $('#email_from').val(),
+            email_method:     $('#email_method').val(),
+            smtp_host:        $('#smtp_host').val(),
+            smtp_port:        $('#smtp_port').val(),
+            smtp_encryption:  $('#smtp_encryption').val(),
+            smtp_username:    $('#smtp_username').val(),
+            smtp_password:    $('#smtp_password').val(),
+            email_vlans:      getSelectedVlans('email-vlan-list'),
+            webhook_enabled:  $('#webhook_enabled').is(':checked')?'1':'0',
+            webhook_url:      $('#webhook_url').val(),
+            webhook_vlans:    getSelectedVlans('webhook-vlan-list'),
+            scan_interval:    $('#scan_interval').val()
+        };
+    }
+
+    function saveConfig($btn, onSuccess) {
         var orig = $btn.html();
         $btn.prop('disabled',true).html('<i class="fa fa-spinner fa-spin"></i> '+translations.saving);
-        $.ajax({ url:'/api/devicemonitor/config/set', type:'POST', data:{
-            enabled:         $('#enabled').is(':checked')?'1':'0',
-            email_enabled:   $('#email_enabled').is(':checked')?'1':'0',
-            email_to:        $('#email_to').val(),
-            email_from:      $('#email_from').val(),
-            email_vlans:     getSelectedVlans('email-vlan-list'),
-            webhook_enabled: $('#webhook_enabled').is(':checked')?'1':'0',
-            webhook_url:     $('#webhook_url').val(),
-            webhook_vlans:   getSelectedVlans('webhook-vlan-list'),
-            scan_interval:   $('#scan_interval').val()
-        }, success:function(r) {
+        $.ajax({ url:'/api/devicemonitor/config/set', type:'POST', data:collectConfigData(), success:function(r) {
             $btn.prop('disabled',false).html(orig);
-            showToast(r.result==='saved'?translations.config_saved:(r.message||translations.config_error),
-                      r.result==='saved'?'success':'error');
+            if (r.result==='saved') {
+                if (typeof onSuccess === 'function') {
+                    onSuccess();
+                } else {
+                    showToast(translations.config_saved,'success');
+                }
+            } else {
+                showToast(r.message||translations.config_error,'error');
+            }
         }, error:function() {
             $btn.prop('disabled',false).html(orig);
             showToast(translations.config_error,'error');
@@ -305,14 +385,23 @@ $().ready(function() {
 
     $('#btn-test-email').click(function() {
         var email=$('#email_to').val();
-        if (!email) { showToast('{{ lang._('Please enter and save recipient email first') }}','error'); return; }
+        if (!email) { showToast('{{ lang._('Please enter recipient email first') }}','error'); return; }
         var $b=$(this), orig=$b.html();
-        $b.prop('disabled',true).html('<i class="fa fa-spinner fa-spin"></i>');
-        $.ajax({ url:'/api/devicemonitor/config/testemail', type:'POST', success:function(r) {
-            $b.prop('disabled',false).html(orig);
-            showToast(r.result==='sent'?translations.test_sent+' '+email:(r.message||translations.test_failed),
-                      r.result==='sent'?'success':'error');
-        }});
+
+        // Save the current form first so the test always uses the selected
+        // transport and the values currently visible in the UI.
+        saveConfig($b, function() {
+            $b.prop('disabled',true).html('<i class="fa fa-spinner fa-spin"></i>');
+            $.ajax({ url:'/api/devicemonitor/config/testemail', type:'POST', success:function(r) {
+                $b.prop('disabled',false).html(orig);
+                var transport = r.transport ? ' ('+r.transport+')' : '';
+                showToast(r.result==='sent'?translations.test_sent+' '+email+transport:(r.message||translations.test_failed),
+                          r.result==='sent'?'success':'error');
+            }, error:function() {
+                $b.prop('disabled',false).html(orig);
+                showToast(translations.test_failed,'error');
+            }});
+        });
     });
 
     $('#test_webhook').click(function() {

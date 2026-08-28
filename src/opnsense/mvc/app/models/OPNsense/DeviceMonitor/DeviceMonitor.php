@@ -44,10 +44,14 @@ class DeviceMonitor
             $json = file_get_contents($configFilePath);
             $savedConfig = json_decode($json, true);
             
-            // Použij uložené hodnoty, ale zachovej cesty z defaults
+            // Merge saved values over current defaults. This makes newly
+            // added settings (for example Direct SMTP) available immediately
+            // after an upgrade without deleting the existing config.json.
             if ($savedConfig !== null && is_array($savedConfig)) {
-                $savedConfig['paths'] = $data['paths'];
-                return $savedConfig;
+                unset($savedConfig['paths']);
+                $config = array_merge($data['config'], $savedConfig);
+                $config['paths'] = $data['paths'];
+                return $config;
             }
         }
         
@@ -128,12 +132,17 @@ class DeviceMonitor
             }
         }
         
-        // Ulož jako JSON s potlačením varování
-        $json = json_encode($data, JSON_PRETTY_PRINT);
-        $result = @file_put_contents($file_name, $json);
+        // Paths are runtime metadata from defaults.json, not user settings.
+        // Do not duplicate them into config.json.
+        unset($data['paths']);
+
+        // The config may contain an SMTP password, therefore keep it readable
+        // only by root/system services.
+        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $result = @file_put_contents($file_name, $json, LOCK_EX);
         
         if ($result !== false) {
-            @chmod($file_name, 0644);
+            @chmod($file_name, 0600);
             return true;
         }
         

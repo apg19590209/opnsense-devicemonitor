@@ -301,3 +301,66 @@ msgstr "Using OPNsense hostwatch database"
 #: settings.volt - Status column value / general status label
 msgid "Status"
 msgstr "Status"
+# ============================================
+# [settings.volt] Email transport
+# ============================================
+
+#: settings.volt - email transport
+msgid "Email delivery method"
+msgstr "Email delivery method"
+
+#: settings.volt - email transport
+msgid "Local Sendmail / Postfix"
+msgstr "Local Sendmail / Postfix"
+
+#: settings.volt - email transport
+msgid "Direct SMTP (built into Device Monitor)"
+msgstr "Direct SMTP (built into Device Monitor)"
+
+#: settings.volt - email transport
+msgid "Choose the mail transport that matches your OPNsense installation"
+msgstr "Choose the mail transport that matches your OPNsense installation"
+
+#: settings.volt - email transport
+msgid "Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured."
+msgstr "Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured."
+
+#: settings.volt - email transport
+msgid "Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit."
+msgstr "Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit."
+
+#: settings.volt - email transport
+msgid "SMTP Server"
+msgstr "SMTP Server"
+
+#: settings.volt - email transport
+msgid "SMTP Port"
+msgstr "SMTP Port"
+
+#: settings.volt - email transport
+msgid "Encryption"
+msgstr "Encryption"
+
+#: settings.volt - email transport
+msgid "None"
+msgstr "None"
+
+#: settings.volt - email transport
+msgid "SMTP Username"
+msgstr "SMTP Username"
+
+#: settings.volt - email transport
+msgid "Leave empty if the SMTP server does not require authentication"
+msgstr "Leave empty if the SMTP server does not require authentication"
+
+#: settings.volt - email transport
+msgid "SMTP Password"
+msgstr "SMTP Password"
+
+#: settings.volt - email transport
+msgid "The current email settings are saved before the test is sent"
+msgstr "The current email settings are saved before the test is sent"
+
+#: settings.volt - email transport
+msgid "Please enter recipient email first"
+msgstr "Please enter recipient email first"

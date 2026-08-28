@@ -2,8 +2,6 @@
 
 **[🇬🇧 English version](README.md)** | **[👨‍💻 Další projekty autora](https://github.com/hacesoft?tab=repositories)**
 
-<img width="1407" height="870" alt="image" src="https://github.com/user-attachments/assets/536c0041-d9f7-4237-9c38-5657156500e0" />
-
 ---
 
 Plugin pro automatické sledování síťových zařízení v OPNsense firewallu. Detekuje nová zařízení pomocí nativní OPNsense hostwatch databáze a odesílá emailová nebo webhook upozornění.
@@ -40,16 +38,20 @@ Plugin automaticky sleduje síť a upozorňuje na:
 
 ## Historie verzí
 
-### v2.2 (srpen 2026) — Opravy Hostwatch a mazání zařízení
+### v2.3 (srpen 2026) — Přímé SMTP a vylepšení upozornění
 
-- Pro každou MAC adresu se použije pouze nejnovější záznam Hostwatch.
-- Ručně smazané zařízení se již nevrací kvůli historickému záznamu Hostwatch; znovu se přidá až po skutečně novějším `last_seen`.
-- Opraveno runtime načítání `scan_interval`, `email_vlans` a `webhook_vlans`.
-- Opraveno `notification_pending`, aby VLAN filtry platily správně pro konkrétní kanál notifikace.
-- Rychlá aktualizace stavu zachovává skutečný Hostwatch čas `last_seen`.
+- Do nastavení Device Monitoru přibyla volba **způsobu odesílání e-mailu**.
+- **Local Sendmail / Postfix** zůstává výchozí metodou a zachovává chování stávajících instalací.
+- Přidáno vestavěné **Direct SMTP** pomocí standardní Python knihovny `smtplib`; není potřeba instalovat další Python balíček.
+- Direct SMTP podporuje **STARTTLS**, **SSL/TLS** i nešifrované SMTP.
+- Do UI přibylo nastavení SMTP serveru, portu, uživatelského jména a hesla.
+- **Test Email** nyní používá právě zvolený způsob odesílání.
+- Existující konfigurace se při aktualizaci automaticky doplní o nové výchozí položky, takže není nutný reset konfigurace.
+- SMTP heslo se nepředává na příkazové řádce procesu, ale načítá se z chráněné konfigurace Device Monitoru.
+- Konfigurační soubor obsahující SMTP údaje se ukládá s omezenými přístupovými právy.
+- Součástí jsou i opravy z v2.2: výběr nejnovějšího Hostwatch záznamu pro každou MAC, zabránění návratu ručně smazaných zařízení z historických záznamů, oprava filtrování VLAN upozornění a zachování skutečného Hostwatch `last_seen` při rychlé aktualizaci stavu.
 
-
-### v2.1 (duben 2026) — Podpora Dnsmasq hostname
+v2.1 (duben 2026) — Podpora Dnsmasq hostname
 Co se změnilo a proč
 1. Načítání hostname z Dnsmasq — `get_dnsmasq_descriptions()`
 Uživatelé OPNsense, kteří migrovali ze zastaralého ISC DHCPv4 na Dnsmasq DNS & DHCP (doporučená náhrada od OPNsense 25.7+), měli v Device Monitoru prázdné hostname. Předchozí kód četl hostname pouze z `config.xml → dhcpd` (statická mapování ISC DHCP).

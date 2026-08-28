@@ -47,6 +47,111 @@ class NotificationHandler
 
 
     
+
+    /**
+     * Odešle zprávu přes interní Direct SMTP helper (Python stdlib smtplib).
+     * SMTP heslo není předáváno v command line; helper si načte config.json.
+     */
+    private function sendViaDirectSmtp($subject, $html)
+    {
+        $helper = '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/smtp_send.py';
+        if (!file_exists($helper)) {
+            return ['result' => 'failed', 'message' => 'Direct SMTP helper not found'];
+        }
+
+        $plain = html_entity_decode(strip_tags(
+            str_replace(['<br>', '<br/>', '<br />', '</p>', '</tr>'], ["\n", "\n", "\n", "\n", "\n"], $html)
+        ), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $plain = preg_replace('/[ \t]+/', ' ', $plain);
+        $plain = preg_replace('/\n{3,}/', "\n\n", $plain);
+        $plain = trim($plain);
+
+        $payload = json_encode([
+            'subject' => $subject,
+            'html' => $html,
+            'text' => $plain,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        if ($payload === false) {
+            return ['result' => 'failed', 'message' => 'Cannot encode email payload'];
+        }
+
+        $proc = proc_open('/usr/local/bin/python3 ' . escapeshellarg($helper), [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ], $pipes);
+
+        if (!is_resource($proc)) {
+            return ['result' => 'failed', 'message' => 'Cannot start Direct SMTP helper'];
+        }
+
+        fwrite($pipes[0], $payload);
+        fclose($pipes[0]);
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $ret = proc_close($proc);
+
+        $response = json_decode(trim($stdout), true);
+        if ($ret === 0 && is_array($response) && ($response['result'] ?? '') === 'sent') {
+            return $response;
+        }
+
+        $detail = is_array($response) ? ($response['message'] ?? '') : '';
+        if ($detail === '') {
+            $detail = trim($stderr) !== '' ? trim($stderr) : (trim($stdout) !== '' ? trim($stdout) : "Exit code: {$ret}");
+        }
+        return ['result' => 'failed', 'message' => 'Direct SMTP error: ' . $detail];
+    }
+
+    /**
+     * Původní transport přes lokální /usr/local/sbin/sendmail (typicky os-postfix).
+     */
+    private function sendViaSendmail($email_to, $email_from, $subject, $html)
+    {
+        $sendmail = '/usr/local/sbin/sendmail';
+        if (!is_executable($sendmail)) {
+            return [
+                'result' => 'failed',
+                'message' => 'Sendmail is not available. Install/configure a local mailer or select Direct SMTP.'
+            ];
+        }
+
+        $message = "From: $email_from\r\n";
+        $message .= "To: $email_to\r\n";
+        $message .= "Subject: $subject\r\n";
+        $message .= "MIME-Version: 1.0\r\n";
+        $message .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $message .= "\r\n$html";
+
+        $proc = proc_open($sendmail . ' -t -i', [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ], $pipes);
+
+        if (!is_resource($proc)) {
+            return ['result' => 'failed', 'message' => 'Cannot start sendmail'];
+        }
+
+        fwrite($pipes[0], $message);
+        fclose($pipes[0]);
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $ret = proc_close($proc);
+
+        if ($ret === 0) {
+            return ['result' => 'sent', 'message' => 'Email sent', 'transport' => 'sendmail'];
+        }
+
+        $detail = trim($stderr) !== '' ? trim($stderr) : (trim($stdout) !== '' ? trim($stdout) : "Exit code: {$ret}");
+        return ['result' => 'failed', 'message' => 'Sendmail error: ' . $detail, 'exit_code' => $ret];
+    }
+
     /**
      * UNIVERZÁLNÍ EMAIL - test i real - S INLINE STYLES!
      */
@@ -211,66 +316,42 @@ ROW;
 HTML;
         }
         
-        // Odešli email
+        // Odešli email zvoleným transportem.
+        $email_method = strtolower($config['email_method'] ?? 'sendmail');
         try {
-            //$this->fLog("Sending email to: {$email_to}", 'EMAIL');
-            
-            $message = "From: $email_from\r\n";
-            $message .= "To: $email_to\r\n";
-            $message .= "Subject: $subject\r\n";
-            $message .= "MIME-Version: 1.0\r\n";
-            $message .= "Content-Type: text/html; charset=UTF-8\r\n";
-            $message .= "\r\n$html";
-            
-            $proc = proc_open('/usr/local/sbin/sendmail -t -i', [
-                0 => ["pipe", "r"],
-                1 => ["pipe", "w"],
-                2 => ["pipe", "w"]
-            ], $pipes);
-            
-            if (!is_resource($proc)) {
-                $this->fLog("FAILED: Cannot start sendmail process", 'EMAIL');
-                return ['result' => 'failed', 'message' => 'Cannot start sendmail'];
+            if ($email_method === 'smtp') {
+                $sendResult = $this->sendViaDirectSmtp($subject, $html);
+            } else {
+                $sendResult = $this->sendViaSendmail($email_to, $email_from, $subject, $html);
+                $email_method = 'sendmail';
             }
-            
-            fwrite($pipes[0], $message);
-            fclose($pipes[0]);
-            
-            $stdout = stream_get_contents($pipes[1]);
-            $stderr = stream_get_contents($pipes[2]);
-            
-            fclose($pipes[1]);
-            fclose($pipes[2]);
-            $ret = proc_close($proc);
-            
-            if ($ret === 0) {
+
+            if (($sendResult['result'] ?? '') === 'sent') {
                 $mode = $is_test ? 'TEST' : 'REAL';
-                $count_info = $is_test ? '0' : count($devices ?? []);
-                $this->fLog("SUCCESS: Email sent ({$mode} mode, {$count_info} devices)", 'EMAIL');
-                
+                $count_info = $is_test ? 0 : count($devices ?? []);
+                $this->fLog("SUCCESS: Email sent ({$mode}, transport={$email_method}, {$count_info} devices)", 'EMAIL');
                 return [
                     'result' => 'sent',
                     'message' => "Email sent to: $email_to",
+                    'transport' => $email_method,
                     'test' => $is_test,
-                    'count' => $count_info
-                ];
-            } else {
-                $error_detail = !empty($stderr) ? $stderr : "Exit code: $ret";
-                $this->fLog("FAILED: Sendmail error - {$error_detail}", 'EMAIL');
-                
-                return [
-                    'result' => 'failed', 
-                    'message' => "Sendmail error: {$error_detail}",
-                    'exit_code' => $ret
+                    'count' => $count_info,
                 ];
             }
-            
+
+            $error_detail = $sendResult['message'] ?? 'Unknown email transport error';
+            $this->fLog("FAILED: {$email_method} - {$error_detail}", 'EMAIL');
+            return [
+                'result' => 'failed',
+                'message' => $error_detail,
+                'transport' => $email_method,
+            ];
         } catch (\Exception $e) {
             $this->fLog("FAILED: Exception - " . $e->getMessage(), 'EMAIL');
-            return ['result' => 'failed', 'message' => $e->getMessage()];
+            return ['result' => 'failed', 'message' => $e->getMessage(), 'transport' => $email_method];
         }
     }
-    
+
     /**
      * UNIVERZÁLNÍ WEBHOOK - test i real
      * POST /api/devicemonitor/config/sendWebhook

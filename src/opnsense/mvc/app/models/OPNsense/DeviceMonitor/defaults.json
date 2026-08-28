@@ -1,5 +1,5 @@
 {
-  "version": "2.2",
+  "version": "2.3",
   "paths": {
     "dbFile": "/var/db/devicemonitor/devices.db",
     "configFile": "/var/db/devicemonitor/config.json",
@@ -21,6 +21,12 @@
     "webhook_url": "",
     "email_vlans": "",
     "webhook_vlans": "",
-    "scan_interval": "300"
+    "scan_interval": "300",
+    "email_method": "sendmail",
+    "smtp_host": "",
+    "smtp_port": "587",
+    "smtp_encryption": "starttls",
+    "smtp_username": "",
+    "smtp_password": ""
   }
 }
