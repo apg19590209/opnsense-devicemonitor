@@ -48,8 +48,11 @@ echo "  OK: Source files found"
 if ! command -v msgfmt >/dev/null 2>&1; then
     echo "  -> msgfmt not found; installing gettext-tools..."
     pkg install -y gettext-tools
-    [ $? -eq 0 ] && echo "  OK: gettext-tools installed" \
-                 || echo "  WARNING: gettext-tools installation failed - translations will not be available"
+    if [ $? -ne 0 ] || ! command -v msgfmt >/dev/null 2>&1; then
+        echo "  ERROR: gettext-tools installation failed or msgfmt is unavailable"
+        exit 1
+    fi
+    echo "  OK: gettext-tools installed"
 else
     echo "  OK: msgfmt available"
 fi
@@ -60,6 +63,10 @@ if ! command -v nmap >/dev/null 2>&1; then
     pkg install -y nmap
     if [ $? -ne 0 ]; then
         echo "  ERROR: nmap installation failed"
+        exit 1
+    fi
+    if ! command -v nmap >/dev/null 2>&1; then
+        echo "  ERROR: nmap is still unavailable after installation"
         exit 1
     fi
     echo "  OK: nmap installed"
@@ -98,6 +105,7 @@ mkdir -p /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/Menu
 mkdir -p /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/ACL
 mkdir -p /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api
 mkdir -p /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor
+mkdir -p /usr/local/opnsense/mvc/app/languages
 mkdir -p /usr/local/opnsense/scripts/OPNsense/DeviceMonitor
 mkdir -p /usr/local/opnsense/service/conf/actions.d
 mkdir -p /usr/local/opnsense/www/js/widgets/Metadata
