@@ -108,6 +108,10 @@ class DevicesController extends ApiControllerBase
                         $match = true;
                     }
                     
+                    if (isset($device['nmap_scan_status']) && strpos(strtolower($device['nmap_scan_status']), $searchPhrase) !== false) {
+                        $match = true;
+                    }
+
                     if ($match) {
                         $filtered[] = $device;
                     }
@@ -123,7 +127,7 @@ class DevicesController extends ApiControllerBase
                 $sortColumn = key($sort);
                 $sortOrder = $sort[$sortColumn];
                 
-                if ($sortColumn && in_array($sortColumn, ['mac', 'ip', 'hostname', 'vendor', 'vlan', 'first_seen', 'last_seen', 'status'])) {
+                if ($sortColumn && in_array($sortColumn, ['mac', 'ip', 'hostname', 'vendor', 'vlan', 'first_seen', 'last_seen', 'status', 'nmap_scan_status'])) {
                     usort($devices, function($a, $b) use ($sortColumn, $sortOrder) {
                         $valA = isset($a[$sortColumn]) ? $a[$sortColumn] : '';
                         $valB = isset($b[$sortColumn]) ? $b[$sortColumn] : '';

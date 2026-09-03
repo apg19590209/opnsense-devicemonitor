@@ -177,6 +177,12 @@ class DeviceMonitor
             deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )');
 
+        // Nmap targeted-scan queue and retry state.
+        @$db->exec('ALTER TABLE devices ADD COLUMN nmap_scan_pending INTEGER DEFAULT 0');
+        @$db->exec('ALTER TABLE devices ADD COLUMN nmap_scan_attempts INTEGER DEFAULT 0');
+        @$db->exec('ALTER TABLE devices ADD COLUMN nmap_next_attempt DATETIME DEFAULT NULL');
+        @$db->exec('ALTER TABLE devices ADD COLUMN nmap_last_error TEXT DEFAULT NULL');
+
         return $db;
     }
 
@@ -209,6 +215,11 @@ class DeviceMonitor
         // Migration: add columns for older databases
         @$db->exec('ALTER TABLE devices ADD COLUMN first_seen DATETIME DEFAULT CURRENT_TIMESTAMP');
         @$db->exec('ALTER TABLE devices ADD COLUMN custom_hostname TEXT DEFAULT NULL');
+        @$db->exec('ALTER TABLE devices ADD COLUMN nmap_scan_pending INTEGER DEFAULT 0');
+        @$db->exec('ALTER TABLE devices ADD COLUMN nmap_scan_attempts INTEGER DEFAULT 0');
+        @$db->exec('ALTER TABLE devices ADD COLUMN nmap_next_attempt DATETIME DEFAULT NULL');
+        @$db->exec('ALTER TABLE devices ADD COLUMN nmap_last_error TEXT DEFAULT NULL');
+
         
         $db->close();
         chmod($file_mame, 0644);
@@ -228,7 +239,7 @@ class DeviceMonitor
         $file_mame = self::getPath('dbFile');
         
         if (file_exists($file_mame)) {
-            $db = new \SQLite3($file_mame);
+            $db = $this->getDb();
             $result = $db->query('SELECT * FROM devices ORDER BY last_seen DESC');
             
             while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
@@ -249,6 +260,28 @@ class DeviceMonitor
                     }
                 }
                 
+                if (!empty($row['nmap_next_attempt'])) {
+                    $timestamp = strtotime($row['nmap_next_attempt']);
+                    if ($timestamp !== false) {
+                        $row['nmap_next_attempt'] = date('d.m.Y - H:i:s', $timestamp);
+                    }
+                }
+
+                $row['nmap_scan_attempts'] = (int)($row['nmap_scan_attempts'] ?? 0);
+                $scanPending = (int)($row['nmap_scan_pending'] ?? 0);
+
+                if ($scanPending === 1) {
+                    $row['nmap_scan_status'] =
+                        $row['nmap_scan_attempts'] > 0 ? 'retrying' : 'pending';
+                } elseif (
+                    $row['nmap_scan_attempts'] >= 5 &&
+                    !empty($row['nmap_last_error'])
+                ) {
+                    $row['nmap_scan_status'] = 'failed';
+                } else {
+                    $row['nmap_scan_status'] = '';
+                }
+
                 $devices[] = $row;
             }
             

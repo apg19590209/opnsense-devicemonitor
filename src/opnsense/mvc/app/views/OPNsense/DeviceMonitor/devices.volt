@@ -73,6 +73,7 @@
                     <th class="sortable" data-col="vendor" style="cursor:pointer;white-space:nowrap;">{{ lang._('Vendor') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable" data-col="vlan" style="cursor:pointer;white-space:nowrap;">{{ lang._('VLAN') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable" data-col="status" style="cursor:pointer;white-space:nowrap;">{{ lang._('Status') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable" data-col="nmap_scan_status" style="cursor:pointer;white-space:nowrap;">{{ lang._('Scan Status') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable" data-col="last_seen" style="cursor:pointer;white-space:nowrap;">{{ lang._('Last Seen') }} <i class="fa fa-sort"></i></th>
                     <th style="white-space:nowrap;">{{ lang._('Actions') }}</th>
                 </tr>
@@ -266,6 +267,51 @@ $(document).ready(function() {
             .addClass(sortDir === 'asc' ? 'fa-sort-asc' : 'fa-sort-desc');
     }
 
+    function buildScanStatusCell(row) {
+        var $cell = $('<td>');
+        var state = row.nmap_scan_status || '';
+        var attempts = parseInt(row.nmap_scan_attempts || 0, 10);
+
+        if (!state) {
+            return $cell.html('<span style="color:#777;">&mdash;</span>');
+        }
+
+        if (row.nmap_last_error) {
+            $cell.attr('title', row.nmap_last_error);
+        }
+
+        if (state === 'pending') {
+            return $cell.html('<span style="color:#5bc0de;font-weight:bold;white-space:nowrap;"><i class="fa fa-clock-o"></i> Pending</span>');
+        }
+
+        if (state === 'retrying') {
+            $cell.append(
+                $('<div>').css({
+                    'color': '#f0ad4e',
+                    'font-weight': 'bold',
+                    'white-space': 'nowrap'
+                }).text('Retry ' + attempts + '/5')
+            );
+
+            if (row.nmap_next_attempt) {
+                $cell.append(
+                    $('<small>').addClass('text-muted').css({
+                        'display': 'block',
+                        'white-space': 'nowrap'
+                    }).text('Next: ' + row.nmap_next_attempt)
+                );
+            }
+
+            return $cell;
+        }
+
+        if (state === 'failed') {
+            return $cell.html('<span style="color:#d9534f;font-weight:bold;white-space:nowrap;"><i class="fa fa-exclamation-triangle"></i> Failed ' + attempts + '/5</span>');
+        }
+
+        return $cell;
+    }
+
     // Render tabulky
     function renderTable(rows) {
         var $tbody = $('#grid-devices tbody').empty();
@@ -293,6 +339,7 @@ $(document).ready(function() {
                 $('<td>').text(row.vendor||''),
                 $('<td>').text(vlanLabel),
                 $('<td>').html(statusHtml),
+                buildScanStatusCell(row),
                 $('<td>').text(row.last_seen||''),
                 $('<td>').html('<button class="btn btn-xs btn-warning command-check" data-row-mac="'+row.mac+'" data-row-ip="'+row.ip+'" title="Check online" style="margin-right:2px;"><i class="fa fa-plug"></i></button>' +
                 '<button class="btn btn-xs btn-danger command-delete" data-row-mac="'+row.mac+'"><i class="fa fa-trash"></i></button>')
