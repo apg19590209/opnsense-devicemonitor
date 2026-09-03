@@ -138,6 +138,87 @@ $html = <<<HTML
 </html>
 HTML;
 
+$emailMethod = strtolower($config['email_method'] ?? 'sendmail');
+
+if ($emailMethod === 'smtp') {
+    $helper = '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/smtp_send.py';
+
+    if (!is_file($helper)) {
+        fwrite(STDERR, "Direct SMTP helper not found\n");
+        exit(1);
+    }
+
+    $plain = html_entity_decode(strip_tags(
+        str_replace(
+            ['<br>', '<br/>', '<br />', '</p>', '</tr>'],
+            ["\n", "\n", "\n", "\n", "\n"],
+            $html
+        )
+    ), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+    $plain = preg_replace('/[ \t]+/', ' ', $plain);
+    $plain = preg_replace('/\n{3,}/', "\n\n", $plain);
+    $plain = trim($plain);
+
+    $payload = json_encode([
+        'subject' => $subject,
+        'html' => $html,
+        'text' => $plain,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    if ($payload === false) {
+        fwrite(STDERR, "Unable to encode SMTP payload\n");
+        exit(1);
+    }
+
+    $proc = proc_open(
+        '/usr/local/bin/python3 ' . escapeshellarg($helper),
+        [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ],
+        $pipes
+    );
+
+    if (!is_resource($proc)) {
+        fwrite(STDERR, "Unable to start Direct SMTP helper\n");
+        exit(1);
+    }
+
+    fwrite($pipes[0], $payload);
+    fclose($pipes[0]);
+
+    $stdout = stream_get_contents($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+
+    $ret = proc_close($proc);
+    $response = json_decode(trim($stdout), true);
+
+    if (
+        $ret !== 0 ||
+        !is_array($response) ||
+        ($response['result'] ?? '') !== 'sent'
+    ) {
+        $detail = is_array($response) ? ($response['message'] ?? '') : '';
+
+        if ($detail === '') {
+            $detail = trim($stderr) !== ''
+                ? trim($stderr)
+                : (trim($stdout) !== '' ? trim($stdout) : "exit code {$ret}");
+        }
+
+        fwrite(STDERR, "Direct SMTP error: {$detail}\n");
+        exit(1);
+    }
+
+    exit(0);
+}
+
+/* Default transport: local sendmail. */
 $message  = "From: {$emailFrom}\r\n";
 $message .= "To: {$emailTo}\r\n";
 $message .= "Subject: {$subject}\r\n";
