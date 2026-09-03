@@ -249,54 +249,70 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 
 ## Installation
 
-### Method 1: WinSCP + SSH (recommended)
+### Method 1: Download release ZIP + WinSCP
 
-**Step 1:** Download the latest release ZIP from [Release](../../tree/main/release).
+1. Download the **v2.4 Source code (zip)** from:
+   https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.4
+2. Enable SSH in OPNsense: **System -> Settings -> Administration -> Secure Shell -> Enable**.
+3. Upload the ZIP to `/tmp/` using WinSCP.
+4. Connect by SSH and install:
 
-**Step 2:** Enable SSH on OPNsense:
-```
-System → Settings → Administration → Secure Shell → Enable
-```
-
-**Step 3:** Upload via WinSCP to `/tmp/` on OPNsense.
-
-**Step 4:** Connect via SSH and install:
-```bash
+```sh
 cd /tmp
-unzip opnsense-devicemonitor*.zip
-cd opnsense-devicemonitor
+unzip opnsense-devicemonitor-2.4.zip
+cd opnsense-devicemonitor-2.4
 sh install.sh
 ```
 
-No reboot required. The install script handles everything.
-
----
+No reboot is normally required.
 
 ### Method 2: Direct SSH
 
-```bash
+```sh
 ssh root@your.opnsense.ip
 cd /tmp
-fetch https://github.com/hacesoft/opnsense-devicemonitor/releases/latest/download/opnsense-devicemonitor.zip
-unzip opnsense-devicemonitor.zip
-cd opnsense-devicemonitor
+fetch https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.4.zip
+unzip v2.4.zip
+cd opnsense-devicemonitor-2.4
 sh install.sh
 ```
 
----
+### Upgrading an existing installation
 
-### What install.sh does
+Before upgrading, back up the runtime data:
 
-1. Checks OPNsense version (minimum 26.1.5)
-2. Runs `uninstall.sh --silent` if an old installation is detected (preserves database)
-3. Creates all required directories
-4. Copies RC script and registers the service in `plugins.inc.d`
-5. Installs the dashboard widget
-6. Compiles translation files
-7. Copies MVC controllers, models, views
-8. Copies Python, shell, and PHP scripts
-9. Copies configd actions
-10. Kills any zombie daemon processes, starts fresh via `configctl devicemonitor start`
+```sh
+tar -czf /root/devicemonitor-backup.tgz /var/db/devicemonitor
+```
+
+Then install v2.4 using either method above.
+
+Existing configuration and device data are preserved during the upgrade.
+
+After installation, verify the daemon:
+
+```sh
+/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
+```
+
+Expected result:
+
+```text
+running
+```
+
+### Targeted Nmap scanning in v2.4
+
+For newly detected devices that qualify for an email notification, v2.4 can:
+
+- scan the top 100 TCP ports;
+- perform lightweight service/version detection;
+- queue scans persistently in SQLite;
+- process up to 2 queued devices per monitoring cycle;
+- retry failed scans;
+- send a separate formatted scan report by email.
+
+Existing devices are not automatically added to the Nmap queue during an upgrade.
 
 ---
 
