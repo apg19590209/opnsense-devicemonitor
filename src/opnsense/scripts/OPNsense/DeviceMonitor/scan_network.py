@@ -1,13 +1,14 @@
 #!/usr/local/bin/python3
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, UTC
 import os
 import json
 import sys
 import argparse
 import subprocess
 import re
+import ipaddress
 import xml.etree.ElementTree as ET
 
 # ================================================================
@@ -298,11 +299,154 @@ def is_recently_seen(last_seen_str, minutes=15):
         return False
     try:
         last_seen = datetime.strptime(last_seen_str, '%Y-%m-%d %H:%M:%S')
-        now_utc = datetime.utcnow()
+        now_utc = datetime.now(UTC).replace(tzinfo=None)
         return (now_utc - last_seen).total_seconds() < minutes * 60
     except:
         return False
     
+
+def targeted_scan_and_email(device):
+    """Run a targeted Nmap scan for one new device and email the formatted result."""
+    ip = (device.get('ip') or '').strip()
+
+    # Hard safety guard: one literal IP only. No CIDR, ranges or hostnames.
+    try:
+        parsed_ip = ipaddress.ip_address(ip)
+    except ValueError:
+        log(f"[NMAP] Invalid target IP rejected: {ip!r}")
+        return False
+
+    if parsed_ip.version != 4:
+        log(f"[NMAP] IPv6 target skipped for now: {ip}")
+        return False
+
+    scan_cmd = [
+        '/usr/local/bin/nmap',
+        '-Pn',
+        '-T4',
+        '--top-ports', '100',
+        '-sV',
+        '--version-light',
+        '--host-timeout', '45s',
+        '-oX', '-',
+        ip
+    ]
+
+    log(f"[NMAP] Starting targeted scan: {ip}")
+
+    try:
+        result = subprocess.run(
+            scan_cmd,
+            capture_output=True,
+            text=True,
+            timeout=50
+        )
+    except subprocess.TimeoutExpired:
+        log(f"[NMAP] Targeted scan timeout: {ip}")
+        return False
+    except Exception as e:
+        log(f"[NMAP] Targeted scan failed to start for {ip}: {e}")
+        return False
+
+    if result.returncode != 0:
+        log(f"[NMAP] Scan failed for {ip}, code={result.returncode}: {result.stderr[:200]}")
+        return False
+
+    try:
+        root = ET.fromstring(result.stdout)
+    except Exception as e:
+        log(f"[NMAP] Invalid XML output for {ip}: {e}")
+        return False
+
+    services = []
+    os_hints = []
+
+    for port in root.findall('.//port'):
+        state_el = port.find('state')
+        if state_el is None or state_el.get('state') != 'open':
+            continue
+
+        service_el = port.find('service')
+        service_name = ''
+        version_parts = []
+
+        if service_el is not None:
+            service_name = service_el.get('name', '')
+
+            for attr in ('product', 'version', 'extrainfo'):
+                value = service_el.get(attr)
+                if value:
+                    version_parts.append(value)
+
+            ostype = service_el.get('ostype')
+            if ostype and ostype not in os_hints:
+                os_hints.append(ostype)
+
+        services.append({
+            'port': port.get('portid', ''),
+            'protocol': port.get('protocol', ''),
+            'state': 'open',
+            'service': service_name or 'unknown',
+            'version': ' '.join(version_parts) or ''
+        })
+
+    runstats = root.find('./runstats/finished')
+    duration = ''
+    if runstats is not None and runstats.get('elapsed'):
+        duration = f"{runstats.get('elapsed')} seconds"
+
+    payload = {
+        'ip': ip,
+        'mac': device.get('mac', ''),
+        'hostname': device.get('hostname', '') or 'Unknown',
+        'vendor': device.get('vendor', '') or 'Unknown',
+        'vlan': device.get('vlan', ''),
+        'first_seen': device.get('first_seen', ''),
+        'scan_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'duration': duration,
+        'os_hint': ', '.join(os_hints) if os_hints else 'Not identified',
+        'services': services
+    }
+
+    safe_ip = ip.replace('.', '_')
+    json_file = f"/tmp/devicemonitor-scan-{os.getpid()}-{safe_ip}.json"
+
+    try:
+        with open(json_file, 'w') as f:
+            json.dump(payload, f)
+
+        mail_result = subprocess.run(
+            [
+                '/usr/local/bin/php',
+                '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_scan_email.php',
+                json_file
+            ],
+            capture_output=True,
+            text=True,
+            timeout=20
+        )
+
+        if mail_result.returncode != 0:
+            log(f"[NMAP] Scan email failed for {ip}: {mail_result.stderr[:200]}")
+            return False
+
+        log(f"[NMAP] Targeted scan email sent for {ip}: {len(services)} open service(s)")
+        return True
+
+    except subprocess.TimeoutExpired:
+        log(f"[NMAP] Scan email timeout for {ip}")
+        return False
+    except Exception as e:
+        log(f"[NMAP] Scan email error for {ip}: {e}")
+        return False
+    finally:
+        try:
+            if os.path.exists(json_file):
+                os.unlink(json_file)
+        except Exception:
+            pass
+
+
 
 def send_email_via_php_api(new_devices):
     """Označ zařízení v DB pro odeslání emailu"""
@@ -509,6 +653,16 @@ def full_scan():
         webhook_devs  = [d for d in new_devices if not webhook_vlans or d.get('vlan','') in webhook_vlans]
         if email_devs and config.get('email_enabled') and config.get('email_to'):
             send_email_via_php_api(email_devs)
+
+            # Targeted security scan for newly detected emailed devices only.
+            # Sequential and capped to avoid tying up OPNsense during mass discovery.
+            scan_devs = email_devs[:5]
+            for device in scan_devs:
+                targeted_scan_and_email(device)
+
+            if len(email_devs) > 5:
+                log(f"[NMAP] Scan cap reached: scanned 5 of {len(email_devs)} new emailed devices")
+
         if webhook_devs and config.get('webhook_enabled') and config.get('webhook_url'):
             send_webhook_via_php_api(webhook_devs)
 
