@@ -1,7 +1,7 @@
 #!/usr/local/bin/python3
 
 import sqlite3
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 import os
 import json
 import sys
@@ -136,6 +136,21 @@ def init_db():
 
     try:
         c.execute('ALTER TABLE devices ADD COLUMN nmap_scan_pending INTEGER DEFAULT 0')
+    except:
+        pass
+
+    try:
+        c.execute('ALTER TABLE devices ADD COLUMN nmap_scan_attempts INTEGER DEFAULT 0')
+    except:
+        pass
+
+    try:
+        c.execute('ALTER TABLE devices ADD COLUMN nmap_next_attempt DATETIME DEFAULT NULL')
+    except:
+        pass
+
+    try:
+        c.execute('ALTER TABLE devices ADD COLUMN nmap_last_error TEXT DEFAULT NULL')
     except:
         pass
 
@@ -342,12 +357,14 @@ def targeted_scan_and_email(device):
     try:
         parsed_ip = ipaddress.ip_address(ip)
     except ValueError:
-        log(f"[NMAP] Invalid target IP rejected: {ip!r}")
-        return False
+        error = f"Invalid target IP: {ip!r}"
+        log(f"[NMAP] {error}")
+        return False, error
 
     if parsed_ip.version != 4:
-        log(f"[NMAP] IPv6 target skipped for now: {ip}")
-        return False
+        error = f"IPv6 target skipped: {ip}"
+        log(f"[NMAP] {error}")
+        return False, error
 
     scan_cmd = [
         '/usr/local/bin/nmap',
@@ -371,21 +388,25 @@ def targeted_scan_and_email(device):
             timeout=50
         )
     except subprocess.TimeoutExpired:
-        log(f"[NMAP] Targeted scan timeout: {ip}")
-        return False
+        error = f"Targeted scan timeout: {ip}"
+        log(f"[NMAP] {error}")
+        return False, error
     except Exception as e:
-        log(f"[NMAP] Targeted scan failed to start for {ip}: {e}")
-        return False
+        error = f"Targeted scan failed to start for {ip}: {e}"
+        log(f"[NMAP] {error}")
+        return False, error
 
     if result.returncode != 0:
-        log(f"[NMAP] Scan failed for {ip}, code={result.returncode}: {result.stderr[:200]}")
-        return False
+        error = f"Scan failed for {ip}, code={result.returncode}: {result.stderr[:200]}"
+        log(f"[NMAP] {error}")
+        return False, error
 
     try:
         root = ET.fromstring(result.stdout)
     except Exception as e:
-        log(f"[NMAP] Invalid XML output for {ip}: {e}")
-        return False
+        error = f"Invalid XML output for {ip}: {e}"
+        log(f"[NMAP] {error}")
+        return False, error
 
     services = []
     os_hints = []
@@ -456,18 +477,21 @@ def targeted_scan_and_email(device):
         )
 
         if mail_result.returncode != 0:
-            log(f"[NMAP] Scan email failed for {ip}: {mail_result.stderr[:200]}")
-            return False
+            error = f"Scan email failed for {ip}: {mail_result.stderr[:200]}"
+            log(f"[NMAP] {error}")
+            return False, error
 
         log(f"[NMAP] Targeted scan email sent for {ip}: {len(services)} open service(s)")
-        return True
+        return True, ""
 
     except subprocess.TimeoutExpired:
-        log(f"[NMAP] Scan email timeout for {ip}")
-        return False
+        error = f"Scan email timeout for {ip}"
+        log(f"[NMAP] {error}")
+        return False, error
     except Exception as e:
-        log(f"[NMAP] Scan email error for {ip}: {e}")
-        return False
+        error = f"Scan email error for {ip}: {e}"
+        log(f"[NMAP] {error}")
+        return False, error
     finally:
         try:
             if os.path.exists(json_file):
@@ -701,13 +725,17 @@ def full_scan():
             send_email_via_php_api(email_devs)
 
             # Queue every newly detected emailed device for a targeted scan.
-            # The queue is drained gradually below to keep scan cycles bounded.
+            # New queue entries always start with a clean retry state.
             with sqlite3.connect(DB_FILE) as queue_conn:
                 for device in email_devs:
-                    queue_conn.execute(
-                        'UPDATE devices SET nmap_scan_pending = 1 WHERE mac = ?',
-                        (device['mac'],)
-                    )
+                    queue_conn.execute('''
+                        UPDATE devices
+                        SET nmap_scan_pending = 1,
+                            nmap_scan_attempts = 0,
+                            nmap_next_attempt = NULL,
+                            nmap_last_error = NULL
+                        WHERE mac = ?
+                    ''', (device['mac'],))
 
             log(f"[NMAP] Queued {len(email_devs)} new device(s) for targeted scanning")
 
@@ -715,27 +743,84 @@ def full_scan():
             send_webhook_via_php_api(webhook_devs)
 
     # Drain a bounded number of queued targeted scans each cycle.
-    # Two scans leave comfortable headroom beneath the daemon timeout.
+    # Retry backoff after failures: 15m, 1h, 6h, 24h, then stop.
     if config['enabled'] and config.get('email_enabled') and config.get('email_to'):
+        retry_now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
         with sqlite3.connect(DB_FILE) as queue_conn:
             queue_conn.row_factory = sqlite3.Row
             scan_rows = queue_conn.execute('''
-                SELECT mac, ip, hostname, vendor, vlan, first_seen
+                SELECT mac, ip, hostname, vendor, vlan, first_seen,
+                       nmap_scan_attempts, nmap_next_attempt, nmap_last_error
                 FROM devices
                 WHERE nmap_scan_pending = 1
+                  AND (nmap_next_attempt IS NULL OR nmap_next_attempt <= ?)
                 ORDER BY first_seen ASC
                 LIMIT 2
-            ''').fetchall()
+            ''', (retry_now,)).fetchall()
 
         for row in scan_rows:
             device = dict(row)
+            success, error = targeted_scan_and_email(device)
 
-            if targeted_scan_and_email(device):
+            if success:
                 with sqlite3.connect(DB_FILE) as queue_conn:
-                    queue_conn.execute(
-                        'UPDATE devices SET nmap_scan_pending = 0 WHERE mac = ?',
-                        (device['mac'],)
-                    )
+                    queue_conn.execute('''
+                        UPDATE devices
+                        SET nmap_scan_pending = 0,
+                            nmap_scan_attempts = 0,
+                            nmap_next_attempt = NULL,
+                            nmap_last_error = NULL
+                        WHERE mac = ?
+                    ''', (device['mac'],))
+
+                log(f"[NMAP] Targeted scan completed for {device['mac']}")
+                continue
+
+            attempts = int(device.get('nmap_scan_attempts') or 0) + 1
+            error = (error or 'Unknown targeted scan failure')[:1000]
+
+            retry_delays = {
+                1: timedelta(minutes=15),
+                2: timedelta(hours=1),
+                3: timedelta(hours=6),
+                4: timedelta(hours=24),
+            }
+
+            if attempts >= 5:
+                with sqlite3.connect(DB_FILE) as queue_conn:
+                    queue_conn.execute('''
+                        UPDATE devices
+                        SET nmap_scan_pending = 0,
+                            nmap_scan_attempts = ?,
+                            nmap_next_attempt = NULL,
+                            nmap_last_error = ?
+                        WHERE mac = ?
+                    ''', (attempts, error, device['mac']))
+
+                log(
+                    f"[NMAP] Targeted scan permanently failed for "
+                    f"{device['mac']} after {attempts} attempts: {error}"
+                )
+            else:
+                next_attempt = (
+                    datetime.now() + retry_delays[attempts]
+                ).strftime('%Y-%m-%d %H:%M:%S')
+
+                with sqlite3.connect(DB_FILE) as queue_conn:
+                    queue_conn.execute('''
+                        UPDATE devices
+                        SET nmap_scan_pending = 1,
+                            nmap_scan_attempts = ?,
+                            nmap_next_attempt = ?,
+                            nmap_last_error = ?
+                        WHERE mac = ?
+                    ''', (attempts, next_attempt, error, device['mac']))
+
+                log(
+                    f"[NMAP] Targeted scan attempt {attempts} failed for "
+                    f"{device['mac']}; retry scheduled for {next_attempt}: {error}"
+                )
 
         with sqlite3.connect(DB_FILE) as queue_conn:
             remaining_scans = queue_conn.execute(
@@ -744,7 +829,6 @@ def full_scan():
 
         if remaining_scans:
             log(f"[NMAP] {remaining_scans} targeted scan(s) remain queued")
-
     # Do not leave stale pending flags between scans/channels.
     with sqlite3.connect(DB_FILE) as cleanup_conn:
         cleanup_conn.execute('UPDATE devices SET notification_pending = 0')
