@@ -333,6 +333,35 @@ echo 'devicemonitor_enable="YES"' > /etc/rc.conf.d/devicemonitor
 chmod 644 /etc/rc.conf.d/devicemonitor
 echo "  OK: Autostart enabled"
 
+# Validate installed files before restarting configd or Device Monitor.
+echo "  -> Validating installed files..."
+
+python3 -m py_compile /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/*.py || {
+    echo "  ERROR: Installed Python syntax validation failed"
+    exit 1
+}
+
+for php_file in /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/*.php; do
+    php -l "$php_file" >/dev/null || {
+        echo "  ERROR: Installed PHP syntax validation failed: $php_file"
+        exit 1
+    }
+done
+
+for shell_file in /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/*.sh; do
+    sh -n "$shell_file" || {
+        echo "  ERROR: Installed shell syntax validation failed: $shell_file"
+        exit 1
+    }
+done
+
+if [ ! -f "/usr/local/opnsense/service/conf/actions.d/actions_devicemonitor.conf" ]; then
+    echo "  ERROR: Installed configd actions file is missing"
+    exit 1
+fi
+
+echo "  OK: Installed files validated"
+
 [ -f "/var/db/known_devices.db" ] && rm -f /var/db/known_devices.db
 
 # ============================================
