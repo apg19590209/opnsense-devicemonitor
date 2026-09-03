@@ -134,6 +134,11 @@ def init_db():
     except:
         pass
 
+    try:
+        c.execute('ALTER TABLE devices ADD COLUMN nmap_scan_pending INTEGER DEFAULT 0')
+    except:
+        pass
+
     # Tombstones for manually deleted devices. Historical Hostwatch records
     # must not immediately recreate a device that the user removed.
     c.execute('''CREATE TABLE IF NOT EXISTS deleted_devices (
@@ -655,17 +660,50 @@ def full_scan():
         if email_devs and config.get('email_enabled') and config.get('email_to'):
             send_email_via_php_api(email_devs)
 
-            # Targeted security scan for newly detected emailed devices only.
-            # Sequential and capped to avoid tying up OPNsense during mass discovery.
-            scan_devs = email_devs[:5]
-            for device in scan_devs:
-                targeted_scan_and_email(device)
+            # Queue every newly detected emailed device for a targeted scan.
+            # The queue is drained gradually below to keep scan cycles bounded.
+            with sqlite3.connect(DB_FILE) as queue_conn:
+                for device in email_devs:
+                    queue_conn.execute(
+                        'UPDATE devices SET nmap_scan_pending = 1 WHERE mac = ?',
+                        (device['mac'],)
+                    )
 
-            if len(email_devs) > 5:
-                log(f"[NMAP] Scan cap reached: scanned 5 of {len(email_devs)} new emailed devices")
+            log(f"[NMAP] Queued {len(email_devs)} new device(s) for targeted scanning")
 
         if webhook_devs and config.get('webhook_enabled') and config.get('webhook_url'):
             send_webhook_via_php_api(webhook_devs)
+
+    # Drain a bounded number of queued targeted scans each cycle.
+    # Two scans leave comfortable headroom beneath the daemon timeout.
+    if config['enabled'] and config.get('email_enabled') and config.get('email_to'):
+        with sqlite3.connect(DB_FILE) as queue_conn:
+            queue_conn.row_factory = sqlite3.Row
+            scan_rows = queue_conn.execute('''
+                SELECT mac, ip, hostname, vendor, vlan, first_seen
+                FROM devices
+                WHERE nmap_scan_pending = 1
+                ORDER BY first_seen ASC
+                LIMIT 2
+            ''').fetchall()
+
+        for row in scan_rows:
+            device = dict(row)
+
+            if targeted_scan_and_email(device):
+                with sqlite3.connect(DB_FILE) as queue_conn:
+                    queue_conn.execute(
+                        'UPDATE devices SET nmap_scan_pending = 0 WHERE mac = ?',
+                        (device['mac'],)
+                    )
+
+        with sqlite3.connect(DB_FILE) as queue_conn:
+            remaining_scans = queue_conn.execute(
+                'SELECT COUNT(*) FROM devices WHERE nmap_scan_pending = 1'
+            ).fetchone()[0]
+
+        if remaining_scans:
+            log(f"[NMAP] {remaining_scans} targeted scan(s) remain queued")
 
     # Do not leave stale pending flags between scans/channels.
     with sqlite3.connect(DB_FILE) as cleanup_conn:
