@@ -147,6 +147,29 @@ def init_db():
         deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )''')
 
+    # Permanent MAC history used to distinguish genuinely new devices from
+    # previously known devices that have been deleted or recreated.
+    c.execute('''CREATE TABLE IF NOT EXISTS known_macs (
+        mac TEXT PRIMARY KEY,
+        first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # Seed historical MACs from both active and deleted device records.
+    c.execute('''
+        INSERT OR IGNORE INTO known_macs (mac, first_seen, last_seen)
+        SELECT lower(trim(mac)), first_seen, last_seen
+        FROM devices
+        WHERE mac IS NOT NULL AND trim(mac) <> ''
+    ''')
+
+    c.execute('''
+        INSERT OR IGNORE INTO known_macs (mac, first_seen, last_seen)
+        SELECT lower(trim(mac)), last_seen, last_seen
+        FROM deleted_devices
+        WHERE mac IS NOT NULL AND trim(mac) <> ''
+    ''')
+
     conn.commit()
     conn.close()
 
@@ -619,6 +642,22 @@ def full_scan():
                 continue
             conn.execute('DELETE FROM deleted_devices WHERE mac = ?', (mac,))
 
+        known_row = conn.execute(
+            'SELECT mac FROM known_macs WHERE mac = ?', (mac,)
+        ).fetchone()
+        is_truly_new = known_row is None
+
+        if is_truly_new:
+            conn.execute('''
+                INSERT INTO known_macs (mac, first_seen, last_seen)
+                VALUES (?, ?, ?)
+            ''', (mac, first_seen, last_seen))
+        else:
+            conn.execute(
+                'UPDATE known_macs SET last_seen = ? WHERE mac = ?',
+                (last_seen, mac)
+            )
+
         row = conn.execute(
             'SELECT mac, custom_hostname FROM devices WHERE mac = ?', (mac,)
         ).fetchone()
@@ -641,7 +680,8 @@ def full_scan():
             ''', (mac, device['ip'], device['hostname'], device['vendor'],
                   device['vlan'], first_seen, last_seen, is_active))
             device['first_seen'] = first_seen
-            new_devices.append(device)
+            if is_truly_new:
+                new_devices.append(device)
 
     conn.commit()
     online = conn.execute(
