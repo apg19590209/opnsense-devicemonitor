@@ -9,10 +9,10 @@ import subprocess
 from datetime import datetime
 
 # ================================================================
-# KONFIGURACE - ZAPNI/VYPNI FUNKCE
+# CONFIGURATION - ENABLE/DISABLE FEATURES
 # ================================================================
-INFO_LOGGING = True   # ← Important events such as daemon start and scan completion
-DEBUG_LOGGING = False  # ← Detailed debug messages such as config reloads every 10 seconds
+INFO_LOGGING = True   # Important events such as daemon start and scan completion
+DEBUG_LOGGING = False  # Detailed debug messages such as config reloads every 10 seconds
 
 # ================================================================
 # PATHS - ALL IN ONE PLACE

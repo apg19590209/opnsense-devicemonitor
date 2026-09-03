@@ -21,7 +21,7 @@ class DevicesController extends ApiControllerBase
             return $defaults['paths'];  // ← Paths from defaults.json
         }
         
-        // Fallback pokud defaults.json neexistuje
+        // Fallback if defaults.json does not exist
         return [-1];
     }
 

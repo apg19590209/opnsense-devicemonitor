@@ -1,64 +1,64 @@
 #!/bin/sh
 
 # Device Monitor - Uninstall Script
-# Podporuje tichý režim pro reinstalaci: ./uninstall.sh --silent
+# Supports silent mode for reinstall: ./uninstall.sh --silent
 
 SILENT_MODE=0
 
-# Kontrola parametru --silent
+# Check the --silent parameter
 if [ "$1" = "--silent" ]; then
     SILENT_MODE=1
 fi
 
 if [ "$SILENT_MODE" -eq 0 ]; then
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  Device Monitor - Odinstalace"
+    echo "  Device Monitor - Uninstall"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 fi
 
-# Kontrola root
+# Root check
 [ "$(id -u)" != "0" ] && {
-    echo "CHYBA: Musíš být root!"
+    echo "ERROR: You must be root!"
     exit 1
 }
 
 # ============================================
-# 1. ZASTAVENÍ SLUŽEB
+# 1. STOP SERVICES
 # ============================================
 
-echo "[1/6] Zastavuji daemon..."
-# Zastav přes configd (ne service status který vrací exit 1)
+echo "[1/6] Stopping daemon..."
+# Stop through configd (not service status, which returns exit 1)
 pkill -f monitor_daemon.py 2>/dev/null || true
 sleep 1
 rm -f /var/run/devicemonitor.pid
-echo "  ✓ Daemon zastaven"
+echo "  Daemon stopped"
 
 
 # ============================================
 # 3. AUTOSTART
 # ============================================
 
-echo "[3/6] Vypínám autostart..."
+echo "[3/6] Disabling autostart..."
 rm -f /etc/rc.conf.d/devicemonitor
 
 if grep -q "devicemonitor_enable" /etc/rc.conf.local 2>/dev/null; then
     sed -i '' '/devicemonitor_enable/d' /etc/rc.conf.local
 fi
 
-echo "  ✓ Autostart vypnut"
+echo "  Autostart disabled"
 
 # ============================================
-# 4. SOUBORY PLUGINU
+# 4. PLUGIN FILES
 # ============================================
 
-echo "[4/6] Odstraňuji soubory pluginu..."
+echo "[4/6] Removing plugin files..."
 
 # RC script
 rm -f /usr/local/etc/rc.d/devicemonitor
 rm -f /etc/rc.d/devicemonitor
 
-# Smazat také nový skript
+# Also remove the new script
 rm -f /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
 
 # 
@@ -82,50 +82,50 @@ rm -f /usr/local/opnsense/service/conf/actions.d/actions_devicemonitor.conf
 # Config files
 rm -f /tmp/devicemonitor_config.json
 
-# Nový JS widget (OPNsense 26.x)
+# New JS widget (OPNsense 26.x)
 rm -f /usr/local/opnsense/www/js/widgets/DeviceMonitor.js
 rm -f /usr/local/opnsense/www/js/widgets/Metadata/DeviceMonitor.xml
 
-echo "  ✓ Soubory pluginu odstraněny"
+echo "  Plugin files removed"
 
 # ============================================
-# 5. PŘEKLADY
+# 5. TRANSLATIONS
 # ============================================
 
-echo "[5/6] Odstraňuji překlady..."
+echo "[5/6] Removing translations..."
 rm -f /usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po
 rm -f /usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.mo
 rm -f /usr/local/opnsense/mvc/app/languages/en_US_devicemonitor.po
 rm -f /usr/local/opnsense/mvc/app/languages/en_US_devicemonitor.mo
-echo "  ✓ Překlady odstraněny"
+echo "  Translations removed"
 
 # ============================================
-# 6. DATABÁZE A DATA
+# 6. DATABASE AND DATA
 # ============================================
 
 if [ "$SILENT_MODE" -eq 1 ]; then
-    # Tichý režim (reinstalace) - NEMAZAT DATA!
-    echo "[6/6] Ponechávám databázi (reinstalace)..."
-    echo "  → /var/db/devicemonitor/devices.db"
+    # Silent mode (reinstall) - DO NOT DELETE DATA!
+    echo "[6/6] Preserving database (reinstall)..."
+    echo "  /var/db/devicemonitor/devices.db"
 else
-    # Normální odinstalace - smazat vše
-    echo "[6/6] Odstraňuji databázi ..."
+    # Normal uninstall - remove everything
+    echo "[6/6] Removing database..."
     
     if [ -d "/var/db/devicemonitor" ]; then
         rm -rf /var/db/devicemonitor
-        echo "  ✓ Databáze smazána"
+        echo "  Database removed"
     else
-        echo "  → Databáze nenalezena"
+        echo "  Database not found"
     fi
 fi
 
 # ============================================
-# VYČISTĚNÍ CACHE
+# CLEAR CACHE
 # ============================================
 
 if [ "$SILENT_MODE" -eq 0 ]; then
     echo ""
-    echo "Čistím cache..."
+    echo "Clearing cache..."
 fi
 
 rm -f /tmp/opnsense_menu_cache.xml
@@ -133,12 +133,12 @@ rm -f /tmp/opnsense_acl_cache.json
 rm -rf /var/cache/opnsense/templates/* 2>/dev/null || true
 
 # ============================================
-# RESTART SLUŽEB (pouze při normální odinstalaci)
+# RESTART SERVICES (normal uninstall only)
 # ============================================
 
 if [ "$SILENT_MODE" -eq 0 ]; then
     echo ""
-    echo "Aktualizuji menu a restartuji služby..."
+    echo "Updating menu and restarting services..."
     
     /usr/local/etc/rc.configure_plugins
     service configd restart
@@ -149,11 +149,11 @@ if [ "$SILENT_MODE" -eq 0 ]; then
     
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  ✓ Odinstalace dokončena!"
+    echo "  Uninstall complete!"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    echo "Plugin byl odstraněn z GUI."
-    echo "Pro úplné vyčištění restartuj prohlížeč (Ctrl+Shift+R)."
+    echo "The plugin has been removed from the GUI."
+    echo "For a complete refresh, reload the browser with Ctrl+Shift+R."
     echo ""
 fi
 

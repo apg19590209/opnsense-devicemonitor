@@ -12,9 +12,9 @@ import ipaddress
 import xml.etree.ElementTree as ET
 
 # ================================================================
-# KONFIGURACE - ZAPNI/VYPNI FUNKCE
+# CONFIGURATION - ENABLE/DISABLE FEATURES
 # ================================================================
-DEBUG_LOGGING = True  # ← Set to False to disable logging
+DEBUG_LOGGING = True  # Set to False to disable logging
 
 # ================================================================
 # PATHS - ALL IN ONE PLACE

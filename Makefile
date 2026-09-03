@@ -3,7 +3,7 @@
 
 .PHONY: help install uninstall reinstall status start stop restart scan test-email clean backup
 
-# Barvy pro výstup
+# Output colors
 RED    = \033[0;31m
 GREEN  = \033[0;32m
 YELLOW = \033[0;33m
@@ -20,63 +20,63 @@ help:
 	@echo "$(BLUE)  OPNsense Device Monitor - Makefile$(NC)"
 	@echo "$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
 	@echo ""
-	@echo "$(GREEN)Instalace:$(NC)"
-	@echo "  make install      - Nainstaluje plugin"
-	@echo "  make uninstall    - Odinstaluje plugin"
-	@echo "  make reinstall    - Přeinstaluje plugin (uninstall + install)"
+	@echo "$(GREEN)Installation:$(NC)"
+	@echo "  make install      - Install plugin"
+	@echo "  make uninstall    - Uninstall plugin"
+	@echo "  make reinstall    - Reinstall plugin (uninstall + install)"
 	@echo ""
 	@echo "$(GREEN)Daemon:$(NC)"
-	@echo "  make start        - Spustí daemon"
-	@echo "  make stop         - Zastaví daemon"
-	@echo "  make restart      - Restartuje daemon"
-	@echo "  make status       - Zobrazí status daemona"
+	@echo "  make start        - Start daemon"
+	@echo "  make stop         - Stop daemon"
+	@echo "  make restart      - Restart daemon"
+	@echo "  make status       - Show daemon status"
 	@echo ""
-	@echo "$(GREEN)Operace:$(NC)"
-	@echo "  make scan         - Manuální sken sítě"
-	@echo "  make test-email   - Test email formátů"
-	@echo "  make logs         - Sleduj logy"
-	@echo "  make db           - Zobraz databázi"
+	@echo "$(GREEN)Operations:$(NC)"
+	@echo "  make scan         - Manual network scan"
+	@echo "  make test-email   - Test email formats"
+	@echo "  make logs         - Follow logs"
+	@echo "  make db           - Show database"
 	@echo ""
-	@echo "$(GREEN)Údržba:$(NC)"
-	@echo "  make clean        - Vyčistí cache"
-	@echo "  make backup       - Zálohuje databázi"
-	@echo "  make restore      - Obnoví databázi"
+	@echo "$(GREEN)Maintenance:$(NC)"
+	@echo "  make clean        - Clear cache"
+	@echo "  make backup       - Back up database"
+	@echo "  make restore      - Restore database"
 	@echo ""
 
 install:
-	@echo "$(GREEN)Instaluji Device Monitor...$(NC)"
-	@test -f install.sh || { echo "$(RED)CHYBA: install.sh nenalezen!$(NC)"; exit 1; }
+	@echo "$(GREEN)Installing Device Monitor...$(NC)"
+	@test -f install.sh || { echo "$(RED)ERROR: install.sh not found!$(NC)"; exit 1; }
 	@chmod +x install.sh
 	@./install.sh
-	@echo "$(GREEN)✓ Instalace dokončena$(NC)"
+	@echo "$(GREEN)Installation complete$(NC)"
 
-	# Helper skripty pro configd
+	# Helper scripts for configd
 	install -m 0755 src/opnsense/scripts/OPNsense/DeviceMonitor/notify_email.php \
 		$(DESTDIR)/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/
 	install -m 0755 src/opnsense/scripts/OPNsense/DeviceMonitor/notify_webhook.php \
 		$(DESTDIR)/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/
 
 uninstall:
-	@echo "$(YELLOW)Odinstalovávám Device Monitor...$(NC)"
-	@test -f uninstall.sh || { echo "$(RED)CHYBA: uninstall.sh nenalezen!$(NC)"; exit 1; }
+	@echo "$(YELLOW)Uninstalling Device Monitor...$(NC)"
+	@test -f uninstall.sh || { echo "$(RED)ERROR: uninstall.sh not found!$(NC)"; exit 1; }
 	@chmod +x uninstall.sh
 	@./uninstall.sh
-	@echo "$(YELLOW)✓ Odinstalace dokončena$(NC)"
+	@echo "$(YELLOW)Uninstall complete$(NC)"
 
 reinstall: uninstall
-	@echo "$(BLUE)Čekám 3 sekundy...$(NC)"
+	@echo "$(BLUE)Waiting 3 seconds...$(NC)"
 	@sleep 3
 	@$(MAKE) install
 
 start:
-	@echo "$(GREEN)Spouštím daemon...$(NC)"
-	@service devicemonitor start || echo "$(RED)Daemon se nepodařilo spustit$(NC)"
+	@echo "$(GREEN)Starting daemon...$(NC)"
+	@service devicemonitor start || echo "$(RED)Failed to start daemon$(NC)"
 	@sleep 2
 	@$(MAKE) status
 
 stop:
-	@echo "$(YELLOW)Zastavuji daemon...$(NC)"
-	@service devicemonitor stop || echo "$(YELLOW)Daemon neběží$(NC)"
+	@echo "$(YELLOW)Stopping daemon...$(NC)"
+	@service devicemonitor stop || echo "$(YELLOW)Daemon is not running$(NC)"
 	@sleep 1
 	@$(MAKE) status
 
@@ -87,96 +87,96 @@ restart:
 	@$(MAKE) status
 
 status:
-	@echo "$(BLUE)Status daemona:$(NC)"
-	@service devicemonitor status || echo "$(RED)Daemon neběží$(NC)"
+	@echo "$(BLUE)Daemon status:$(NC)"
+	@service devicemonitor status || echo "$(RED)Daemon is not running$(NC)"
 	@if [ -f "/var/run/devicemonitor.pid" ]; then \
 		echo "$(GREEN)PID: $$(cat /var/run/devicemonitor.pid)$(NC)"; \
 	fi
 
 scan:
-	@echo "$(GREEN)Spouštím manuální sken...$(NC)"
+	@echo "$(GREEN)Starting manual scan...$(NC)"
 	@/usr/local/bin/python3 /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py
-	@echo "$(GREEN)✓ Sken dokončen$(NC)"
+	@echo "$(GREEN)Scan complete$(NC)"
 
 test-email:
-	@echo "$(BLUE)Testování email formátů...$(NC)"
-	@test -f test_email_formats.sh || { echo "$(RED)CHYBA: test_email_formats.sh nenalezen!$(NC)"; exit 1; }
+	@echo "$(BLUE)Testing email formats...$(NC)"
+	@test -f test_email_formats.sh || { echo "$(RED)ERROR: test_email_formats.sh not found!$(NC)"; exit 1; }
 	@chmod +x test_email_formats.sh
 	@./test_email_formats.sh
-	@echo "$(BLUE)✓ Zkontroluj emailovou schránku$(NC)"
+	@echo "$(BLUE)Check the email inbox$(NC)"
 
 logs:
-	@echo "$(BLUE)Sledování logů (Ctrl+C pro ukončení):$(NC)"
+	@echo "$(BLUE)Following logs (Ctrl+C to stop):$(NC)"
 	@tail -f /var/log/system.log | grep --color=always devicemonitor
 
 db:
-	@echo "$(BLUE)Obsah databáze:$(NC)"
+	@echo "$(BLUE)Database contents:$(NC)"
 	@if [ -f "$(DB_DIR)/devices.db" ]; then \
-		echo "$(GREEN)Celkem zařízení:$(NC)"; \
+		echo "$(GREEN)Total devices:$(NC)"; \
 		sqlite3 $(DB_DIR)/devices.db "SELECT COUNT(*) FROM devices;"; \
 		echo ""; \
-		echo "$(GREEN)Posledních 10 zařízení:$(NC)"; \
+		echo "$(GREEN)Last 10 devices:$(NC)"; \
 		sqlite3 $(DB_DIR)/devices.db "SELECT mac, ip, hostname, vlan, last_seen FROM devices ORDER BY last_seen DESC LIMIT 10;" | column -t -s '|'; \
 	else \
-		echo "$(RED)Databáze neexistuje$(NC)"; \
+		echo "$(RED)Database does not exist$(NC)"; \
 	fi
 
 clean:
-	@echo "$(YELLOW)Čistím cache...$(NC)"
+	@echo "$(YELLOW)Clearing cache...$(NC)"
 	@rm -f /tmp/opnsense_menu_cache.xml
 	@rm -f /tmp/opnsense_acl_cache.json
 	@rm -rf /var/cache/opnsense/templates/*
-	@echo "$(YELLOW)Restartuji služby...$(NC)"
+	@echo "$(YELLOW)Restarting services...$(NC)"
 	@service configd restart
 	@configctl webgui restart
-	@echo "$(GREEN)✓ Cache vyčištěna$(NC)"
+	@echo "$(GREEN)Cache cleared$(NC)"
 
 backup:
-	@echo "$(BLUE)Zálohuji databázi...$(NC)"
+	@echo "$(BLUE)Backing up database...$(NC)"
 	@mkdir -p $(BACKUP_DIR)
 	@if [ -f "$(DB_DIR)/devices.db" ]; then \
 		cp $(DB_DIR)/devices.db $(BACKUP_DIR)/devices_$$(date +%Y%m%d_%H%M%S).db; \
-		echo "$(GREEN)✓ Záloha uložena do $(BACKUP_DIR)$(NC)"; \
+		echo "$(GREEN)Backup saved to $(BACKUP_DIR)$(NC)"; \
 		ls -lh $(BACKUP_DIR)/devices_*.db | tail -1; \
 	else \
-		echo "$(RED)Databáze neexistuje$(NC)"; \
+		echo "$(RED)Database does not exist$(NC)"; \
 	fi
 
 restore:
-	@echo "$(BLUE)Dostupné zálohy:$(NC)"
-	@ls -lh $(BACKUP_DIR)/devices_*.db 2>/dev/null || { echo "$(RED)Žádné zálohy nenalezeny$(NC)"; exit 1; }
+	@echo "$(BLUE)Available backups:$(NC)"
+	@ls -lh $(BACKUP_DIR)/devices_*.db 2>/dev/null || { echo "$(RED)No backups found$(NC)"; exit 1; }
 	@echo ""
-	@echo "$(YELLOW)Zadej jméno souboru k obnovení:$(NC)"
-	@read -p "Soubor: " file; \
+	@echo "$(YELLOW)Enter the filename to restore:$(NC)"
+	@read -p "File: " file; \
 	if [ -f "$(BACKUP_DIR)/$$file" ]; then \
 		cp $(BACKUP_DIR)/$$file $(DB_DIR)/devices.db; \
 		chmod 644 $(DB_DIR)/devices.db; \
-		echo "$(GREEN)✓ Databáze obnovena$(NC)"; \
+		echo "$(GREEN)Database restored$(NC)"; \
 	else \
-		echo "$(RED)Soubor nenalezen!$(NC)"; \
+		echo "$(RED)File not found!$(NC)"; \
 	fi
 
-# Developer cíle
+# Developer targets
 dev-watch:
-	@echo "$(BLUE)Sledování změn v souborech...$(NC)"
+	@echo "$(BLUE)Watching files for changes...$(NC)"
 	@while true; do \
 		inotifywait -r -e modify,create,delete src/ 2>/dev/null && \
-		echo "$(YELLOW)Změna detekována, restartuji...$(NC)" && \
+		echo "$(YELLOW)Change detected, restarting...$(NC)" && \
 		$(MAKE) reinstall; \
 	done
 
 dev-debug:
-	@echo "$(BLUE)Debug informace:$(NC)"
-	@echo "$(GREEN)Config soubor:$(NC)"
-	@cat /tmp/devicemonitor_config.json 2>/dev/null || echo "$(RED)Config neexistuje$(NC)"
+	@echo "$(BLUE)Debug information:$(NC)"
+	@echo "$(GREEN)Config file:$(NC)"
+	@cat /tmp/devicemonitor_config.json 2>/dev/null || echo "$(RED)Config does not exist$(NC)"
 	@echo ""
 	@echo "$(GREEN)PID file:$(NC)"
-	@cat /var/run/devicemonitor.pid 2>/dev/null || echo "$(RED)PID file neexistuje$(NC)"
+	@cat /var/run/devicemonitor.pid 2>/dev/null || echo "$(RED)PID file does not exist$(NC)"
 	@echo ""
-	@echo "$(GREEN)Daemon proces:$(NC)"
-	@ps aux | grep monitor_daemon | grep -v grep || echo "$(RED)Daemon neběží$(NC)"
+	@echo "$(GREEN)Daemon process:$(NC)"
+	@ps aux | grep monitor_daemon | grep -v grep || echo "$(RED)Daemon is not running$(NC)"
 
-# Rychlé příkazy
+# Quick commands
 i: install
 u: uninstall
 r: reinstall

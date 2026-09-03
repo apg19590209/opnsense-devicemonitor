@@ -312,7 +312,7 @@ $(document).ready(function() {
         return $cell;
     }
 
-    // Render tabulky
+    // Render table
     function renderTable(rows) {
         var $tbody = $('#grid-devices tbody').empty();
         rows.forEach(function(row) {

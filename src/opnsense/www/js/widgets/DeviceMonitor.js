@@ -6,7 +6,7 @@ export default class DeviceMonitor extends BaseWidget {
 
     getMarkup() {
         let t = this.translations;
-        // Unikátní ID – tak widget framework vždy najde správný DOM uzel
+        // Unique ID so the widget framework always finds the correct DOM element
         return $(`
             <table id="dm-widget-table" class="table table-condensed" style="margin-bottom:0;">
                 <tbody>
@@ -31,12 +31,12 @@ export default class DeviceMonitor extends BaseWidget {
         try {
             const stats = await this.ajaxCall('/api/devicemonitor/devices/stats');
             if (stats) {
-                // Hledej přímo v dokumentu – ne přes this.$container
+                // Search directly in the document, not through this.$container
                 $('#dm-total').text(stats.total ?? '-');
                 $('#dm-online').text(stats.online ?? '-');
             }
         } catch(e) {
-            console.error("Chyba při načítání stats:", e);
+            console.error("Error loading stats:", e);
         }
 
         try {
@@ -50,7 +50,7 @@ export default class DeviceMonitor extends BaseWidget {
                 $('#dm-status').html(`<span class="label ${label}">${text}</span>`);
             }
         } catch(e) {
-            console.error("Chyba při načítání statusu:", e);
+            console.error("Error loading status:", e);
         }
     }
 }
