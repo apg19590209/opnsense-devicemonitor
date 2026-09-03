@@ -54,6 +54,18 @@ else
     echo "  ✓ msgfmt dostupný"
 fi
 
+# Ensure Nmap is available for targeted new-device security scans.
+if ! command -v nmap >/dev/null 2>&1; then
+    echo "  -> nmap not found, installing..."
+    pkg install -y nmap
+    if [ $? -ne 0 ]; then
+        echo "  ERROR: nmap installation failed"
+        exit 1
+    fi
+    echo "  OK: nmap installed"
+else
+    echo "  OK: nmap available"
+fi
 # ============================================
 # [2/9] ODINSTALACE STARÉ VERZE
 # ============================================
