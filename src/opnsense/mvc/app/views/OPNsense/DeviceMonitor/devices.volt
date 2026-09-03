@@ -1,7 +1,7 @@
 <div class="content-box">
     <div class="content-box-main">
 
-        <!-- Header s verzí a statistikami -->
+        <!-- Header with version and statistics -->
         <div style="padding:10px 10px 8px 10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:1px solid #333;margin-bottom:12px;">
             <h1 style="margin:0;font-size:20px;">
                 {{ lang._('Device Monitor') }}
@@ -101,7 +101,7 @@ $(document).ready(function() {
     var allRows = [], activeVlans = [], activeStatus = '', vlanNames = {};
     var sortCol = 'last_seen', sortDir = 'desc';
 
-    // Obnov uložený VLAN filtr
+    // Restore saved VLAN filter
     try { activeVlans = JSON.parse(localStorage.getItem('dm_vlan_filter') || '[]'); } catch(e) {}
 
     // Toast
@@ -146,7 +146,7 @@ $(document).ready(function() {
                     .on('click', function(e){
                         e.preventDefault();
                         e.stopPropagation();
-                        // Reset = všechny odškrtnuté + All VLANs zaškrtnuté = žádný filtr
+                        // Reset means all individual VLANs unchecked and All VLANs selected
                         $('#vlan-checklist .vlan-cb').prop('checked', false);
                         $('#vlan-all').prop('checked', true);
                         activeVlans = [];
@@ -173,7 +173,7 @@ $(document).ready(function() {
         updateVlanLabel();
     }
 
-    // Dropdown nezavírat při kliknutí na checkbox
+    // Keep dropdown open when clicking a checkbox
     $('#vlan-checklist').on('click', function(e){ e.stopPropagation(); });
 
     $(document).on('change','#vlan-all',function(){
@@ -193,7 +193,7 @@ $(document).ready(function() {
         $('#vlan-checklist .vlan-cb:checked').each(function(){ sel.push($(this).val()); });
 
         if (sel.length === total || sel.length === 0) {
-            // Všechny zaškrtnuté NEBO žádná = žádný filtr
+            // All selected or none selected means no filter
             activeVlans = [];
             $('#vlan-all').prop('checked', true);
         } else {
@@ -216,7 +216,7 @@ $(document).ready(function() {
         }
     }
 
-    // Filtrování
+    // Filtering
     function applyFilters() {
         if (!allRows || !allRows.length) return;
         var filtered = allRows.filter(function(r){
@@ -224,12 +224,12 @@ $(document).ready(function() {
             var so = !activeStatus || r.status === activeStatus;
             return vo && so;
         });
-        // Řazení
+        // Sorting
         filtered.sort(function(a, b) {
             var va = a[sortCol] || '';
             var vb = b[sortCol] || '';
 
-            // Numerické řazení pro IP adresy
+            // Numeric sorting for IP addresses
             if (sortCol === 'ip') {
                 var ia = va.split('.').map(Number);
                 var ib = vb.split('.').map(Number);
@@ -242,7 +242,7 @@ $(document).ready(function() {
                 return 0;
             }
 
-            // Numerické řazení pro MAC adresu (hex)
+            // Numeric sorting for MAC addresses in hexadecimal
             if (sortCol === 'mac') {
                 var ma = va.replace(/:/g,'').toLowerCase();
                 var mb = vb.replace(/:/g,'').toLowerCase();
@@ -250,7 +250,7 @@ $(document).ready(function() {
                 return sortDir === 'asc' ? cmp : -cmp;
             }
 
-            // Textové řazení pro ostatní
+            // Text sorting for remaining fields
             va = va.toString().toLowerCase();
             vb = vb.toString().toLowerCase();
             if (va === vb) return 0;
@@ -259,7 +259,7 @@ $(document).ready(function() {
         });
 
         renderTable(filtered);
-        // Aktualizuj ikony šipek
+        // Update sort-arrow icons
         $('th.sortable .fa').removeClass('fa-sort-asc fa-sort-desc').addClass('fa-sort');
         $('th.sortable[data-col="'+sortCol+'"] .fa')
             .removeClass('fa-sort')
@@ -301,7 +301,7 @@ $(document).ready(function() {
         bindButtons();
     }
 
-    // Načtení dat
+    // Load data
     function loadDevices() {
         $.ajax({url:'/api/devicemonitor/devices/search',type:'POST',
             data:{rowCount:-1,current:1,searchPhrase:''},
@@ -387,7 +387,7 @@ $(document).ready(function() {
         }).on('blur',function(){ setTimeout(save,150); });
     });
 
-    // Řazení sloupců
+    // Column sorting
     $(document).on('click', 'th.sortable', function() {
         var col = $(this).data('col');
         if (sortCol === col) {
@@ -420,9 +420,9 @@ $(document).ready(function() {
         });
     });
 
-    // Export CSV - respektuje aktuální filtr
+    // CSV export respects the current filter
     $('#btn-export').on('click', function() {
-        // Vezmi aktuálně zobrazená data (po filtrování)
+        // Use the currently displayed filtered data
         var filtered = allRows.filter(function(r) {
             var vo = !activeVlans.length || activeVlans.indexOf(r.vlan) !== -1;
             var so = !activeStatus || r.status === activeStatus;
@@ -434,7 +434,7 @@ $(document).ready(function() {
             return;
         }
 
-        // Hlavičky
+        // Headers
         var cols = ['mac', 'ip', 'hostname', 'vendor', 'vlan', 'status', 'last_seen'];
         var headers = ['MAC Address', 'IP Address', 'Hostname', 'Vendor', 'VLAN', 'Status', 'Last Seen'];
 
@@ -442,11 +442,11 @@ $(document).ready(function() {
         filtered.forEach(function(row) {
             var line = cols.map(function(c) {
                 var val = (row[c] || '').toString();
-                // VLAN přidej popis
+                // Add the VLAN description
                 if (c === 'vlan' && row.vlan && vlanNames[row.vlan]) {
                     val = row.vlan + ' - ' + vlanNames[row.vlan];
                 }
-                // Escapuj středník a uvozovky
+                // Escape semicolons and quotation marks
                 val = val.replace(/"/g, '""');
                 if (val.indexOf(';') !== -1 || val.indexOf('"') !== -1) {
                     val = '"' + val + '"';
@@ -456,12 +456,12 @@ $(document).ready(function() {
             csv += line + '\n';
         });
 
-        // Přidej BOM pro správné zobrazení v Excelu
+        // Add BOM for correct display in Excel
         var bom = '\uFEFF';
         var blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
         var url  = URL.createObjectURL(blob);
 
-        // Vytvoř název souboru s datem + aktivním filtrem
+        // Create a filename containing the date and active filter
         var date    = new Date().toISOString().slice(0,10);
         var vlanPart = activeVlans.length === 1 ? '_' + activeVlans[0] : (activeVlans.length > 1 ? '_multi' : '_all');
         var filename = 'device_monitor_' + date + vlanPart + '.csv';
@@ -486,7 +486,7 @@ $(document).ready(function() {
         });
     });
 
-    // Init – nejprve načti interface popisky, pak zařízení
+    // Initialize by loading interface labels before devices
     $.ajax({url:'/api/devicemonitor/config/getinterfaces',type:'GET',
         success:function(data){ vlanNames=data||{}; loadDevices(); },
         error:function(){ loadDevices(); }

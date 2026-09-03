@@ -11,13 +11,13 @@ from datetime import datetime
 # ================================================================
 # KONFIGURACE - ZAPNI/VYPNI FUNKCE
 # ================================================================
-INFO_LOGGING = True   # ← Důležité události (daemon started, scan completed)
-DEBUG_LOGGING = False  # ← Detailní debug zprávy (config loaded každých 10s)
+INFO_LOGGING = True   # ← Important events such as daemon start and scan completion
+DEBUG_LOGGING = False  # ← Detailed debug messages such as config reloads every 10 seconds
 
 # ================================================================
-# CESTY - VŠECHNO NA JEDNOM MÍSTĚ!
+# PATHS - ALL IN ONE PLACE
 #
-#          Ukazatel na konfigurační soubor s výchozími hodnotami
+#          Pointer to the configuration file containing default values
 #
 # ================================================================
 defaultsFile = '/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json'
@@ -26,11 +26,11 @@ def load_defaults():
     with open(defaultsFile, 'r') as f:
         return json.load(f)
 
-# Načti na startu
+# Load at startup
 _defaults = load_defaults()
 PATHS = _defaults['paths']
 
-# Cesty (místo hardcoded)
+# Paths instead of hard-coded values
 CONFIG_FILE = PATHS['configFile']
 DB_FILE = PATHS['dbFile']
 PID_FILE = PATHS['pidFile']
@@ -41,7 +41,7 @@ DEFAULT_CONFIG = _defaults['config']
 running = True
 
 def signal_handler(signum, frame):
-    """Handler pro ukončení daemona"""
+    """Daemon shutdown handler"""
     global running
     log("Daemon stopping...", level='INFO')
     running = False
@@ -50,20 +50,20 @@ LOG_FILE = "/var/log/devicemonitor.log"
 
 def log(message, level='INFO'):
     """
-    Logování přímo do souboru + syslog
+    Log directly to file and syslog
     """
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     if level == 'INFO' and INFO_LOGGING:
-        # Zapiš přímo do souboru
+        # Write directly to the log file
         try:
             with open(LOG_FILE, 'a') as f:
                 f.write(f"[{timestamp}] {message}\n")
                 f.flush()
         except Exception as e:
-            pass  # Tiše ignoruj chyby
+            pass  # Silently ignore errors
         
-        # Pokus o syslog (nemusí fungovat)
+        # Attempt syslog logging if available
         try:
             subprocess.run(['logger', '-t', 'devicemonitor', message], check=False)
         except:
@@ -83,7 +83,7 @@ def log(message, level='INFO'):
             pass
 
 def load_config():
-    """Načte runtime konfiguraci (enabled, email, interval)"""
+    """Load runtime configuration including enabled state, email and interval"""
     
     if not os.path.exists(CONFIG_FILE):
         log(f"Config file not found: {CONFIG_FILE}, using defaults", level='DEBUG')
@@ -101,7 +101,7 @@ def load_config():
             enabled = config.get('enabled', '0') == '1'
             scan_interval = int(config.get('scan_interval', 300))
             
-            # DEBUG level - zobrazí se jen když DEBUG_LOGGING = True
+            # DEBUG level is shown only when DEBUG_LOGGING is True
             log(f"Config loaded: enabled={enabled}, interval={scan_interval}s", level='DEBUG')
             
             return {
@@ -121,7 +121,7 @@ def load_config():
         }
 
 def run_scan():
-    """Spustí scan script"""
+    """Run the scan script"""
     try:
         result = subprocess.run(
             ['/usr/local/bin/python3', SCAN_SCRIPT],
@@ -147,7 +147,7 @@ def run_scan():
         return False
 
 def main():
-    """Hlavní smyčka daemona"""
+    """Main daemon loop"""
     global running
     
     # Registruj signal handlery
@@ -156,19 +156,19 @@ def main():
     
     log("Daemon started", level='INFO')
     
-    # Načti konfiguraci (včetně cest)
+    # Load configuration including paths
     config = load_config()
     
     last_scan = 0
-    last_config_state = None  # Pro sledování změn konfigurace
-    last_interval = None      # Pro sledování změn intervalu
+    last_config_state = None  # Track configuration changes
+    last_interval = None      # Track interval changes
     
     while running:
         try:
-            # Načti konfiguraci (cesty se nenačítají znovu, jen settings)
+            # Reload settings without reloading paths
             config = load_config()
             
-            # Loguj jen změny stavu
+            # Log only state changes
             current_state = config['enabled']
             current_interval = config['scan_interval']
             
@@ -179,24 +179,24 @@ def main():
                     log("Monitoring DISABLED", level='INFO')
                 last_config_state = current_state
             
-            # Loguj změnu intervalu (i když je enabled)
+            # Log interval changes even while enabled
             elif current_state and current_interval != last_interval:
                 log(f"Scan interval changed to {current_interval}s", level='INFO')
             
             last_interval = current_interval
             
-            # Pokud je monitoring zapnutý
+            # If monitoring is enabled
             if config['enabled']:
                 current_time = time.time()
                 interval = config['scan_interval']
                 
-                # Je čas na sken?
+                # Is it time to scan?
                 if current_time - last_scan >= interval:
                     log(f"Running scheduled scan", level='INFO')
                     run_scan()
                     last_scan = current_time
             
-            # Spinkej 10 sekund před další kontrolou
+            # Sleep 10 seconds before the next check
             time.sleep(10)
             
         except Exception as e:

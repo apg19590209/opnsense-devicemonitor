@@ -5,9 +5,9 @@ namespace OPNsense\DeviceMonitor;
 class DeviceMonitor
 {
     // ================================================================
-    // CESTY - VŠECHNO NA JEDNOM MÍSTĚ!
+    // PATHS - ALL IN ONE PLACE
     //
-    //          Ukazatel na konfigurační soubor s výchozími hodnotami
+    //          Pointer to the configuration file containing default values
     //
     // ================================================================
     private static $defaultsFile = '/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json';
@@ -39,7 +39,7 @@ class DeviceMonitor
         $data = self::loadDefaults();
         $configFilePath = $data['paths']['configFile'];
         
-        // Pokud existuje config.json, načti z něj
+        // Load config.json if it exists
         if (file_exists($configFilePath)) {
             $json = file_get_contents($configFilePath);
             $savedConfig = json_decode($json, true);
@@ -55,7 +55,7 @@ class DeviceMonitor
             }
         }
         
-        // Jinak vrať defaults
+        // Otherwise return defaults
         $config = $data['config'];
         $config['paths'] = $data['paths'];
         return $config;
@@ -68,7 +68,7 @@ class DeviceMonitor
 
 
     /**
-     * Vrátí cestu k PID souboru
+     * Return the PID file path
      */
     public function getPidFilePath()
     {
@@ -77,7 +77,7 @@ class DeviceMonitor
 
     
     /**
-     * Vrátí cestu k databázi
+     * Return the database path
      */
     public function getDbFilePath()
     {
@@ -85,7 +85,7 @@ class DeviceMonitor
     }
     
     /**
-     * Vrátí cestu ke konfiguračnímu souboru
+     * Return the configuration file path
      */
     public function getConfigFilePath()
     {
@@ -114,21 +114,21 @@ class DeviceMonitor
 
 
     /**
-     * Uložení konfigurace
-     * @param array $data Data k uložení
-     * @return bool True pokud se podařilo uložit
+     * Save configuration
+     * @param array $data Data to save
+     * @return bool True if saving succeeded
      */
     public function setConfig($data)
     {
         $file_name = self::getPath('configFile');
         
-        // Bezpečné zajištění adresáře - nesmí blokovat uložení!
+        // Ensure the directory exists without blocking the save
         $dir = dirname($file_name);
         if (!is_dir($dir)) {
             try {
                 @mkdir($dir, 0755, true);
             } catch (\Exception $e) {
-                // Ignoruj chybu - zkusíme uložit soubor i tak
+                // Ignore the error and attempt to save the file anyway
             }
         }
         
@@ -151,7 +151,7 @@ class DeviceMonitor
 
     
     // ========================================
-    // DATABÁZE
+    // DATABASE
     // ========================================
     
     private function getDb()
@@ -215,12 +215,12 @@ class DeviceMonitor
     }
 
     // ========================================
-    // ZAŘÍZENÍ - CRUD OPERACE
+    // DEVICES - CRUD OPERATIONS
     // ========================================
     
     /**
-     * Získání všech zařízení z databáze
-     * @return array Seznam zařízení (upravený podle konfigurace)
+     * Retrieve all devices from the database
+     * @return array Device list adjusted according to configuration
      */
     public function getDevices()
     {
@@ -233,15 +233,15 @@ class DeviceMonitor
             
             while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
                 
-                // Status podle is_active sloupce (místo času)
+                // Determine status from the is_active column instead of time
                 $row['status'] = (isset($row['is_active']) && $row['is_active'] == 1) ? 'online' : 'offline';
                 
-                // Vendor může být NULL - oprav to
+                // Vendor may be NULL; normalize it
                 if (empty($row['vendor'])) {
                     $row['vendor'] = 'Unknown';
                 }
 
-                // Formátuj datum do českého formátu: 29.12.2025 - 18:37:51
+                // Format date as DD.MM.YYYY - HH:MM:SS
                 if (!empty($row['last_seen'])) {
                     $timestamp = strtotime($row['last_seen']);
                     if ($timestamp !== false) {

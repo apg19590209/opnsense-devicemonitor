@@ -8,7 +8,7 @@ use OPNsense\DeviceMonitor\DeviceMonitor;
 require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php');
 
 /**
- * API controller pro správu konfigurace
+ * API controller for configuration management
  */
 class ConfigController extends ApiControllerBase
 {
@@ -51,7 +51,7 @@ class ConfigController extends ApiControllerBase
     public function setAction()
     {
         if (!$this->request->isPost()) {
-            return ['result' => 'failed', 'message' => 'Musí být POST request'];
+            return ['result' => 'failed', 'message' => 'Must be a POST request'];
         }
 
         $model = new DeviceMonitor();
@@ -74,43 +74,43 @@ class ConfigController extends ApiControllerBase
         $webhook_vlans = $this->request->getPost('webhook_vlans', 'string', '');
 
         if (!in_array($email_method, ['sendmail', 'smtp'], true)) {
-            return ['result' => 'failed', 'message' => 'Neplatná metoda odesílání emailu'];
+            return ['result' => 'failed', 'message' => 'Invalid email delivery method'];
         }
 
         if (!in_array($smtp_encryption, ['none', 'starttls', 'ssl'], true)) {
-            return ['result' => 'failed', 'message' => 'Neplatný typ SMTP šifrování'];
+            return ['result' => 'failed', 'message' => 'Invalid SMTP encryption type'];
         }
 
         if ($email_enabled == '1') {
             if (empty($email_to) || !filter_var($email_to, FILTER_VALIDATE_EMAIL)) {
-                return ['result' => 'failed', 'message' => 'Neplatná emailová adresa příjemce'];
+                return ['result' => 'failed', 'message' => 'Invalid recipient email address'];
             }
 
             if (empty($email_from) || !filter_var($email_from, FILTER_VALIDATE_EMAIL)) {
-                return ['result' => 'failed', 'message' => 'Neplatná emailová adresa odesílatele'];
+                return ['result' => 'failed', 'message' => 'Invalid sender email address'];
             }
 
             if ($email_method === 'smtp') {
                 if ($smtp_host === '') {
-                    return ['result' => 'failed', 'message' => 'SMTP server nesmí být prázdný'];
+                    return ['result' => 'failed', 'message' => 'SMTP server must not be empty'];
                 }
                 if ($smtp_port < 1 || $smtp_port > 65535) {
-                    return ['result' => 'failed', 'message' => 'SMTP port musí být mezi 1-65535'];
+                    return ['result' => 'failed', 'message' => 'SMTP port must be between 1 and 65535'];
                 }
             }
         }
 
         if ($webhook_enabled == '1') {
             if (empty($webhook_url)) {
-                return ['result' => 'failed', 'message' => 'Webhook URL nesmí být prázdné'];
+                return ['result' => 'failed', 'message' => 'Webhook URL must not be empty'];
             }
             if (!filter_var($webhook_url, FILTER_VALIDATE_URL)) {
-                return ['result' => 'failed', 'message' => 'Neplatná webhook URL'];
+                return ['result' => 'failed', 'message' => 'Invalid webhook URL'];
             }
         }
 
         if ($scan_interval < 60 || $scan_interval > 3600) {
-            return ['result' => 'failed', 'message' => 'Scan interval musí být mezi 60-3600 sekundami'];
+            return ['result' => 'failed', 'message' => 'Scan interval must be between 60 and 3600 seconds'];
         }
 
         $config = $model->getConfig();
@@ -131,10 +131,10 @@ class ConfigController extends ApiControllerBase
         $config['webhook_vlans'] = $webhook_vlans;
 
         if ($model->setConfig($config)) {
-            return ['result' => 'saved', 'message' => 'Konfigurace uložena'];
+            return ['result' => 'saved', 'message' => 'Configuration saved'];
         }
 
-        return ['result' => 'failed', 'message' => 'Nepodařilo se uložit konfiguraci'];
+        return ['result' => 'failed', 'message' => 'Failed to save configuration'];
     }
 
     public function testemailAction()

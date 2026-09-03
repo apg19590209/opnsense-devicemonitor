@@ -8,7 +8,7 @@ use OPNsense\Core\Backend;
 class ServiceController extends ApiControllerBase
 {
     /**
-     * Spuštění manuálního skenu
+     * Run a manual scan
      */
     public function scanAction()
     {
@@ -32,7 +32,7 @@ class ServiceController extends ApiControllerBase
         if (file_exists($pidFile)) {
             $pid = trim(file_get_contents($pidFile));
             
-            // Zkontroluj jestli proces běží
+            // Check whether the process is running
             exec("ps -p $pid", $output, $return);
             
             if ($return === 0) {

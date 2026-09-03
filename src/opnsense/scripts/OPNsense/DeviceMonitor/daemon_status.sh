@@ -6,7 +6,7 @@ if [ -f "$PIDFILE" ]; then
         echo "running"
         exit 0
     fi
-    # Pidfile existuje ale proces neběží - vyčisti
+    # PID file exists but the process is not running; clean it up
     rm -f "$PIDFILE"
 fi
 echo "stopped"

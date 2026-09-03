@@ -14,12 +14,12 @@ import xml.etree.ElementTree as ET
 # ================================================================
 # KONFIGURACE - ZAPNI/VYPNI FUNKCE
 # ================================================================
-DEBUG_LOGGING = True  # ← Změň na False pro vypnutí logů
+DEBUG_LOGGING = True  # ← Set to False to disable logging
 
 # ================================================================
-# CESTY - VŠECHNO NA JEDNOM MÍSTĚ!
+# PATHS - ALL IN ONE PLACE
 #
-#          Ukazatel na konfigurační soubor s výchozími hodnotami
+#          Pointer to the configuration file containing default values
 #
 # ================================================================
 defaultsFile = '/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json'
@@ -28,11 +28,11 @@ def load_defaults():
     with open(defaultsFile, 'r') as f:
         return json.load(f)
 
-# Načti na startu
+# Load at startup
 _defaults = load_defaults()
 PATHS = _defaults['paths']
 
-# Cesty (místo hardcoded)
+# Paths instead of hard-coded values
 HOSTWATCH_DB = PATHS['hostwatchDb']
 CONFIG_FILE = PATHS['configFile']
 DB_FILE = PATHS['dbFile']
@@ -41,17 +41,17 @@ DEFAULT_CONFIG = _defaults['config']
 
 
 def log(message):
-    """Standardní append logging (rychlé!)"""
+    """Standard append logging"""
     if not DEBUG_LOGGING:
         return
-    
+
     timestamp = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
     with open("/var/log/devicemonitor.log", "a") as f:
         f.write(f"{timestamp} - {message}\n")
 
 def load_config():
-    """Načte runtime konfiguraci"""
-    
+    """Load runtime configuration"""
+
     if not os.path.exists(CONFIG_FILE):
         if DEBUG_LOGGING:
             log(f"Config file not found: {CONFIG_FILE}, using defaults")
@@ -68,11 +68,11 @@ def load_config():
             'apiEmailUrl': PATHS.get('apiEmailUrl', ''),
             'apiWebhookUrl': PATHS.get('apiWebhookUrl', '')
         }
-    
+
     try:
         with open(CONFIG_FILE, 'r') as f:
             config = json.load(f)
-            
+
             return {
                 'enabled': config.get('enabled', '0') == '1',
                 'email_enabled': config.get('email_enabled', '1') == '1',
@@ -103,14 +103,14 @@ def load_config():
             'apiWebhookUrl': PATHS.get('apiWebhookUrl')
         }
 
-    
-    
+
+
 
 def init_db():
-    """Inicializace databáze"""
+    """Initialize database"""
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    
+
     c.execute('''CREATE TABLE IF NOT EXISTS devices (
         mac TEXT PRIMARY KEY,
         ip TEXT,
@@ -122,8 +122,8 @@ def init_db():
         is_active INTEGER DEFAULT 0,
         notification_pending INTEGER DEFAULT 0
     )''')
-    
-    # Přidej sloupce pokud neexistují (pro zpětnou kompatibilitu)   
+
+    # Add missing columns for backward compatibility
     try:
         c.execute('ALTER TABLE devices ADD COLUMN first_seen DATETIME DEFAULT CURRENT_TIMESTAMP')
     except:
@@ -146,26 +146,26 @@ def init_db():
         last_seen DATETIME,
         deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )''')
-    
+
     conn.commit()
     conn.close()
 
 
 def get_hostwatch_devices():
-    """Načte zařízení přímo z OPNsense hostwatch databáze"""
+    """Load devices directly from the OPNsense Hostwatch database"""
     devices = []
-    
+
     if not os.path.exists(HOSTWATCH_DB):
-        log("CHYBA: hostwatch databáze neexistuje: " + HOSTWATCH_DB)
+        log("ERROR: Hostwatch database does not exist: " + HOSTWATCH_DB)
         return devices
-    
+
     try:
         conn = sqlite3.connect(f'file:{HOSTWATCH_DB}?mode=ro', uri=True)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        
+
         cursor.execute('''
-            SELECT 
+            SELECT
                 interface_name,
                 ip_address,
                 ether_address,
@@ -191,10 +191,10 @@ def get_hostwatch_devices():
               )
             ORDER BY last_seen DESC
         ''')
-        
+
         rows = cursor.fetchall()
         conn.close()
-        
+
         for row in rows:
             mac = (row['ether_address'] or '').lower().strip()
             if not mac:
@@ -203,11 +203,11 @@ def get_hostwatch_devices():
             # Mapuj interface_name na VLAN popis
             iface = row['interface_name'] or ''
             vlan = map_interface_to_vlan(iface)
-            
+
             vendor = row['organization_name'] or 'Unknown'
             if len(vendor) > 40:
                 vendor = vendor[:37] + '...'
-            
+
             devices.append({
                 'mac': mac,
                 'ip': row['ip_address'] or '',
@@ -217,31 +217,31 @@ def get_hostwatch_devices():
                 'first_seen': row['first_seen'] or '',
                 'last_seen': row['last_seen'] or '',
             })
-        
+
         log(f"Hostwatch DB: loaded {len(devices)} devices")
 
     except Exception as e:
-        log(f"Chyba čtení hostwatch DB: {e}")
-    
+        log(f"Error reading Hostwatch DB: {e}")
+
     return devices
 
 
 def map_interface_to_vlan(interface_name):
-    """Převede interface_name (vlan0.11) na čitelný název (VLAN11)"""
+    """Convert interface_name such as vlan0.11 to a readable label such as VLAN11"""
     if not interface_name:
         return 'Unknown'
-    
+
     # vlan0.11 → VLAN11
     match = re.search(r'vlan\d+\.(\d+)', interface_name, re.I)
     if match:
         return 'VLAN' + match.group(1)
-    
-    # igc0, igc1 → interface název
+
+    # igc0, igc1 → interface name
     return interface_name.upper()
 
 
 def get_dhcp_descriptions():
-    """Načte popisky zařízení z DHCP statických přiřazení (/conf/config.xml)"""
+    """Load device labels from DHCP static mappings (/conf/config.xml)"""
     descriptions = {}
     try:
         tree = ET.parse('/conf/config.xml')
@@ -251,7 +251,7 @@ def get_dhcp_descriptions():
             return descriptions
 
         for iface in dhcpd:
-            # Přeskočit vypnuté ISC DHCP interfacy
+            # Skip disabled ISC DHCP interfaces
             enable_el = iface.find('enable')
             if enable_el is None:
                 continue
@@ -267,13 +267,13 @@ def get_dhcp_descriptions():
                     elif descr_el is not None and descr_el.text:
                         descriptions[mac] = descr_el.text.strip()
 
-        log(f"DHCP popisky: {len(descriptions)} záznamů")
+        log(f"DHCP labels: {len(descriptions)} records")
     except Exception as e:
-        log(f"Chyba čtení config.xml: {e}")
+        log(f"Error reading config.xml: {e}")
     return descriptions
 
 def get_dnsmasq_descriptions():
-    """Načte popisky zařízení z Dnsmasq Host Overrides (/conf/config.xml)"""
+    """Load device labels from Dnsmasq Host Overrides (/conf/config.xml)"""
     descriptions = {}
     try:
         tree = ET.parse('/conf/config.xml')
@@ -294,13 +294,13 @@ def get_dnsmasq_descriptions():
                 elif descr_el is not None and descr_el.text:
                     descriptions[mac] = descr_el.text.strip()
 
-        log(f"Dnsmasq popisky: {len(descriptions)} záznamů")
+        log(f"Dnsmasq labels: {len(descriptions)} records")
     except Exception as e:
-        log(f"Chyba čtení Dnsmasq config.xml: {e}")
+        log(f"Error reading Dnsmasq config.xml: {e}")
     return descriptions
 
 def is_recently_seen(last_seen_str, minutes=15):
-    """True pokud bylo zařízení viděno v posledních N minutách (porovnání v UTC)"""
+    """True if the device was seen within the last N minutes using UTC comparison"""
     if not last_seen_str:
         return False
     try:
@@ -309,7 +309,7 @@ def is_recently_seen(last_seen_str, minutes=15):
         return (now_utc - last_seen).total_seconds() < minutes * 60
     except:
         return False
-    
+
 
 def targeted_scan_and_email(device):
     """Run a targeted Nmap scan for one new device and email the formatted result."""
@@ -455,99 +455,99 @@ def targeted_scan_and_email(device):
 
 
 def send_email_via_php_api(new_devices):
-    """Označ zařízení v DB pro odeslání emailu"""
+    """Mark devices in the database for email delivery"""
     if not new_devices:
         return
-    
+
     try:
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
 
         # Pending must represent exactly this delivery channel's filtered set.
         cursor.execute("UPDATE devices SET notification_pending = 0")
-        
-        # Označ zařízení pro notifikaci
+
+        # Mark devices for notification
         for device in new_devices:
             cursor.execute("""
-                UPDATE devices 
-                SET notification_pending = 1 
+                UPDATE devices
+                SET notification_pending = 1
                 WHERE mac = ?
             """, (device['mac'],))
-        
+
         conn.commit()
         # log(f"[EMAIL] Marked {len(new_devices)} devices for notification")
-        
-        # Zavolej PHP BEZ parametrů
+
+        # Call PHP without parameters
         result = subprocess.run(
             ['/usr/local/sbin/configctl', 'devicemonitor', 'sendEmailNotification'],
             capture_output=True,
             text=True,
             timeout=30
         )
-        
+
         # log(f"[EMAIL] configctl returned: {result.returncode}")
         # if result.stdout:
         #     log(f"[EMAIL] stdout: {result.stdout[:200]}")
         if result.stderr:
             log(f"[EMAIL] stderr: {result.stderr[:200]}")
-            
+
     except Exception as e:
         log(f"[EMAIL] Error: {e}")
 
 
 def send_webhook_via_php_api(new_devices):
-    """Označ zařízení v DB pro odeslání webhooku"""
+    """Mark devices in the database for webhook delivery"""
     if not new_devices:
         return
-    
+
     try:
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
 
         # Pending must represent exactly this delivery channel's filtered set.
         cursor.execute("UPDATE devices SET notification_pending = 0")
-        
-        # Označ zařízení pro notifikaci
+
+        # Mark devices for notification
         for device in new_devices:
             cursor.execute("""
-                UPDATE devices 
-                SET notification_pending = 1 
+                UPDATE devices
+                SET notification_pending = 1
                 WHERE mac = ?
             """, (device['mac'],))
-        
+
         conn.commit()
         # log(f"[WEBHOOK] Marked {len(new_devices)} devices for notification")
-        
-        # Zavolej PHP BEZ parametrů
+
+        # Call PHP without parameters
         result = subprocess.run(
             ['/usr/local/sbin/configctl', 'devicemonitor', 'sendWebhookNotification'],
             capture_output=True,
             text=True,
             timeout=30
         )
-        
+
         # log(f"[WEBHOOK] configctl returned: {result.returncode}")
         # if result.stdout:
         #     log(f"[WEBHOOK] stdout: {result.stdout[:200]}")
         if result.stderr:
             log(f"[WEBHOOK] stderr: {result.stderr[:200]}")
-            
+
     except Exception as e:
         log(f"[WEBHOOK] Error: {e}")
-    
+
 
 # ================================================================
-# HLAVNÍ FUNKCE - REFAKTOROVANÉ
+# MAIN FUNCTIONS - REFACTORED
 # ================================================================
 
 def update_status_only():
-    """Rychlá aktualizace online/offline statusu z hostwatch DB"""
+    """Quick online/offline status update from Hostwatch DB"""
     log("Quick status update (hostwatch DB)")
     init_db()
 
     devices = get_hostwatch_devices()
     if not devices:
-        log("Žádná data z hostwatch DB")
+        log("No data from Hostwatch DB")
         print("ERROR: No hostwatch data")
         return 1
 
@@ -572,23 +572,23 @@ def update_status_only():
 
 
 def full_scan():
-    """Kompletní scan z OPNsense hostwatch DB + DHCP popisky"""
-    log("Spouštím full scan (hostwatch DB)...")
+    """Full scan from OPNsense Hostwatch DB with DHCP labels"""
+    log("Starting full scan from Hostwatch DB...")
     config = load_config()
     init_db()
 
     # 1. Data z hostwatch
     devices = get_hostwatch_devices()
     if not devices:
-        log("CHYBA: Žádná data z hostwatch DB")
+        log("ERROR: No data from Hostwatch DB")
         return 1
 
-    # 2. DHCP popisky (ISC + Dnsmasq, Dnsmasq má přednost)
+    # 2. DHCP labels from ISC and Dnsmasq, with Dnsmasq taking precedence
     dhcp_descriptions = get_dhcp_descriptions()
     dnsmasq_descriptions = get_dnsmasq_descriptions()
-    dhcp_descriptions.update(dnsmasq_descriptions)  # Dnsmasq přepíše ISC pokud existuje stejné MAC
+    dhcp_descriptions.update(dnsmasq_descriptions)  # Dnsmasq overrides ISC when the same MAC exists
 
-    # 3. Aktualizace vlastní DB
+    # 3. Update local database
     new_devices = []
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     conn = sqlite3.connect(DB_FILE)
@@ -599,7 +599,7 @@ def full_scan():
         if not mac:
             continue
 
-        # Obohacení o DHCP popis
+        # Enrich with DHCP description
         if mac in dhcp_descriptions:
             device['hostname'] = dhcp_descriptions[mac]
 
@@ -650,8 +650,8 @@ def full_scan():
     total = conn.execute("SELECT COUNT(*) FROM devices").fetchone()[0]
     conn.close()
 
-    # 4. Notifikace (s filtrováním podle VLAN)
-    log(f"Nová zařízení: {len(new_devices)}, Online: {online}/{total}")
+    # 4. Notifications filtered by VLAN
+    log(f"New devices: {len(new_devices)}, Online: {online}/{total}")
     if new_devices and config['enabled']:
         email_vlans   = set(v.strip() for v in config.get('email_vlans',  '').split(',') if v.strip())
         webhook_vlans = set(v.strip() for v in config.get('webhook_vlans', '').split(',') if v.strip())
@@ -713,8 +713,8 @@ def full_scan():
 
 
 def main():
-    """Hlavní entry point s parsováním argumentů"""
-    
+    """Main entry point with argument parsing"""
+
     # Parsuj argumenty
     parser = argparse.ArgumentParser(
         description='OPNsense Device Monitor - Network Scanner',
@@ -727,33 +727,33 @@ Examples:
   %(prog)s --help             # Show this help
         '''
     )
-    
+
     parser.add_argument(
         '--update-only',
         action='store_true',
         help='Quick mode: only update online/offline status via hostwatch DB'
     )
-    
+
     parser.add_argument(
         '--verbose', '-v',
         action='store_true',
         help='Enable verbose output'
     )
-    
+
     args = parser.parse_args()
-    
+
     # Verbose mode
     global DEBUG_LOGGING
     if args.verbose:
         DEBUG_LOGGING = True
-    
+
     try:
-        # Rozhodnutí podle režimu
+        # Dispatch according to mode
         if args.update_only:
             return update_status_only()
         else:
             return full_scan()
-            
+
     except KeyboardInterrupt:
         log("Scan interrupted by user")
         print("\nInterrupted")

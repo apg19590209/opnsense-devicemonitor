@@ -8,7 +8,7 @@ use OPNsense\DeviceMonitor\DeviceMonitor;
 /**
  * DevicesController
  * 
- * API controller pro správu zařízení
+ * API controller for device management
  */
 class DevicesController extends ApiControllerBase
 {
@@ -18,7 +18,7 @@ class DevicesController extends ApiControllerBase
         
         if (file_exists($defaultsFile)) {
             $defaults = json_decode(file_get_contents($defaultsFile), true);
-            return $defaults['paths'];  // ← Cesty z defaults.json
+            return $defaults['paths'];  // ← Paths from defaults.json
         }
         
         // Fallback pokud defaults.json neexistuje
@@ -48,7 +48,7 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
-     * Vyhledání zařízení (pro Bootgrid tabulku)
+     * Device search for the Bootgrid table
      * GET/POST /api/devicemonitor/devices/search
      */
     public function searchAction()
@@ -58,7 +58,7 @@ class DevicesController extends ApiControllerBase
             $model = new DeviceMonitor();
             $devices = $model->getDevices();
             
-            // Zpracuj parametry z Bootgrid - bezpečně
+            // Process Bootgrid parameters safely
             $current = 1;
             $rowCount = -1;
             $searchPhrase = '';
@@ -80,7 +80,7 @@ class DevicesController extends ApiControllerBase
                 }
             }
             
-            // === 1. FILTROVÁNÍ ===
+            // === 1. FILTERING ===
             if (!empty($searchPhrase) && strlen(trim($searchPhrase)) > 0) {
                 $searchPhrase = strtolower(trim($searchPhrase));
                 $filtered = [];
@@ -88,7 +88,7 @@ class DevicesController extends ApiControllerBase
                 foreach ($devices as $device) {
                     $match = false;
                     
-                    // Kontrola všech polí
+                    // Check all fields
                     if (isset($device['mac']) && strpos(strtolower($device['mac']), $searchPhrase) !== false) {
                         $match = true;
                     }
@@ -118,7 +118,7 @@ class DevicesController extends ApiControllerBase
             
             $total = count($devices);
             
-            // === 2. ŘAZENÍ ===
+            // === 2. SORTING ===
             if (!empty($sort) && is_array($sort)) {
                 $sortColumn = key($sort);
                 $sortOrder = $sort[$sortColumn];
@@ -128,26 +128,26 @@ class DevicesController extends ApiControllerBase
                         $valA = isset($a[$sortColumn]) ? $a[$sortColumn] : '';
                         $valB = isset($b[$sortColumn]) ? $b[$sortColumn] : '';
                         
-                        // Porovnání
+                        // Comparison
                         if ($valA == $valB) {
                             return 0;
                         }
                         
                         $result = ($valA < $valB) ? -1 : 1;
                         
-                        // Podle směru řazení
+                        // Apply sort direction
                         return ($sortOrder === 'desc') ? -$result : $result;
                     });
                 }
             }
             
-            // === 3. STRÁNKOVÁNÍ ===
+            // === 3. PAGINATION ===
             if ($rowCount > 0) {
                 $offset = ($current - 1) * $rowCount;
                 $devices = array_slice($devices, $offset, $rowCount);
             }
             
-            // Re-index pole (bootgrid vyžaduje indexed array)
+            // Re-index array because Bootgrid requires an indexed array
             $devices = array_values($devices);
             
             return [
@@ -158,7 +158,7 @@ class DevicesController extends ApiControllerBase
             ];
             
         } catch (\Exception $e) {
-            // V případě chyby vrať prázdná data
+            // Return empty data on error
             return [
                 'rows' => [],
                 'rowCount' => 0,
@@ -170,7 +170,7 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
-     * Statistiky zařízení
+     * Device statistics
      * GET /api/devicemonitor/devices/stats
      */
     public function statsAction()
@@ -201,7 +201,7 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
-    * Rychlá aktualizace online/offline statusu (hostwatch DB)
+    * Quick online/offline status update from Hostwatch DB
      * POST /api/devicemonitor/devices/updatestatus
      */
     public function updatestatusAction()
@@ -213,16 +213,16 @@ class DevicesController extends ApiControllerBase
         exec("{$paths['scanScript']} --update-only 2>&1", $output, $return_code);
         
         if ($return_code === 0) {
-            // Znovu načti statistiky z DB
-            return $this->statsAction();  // ← Správně!
+            // Reload statistics from the database
+            return $this->statsAction();  // ← Correct
         }
         
-        // Pokud scan selhal, vrať error
+        // Return an error if the scan failed
         return ['result' => 'error', 'online' => 0, 'total' => 0];
     }
 
     /**
-     * Smazání jednoho zařízení
+     * Delete one device
      * POST /api/devicemonitor/devices/delete
      */
     public function deleteAction()
@@ -240,7 +240,7 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
-     * Ping zařízení a aktualizuj jeho status
+     * Ping a device and update its status
      * POST /api/devicemonitor/devices/pingdevice
      */
     public function pingdeviceAction()
@@ -287,7 +287,7 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
-     * Vyčištění celé databáze
+     * Clear the entire database
      * POST /api/devicemonitor/devices/clear
      */
     public function clearAction()

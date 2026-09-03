@@ -4,7 +4,7 @@
  * Path: /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php
  */
 
-// Načtení třídy DeviceMonitor
+// Load the DeviceMonitor class
 require_once('/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php');
 
 class NotificationHandler
@@ -18,7 +18,7 @@ class NotificationHandler
 
     
     /**
-     * Načte zařízení z databáze s notification_pending = 1
+     * Load devices with notification_pending = 1 from the database
      */
     private function loadDevicesFromDb()
     {
@@ -49,8 +49,8 @@ class NotificationHandler
     
 
     /**
-     * Odešle zprávu přes interní Direct SMTP helper (Python stdlib smtplib).
-     * SMTP heslo není předáváno v command line; helper si načte config.json.
+     * Send the message through the internal Direct SMTP helper using Python smtplib.
+     * The SMTP password is not passed on the command line; the helper loads config.json itself.
      */
     private function sendViaDirectSmtp($subject, $html)
     {
@@ -107,7 +107,7 @@ class NotificationHandler
     }
 
     /**
-     * Původní transport přes lokální /usr/local/sbin/sendmail (typicky os-postfix).
+     * Original transport through local /usr/local/sbin/sendmail, typically os-postfix.
      */
     private function sendViaSendmail($email_to, $email_from, $subject, $html)
     {
@@ -153,7 +153,7 @@ class NotificationHandler
     }
 
     /**
-     * UNIVERZÁLNÍ EMAIL - test i real - S INLINE STYLES!
+     * UNIVERSAL EMAIL - TEST AND REAL - WITH INLINE STYLES
      */
     public function sendEmail($is_test = false)
     {
@@ -209,7 +209,7 @@ class NotificationHandler
 HTML;
             
         } else {
-            // === REAL MODE - načti z DB ===
+            // === REAL MODE - load from database ===
             $devices = $this->loadDevicesFromDb();
             
             if ($devices === null) {
@@ -316,7 +316,7 @@ ROW;
 HTML;
         }
         
-        // Odešli email zvoleným transportem.
+        // Send email using the selected transport.
         $email_method = strtolower($config['email_method'] ?? 'sendmail');
         try {
             if ($email_method === 'smtp') {
@@ -353,14 +353,14 @@ HTML;
     }
 
     /**
-     * UNIVERZÁLNÍ WEBHOOK - test i real
+     * UNIVERSAL WEBHOOK - TEST AND REAL
      * POST /api/devicemonitor/config/sendWebhook
      */
     public function sendWebhook($is_test = false, $webhook_url = null)
     {
         
         
-        // Pokud není webhook_url předán, načti z configu
+        // Load webhook_url from configuration if it was not supplied
         if ($webhook_url === null) {
             $model = new \OPNsense\DeviceMonitor\DeviceMonitor();
             $config = $model->getConfig();
@@ -449,7 +449,7 @@ HTML;
                 }
                 
             } else {
-                // === REAL MODE - načti z DB ===
+                // === REAL MODE - load from database ===
                 $devices = $this->loadDevicesFromDb();
                 
                 if ($devices === null) {
@@ -535,7 +535,7 @@ HTML;
                 }
             }
             
-            // Odešli webhook
+            // Send webhook
             $response = curl_exec($ch);
             $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
