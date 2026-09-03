@@ -38,6 +38,19 @@ Plugin automaticky sleduje síť a upozorňuje na:
 
 ## Historie verzí
 
+### v2.4 (září 2026) — Cílené bezpečnostní skenování a vyšší spolehlivost
+
+- Přidány volitelné **cílené bezpečnostní skeny Nmap** pro nově zjištěná zařízení, která splňují podmínky pro e-mailové upozornění.
+- Cílený sken kontroluje 100 nejčastějších TCP portů pomocí lehké detekce služeb a verzí a odešle samostatný formátovaný bezpečnostní report e-mailem.
+- Cíl skenu je omezen na jednu konkrétní IPv4 adresu; názvy hostitelů, rozsahy a CIDR nejsou povoleny.
+- Přidána trvalá **fronta Nmap skenů uložená v databázi**, takže větší počet nových zařízení může být bezpečně zpracován během více cyklů Device Monitoru.
+- Cílené skeny jsou omezeny na **dvě zařízení za jeden monitorovací cyklus**, aby zůstala bezpečná rezerva pod časovým limitem démona.
+- Neúspěšné skeny zůstávají ve frontě pro další pokus; příznak fronty se odstraní až po úspěšném odeslání reportu.
+- Reporty cíleného skenu podporují jak **Local Sendmail / Postfix**, tak **Direct SMTP** zavedené ve v2.3.
+- Instalační skript nyní automaticky nainstaluje **Nmap**, pokud ještě není k dispozici.
+- Vylepšeno odstranění duplicit z Hostwatch: nejnovější IPv4 záznam pro každou MAC adresu se vybírá přímo pomocí SQL.
+- Zachováno slučování konfigurace z v2.3, ochrana SMTP údajů, tombstones pro smazaná zařízení, filtrování VLAN upozornění a čištění stavů notifikací.
+- Zbývající komentáře ve zdrojovém kódu, runtime logy a validační zprávy API byly přeloženy do angličtiny; existující překladové katalogy zůstaly zachovány.
 ### v2.3 (srpen 2026) — Přímé SMTP a vylepšení upozornění
 
 - Do nastavení Device Monitoru přibyla volba **způsobu odesílání e-mailu**.

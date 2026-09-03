@@ -38,6 +38,19 @@ The plugin automatically monitors the network and alerts you about:
 
 ## Version history
 
+### v2.4 (September 2026) — Targeted security scanning and reliability improvements
+
+- Added optional **targeted Nmap security scans** for newly detected devices that qualify for email notification.
+- Targeted scans inspect the top 100 TCP ports using lightweight service/version detection and send a separate formatted security report by email.
+- Scan targets are restricted to a single literal IPv4 address; hostnames, ranges and CIDR targets are rejected.
+- Added a persistent **database-backed Nmap scan queue** so bursts of new devices are processed safely across multiple Device Monitor cycles instead of being dropped.
+- Targeted scans are deliberately rate-limited to **two devices per monitoring cycle** to preserve headroom below the Device Monitor daemon timeout.
+- Failed targeted scans remain queued for retry; the queue flag is cleared only after the scan report is successfully sent.
+- Targeted scan reports now support both **Local Sendmail / Postfix** and the v2.3 **Direct SMTP** transport.
+- The installer now automatically installs **Nmap** when it is not already available.
+- Improved Hostwatch de-duplication by selecting the newest IPv4 record for each MAC address directly in SQL.
+- Retained the v2.3 configuration merging, SMTP credential protection, deleted-device tombstones, VLAN notification filtering and notification cleanup behavior.
+- Translated remaining source-code comments, runtime log messages and API validation messages to English while preserving the existing translation catalogs.
 ### v2.3 (August 2026) — Direct SMTP and notification improvements
 
 - Added selectable **Email delivery method** in Device Monitor settings.
