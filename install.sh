@@ -45,6 +45,66 @@ cd "$SCRIPT_DIR" || exit 1
 }
 echo "  OK: Source files found"
 
+# Validate critical source files before modifying an existing installation.
+REQUIRED_FILES="
+src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
+src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py
+src/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py
+src/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php
+src/opnsense/scripts/OPNsense/DeviceMonitor/notify_email.php
+src/opnsense/scripts/OPNsense/DeviceMonitor/notify_webhook.php
+src/opnsense/scripts/OPNsense/DeviceMonitor/notify_scan_email.php
+src/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
+src/opnsense/service/conf/actions.d/actions_devicemonitor.conf
+"
+
+for required_file in $REQUIRED_FILES; do
+    if [ ! -f "$required_file" ]; then
+        echo "  ERROR: Required source file missing: $required_file"
+        exit 1
+    fi
+done
+echo "  OK: Required source files verified"
+
+echo "  -> Validating source syntax..."
+python3 -m py_compile src/opnsense/scripts/OPNsense/DeviceMonitor/*.py || {
+    echo "  ERROR: Python syntax validation failed"
+    exit 1
+}
+
+for php_file in src/opnsense/scripts/OPNsense/DeviceMonitor/*.php; do
+    php -l "$php_file" >/dev/null || {
+        echo "  ERROR: PHP syntax validation failed: $php_file"
+        exit 1
+    }
+done
+
+for shell_file in src/opnsense/scripts/OPNsense/DeviceMonitor/*.sh; do
+    sh -n "$shell_file" || {
+        echo "  ERROR: Shell syntax validation failed: $shell_file"
+        exit 1
+    }
+done
+
+echo "  OK: Source syntax validation passed"
+
+# Preserve runtime state independently of the old uninstaller.
+UPGRADE_BACKUP_DIR=""
+if [ -f "/var/db/devicemonitor/config.json" ] || [ -f "/var/db/devicemonitor/devices.db" ]; then
+    UPGRADE_BACKUP_DIR=$(mktemp -d /tmp/devicemonitor-upgrade.XXXXXX) || {
+        echo "  ERROR: Unable to create upgrade backup directory"
+        exit 1
+    }
+
+    [ -f "/var/db/devicemonitor/config.json" ] && \
+        cp -p /var/db/devicemonitor/config.json "$UPGRADE_BACKUP_DIR/config.json"
+
+    [ -f "/var/db/devicemonitor/devices.db" ] && \
+        cp -p /var/db/devicemonitor/devices.db "$UPGRADE_BACKUP_DIR/devices.db"
+
+    echo "  OK: Runtime state backed up to $UPGRADE_BACKUP_DIR"
+fi
+
 if ! command -v msgfmt >/dev/null 2>&1; then
     echo "  -> msgfmt not found; installing gettext-tools..."
     pkg install -y gettext-tools
@@ -114,6 +174,19 @@ mkdir -p /usr/local/etc/rc.d
 mkdir -p /etc/rc.d
 mkdir -p /var/db/devicemonitor
 chmod 755 /var/db/devicemonitor
+
+# Restore runtime state if an older uninstaller removed it unexpectedly.
+if [ -n "$UPGRADE_BACKUP_DIR" ]; then
+    if [ ! -f "/var/db/devicemonitor/config.json" ] && [ -f "$UPGRADE_BACKUP_DIR/config.json" ]; then
+        cp -p "$UPGRADE_BACKUP_DIR/config.json" /var/db/devicemonitor/config.json
+        echo "  OK: Existing configuration restored"
+    fi
+
+    if [ ! -f "/var/db/devicemonitor/devices.db" ] && [ -f "$UPGRADE_BACKUP_DIR/devices.db" ]; then
+        cp -p "$UPGRADE_BACKUP_DIR/devices.db" /var/db/devicemonitor/devices.db
+        echo "  OK: Existing device database restored"
+    fi
+fi
 
 echo "  OK: Directories created"
 
@@ -291,6 +364,11 @@ sleep 2
 PID=$(cat /var/run/devicemonitor.pid 2>/dev/null)
 if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
     echo "  OK: Daemon running (PID: $PID)"
+    if [ -n "$UPGRADE_BACKUP_DIR" ] && [ -d "$UPGRADE_BACKUP_DIR" ]; then
+        rm -rf "$UPGRADE_BACKUP_DIR"
+        UPGRADE_BACKUP_DIR=""
+        echo "  OK: Temporary upgrade backup removed"
+    fi
 else
     echo "  WARNING: Daemon failed to start"
     echo "  -> Start manually with: configctl devicemonitor start"
