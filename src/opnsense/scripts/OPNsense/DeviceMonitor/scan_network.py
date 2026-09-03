@@ -171,25 +171,29 @@ def get_hostwatch_devices():
             WHERE protocol = 'inet'
               AND ether_address NOT IN ('ff:ff:ff:ff:ff:ff', '00:00:00:00:00:00')
               AND ip_address NOT LIKE '169.254.%'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM v_hosts newer
+                  WHERE newer.ether_address = v_hosts.ether_address
+                    AND newer.protocol = 'inet'
+                    AND (
+                        newer.last_seen > v_hosts.last_seen
+                        OR (
+                            newer.last_seen = v_hosts.last_seen
+                            AND newer.id > v_hosts.id
+                        )
+                    )
+              )
             ORDER BY last_seen DESC
         ''')
         
         rows = cursor.fetchall()
         conn.close()
         
-        # The query is sorted newest-first. Keep only the first row for each
-        # MAC so historical Hostwatch records cannot overwrite current data.
-        seen_macs = set()
-        skipped_duplicates = 0
-
         for row in rows:
             mac = (row['ether_address'] or '').lower().strip()
             if not mac:
                 continue
-            if mac in seen_macs:
-                skipped_duplicates += 1
-                continue
-            seen_macs.add(mac)
 
             # Mapuj interface_name na VLAN popis
             iface = row['interface_name'] or ''
@@ -209,11 +213,8 @@ def get_hostwatch_devices():
                 'last_seen': row['last_seen'] or '',
             })
         
-        log(
-            f"Hostwatch DB: načteno {len(rows)} záznamů, "
-            f"{len(devices)} unikátních MAC, přeskočeno {skipped_duplicates} historických duplicit"
-        )
-        
+        log(f"Hostwatch DB: loaded {len(devices)} devices")
+
     except Exception as e:
         log(f"Chyba čtení hostwatch DB: {e}")
     
