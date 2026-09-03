@@ -259,14 +259,21 @@ echo "[6/9] Installing translations..."
 
 if [ -f "src/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po" ]; then
     if command -v msgfmt >/dev/null 2>&1; then
-        msgfmt -o /usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.mo \
-                  src/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po \
-            && echo "  OK: cs_CZ translation compiled" \
-            || echo "  ERROR: cs_CZ translation compilation failed"
-        msgfmt -o /usr/local/opnsense/mvc/app/languages/en_US_devicemonitor.mo \
-                  src/opnsense/mvc/app/languages/en_US_devicemonitor.po \
-            && echo "  OK: en_US translation compiled" \
-            || echo "  ERROR: en_US translation compilation failed"
+        if msgfmt -o /usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.mo \
+                  src/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po; then
+            echo "  OK: cs_CZ translation compiled"
+        else
+            echo "  ERROR: cs_CZ translation compilation failed"
+            exit 1
+        fi
+
+        if msgfmt -o /usr/local/opnsense/mvc/app/languages/en_US_devicemonitor.mo \
+                  src/opnsense/mvc/app/languages/en_US_devicemonitor.po; then
+            echo "  OK: en_US translation compiled"
+        else
+            echo "  ERROR: en_US translation compilation failed"
+            exit 1
+        fi
     else
         echo "  WARNING: msgfmt is unavailable - translations will not work"
     fi
