@@ -83,20 +83,38 @@
 
         <div class="panel panel-default" style="margin-top:20px;">
             <div class="panel-heading" style="display:flex;align-items:center;justify-content:space-between;">
-                <strong>
+                <strong style="font-size:13px;">
                     <i class="fa fa-history"></i>
                     {{ lang._('Nmap Scan History') }}
                     <span id="scan-history-total" class="badge" style="margin-left:6px;">0</span>
                 </strong>
 
-                <button id="btn-history-refresh"
-                        class="btn btn-xs btn-default"
-                        title="{{ lang._('Refresh scan history') }}">
-                    <i class="fa fa-refresh"></i>
-                </button>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <label for="scan-history-limit"
+                           style="margin:0;font-size:12px;font-weight:normal;">
+                        {{ lang._('Rows') }}
+                    </label>
+
+                    <select id="scan-history-limit"
+                            class="form-control input-sm"
+                            style="width:70px;height:28px;padding:3px 6px;">
+                        <option value="10" selected>10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+
+                    <button id="btn-history-refresh"
+                            class="btn btn-xs btn-default"
+                            title="{{ lang._('Refresh scan history') }}">
+                        <i class="fa fa-refresh"></i>
+                    </button>
+                </div>
             </div>
 
-            <div class="table-responsive">
+            <div id="scan-history-scroll"
+                 class="table-responsive"
+                 style="max-height:360px;overflow-y:auto;">
                 <table class="table table-condensed table-hover table-striped"
                        id="grid-scan-history"
                        style="margin-bottom:0;">
@@ -124,6 +142,23 @@
     </div>
 </div>
 
+
+<style>
+#grid-devices thead th,
+#grid-scan-history thead th {
+    font-size: 12px;
+    font-weight: 600;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+#grid-scan-history thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: inherit;
+}
+</style>
 
 <script>
 $(document).ready(function() {
@@ -462,10 +497,12 @@ $(document).ready(function() {
 
 
     function loadScanHistory() {
+        var limit = parseInt($('#scan-history-limit').val(), 10) || 10;
+
         $.ajax({
             url: '/api/devicemonitor/devices/scanhistory',
             type: 'GET',
-            data: { limit: 100 },
+            data: { limit: limit },
             success: function(data) {
                 $('#scan-history-total').text(data.total || 0);
                 renderScanHistory(data.rows || []);
@@ -609,6 +646,10 @@ $(document).ready(function() {
     $('#btn-refresh').on('click',function(){ loadDevices(); loadStats(); loadScanHistory(); });
 
     $('#btn-history-refresh').on('click', function() {
+        loadScanHistory();
+    });
+
+    $('#scan-history-limit').on('change', function() {
         loadScanHistory();
     });
 
