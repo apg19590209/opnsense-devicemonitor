@@ -1,0 +1,180 @@
+name: Device Monitor CI
+
+on:
+  push:
+    branches:
+      - v2.5-development
+  pull_request:
+    branches:
+      - v2.5-development
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y php-cli gettext sqlite3
+
+      - name: Compile Python sources
+        run: |
+          set -eu
+          find src -type f -name '*.py' -print0 |
+            xargs -0 -n1 python3 -m py_compile
+
+      - name: Lint PHP sources
+        run: |
+          set -eu
+          find src -type f -name '*.php' -print0 |
+            xargs -0 -n1 php -l
+
+      - name: Check shell syntax
+        run: |
+          set -eu
+          sh -n install.sh
+          sh -n uninstall.sh
+          sh -n src/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
+
+      - name: Compile gettext catalogs
+        run: |
+          set -eu
+          mkdir -p /tmp/devicemonitor-mo
+          msgfmt \
+            src/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po \
+            -o /tmp/devicemonitor-mo/cs_CZ_devicemonitor.mo
+          msgfmt \
+            src/opnsense/mvc/app/languages/en_US_devicemonitor.po \
+            -o /tmp/devicemonitor-mo/en_US_devicemonitor.mo
+
+      - name: Validate Device Monitor database migrations
+        run: |
+          set -eu
+
+          sudo mkdir -p /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor
+
+          sudo tee /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json >/dev/null <<'JSON'
+          {
+            "paths": {
+              "hostwatchDb": "/tmp/devicemonitor-ci-hostwatch.db",
+              "configFile": "/tmp/devicemonitor-ci-config.json",
+              "dbFile": "/tmp/devicemonitor-ci-devices.db"
+            },
+            "config": {}
+          }
+          JSON
+
+          python3 <<'PY'
+          import importlib.util
+          import sqlite3
+          import tempfile
+          from pathlib import Path
+
+          source = Path(
+              "src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py"
+          )
+
+          spec = importlib.util.spec_from_file_location(
+              "devicemonitor_scan_network",
+              source
+          )
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+
+          with tempfile.TemporaryDirectory() as tmp:
+              db_path = Path(tmp) / "devices.db"
+
+              # Start with a minimal pre-v2.5-style database.
+              conn = sqlite3.connect(db_path)
+              conn.execute("""
+                  CREATE TABLE devices (
+                      mac TEXT PRIMARY KEY,
+                      ip TEXT,
+                      hostname TEXT,
+                      vendor TEXT,
+                      vlan TEXT,
+                      last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                      notified INTEGER DEFAULT 0,
+                      is_active INTEGER DEFAULT 0,
+                      notification_pending INTEGER DEFAULT 0,
+                      first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                      custom_hostname TEXT DEFAULT NULL,
+                      nmap_scan_pending INTEGER DEFAULT 0
+                  )
+              """)
+
+              conn.execute("""
+                  CREATE TABLE deleted_devices (
+                      mac TEXT PRIMARY KEY,
+                      last_seen DATETIME,
+                      deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                  )
+              """)
+
+              conn.execute("""
+                  INSERT INTO devices
+                  (mac, ip, hostname, vendor, vlan)
+                  VALUES
+                  ('aa:bb:cc:dd:ee:01', '192.0.2.10',
+                   'existing-device', 'Example', 'LAN')
+              """)
+
+              conn.commit()
+              conn.close()
+
+              module.DB_FILE = str(db_path)
+              module.init_db()
+
+              conn = sqlite3.connect(db_path)
+
+              columns = {
+                  row[1]
+                  for row in conn.execute("PRAGMA table_info(devices)")
+              }
+
+              required_columns = {
+                  "nmap_scan_pending",
+                  "nmap_scan_attempts",
+                  "nmap_next_attempt",
+                  "nmap_last_error",
+              }
+
+              missing = required_columns - columns
+              assert not missing, f"Missing retry columns: {sorted(missing)}"
+
+              known_columns = {
+                  row[1]
+                  for row in conn.execute("PRAGMA table_info(known_macs)")
+              }
+
+              assert {"mac", "first_seen", "last_seen"} <= known_columns
+
+              known_count = conn.execute("""
+                  SELECT COUNT(*)
+                  FROM known_macs
+                  WHERE mac = 'aa:bb:cc:dd:ee:01'
+              """).fetchone()[0]
+
+              assert known_count == 1, (
+                  "Existing device was not seeded into known_macs"
+              )
+
+              retry_defaults = conn.execute("""
+                  SELECT
+                      nmap_scan_attempts,
+                      nmap_next_attempt,
+                      nmap_last_error
+                  FROM devices
+                  WHERE mac = 'aa:bb:cc:dd:ee:01'
+              """).fetchone()
+
+              assert retry_defaults == (0, None, None), retry_defaults
+
+              conn.close()
+
+          print("Device Monitor migration checks passed")
+          PY
