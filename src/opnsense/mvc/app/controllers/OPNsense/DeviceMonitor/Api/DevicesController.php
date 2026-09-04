@@ -313,7 +313,10 @@ class DevicesController extends ApiControllerBase
         }
 
         try {
-            $db = new \SQLite3($paths['dbFile']);
+            $db = new \SQLite3(
+                $paths['dbFile'],
+                SQLITE3_OPEN_READONLY
+            );
             $db->busyTimeout(2000);
 
             $exists = $db->querySingle(
@@ -353,10 +356,14 @@ class DevicesController extends ApiControllerBase
                 'total' => $total
             ];
         } catch (\Exception $e) {
+            error_log(
+                'DeviceMonitor scan history error: ' . $e->getMessage()
+            );
+
             return [
                 'rows' => [],
                 'total' => 0,
-                'error' => $e->getMessage()
+                'error' => 'Unable to load scan history'
             ];
         }
     }
