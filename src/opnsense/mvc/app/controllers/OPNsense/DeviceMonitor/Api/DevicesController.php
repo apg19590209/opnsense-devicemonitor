@@ -291,6 +291,78 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
+     * Return recent targeted Nmap scan history
+     * GET /api/devicemonitor/devices/scanhistory
+     */
+    public function scanhistoryAction()
+    {
+        $paths = $this->getPaths();
+
+        if (
+            !isset($paths['dbFile']) ||
+            !is_file($paths['dbFile'])
+        ) {
+            return ['rows' => [], 'total' => 0];
+        }
+
+        $limit = (int)$this->request->get('limit', 'int', 100);
+        if ($limit < 1) {
+            $limit = 1;
+        } elseif ($limit > 500) {
+            $limit = 500;
+        }
+
+        try {
+            $db = new \SQLite3($paths['dbFile']);
+            $db->busyTimeout(2000);
+
+            $exists = $db->querySingle(
+                "SELECT COUNT(*) FROM sqlite_master " .
+                "WHERE type='table' AND name='nmap_scan_history'"
+            );
+
+            if (!$exists) {
+                $db->close();
+                return ['rows' => [], 'total' => 0];
+            }
+
+            $total = (int)$db->querySingle(
+                'SELECT COUNT(*) FROM nmap_scan_history'
+            );
+
+            $stmt = $db->prepare(
+                'SELECT id, mac, ip, scan_type, started_at, ' .
+                'finished_at, success, error ' .
+                'FROM nmap_scan_history ' .
+                'ORDER BY id DESC LIMIT :limit'
+            );
+            $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+
+            $result = $stmt->execute();
+            $rows = [];
+
+            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                $rows[] = $row;
+            }
+
+            $result->finalize();
+            $db->close();
+
+            return [
+                'rows' => $rows,
+                'total' => $total
+            ];
+        } catch (\Exception $e) {
+            return [
+                'rows' => [],
+                'total' => 0,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+
+    /**
      * Run a manual targeted Nmap scan for one existing device
      * POST /api/devicemonitor/devices/nmapscan
      */
