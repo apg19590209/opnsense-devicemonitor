@@ -7,7 +7,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Device Monitor 2.4\n"
+"Project-Id-Version: Device Monitor 2.5\n"
 "POT-Creation-Date: 2026-04-10 00:00+0000\n"
 "PO-Revision-Date: 2026-04-10 00:00+0100\n"
 "MIME-Version: 1.0\n"
@@ -365,3 +365,25 @@ msgstr "Aktuální nastavení e-mailu se před odesláním testu uloží"
 #: settings.volt - email transport
 msgid "Please enter recipient email first"
 msgstr "Nejprve zadejte e-mail příjemce"
+
+# ============================================
+# [scanhistory.volt] Historie Nmap skenů
+# ============================================
+
+msgid "Nmap Scan History"
+msgstr "Historie Nmap skenů"
+
+msgid "Refresh scan history"
+msgstr "Obnovit historii skenů"
+
+msgid "Rows"
+msgstr "Řádky"
+
+msgid "Started"
+msgstr "Spuštěno"
+
+msgid "Finished"
+msgstr "Dokončeno"
+
+msgid "Error"
+msgstr "Chyba"

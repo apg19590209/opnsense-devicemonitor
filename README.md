@@ -38,6 +38,19 @@ The plugin automatically monitors the network and alerts you about:
 
 ## Version history
 
+### v2.5 (September 2026) — Nmap management, history and reliability
+
+- Added configurable **targeted Nmap settings** for enable/disable, top-port count, timing template, host timeout, service/version detection and scans per monitoring cycle.
+- Added **retry and backoff** for failed automatic targeted scans: 15 minutes, 1 hour, 6 hours and 24 hours, with automatic retry stopping after five failed attempts.
+- Added visible **Nmap queue/retry status** to the Devices table, including Pending, Retry and Failed states.
+- Added a per-device **manual targeted Nmap scan** action using the same controlled scan settings without modifying the automatic retry queue.
+- Added persistent **Nmap scan history** for manual and automatic scans, including successful, failed and interrupted/incomplete runs.
+- Added a dedicated **Nmap Scan History** page with selectable 10, 25, 50 or 100-row views, refresh control and scrollable results.
+- Added permanent **known MAC history** so a previously seen device does not become a new-device event merely because its active device record was deleted and later rediscovered.
+- Hardened the scan-history API with bounded queries, read-only SQLite access and safer error reporting.
+- Hardened the installer with source validation, dependency checks, temporary upgrade backups and syntax validation.
+- Added automated **CI validation** for Python, PHP, shell scripts, translations and database migration behavior.
+
 ### v2.4 (September 2026) — Targeted security scanning and reliability improvements
 
 - Added optional **targeted Nmap security scans** for newly detected devices that qualify for email notification.
@@ -251,16 +264,16 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 
 ### Method 1: Download release ZIP + WinSCP
 
-1. Download the **v2.4 Source code (zip)** from:
-   https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.4
+1. Download the **v2.5 Source code (zip)** from:
+   https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.5
 2. Enable SSH in OPNsense: **System -> Settings -> Administration -> Secure Shell -> Enable**.
 3. Upload the ZIP to `/tmp/` using WinSCP.
 4. Connect by SSH and install:
 
 ```sh
 cd /tmp
-unzip opnsense-devicemonitor-2.4.zip
-cd opnsense-devicemonitor-2.4
+unzip opnsense-devicemonitor-2.5.zip
+cd opnsense-devicemonitor-2.5
 sh install.sh
 ```
 
@@ -271,9 +284,9 @@ No reboot is normally required.
 ```sh
 ssh root@your.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.4.zip
-unzip v2.4.zip
-cd opnsense-devicemonitor-2.4
+fetch https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.5.zip
+unzip v2.5.zip
+cd opnsense-devicemonitor-2.5
 sh install.sh
 ```
 
@@ -285,7 +298,7 @@ Before upgrading, back up the runtime data:
 tar -czf /root/devicemonitor-backup.tgz /var/db/devicemonitor
 ```
 
-Then install v2.4 using either method above.
+Then install v2.5 using either method above.
 
 Existing configuration and device data are preserved during the upgrade.
 
@@ -301,18 +314,22 @@ Expected result:
 running
 ```
 
-### Targeted Nmap scanning in v2.4
+### Targeted Nmap scanning in v2.5
 
-For newly detected devices that qualify for an email notification, v2.4 can:
+For newly detected devices that qualify for an email notification, v2.5 can:
 
-- scan the top 100 TCP ports;
-- perform lightweight service/version detection;
+- run targeted scans automatically, with the feature independently enabled or disabled;
+- scan a configurable number of top TCP ports (default: 100);
+- use a configurable Nmap timing template and host timeout;
+- optionally perform lightweight service/version detection;
 - queue scans persistently in SQLite;
-- process up to 2 queued devices per monitoring cycle;
-- retry failed scans;
+- process a configurable number of queued devices per monitoring cycle (default: 2);
+- retry failed automatic scans using bounded backoff and stop after five failed attempts;
+- run an on-demand targeted scan manually from the Devices page;
+- record manual and automatic scan outcomes in persistent scan history;
 - send a separate formatted scan report by email.
 
-Existing devices are not automatically added to the Nmap queue during an upgrade.
+Existing devices are not automatically added to the automatic Nmap queue during an upgrade.
 
 ---
 
@@ -646,3 +663,25 @@ service configd restart
 ## License
 
 MIT License — see [LICENSE](LICENSE)
+
+# ============================================
+# [scanhistory.volt] Nmap scan history page
+# ============================================
+
+msgid "Nmap Scan History"
+msgstr "Nmap Scan History"
+
+msgid "Refresh scan history"
+msgstr "Refresh scan history"
+
+msgid "Rows"
+msgstr "Rows"
+
+msgid "Started"
+msgstr "Started"
+
+msgid "Finished"
+msgstr "Finished"
+
+msgid "Error"
+msgstr "Error"

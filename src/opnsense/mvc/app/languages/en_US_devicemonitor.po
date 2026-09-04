@@ -7,7 +7,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Device Monitor 2.4\n"
+"Project-Id-Version: Device Monitor 2.5\n"
 "POT-Creation-Date: 2026-04-10 00:00+0000\n"
 "PO-Revision-Date: 2026-04-10 00:00+0000\n"
 "MIME-Version: 1.0\n"
@@ -364,3 +364,25 @@ msgstr "The current email settings are saved before the test is sent"
 #: settings.volt - email transport
 msgid "Please enter recipient email first"
 msgstr "Please enter recipient email first"
+
+# ============================================
+# [scanhistory.volt] Nmap scan history page
+# ============================================
+
+msgid "Nmap Scan History"
+msgstr "Nmap Scan History"
+
+msgid "Refresh scan history"
+msgstr "Refresh scan history"
+
+msgid "Rows"
+msgstr "Rows"
+
+msgid "Started"
+msgstr "Started"
+
+msgid "Finished"
+msgstr "Finished"
+
+msgid "Error"
+msgstr "Error"

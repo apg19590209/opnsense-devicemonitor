@@ -38,6 +38,19 @@ Plugin automaticky sleduje síť a upozorňuje na:
 
 ## Historie verzí
 
+### v2.5 (září 2026) — Správa Nmap, historie a spolehlivost
+
+- Přidáno konfigurovatelné **cílené Nmap skenování**: zapnutí/vypnutí, počet portů, časovací profil, timeout hostitele, detekce služeb/verzí a maximální počet skenů za monitorovací cyklus.
+- Přidán **retry/backoff** pro neúspěšné automatické cílené skeny: 15 minut, 1 hodina, 6 hodin a 24 hodin; po pěti neúspěšných pokusech se automatické opakování zastaví.
+- Do tabulky zařízení přidán viditelný **stav fronty a opakování Nmap skenu**, včetně stavů Pending, Retry a Failed.
+- Přidána možnost spustit **ruční cílený Nmap sken** pro konkrétní zařízení bez ovlivnění automatické retry fronty.
+- Přidána trvalá **historie Nmap skenů** pro ruční i automatické skeny, včetně úspěšných, neúspěšných a přerušených/neúplných běhů.
+- Přidána samostatná stránka **Nmap Scan History** s volbou 10, 25, 50 nebo 100 řádků, ručním obnovením a posuvnou tabulkou výsledků.
+- Přidána trvalá **historie známých MAC adres**, aby dříve známé zařízení nebylo po smazání a opětovném nalezení považováno za nové.
+- Zpevněno API historie skenů pomocí omezených dotazů, SQLite v režimu pouze pro čtení a bezpečnějšího hlášení chyb.
+- Zpevněn instalační skript pomocí validace zdrojů, kontrol závislostí, dočasných záloh při upgradu a kontroly syntaxe.
+- Přidána automatická **CI validace** pro Python, PHP, shell skripty, překlady a chování databázových migrací.
+
 ### v2.4 (září 2026) — Cílené bezpečnostní skenování a vyšší spolehlivost
 
 - Přidány volitelné **cílené bezpečnostní skeny Nmap** pro nově zjištěná zařízení, která splňují podmínky pro e-mailové upozornění.
