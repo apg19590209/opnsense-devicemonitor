@@ -387,3 +387,93 @@ msgstr "Dokončeno"
 
 msgid "Error"
 msgstr "Chyba"
+
+msgid "Email sent"
+msgstr "E-mail odeslán"
+
+msgid "Email failed"
+msgstr "Odeslání e-mailu selhalo"
+
+msgid "Sent"
+msgstr "Odesláno"
+
+msgid "Success"
+msgstr "Úspěch"
+
+msgid "Incomplete"
+msgstr "Nedokončeno"
+
+msgid "Manual"
+msgstr "Ruční"
+
+msgid "Automatic"
+msgstr "Automatické"
+
+msgid "Port"
+msgstr "Port"
+
+msgid "Protocol"
+msgstr "Protokol"
+
+msgid "Service"
+msgstr "Služba"
+
+msgid "Product"
+msgstr "Produkt"
+
+msgid "Version"
+msgstr "Verze"
+
+msgid "Extra info"
+msgstr "Další informace"
+
+msgid "No open ports recorded"
+msgstr "Nejsou zaznamenány žádné otevřené porty"
+
+msgid "Enabled"
+msgstr "Povoleno"
+
+msgid "Disabled"
+msgstr "Zakázáno"
+
+msgid "Top ports"
+msgstr "Nejčastější porty"
+
+msgid "Timing"
+msgstr "Časování"
+
+msgid "Host timeout"
+msgstr "Časový limit hostitele"
+
+msgid "Version detection"
+msgstr "Detekce verze"
+
+msgid "Nmap version"
+msgstr "Verze Nmap"
+
+msgid "Nmap elapsed"
+msgstr "Doba běhu Nmap"
+
+msgid "OS hint"
+msgstr "Odhad OS"
+
+msgid "Open ports"
+msgstr "Otevřené porty"
+
+msgid "Scan error"
+msgstr "Chyba skenování"
+
+msgid "Email error"
+msgstr "Chyba e-mailu"
+
+msgid "Open port details"
+msgstr "Podrobnosti otevřených portů"
+
+msgid "No targeted Nmap scan history recorded"
+msgstr "Nejsou zaznamenány žádné cílené Nmap skeny"
+
+msgid "Show scan details"
+msgstr "Zobrazit podrobnosti skenu"
+
+msgid "Hide scan details"
+msgstr "Skrýt podrobnosti skenu"

@@ -222,7 +222,7 @@ $(document).ready(function() {
                 })
                 .append(
                     $('<i>').addClass('fa fa-check-circle'),
-                    document.createTextNode(' Success')
+                    document.createTextNode(' ' + historyText.success)
                 );
         }
 
@@ -235,7 +235,7 @@ $(document).ready(function() {
                 })
                 .append(
                     $('<i>').addClass('fa fa-exclamation-circle'),
-                    document.createTextNode(' Failed')
+                    document.createTextNode(' ' + historyText.failed)
                 );
         }
 
@@ -247,28 +247,66 @@ $(document).ready(function() {
             })
             .append(
                 $('<i>').addClass('fa fa-minus-circle'),
-                document.createTextNode(' Incomplete')
+                document.createTextNode(' ' + historyText.incomplete)
             );
     }
+
+    var historyText = {
+        emailSent: "{{ lang._('Email sent') }}",
+        emailFailed: "{{ lang._('Email failed') }}",
+        sent: "{{ lang._('Sent') }}",
+        failed: "{{ lang._('Failed') }}",
+        success: "{{ lang._('Success') }}",
+        incomplete: "{{ lang._('Incomplete') }}",
+        none: "{{ lang._('None') }}",
+        manual: "{{ lang._('Manual') }}",
+        automatic: "{{ lang._('Automatic') }}",
+        port: "{{ lang._('Port') }}",
+        protocol: "{{ lang._('Protocol') }}",
+        service: "{{ lang._('Service') }}",
+        product: "{{ lang._('Product') }}",
+        version: "{{ lang._('Version') }}",
+        extraInfo: "{{ lang._('Extra info') }}",
+        noOpenPorts: "{{ lang._('No open ports recorded') }}",
+        enabled: "{{ lang._('Enabled') }}",
+        disabled: "{{ lang._('Disabled') }}",
+        finished: "{{ lang._('Finished') }}",
+        topPorts: "{{ lang._('Top ports') }}",
+        timing: "{{ lang._('Timing') }}",
+        hostTimeout: "{{ lang._('Host timeout') }}",
+        versionDetection: "{{ lang._('Version detection') }}",
+        nmapVersion: "{{ lang._('Nmap version') }}",
+        nmapElapsed: "{{ lang._('Nmap elapsed') }}",
+        osHint: "{{ lang._('OS hint') }}",
+        openPorts: "{{ lang._('Open ports') }}",
+        emailSentLabel: "{{ lang._('Email sent') }}",
+        scanError: "{{ lang._('Scan error') }}",
+        emailError: "{{ lang._('Email error') }}",
+        openPortDetails: "{{ lang._('Open port details') }}",
+        noHistory: "{{ lang._('No targeted Nmap scan history recorded') }}",
+        showDetails: "{{ lang._('Show scan details') }}",
+        hideDetails: "{{ lang._('Hide scan details') }}",
+
+    };
 
     function emailStatus(row) {
         if (row.email_sent === 1 || row.email_sent === '1') {
             return $('<span>')
                 .addClass('text-success')
-                .attr('title', 'Email sent')
+                .attr('title', historyText.emailSent)
                 .append(
                     $('<i>').addClass('fa fa-envelope'),
-                    document.createTextNode(' Sent')
+                    document.createTextNode(' ' + historyText.sent)
                 );
         }
 
         if (row.email_sent === 0 || row.email_sent === '0') {
             return $('<span>')
                 .addClass('text-danger')
-                .attr('title', row.email_error || 'Email failed')
+                .attr('title', row.email_error || historyText.emailFailed)
                 .append(
                     $('<i>').addClass('fa fa-exclamation-triangle'),
-                    document.createTextNode(' Failed')
+                    document.createTextNode(' ' + historyText.failed)
                 );
         }
 
@@ -281,12 +319,12 @@ $(document).ready(function() {
         if (row.scan_type === 'manual') {
             return $('<span>')
                 .addClass('label label-info')
-                .text('Manual');
+                .text(historyText.manual);
         }
 
         return $('<span>')
             .addClass('label label-default')
-            .text('Automatic');
+            .text(historyText.automatic);
     }
 
     function portSummary(row) {
@@ -324,7 +362,7 @@ $(document).ready(function() {
             row.open_port_count === '0') {
             return $('<span>')
                 .addClass('text-muted')
-                .text('None');
+                .text(historyText.none);
         }
 
         if (row.open_port_count !== null &&
@@ -358,12 +396,12 @@ $(document).ready(function() {
 
         var $head = $('<thead>').append(
             $('<tr>').append(
-                $('<th>').text('Port'),
-                $('<th>').text('Protocol'),
-                $('<th>').text('Service'),
-                $('<th>').text('Product'),
-                $('<th>').text('Version'),
-                $('<th>').text('Extra info')
+                $('<th>').text(historyText.port),
+                $('<th>').text(historyText.protocol),
+                $('<th>').text(historyText.service),
+                $('<th>').text(historyText.product),
+                $('<th>').text(historyText.version),
+                $('<th>').text(historyText.extraInfo)
             )
         );
 
@@ -375,7 +413,7 @@ $(document).ready(function() {
                     $('<td>')
                         .attr('colspan', 6)
                         .addClass('text-muted')
-                        .text('No open ports recorded')
+                        .text(historyText.noOpenPorts)
                 )
             );
         } else {
@@ -403,12 +441,12 @@ $(document).ready(function() {
 
         if (row.version_detection === 1 ||
             row.version_detection === '1') {
-            versionDetection = 'Enabled';
+            versionDetection = historyText.enabled;
         } else if (
             row.version_detection === 0 ||
             row.version_detection === '0'
         ) {
-            versionDetection = 'Disabled';
+            versionDetection = historyText.disabled;
         } else {
             versionDetection = '\u2014';
         }
@@ -421,44 +459,44 @@ $(document).ready(function() {
         var $grid = $('<div>')
             .addClass('scan-history-detail-grid')
             .append(
-                detailItem('Finished', row.finished_at),
-                detailItem('Top ports', row.top_ports),
+                detailItem(historyText.finished, row.finished_at),
+                detailItem(historyText.topPorts, row.top_ports),
                 detailItem(
-                    'Timing',
+                    historyText.timing,
                     row.timing !== null &&
                     row.timing !== undefined
                         ? 'T' + row.timing
                         : null
                 ),
                 detailItem(
-                    'Host timeout',
+                    historyText.hostTimeout,
                     row.host_timeout !== null &&
                     row.host_timeout !== undefined
                         ? row.host_timeout + ' s'
                         : null
                 ),
                 detailItem(
-                    'Version detection',
+                    historyText.versionDetection,
                     versionDetection
                 ),
                 detailItem(
-                    'Nmap version',
+                    historyText.nmapVersion,
                     row.nmap_version
                 ),
                 detailItem(
-                    'Nmap elapsed',
+                    historyText.nmapElapsed,
                     elapsed
                 ),
                 detailItem(
-                    'OS hint',
+                    historyText.osHint,
                     row.os_hint
                 ),
                 detailItem(
-                    'Open ports',
+                    historyText.openPorts,
                     row.open_port_count
                 ),
                 detailItem(
-                    'Email sent',
+                    historyText.emailSentLabel,
                     yesNo(row.email_sent)
                 )
             );
@@ -474,7 +512,7 @@ $(document).ready(function() {
                     .append(
                         $('<span>')
                             .addClass('scan-history-detail-label')
-                            .text('Scan error'),
+                            .text(historyText.scanError),
                         $('<div>')
                             .addClass(
                                 'scan-history-error text-danger'
@@ -491,7 +529,7 @@ $(document).ready(function() {
                     .append(
                         $('<span>')
                             .addClass('scan-history-detail-label')
-                            .text('Email error'),
+                            .text(historyText.emailError),
                         $('<div>')
                             .addClass(
                                 'scan-history-error text-danger'
@@ -504,7 +542,7 @@ $(document).ready(function() {
         $box.append(
             $('<span>')
                 .addClass('scan-history-detail-label')
-                .text('Open port details'),
+                .text(historyText.openPortDetails),
             buildPortsTable(ports)
         );
 
@@ -527,9 +565,7 @@ $(document).ready(function() {
                 $('<td>')
                     .attr('colspan', 8)
                     .addClass('text-muted')
-                    .text(
-                        'No targeted Nmap scan history recorded'
-                    )
+                    .text(historyText.noHistory)
             ).appendTo($tbody);
 
             return;
@@ -541,7 +577,7 @@ $(document).ready(function() {
             var $button = $('<button>')
                 .attr({
                     'type': 'button',
-                    'title': 'Show scan details',
+                    'title': historyText.showDetails,
                     'aria-expanded': 'false'
                 })
                 .addClass(
@@ -566,8 +602,8 @@ $(document).ready(function() {
                     .attr(
                         'title',
                         visible
-                            ? 'Show scan details'
-                            : 'Hide scan details'
+                            ? historyText.showDetails
+                            : historyText.hideDetails
                     )
                     .find('i')
                     .toggleClass(

@@ -386,3 +386,93 @@ msgstr "Finished"
 
 msgid "Error"
 msgstr "Error"
+
+msgid "Email sent"
+msgstr "Email sent"
+
+msgid "Email failed"
+msgstr "Email failed"
+
+msgid "Sent"
+msgstr "Sent"
+
+msgid "Success"
+msgstr "Success"
+
+msgid "Incomplete"
+msgstr "Incomplete"
+
+msgid "Manual"
+msgstr "Manual"
+
+msgid "Automatic"
+msgstr "Automatic"
+
+msgid "Port"
+msgstr "Port"
+
+msgid "Protocol"
+msgstr "Protocol"
+
+msgid "Service"
+msgstr "Service"
+
+msgid "Product"
+msgstr "Product"
+
+msgid "Version"
+msgstr "Version"
+
+msgid "Extra info"
+msgstr "Extra info"
+
+msgid "No open ports recorded"
+msgstr "No open ports recorded"
+
+msgid "Enabled"
+msgstr "Enabled"
+
+msgid "Disabled"
+msgstr "Disabled"
+
+msgid "Top ports"
+msgstr "Top ports"
+
+msgid "Timing"
+msgstr "Timing"
+
+msgid "Host timeout"
+msgstr "Host timeout"
+
+msgid "Version detection"
+msgstr "Version detection"
+
+msgid "Nmap version"
+msgstr "Nmap version"
+
+msgid "Nmap elapsed"
+msgstr "Nmap elapsed"
+
+msgid "OS hint"
+msgstr "OS hint"
+
+msgid "Open ports"
+msgstr "Open ports"
+
+msgid "Scan error"
+msgstr "Scan error"
+
+msgid "Email error"
+msgstr "Email error"
+
+msgid "Open port details"
+msgstr "Open port details"
+
+msgid "No targeted Nmap scan history recorded"
+msgstr "No targeted Nmap scan history recorded"
+
+msgid "Show scan details"
+msgstr "Show scan details"
+
+msgid "Hide scan details"
+msgstr "Hide scan details"
