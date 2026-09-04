@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - v2.5-development
+      - v2.6-development
   pull_request:
     branches:
       - v2.5-development
+      - v2.6-development
 
 jobs:
   validate:
