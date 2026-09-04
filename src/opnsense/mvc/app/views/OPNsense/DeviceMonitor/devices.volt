@@ -97,7 +97,7 @@
 
                     <select id="scan-history-limit"
                             class="form-control input-sm"
-                            style="width:70px;height:28px;padding:3px 24px 3px 6px;margin:0;display:inline-block;vertical-align:middle;">
+                            style="width:70px;height:28px;padding:0 24px 0 8px;margin:0;display:inline-block;vertical-align:middle;line-height:26px;">
                         <option value="10" selected>10</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
