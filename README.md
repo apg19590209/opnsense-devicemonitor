@@ -38,6 +38,17 @@ The plugin automatically monitors the network and alerts you about:
 
 ## Version history
 
+### v2.6 (September 2026) — Detailed targeted Nmap scan history
+
+- Records targeted scan settings, Nmap version, elapsed time, OS hint and email outcome.
+- Stores discovered open ports with protocol, service, product, version and extra information.
+- Adds expandable scan-history details while keeping the main history table compact.
+- Separates Nmap scan success from notification email success.
+- Adds backward-compatible database migration for existing v2.5 installations.
+- Preserves valid zero-valued Nmap settings.
+- Adds translated scan-history detail labels.
+- Extends CI validation to the v2.6 development branch.
+
 ### v2.5 (September 2026) — Nmap management, history and reliability
 
 - Added configurable **targeted Nmap settings** for enable/disable, top-port count, timing template, host timeout, service/version detection and scans per monitoring cycle.
@@ -264,16 +275,16 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 
 ### Method 1: Download release ZIP + WinSCP
 
-1. Download the **v2.5 Source code (zip)** from:
-   https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.5
+1. Download the **v2.6 Source code (zip)** from:
+   https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.6
 2. Enable SSH in OPNsense: **System -> Settings -> Administration -> Secure Shell -> Enable**.
 3. Upload the ZIP to `/tmp/` using WinSCP.
 4. Connect by SSH and install:
 
 ```sh
 cd /tmp
-unzip opnsense-devicemonitor-2.5.zip
-cd opnsense-devicemonitor-2.5
+unzip opnsense-devicemonitor-2.6.zip
+cd opnsense-devicemonitor-2.6
 sh install.sh
 ```
 
@@ -284,9 +295,9 @@ No reboot is normally required.
 ```sh
 ssh root@your.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.5.zip
-unzip v2.5.zip
-cd opnsense-devicemonitor-2.5
+fetch https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.6.zip
+unzip v2.6.zip
+cd opnsense-devicemonitor-2.6
 sh install.sh
 ```
 
@@ -298,7 +309,7 @@ Before upgrading, back up the runtime data:
 tar -czf /root/devicemonitor-backup.tgz /var/db/devicemonitor
 ```
 
-Then install v2.5 using either method above.
+Then install v2.6 using either method above.
 
 Existing configuration and device data are preserved during the upgrade.
 
@@ -314,9 +325,9 @@ Expected result:
 running
 ```
 
-### Targeted Nmap scanning in v2.5
+### Targeted Nmap scanning in v2.6
 
-For newly detected devices that qualify for an email notification, v2.5 can:
+For newly detected devices that qualify for an email notification, v2.6 can:
 
 - run targeted scans automatically, with the feature independently enabled or disabled;
 - scan a configurable number of top TCP ports (default: 100);

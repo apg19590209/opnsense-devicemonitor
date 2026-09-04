@@ -38,6 +38,17 @@ Plugin automaticky sleduje síť a upozorňuje na:
 
 ## Historie verzí
 
+### v2.6 (září 2026) — Podrobná historie cílených skenů Nmap
+
+- Zaznamenává nastavení skenu, verzi Nmap, dobu běhu, odhad OS a výsledek odeslání e-mailu.
+- Ukládá nalezené otevřené porty včetně protokolu, služby, produktu, verze a dalších informací.
+- Přidává rozbalitelné podrobnosti historie skenů při zachování kompaktní hlavní tabulky.
+- Odděluje úspěch skenu Nmap od úspěchu odeslání e-mailu.
+- Přidává zpětně kompatibilní migraci databáze pro instalace v2.5.
+- Zachovává platná nulová nastavení Nmap.
+- Přidává překlady podrobností historie skenů.
+- Rozšiřuje CI ověřování na vývojovou větev v2.6.
+
 ### v2.5 (září 2026) — Správa Nmap, historie a spolehlivost
 
 - Přidáno konfigurovatelné **cílené Nmap skenování**: zapnutí/vypnutí, počet portů, časovací profil, timeout hostitele, detekce služeb/verzí a maximální počet skenů za monitorovací cyklus.
