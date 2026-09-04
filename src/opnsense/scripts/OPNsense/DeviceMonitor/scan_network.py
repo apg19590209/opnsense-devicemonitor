@@ -188,6 +188,23 @@ def init_db():
         last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
     )''')
 
+    # Audit history for every targeted Nmap execution.
+    c.execute('''CREATE TABLE IF NOT EXISTS nmap_scan_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mac TEXT NOT NULL,
+        ip TEXT,
+        scan_type TEXT NOT NULL,
+        started_at DATETIME NOT NULL,
+        finished_at DATETIME,
+        success INTEGER,
+        error TEXT
+    )''')
+
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS idx_nmap_scan_history_mac_started
+        ON nmap_scan_history(mac, started_at DESC)
+    ''')
+
     # Seed historical MACs from both active and deleted device records.
     c.execute('''
         INSERT OR IGNORE INTO known_macs (mac, first_seen, last_seen)
@@ -365,6 +382,69 @@ def is_recently_seen(last_seen_str, minutes=15):
         return (now_utc - last_seen).total_seconds() < minutes * 60
     except:
         return False
+
+
+def run_targeted_scan_with_history(device, config, scan_type):
+    """Run a targeted scan and record one audit-history row."""
+    if scan_type not in ('manual', 'automatic'):
+        raise ValueError(f"Invalid scan type: {scan_type}")
+
+    mac = (device.get('mac') or '').strip().lower()
+    ip = (device.get('ip') or '').strip()
+    started_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    history_id = None
+
+    try:
+        with sqlite3.connect(DB_FILE) as history_conn:
+            cursor = history_conn.execute(
+                '''
+                INSERT INTO nmap_scan_history
+                    (mac, ip, scan_type, started_at)
+                VALUES (?, ?, ?, ?)
+                ''',
+                (mac, ip, scan_type, started_at)
+            )
+            history_id = cursor.lastrowid
+    except Exception as e:
+        log(f"[NMAP] Unable to create scan history row: {e}")
+
+    try:
+        success, error = targeted_scan_and_email(device, config)
+    except Exception as e:
+        if history_id is not None:
+            finished_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            try:
+                with sqlite3.connect(DB_FILE) as history_conn:
+                    history_conn.execute(
+                        '''
+                        UPDATE nmap_scan_history
+                        SET finished_at = ?, success = 0, error = ?
+                        WHERE id = ?
+                        ''',
+                        (finished_at, str(e)[:1000], history_id)
+                    )
+            except Exception as history_error:
+                log(f"[NMAP] Unable to finish scan history row: {history_error}")
+        raise
+
+    if history_id is not None:
+        finished_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        stored_error = None if success else (error or 'Unknown targeted scan failure')[:1000]
+
+        try:
+            with sqlite3.connect(DB_FILE) as history_conn:
+                history_conn.execute(
+                    '''
+                    UPDATE nmap_scan_history
+                    SET finished_at = ?, success = ?, error = ?
+                    WHERE id = ?
+                    ''',
+                    (finished_at, 1 if success else 0, stored_error, history_id)
+                )
+        except Exception as e:
+            log(f"[NMAP] Unable to finish scan history row: {e}")
+
+    return success, error
 
 
 def targeted_scan_and_email(device, config):
@@ -795,7 +875,7 @@ def full_scan():
 
         for row in scan_rows:
             device = dict(row)
-            success, error = targeted_scan_and_email(device, config)
+            success, error = run_targeted_scan_with_history(device, config, 'automatic')
 
             if success:
                 with sqlite3.connect(DB_FILE) as queue_conn:
@@ -898,7 +978,7 @@ def manual_targeted_scan(mac):
     device = dict(row)
     config = load_config()
 
-    success, error = targeted_scan_and_email(device, config)
+    success, error = run_targeted_scan_with_history(device, config, 'manual')
 
     if success:
         print(f"Targeted Nmap scan completed for {mac}")
