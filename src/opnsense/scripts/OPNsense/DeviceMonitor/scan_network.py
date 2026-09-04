@@ -870,6 +870,44 @@ def full_scan():
     return 0
 
 
+def manual_targeted_scan(mac):
+    """Run one targeted Nmap scan for an existing device without changing queue state."""
+    mac = (mac or '').strip().lower()
+
+    if not re.fullmatch(r'(?:[0-9a-f]{2}:){5}[0-9a-f]{2}', mac):
+        print(f"ERROR: Invalid MAC address: {mac}", file=sys.stderr)
+        return 2
+
+    init_db()
+
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            '''
+            SELECT mac, ip, hostname, vendor, vlan, first_seen
+            FROM devices
+            WHERE lower(mac) = ?
+            ''',
+            (mac,)
+        ).fetchone()
+
+    if row is None:
+        print(f"ERROR: Device not found: {mac}", file=sys.stderr)
+        return 3
+
+    device = dict(row)
+    config = load_config()
+
+    success, error = targeted_scan_and_email(device, config)
+
+    if success:
+        print(f"Targeted Nmap scan completed for {mac}")
+        return 0
+
+    print(f"ERROR: {error or 'Targeted Nmap scan failed'}", file=sys.stderr)
+    return 1
+
+
 def main():
     """Main entry point with argument parsing"""
 
@@ -881,6 +919,7 @@ def main():
 Examples:
   %(prog)s                    # Full scan (default)
   %(prog)s --update-only      # Quick status update (hostwatch DB)
+  %(prog)s --scan-mac MAC     # Targeted Nmap scan for one existing device
   %(prog)s --verbose          # Full scan with verbose output
   %(prog)s --help             # Show this help
         '''
@@ -890,6 +929,12 @@ Examples:
         '--update-only',
         action='store_true',
         help='Quick mode: only update online/offline status via hostwatch DB'
+    )
+
+    parser.add_argument(
+        '--scan-mac',
+        metavar='MAC',
+        help='Run one targeted Nmap scan for an existing device'
     )
 
     parser.add_argument(
@@ -907,10 +952,11 @@ Examples:
 
     try:
         # Dispatch according to mode
+        if args.scan_mac:
+            return manual_targeted_scan(args.scan_mac)
         if args.update_only:
             return update_status_only()
-        else:
-            return full_scan()
+        return full_scan()
 
     except KeyboardInterrupt:
         log("Scan interrupted by user")

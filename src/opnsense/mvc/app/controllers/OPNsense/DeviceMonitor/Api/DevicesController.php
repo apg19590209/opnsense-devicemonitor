@@ -291,6 +291,64 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
+     * Run a manual targeted Nmap scan for one existing device
+     * POST /api/devicemonitor/devices/nmapscan
+     */
+    public function nmapscanAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed', 'error' => 'POST required'];
+        }
+
+        $mac = strtolower(trim(
+            (string)$this->request->getPost('mac', 'string', '')
+        ));
+
+        if (!preg_match('/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/', $mac)) {
+            return ['result' => 'failed', 'error' => 'Invalid MAC address'];
+        }
+
+        $paths = $this->getPaths();
+
+        if (
+            !isset($paths['scanScript']) ||
+            !is_file($paths['scanScript'])
+        ) {
+            return ['result' => 'failed', 'error' => 'Scanner unavailable'];
+        }
+
+        $command =
+            escapeshellarg($paths['scanScript']) .
+            ' --scan-mac ' .
+            escapeshellarg($mac) .
+            ' 2>&1';
+
+        $output = [];
+        $returnCode = 1;
+        exec($command, $output, $returnCode);
+
+        $message = trim(implode("\n", $output));
+
+        if ($returnCode === 0) {
+            return [
+                'result' => 'scanned',
+                'message' => $message !== ''
+                    ? $message
+                    : 'Targeted Nmap scan completed'
+            ];
+        }
+
+        return [
+            'result' => 'failed',
+            'error' => $message !== ''
+                ? $message
+                : 'Targeted Nmap scan failed',
+            'code' => $returnCode
+        ];
+    }
+
+
+    /**
      * Clear the entire database
      * POST /api/devicemonitor/devices/clear
      */

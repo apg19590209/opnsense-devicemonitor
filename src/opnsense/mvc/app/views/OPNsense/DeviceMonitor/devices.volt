@@ -342,6 +342,7 @@ $(document).ready(function() {
                 buildScanStatusCell(row),
                 $('<td>').text(row.last_seen||''),
                 $('<td>').html('<button class="btn btn-xs btn-warning command-check" data-row-mac="'+row.mac+'" data-row-ip="'+row.ip+'" title="Check online" style="margin-right:2px;"><i class="fa fa-plug"></i></button>' +
+                '<button class="btn btn-xs btn-info command-nmap" data-row-mac="'+row.mac+'" title="Run targeted Nmap scan" style="margin-right:2px;"><i class="fa fa-search"></i></button>' +
                 '<button class="btn btn-xs btn-danger command-delete" data-row-mac="'+row.mac+'"><i class="fa fa-trash"></i></button>')
             ).appendTo($tbody);
         });
@@ -374,6 +375,39 @@ $(document).ready(function() {
                 }
             });
         });
+
+        $('.command-nmap').off('click').on('click', function() {
+            var mac = $(this).data('row-mac');
+            var $btn = $(this);
+
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+
+            $.ajax({
+                url: '/api/devicemonitor/devices/nmapscan',
+                type: 'POST',
+                data: { mac: mac },
+                success: function(r) {
+                    $btn.prop('disabled', false).html('<i class="fa fa-search"></i>');
+
+                    if (r.result === 'scanned') {
+                        showToast(r.message || 'Targeted Nmap scan completed', 'success');
+                    } else {
+                        showToast(r.error || 'Targeted Nmap scan failed', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    $btn.prop('disabled', false).html('<i class="fa fa-search"></i>');
+
+                    var message = 'Targeted Nmap scan failed';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        message = xhr.responseJSON.error;
+                    }
+
+                    showToast(message, 'error');
+                }
+            });
+        });
+
 
         $('.command-check').off('click').on('click', function() {
             var mac = $(this).data('row-mac');
