@@ -197,14 +197,69 @@ def init_db():
         started_at DATETIME NOT NULL,
         finished_at DATETIME,
         success INTEGER,
-        error TEXT
+        error TEXT,
+        top_ports INTEGER,
+        timing INTEGER,
+        host_timeout INTEGER,
+        version_detection INTEGER,
+        nmap_version TEXT,
+        nmap_elapsed REAL,
+        os_hint TEXT,
+        open_port_count INTEGER,
+        email_sent INTEGER,
+        email_error TEXT
     )''')
+
+    # Add v2.6 history metadata columns to existing databases.
+    history_columns = {
+        row[1]
+        for row in c.execute('PRAGMA table_info(nmap_scan_history)')
+    }
+    history_migrations = {
+        'top_ports': 'INTEGER',
+        'timing': 'INTEGER',
+        'host_timeout': 'INTEGER',
+        'version_detection': 'INTEGER',
+        'nmap_version': 'TEXT',
+        'nmap_elapsed': 'REAL',
+        'os_hint': 'TEXT',
+        'open_port_count': 'INTEGER',
+        'email_sent': 'INTEGER',
+        'email_error': 'TEXT',
+    }
+    for column, definition in history_migrations.items():
+        if column not in history_columns:
+            c.execute(
+                f'ALTER TABLE nmap_scan_history '
+                f'ADD COLUMN {column} {definition}'
+            )
 
     c.execute('''
         CREATE INDEX IF NOT EXISTS idx_nmap_scan_history_mac_started
         ON nmap_scan_history(mac, started_at DESC)
     ''')
 
+    # Structured open-port results for each targeted scan.
+    c.execute('''CREATE TABLE IF NOT EXISTS nmap_scan_ports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        scan_history_id INTEGER NOT NULL,
+        port INTEGER NOT NULL,
+        protocol TEXT NOT NULL,
+        state TEXT NOT NULL,
+        service TEXT,
+        product TEXT,
+        version TEXT,
+        extra_info TEXT,
+        FOREIGN KEY(scan_history_id)
+            REFERENCES nmap_scan_history(id)
+            ON DELETE CASCADE,
+        UNIQUE(scan_history_id, port, protocol)
+    )''')
+
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS idx_nmap_scan_ports_history
+        ON nmap_scan_ports(scan_history_id)
+    ''')
     # Seed historical MACs from both active and deleted device records.
     c.execute('''
         INSERT OR IGNORE INTO known_macs (mac, first_seen, last_seen)
@@ -384,8 +439,25 @@ def is_recently_seen(last_seen_str, minutes=15):
         return False
 
 
+def config_bool(value, default=False):
+    """Convert configuration values such as 0/1 strings safely to bool."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+
+    text = str(value).strip().lower()
+    if text in ('1', 'true', 'yes', 'on', 'enabled'):
+        return True
+    if text in ('0', 'false', 'no', 'off', 'disabled', ''):
+        return False
+    return default
+
+
 def run_targeted_scan_with_history(device, config, scan_type):
-    """Run a targeted scan and record one audit-history row."""
+    """Run a targeted scan and record its scan and email audit history."""
     if scan_type not in ('manual', 'automatic'):
         raise ValueError(f"Invalid scan type: {scan_type}")
 
@@ -394,22 +466,62 @@ def run_targeted_scan_with_history(device, config, scan_type):
     started_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     history_id = None
 
+    top_ports = int(config.get('nmap_top_ports', 100))
+    timing = int(config.get('nmap_timing', 4))
+    host_timeout = int(config.get('nmap_host_timeout', 45))
+    version_detection = config_bool(
+        config.get('nmap_version_detection', True),
+        True
+    )
+
     try:
         with sqlite3.connect(DB_FILE) as history_conn:
             cursor = history_conn.execute(
                 '''
-                INSERT INTO nmap_scan_history
-                    (mac, ip, scan_type, started_at)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO nmap_scan_history (
+                    mac,
+                    ip,
+                    scan_type,
+                    started_at,
+                    top_ports,
+                    timing,
+                    host_timeout,
+                    version_detection
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ''',
-                (mac, ip, scan_type, started_at)
+                (
+                    mac,
+                    ip,
+                    scan_type,
+                    started_at,
+                    top_ports,
+                    timing,
+                    host_timeout,
+                    1 if version_detection else 0,
+                )
             )
             history_id = cursor.lastrowid
     except Exception as e:
         log(f"[NMAP] Unable to create scan history row: {e}")
 
+    details = {
+        'scan_success': False,
+        'scan_error': None,
+        'services': [],
+        'nmap_version': '',
+        'nmap_elapsed': None,
+        'os_hint': None,
+        'email_sent': None,
+        'email_error': None,
+    }
+
     try:
-        success, error = targeted_scan_and_email(device, config)
+        operation_success, error, details = targeted_scan_and_email(
+            device,
+            config
+        )
+        details = details or {}
     except Exception as e:
         if history_id is not None:
             finished_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -424,50 +536,148 @@ def run_targeted_scan_with_history(device, config, scan_type):
                         (finished_at, str(e)[:1000], history_id)
                     )
             except Exception as history_error:
-                log(f"[NMAP] Unable to finish scan history row: {history_error}")
+                log(
+                    "[NMAP] Unable to finish scan history row: "
+                    f"{history_error}"
+                )
         raise
 
     if history_id is not None:
         finished_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        stored_error = None if success else (error or 'Unknown targeted scan failure')[:1000]
+
+        scan_success = bool(details.get('scan_success'))
+        scan_error = details.get('scan_error')
+
+        if not scan_success and not scan_error:
+            scan_error = error or 'Unknown targeted scan failure'
+
+        if scan_error:
+            scan_error = str(scan_error)[:1000]
+
+        services = details.get('services') or []
+        email_sent = details.get('email_sent')
+        email_error = details.get('email_error')
+
+        if email_sent is not None:
+            email_sent = 1 if email_sent else 0
+
+        if email_error:
+            email_error = str(email_error)[:1000]
 
         try:
             with sqlite3.connect(DB_FILE) as history_conn:
+                history_conn.execute('PRAGMA foreign_keys = ON')
+
                 history_conn.execute(
                     '''
                     UPDATE nmap_scan_history
-                    SET finished_at = ?, success = ?, error = ?
+                    SET finished_at = ?,
+                        success = ?,
+                        error = ?,
+                        nmap_version = ?,
+                        nmap_elapsed = ?,
+                        os_hint = ?,
+                        open_port_count = ?,
+                        email_sent = ?,
+                        email_error = ?
                     WHERE id = ?
                     ''',
-                    (finished_at, 1 if success else 0, stored_error, history_id)
+                    (
+                        finished_at,
+                        1 if scan_success else 0,
+                        scan_error,
+                        details.get('nmap_version') or None,
+                        details.get('nmap_elapsed'),
+                        details.get('os_hint') or None,
+                        len(services),
+                        email_sent,
+                        email_error,
+                        history_id,
+                    )
                 )
+
+                history_conn.execute(
+                    'DELETE FROM nmap_scan_ports '
+                    'WHERE scan_history_id = ?',
+                    (history_id,)
+                )
+
+                for service in services:
+                    try:
+                        port_number = int(service.get('port'))
+                    except (TypeError, ValueError):
+                        continue
+
+                    history_conn.execute(
+                        '''
+                        INSERT INTO nmap_scan_ports (
+                            scan_history_id,
+                            port,
+                            protocol,
+                            state,
+                            service,
+                            product,
+                            version,
+                            extra_info
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        ''',
+                        (
+                            history_id,
+                            port_number,
+                            str(service.get('protocol') or ''),
+                            str(service.get('state') or 'open'),
+                            str(service.get('service') or 'unknown'),
+                            str(service.get('product') or ''),
+                            str(service.get('service_version') or ''),
+                            str(service.get('extra_info') or ''),
+                        )
+                    )
+
         except Exception as e:
             log(f"[NMAP] Unable to finish scan history row: {e}")
 
-    return success, error
-
+    # Preserve existing operational semantics:
+    # email failure still causes automatic retry/backoff.
+    return operation_success, error
 
 def targeted_scan_and_email(device, config):
-    """Run a targeted Nmap scan for one new device and email the formatted result."""
+    """Run one targeted Nmap scan, email it, and return structured results."""
     ip = (device.get('ip') or '').strip()
+
+    details = {
+        'scan_success': False,
+        'scan_error': None,
+        'services': [],
+        'nmap_version': '',
+        'nmap_elapsed': None,
+        'os_hint': None,
+        'email_sent': None,
+        'email_error': None,
+    }
 
     # Hard safety guard: one literal IP only. No CIDR, ranges or hostnames.
     try:
         parsed_ip = ipaddress.ip_address(ip)
     except ValueError:
         error = f"Invalid target IP: {ip!r}"
+        details['scan_error'] = error
         log(f"[NMAP] {error}")
-        return False, error
+        return False, error, details
 
     if parsed_ip.version != 4:
         error = f"IPv6 target skipped: {ip}"
+        details['scan_error'] = error
         log(f"[NMAP] {error}")
-        return False, error
+        return False, error, details
 
     nmap_top_ports = int(config.get('nmap_top_ports', 100))
     nmap_timing = int(config.get('nmap_timing', 4))
     nmap_host_timeout = int(config.get('nmap_host_timeout', 45))
-    nmap_version_detection = bool(config.get('nmap_version_detection', True))
+    nmap_version_detection = config_bool(
+        config.get('nmap_version_detection', True),
+        True
+    )
 
     scan_cmd = [
         '/usr/local/bin/nmap',
@@ -496,24 +706,31 @@ def targeted_scan_and_email(device, config):
         )
     except subprocess.TimeoutExpired:
         error = f"Targeted scan timeout: {ip}"
+        details['scan_error'] = error
         log(f"[NMAP] {error}")
-        return False, error
+        return False, error, details
     except Exception as e:
         error = f"Targeted scan failed to start for {ip}: {e}"
+        details['scan_error'] = error
         log(f"[NMAP] {error}")
-        return False, error
+        return False, error, details
 
     if result.returncode != 0:
-        error = f"Scan failed for {ip}, code={result.returncode}: {result.stderr[:200]}"
+        error = (
+            f"Scan failed for {ip}, code={result.returncode}: "
+            f"{result.stderr[:200]}"
+        )
+        details['scan_error'] = error
         log(f"[NMAP] {error}")
-        return False, error
+        return False, error, details
 
     try:
         root = ET.fromstring(result.stdout)
     except Exception as e:
         error = f"Invalid XML output for {ip}: {e}"
+        details['scan_error'] = error
         log(f"[NMAP] {error}")
-        return False, error
+        return False, error, details
 
     services = []
     os_hints = []
@@ -525,32 +742,63 @@ def targeted_scan_and_email(device, config):
 
         service_el = port.find('service')
         service_name = ''
-        version_parts = []
+        product = ''
+        service_version = ''
+        extra_info = ''
 
         if service_el is not None:
             service_name = service_el.get('name', '')
-
-            for attr in ('product', 'version', 'extrainfo'):
-                value = service_el.get(attr)
-                if value:
-                    version_parts.append(value)
+            product = service_el.get('product', '') or ''
+            service_version = service_el.get('version', '') or ''
+            extra_info = service_el.get('extrainfo', '') or ''
 
             ostype = service_el.get('ostype')
             if ostype and ostype not in os_hints:
                 os_hints.append(ostype)
+
+        version_parts = [
+            value
+            for value in (product, service_version, extra_info)
+            if value
+        ]
 
         services.append({
             'port': port.get('portid', ''),
             'protocol': port.get('protocol', ''),
             'state': 'open',
             'service': service_name or 'unknown',
-            'version': ' '.join(version_parts) or ''
+
+            # Preserve the existing email-friendly combined version field.
+            'version': ' '.join(version_parts),
+
+            # v2.6 structured fields for persistent history.
+            'product': product,
+            'service_version': service_version,
+            'extra_info': extra_info,
         })
 
     runstats = root.find('./runstats/finished')
     duration = ''
+    elapsed_value = None
+
     if runstats is not None and runstats.get('elapsed'):
-        duration = f"{runstats.get('elapsed')} seconds"
+        elapsed_text = runstats.get('elapsed')
+        duration = f"{elapsed_text} seconds"
+        try:
+            elapsed_value = float(elapsed_text)
+        except (TypeError, ValueError):
+            elapsed_value = None
+
+    os_hint = ', '.join(os_hints) if os_hints else 'Not identified'
+
+    details.update({
+        'scan_success': True,
+        'scan_error': None,
+        'services': services,
+        'nmap_version': root.get('version', '') or '',
+        'nmap_elapsed': elapsed_value,
+        'os_hint': os_hint,
+    })
 
     payload = {
         'ip': ip,
@@ -561,12 +809,14 @@ def targeted_scan_and_email(device, config):
         'first_seen': device.get('first_seen', ''),
         'scan_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'duration': duration,
-        'os_hint': ', '.join(os_hints) if os_hints else 'Not identified',
+        'os_hint': os_hint,
         'services': services
     }
 
     safe_ip = ip.replace('.', '_')
-    json_file = f"/tmp/devicemonitor-scan-{os.getpid()}-{safe_ip}.json"
+    json_file = (
+        f"/tmp/devicemonitor-scan-{os.getpid()}-{safe_ip}.json"
+    )
 
     try:
         with open(json_file, 'w') as f:
@@ -575,7 +825,8 @@ def targeted_scan_and_email(device, config):
         mail_result = subprocess.run(
             [
                 '/usr/local/bin/php',
-                '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_scan_email.php',
+                '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/'
+                'notify_scan_email.php',
                 json_file
             ],
             capture_output=True,
@@ -584,29 +835,44 @@ def targeted_scan_and_email(device, config):
         )
 
         if mail_result.returncode != 0:
-            error = f"Scan email failed for {ip}: {mail_result.stderr[:200]}"
+            error = (
+                f"Scan email failed for {ip}: "
+                f"{mail_result.stderr[:200]}"
+            )
+            details['email_sent'] = False
+            details['email_error'] = error
             log(f"[NMAP] {error}")
-            return False, error
+            return False, error, details
 
-        log(f"[NMAP] Targeted scan email sent for {ip}: {len(services)} open service(s)")
-        return True, ""
+        details['email_sent'] = True
+        details['email_error'] = None
+
+        log(
+            f"[NMAP] Targeted scan email sent for {ip}: "
+            f"{len(services)} open service(s)"
+        )
+        return True, "", details
 
     except subprocess.TimeoutExpired:
         error = f"Scan email timeout for {ip}"
+        details['email_sent'] = False
+        details['email_error'] = error
         log(f"[NMAP] {error}")
-        return False, error
+        return False, error, details
+
     except Exception as e:
         error = f"Scan email error for {ip}: {e}"
+        details['email_sent'] = False
+        details['email_error'] = error
         log(f"[NMAP] {error}")
-        return False, error
+        return False, error, details
+
     finally:
         try:
             if os.path.exists(json_file):
                 os.unlink(json_file)
         except Exception:
             pass
-
-
 
 def send_email_via_php_api(new_devices):
     """Mark devices in the database for email delivery"""

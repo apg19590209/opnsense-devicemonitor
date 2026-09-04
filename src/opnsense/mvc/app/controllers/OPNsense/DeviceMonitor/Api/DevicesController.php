@@ -296,68 +296,207 @@ class DevicesController extends ApiControllerBase
      */
     public function scanhistoryAction()
     {
-        $paths = $this->getPaths();
-
-        if (
-            !isset($paths['dbFile']) ||
-            !is_file($paths['dbFile'])
-        ) {
-            return ['rows' => [], 'total' => 0];
-        }
-
-        $limit = (int)$this->request->get('limit', 'int', 100);
-        if ($limit < 1) {
-            $limit = 1;
-        } elseif ($limit > 500) {
-            $limit = 500;
-        }
+        $result = [
+            'rows' => [],
+            'total' => 0
+        ];
 
         try {
+            $paths = $this->getPaths();
+
+            if (
+                !isset($paths['dbFile']) ||
+                !is_file($paths['dbFile'])
+            ) {
+                return $result;
+            }
+
+            $dbPath = $paths['dbFile'];
+
+            $limit = (int)$this->request->get('limit', 'int', 10);
+            $limit = max(1, min(500, $limit));
+
             $db = new \SQLite3(
-                $paths['dbFile'],
+                $dbPath,
                 SQLITE3_OPEN_READONLY
             );
             $db->busyTimeout(2000);
 
-            $exists = $db->querySingle(
-                "SELECT COUNT(*) FROM sqlite_master " .
-                "WHERE type='table' AND name='nmap_scan_history'"
+            $historyExists = (int)$db->querySingle(
+                "SELECT COUNT(*) " .
+                "FROM sqlite_master " .
+                "WHERE type = 'table' " .
+                "AND name = 'nmap_scan_history'"
             );
 
-            if (!$exists) {
+            if ($historyExists !== 1) {
                 $db->close();
-                return ['rows' => [], 'total' => 0];
+                return $result;
             }
 
-            $total = (int)$db->querySingle(
+            $result['total'] = (int)$db->querySingle(
                 'SELECT COUNT(*) FROM nmap_scan_history'
             );
 
-            $stmt = $db->prepare(
-                'SELECT id, mac, ip, scan_type, started_at, ' .
-                'finished_at, success, error ' .
-                'FROM nmap_scan_history ' .
-                'ORDER BY id DESC LIMIT :limit'
+            /*
+             * Detect v2.6 columns dynamically so an older database
+             * remains readable until its scanner-side migration runs.
+             */
+            $historyColumns = [];
+
+            $columnResult = $db->query(
+                'PRAGMA table_info(nmap_scan_history)'
             );
-            $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
 
-            $result = $stmt->execute();
-            $rows = [];
-
-            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                $rows[] = $row;
+            while ($column = $columnResult->fetchArray(SQLITE3_ASSOC)) {
+                $historyColumns[$column['name']] = true;
             }
 
-            $result->finalize();
+            $optionalColumns = [
+                'top_ports',
+                'timing',
+                'host_timeout',
+                'version_detection',
+                'nmap_version',
+                'nmap_elapsed',
+                'os_hint',
+                'open_port_count',
+                'email_sent',
+                'email_error'
+            ];
+
+            $selectColumns = [
+                'id',
+                'mac',
+                'ip',
+                'scan_type',
+                'started_at',
+                'finished_at',
+                'success',
+                'error'
+            ];
+
+            foreach ($optionalColumns as $column) {
+                if (isset($historyColumns[$column])) {
+                    $selectColumns[] = $column;
+                } else {
+                    $selectColumns[] = 'NULL AS ' . $column;
+                }
+            }
+
+            $historySql =
+                'SELECT ' .
+                implode(', ', $selectColumns) .
+                ' FROM nmap_scan_history ' .
+                'ORDER BY id DESC ' .
+                'LIMIT :limit';
+
+            $stmt = $db->prepare($historySql);
+            $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+
+            $query = $stmt->execute();
+
+            $rowsById = [];
+            $historyIds = [];
+
+            while ($row = $query->fetchArray(SQLITE3_ASSOC)) {
+                $row['id'] = (int)$row['id'];
+
+                if ($row['success'] !== null) {
+                    $row['success'] = (int)$row['success'];
+                }
+
+                foreach ([
+                    'top_ports',
+                    'timing',
+                    'host_timeout',
+                    'version_detection',
+                    'open_port_count',
+                    'email_sent'
+                ] as $integerField) {
+                    if ($row[$integerField] !== null) {
+                        $row[$integerField] =
+                            (int)$row[$integerField];
+                    }
+                }
+
+                if ($row['nmap_elapsed'] !== null) {
+                    $row['nmap_elapsed'] =
+                        (float)$row['nmap_elapsed'];
+                }
+
+                $row['ports'] = [];
+
+                $rowsById[$row['id']] = $row;
+                $historyIds[] = $row['id'];
+            }
+
+            /*
+             * Fetch all ports for the returned history rows in one query.
+             * IDs originate from SQLite and are explicitly cast to int.
+             */
+            if (count($historyIds) > 0) {
+                $portsExists = (int)$db->querySingle(
+                    "SELECT COUNT(*) " .
+                    "FROM sqlite_master " .
+                    "WHERE type = 'table' " .
+                    "AND name = 'nmap_scan_ports'"
+                );
+
+                if ($portsExists === 1) {
+                    $safeIds = array_map(
+                        'intval',
+                        $historyIds
+                    );
+
+                    $portsSql =
+                        'SELECT ' .
+                        'scan_history_id, ' .
+                        'port, ' .
+                        'protocol, ' .
+                        'state, ' .
+                        'service, ' .
+                        'product, ' .
+                        'version, ' .
+                        'extra_info ' .
+                        'FROM nmap_scan_ports ' .
+                        'WHERE scan_history_id IN (' .
+                        implode(',', $safeIds) .
+                        ') ' .
+                        'ORDER BY scan_history_id DESC, ' .
+                        'port ASC, protocol ASC';
+
+                    $portQuery = $db->query($portsSql);
+
+                    while (
+                        $port =
+                        $portQuery->fetchArray(SQLITE3_ASSOC)
+                    ) {
+                        $historyId =
+                            (int)$port['scan_history_id'];
+
+                        if (!isset($rowsById[$historyId])) {
+                            continue;
+                        }
+
+                        $port['scan_history_id'] = $historyId;
+                        $port['port'] = (int)$port['port'];
+
+                        $rowsById[$historyId]['ports'][] = $port;
+                    }
+                }
+            }
+
+            foreach ($historyIds as $historyId) {
+                $result['rows'][] = $rowsById[$historyId];
+            }
+
             $db->close();
 
-            return [
-                'rows' => $rows,
-                'total' => $total
-            ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             error_log(
-                'DeviceMonitor scan history error: ' . $e->getMessage()
+                'DeviceMonitor scan history error: ' .
+                $e->getMessage()
             );
 
             return [
@@ -366,8 +505,9 @@ class DevicesController extends ApiControllerBase
                 'error' => 'Unable to load scan history'
             ];
         }
-    }
 
+        return $result;
+    }
 
     /**
      * Run a manual targeted Nmap scan for one existing device
