@@ -260,6 +260,27 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_nmap_scan_ports_history
         ON nmap_scan_ports(scan_history_id)
     ''')
+    # Observational identity anomaly events. v2.7 Phase A records evidence
+    # only; it does not automatically alert, block, merge, or delete devices.
+    c.execute('''CREATE TABLE IF NOT EXISTS device_identity_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mac TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        detected_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        ip TEXT,
+        other_ip TEXT,
+        interface TEXT,
+        other_interface TEXT,
+        details TEXT,
+        resolved_at DATETIME
+    )''')
+
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS idx_device_identity_events_mac_detected
+        ON device_identity_events(mac, detected_at DESC)
+    ''')
+
     # Seed historical MACs from both active and deleted device records.
     c.execute('''
         INSERT OR IGNORE INTO known_macs (mac, first_seen, last_seen)
@@ -367,6 +388,14 @@ def map_interface_to_vlan(interface_name):
     # igc0, igc1 → interface name
     return interface_name.upper()
 
+
+def is_locally_administered_mac(mac):
+    """Return True when the IEEE locally-administered bit is set."""
+    try:
+        first_octet = int((mac or '').split(':')[0], 16)
+        return bool(first_octet & 0x02)
+    except (ValueError, IndexError):
+        return False
 
 def get_dhcp_descriptions():
     """Load device labels from DHCP static mappings (/conf/config.xml)"""
@@ -960,6 +989,108 @@ def send_webhook_via_php_api(new_devices):
 # MAIN FUNCTIONS - REFACTORED
 # ================================================================
 
+def record_identity_event(conn, mac, event_type, severity,
+                          ip='', other_ip='', interface='', other_interface='',
+                          details=''):
+    """Record an identity event unless an equivalent recent event exists."""
+    existing = conn.execute('''
+        SELECT id
+        FROM device_identity_events
+        WHERE mac = ?
+          AND event_type = ?
+          AND COALESCE(ip, '') = ?
+          AND COALESCE(other_ip, '') = ?
+          AND COALESCE(interface, '') = ?
+          AND COALESCE(other_interface, '') = ?
+          AND resolved_at IS NULL
+          AND detected_at >= datetime('now', '-15 minutes')
+        LIMIT 1
+    ''', (mac, event_type, ip, other_ip, interface, other_interface)).fetchone()
+
+    if existing:
+        return False
+
+    conn.execute('''
+        INSERT INTO device_identity_events
+            (mac, event_type, severity, ip, other_ip,
+             interface, other_interface, details)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (mac, event_type, severity, ip, other_ip,
+          interface, other_interface, details))
+    return True
+
+
+def detect_recent_hostwatch_identity_events(conn, minutes=5):
+    """Detect recent duplicate-MAC evidence without changing device state."""
+    if not os.path.exists(HOSTWATCH_DB):
+        return 0
+
+    try:
+        hw_conn = sqlite3.connect(f'file:{HOSTWATCH_DB}?mode=ro', uri=True)
+        hw_conn.row_factory = sqlite3.Row
+        rows = hw_conn.execute('''
+            SELECT interface_name, ip_address, ether_address, last_seen
+            FROM v_hosts
+            WHERE protocol = 'inet'
+              AND ether_address NOT IN
+                  ('ff:ff:ff:ff:ff:ff', '00:00:00:00:00:00')
+              AND ip_address NOT LIKE '169.254.%'
+        ''').fetchall()
+        hw_conn.close()
+    except Exception as e:
+        log(f'Identity detection: Hostwatch read failed: {e}')
+        return 0
+
+    recent = {}
+    for row in rows:
+        mac = (row['ether_address'] or '').lower().strip()
+        ip = row['ip_address'] or ''
+        iface = row['interface_name'] or ''
+        last_seen = row['last_seen'] or ''
+
+        if not mac or not is_recently_seen(last_seen, minutes):
+            continue
+
+        try:
+            if ipaddress.ip_address(ip).version != 4:
+                continue
+        except ValueError:
+            continue
+
+        recent.setdefault(mac, []).append({
+            'ip': ip,
+            'interface': iface,
+            'last_seen': last_seen,
+        })
+
+    created = 0
+
+    for mac, observations in recent.items():
+        ips = sorted({o['ip'] for o in observations if o['ip']})
+        interfaces = sorted({o['interface'] for o in observations if o['interface']})
+        details = json.dumps({
+            'window_minutes': minutes,
+            'locally_administered': is_locally_administered_mac(mac),
+            'observations': observations,
+        }, sort_keys=True)
+
+        if len(ips) > 1:
+            if record_identity_event(
+                conn, mac, 'MAC_MULTI_IP', 'medium',
+                ips[0], ips[1], '', '', details
+            ):
+                created += 1
+
+        if len(interfaces) > 1:
+            if record_identity_event(
+                conn, mac, 'MAC_MULTI_INTERFACE', 'high',
+                ips[0] if ips else '', '',
+                interfaces[0], interfaces[1], details
+            ):
+                created += 1
+
+    return created
+
 def update_status_only():
     """Quick online/offline status update from Hostwatch DB"""
     log("Quick status update (hostwatch DB)")
@@ -1079,6 +1210,10 @@ def full_scan():
             device['first_seen'] = first_seen
             if is_truly_new:
                 new_devices.append(device)
+
+    identity_events = detect_recent_hostwatch_identity_events(conn, minutes=5)
+    if identity_events:
+        log(f'Identity detection: recorded {identity_events} event(s)')
 
     conn.commit()
     online = conn.execute(
