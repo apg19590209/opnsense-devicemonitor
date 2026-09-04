@@ -89,15 +89,15 @@
                     <span id="scan-history-total" class="badge" style="margin-left:6px;">0</span>
                 </strong>
 
-                <div style="display:flex;align-items:center;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
                     <label for="scan-history-limit"
-                           style="margin:0;font-size:12px;font-weight:normal;">
+                           style="margin:0;display:inline-flex;align-items:center;height:28px;font-size:12px;font-weight:600;white-space:nowrap;">
                         {{ lang._('Rows') }}
                     </label>
 
                     <select id="scan-history-limit"
                             class="form-control input-sm"
-                            style="width:70px;height:28px;padding:3px 6px;">
+                            style="width:70px;height:28px;padding:3px 24px 3px 6px;margin:0;display:inline-block;vertical-align:middle;">
                         <option value="10" selected>10</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
@@ -105,7 +105,7 @@
                     </select>
 
                     <button id="btn-history-refresh"
-                            class="btn btn-xs btn-default"
+                            class="btn btn-xs btn-default" style="height:28px;min-width:28px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;"
                             title="{{ lang._('Refresh scan history') }}">
                         <i class="fa fa-refresh"></i>
                     </button>
