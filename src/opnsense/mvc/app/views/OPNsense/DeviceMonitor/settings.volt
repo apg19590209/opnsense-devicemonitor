@@ -367,11 +367,32 @@ $().ready(function() {
         $.ajax({ url:'/api/devicemonitor/config/get', type:'GET', success:function(d) {
             $('#enabled').prop('checked', d.enabled==='1');
             $('#scan_interval').val(d.scan_interval||300);
-            $('#targeted_nmap_enabled').prop('checked', (d.targeted_nmap_enabled||'1')==='1');
+            #targeted_nmap_enabled.prop(
+                'checked',
+                String(
+                    d.targeted_nmap_enabled !== undefined &&
+                    d.targeted_nmap_enabled !== null
+                        ? d.targeted_nmap_enabled
+                        : '1'
+                ) === '1'
+            );
             $('#nmap_top_ports').val(d.nmap_top_ports||100);
-            $('#nmap_timing').val(d.nmap_timing||4);
+            #nmap_timing.val(
+                d.nmap_timing !== undefined &&
+                d.nmap_timing !== null
+                    ? d.nmap_timing
+                    : 4
+            );
             $('#nmap_host_timeout').val(d.nmap_host_timeout||45);
-            $('#nmap_version_detection').prop('checked', (d.nmap_version_detection||'1')==='1');
+            #nmap_version_detection.prop(
+                'checked',
+                String(
+                    d.nmap_version_detection !== undefined &&
+                    d.nmap_version_detection !== null
+                        ? d.nmap_version_detection
+                        : '1'
+                ) === '1'
+            );
             $('#nmap_max_per_cycle').val(d.nmap_max_per_cycle||2);
             $('#email_enabled').prop('checked', d.email_enabled==='1');
             $('#email_to').val(d.email_to||'');
