@@ -27,6 +27,12 @@
     "smtp_port": "587",
     "smtp_encryption": "starttls",
     "smtp_username": "",
-    "smtp_password": ""
+    "smtp_password": "",
+    "targeted_nmap_enabled": "1",
+    "nmap_top_ports": "100",
+    "nmap_timing": "4",
+    "nmap_host_timeout": "45",
+    "nmap_version_detection": "1",
+    "nmap_max_per_cycle": "2"
   }
 }

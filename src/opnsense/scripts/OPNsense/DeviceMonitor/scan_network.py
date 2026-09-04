@@ -65,6 +65,12 @@ def load_config():
             'scan_interval': int(DEFAULT_CONFIG.get('scan_interval', 300)),
             'email_vlans': DEFAULT_CONFIG.get('email_vlans', ''),
             'webhook_vlans': DEFAULT_CONFIG.get('webhook_vlans', ''),
+            'targeted_nmap_enabled': DEFAULT_CONFIG.get('targeted_nmap_enabled', '1') == '1',
+            'nmap_top_ports': int(DEFAULT_CONFIG.get('nmap_top_ports', 100)),
+            'nmap_timing': int(DEFAULT_CONFIG.get('nmap_timing', 4)),
+            'nmap_host_timeout': int(DEFAULT_CONFIG.get('nmap_host_timeout', 45)),
+            'nmap_version_detection': DEFAULT_CONFIG.get('nmap_version_detection', '1') == '1',
+            'nmap_max_per_cycle': int(DEFAULT_CONFIG.get('nmap_max_per_cycle', 2)),
             'apiEmailUrl': PATHS.get('apiEmailUrl', ''),
             'apiWebhookUrl': PATHS.get('apiWebhookUrl', '')
         }
@@ -83,6 +89,12 @@ def load_config():
                 'scan_interval': int(config.get('scan_interval', DEFAULT_CONFIG.get('scan_interval', 300))),
                 'email_vlans': config.get('email_vlans', DEFAULT_CONFIG.get('email_vlans', '')),
                 'webhook_vlans': config.get('webhook_vlans', DEFAULT_CONFIG.get('webhook_vlans', '')),
+                'targeted_nmap_enabled': config.get('targeted_nmap_enabled', DEFAULT_CONFIG.get('targeted_nmap_enabled', '1')) == '1',
+                'nmap_top_ports': int(config.get('nmap_top_ports', DEFAULT_CONFIG.get('nmap_top_ports', 100))),
+                'nmap_timing': int(config.get('nmap_timing', DEFAULT_CONFIG.get('nmap_timing', 4))),
+                'nmap_host_timeout': int(config.get('nmap_host_timeout', DEFAULT_CONFIG.get('nmap_host_timeout', 45))),
+                'nmap_version_detection': config.get('nmap_version_detection', DEFAULT_CONFIG.get('nmap_version_detection', '1')) == '1',
+                'nmap_max_per_cycle': int(config.get('nmap_max_per_cycle', DEFAULT_CONFIG.get('nmap_max_per_cycle', 2))),
                 'apiEmailUrl': PATHS.get('apiEmailUrl', ''),
                 'apiWebhookUrl': PATHS.get('apiWebhookUrl', '')
             }
@@ -99,6 +111,12 @@ def load_config():
             'scan_interval': 300,
             'email_vlans':  '',
             'webhook_vlans': '',
+            'targeted_nmap_enabled': True,
+            'nmap_top_ports': 100,
+            'nmap_timing': 4,
+            'nmap_host_timeout': 45,
+            'nmap_version_detection': True,
+            'nmap_max_per_cycle': 2,
             'apiEmailUrl': PATHS.get('apiEmailUrl'),
             'apiWebhookUrl': PATHS.get('apiWebhookUrl')
         }
@@ -349,7 +367,7 @@ def is_recently_seen(last_seen_str, minutes=15):
         return False
 
 
-def targeted_scan_and_email(device):
+def targeted_scan_and_email(device, config):
     """Run a targeted Nmap scan for one new device and email the formatted result."""
     ip = (device.get('ip') or '').strip()
 
@@ -366,17 +384,26 @@ def targeted_scan_and_email(device):
         log(f"[NMAP] {error}")
         return False, error
 
+    nmap_top_ports = int(config.get('nmap_top_ports', 100))
+    nmap_timing = int(config.get('nmap_timing', 4))
+    nmap_host_timeout = int(config.get('nmap_host_timeout', 45))
+    nmap_version_detection = bool(config.get('nmap_version_detection', True))
+
     scan_cmd = [
         '/usr/local/bin/nmap',
         '-Pn',
-        '-T4',
-        '--top-ports', '100',
-        '-sV',
-        '--version-light',
-        '--host-timeout', '45s',
+        f'-T{nmap_timing}',
+        '--top-ports', str(nmap_top_ports),
+    ]
+
+    if nmap_version_detection:
+        scan_cmd.extend(['-sV', '--version-light'])
+
+    scan_cmd.extend([
+        '--host-timeout', f'{nmap_host_timeout}s',
         '-oX', '-',
         ip
-    ]
+    ])
 
     log(f"[NMAP] Starting targeted scan: {ip}")
 
@@ -385,7 +412,7 @@ def targeted_scan_and_email(device):
             scan_cmd,
             capture_output=True,
             text=True,
-            timeout=50
+            timeout=nmap_host_timeout + 5
         )
     except subprocess.TimeoutExpired:
         error = f"Targeted scan timeout: {ip}"
@@ -724,28 +751,35 @@ def full_scan():
         if email_devs and config.get('email_enabled') and config.get('email_to'):
             send_email_via_php_api(email_devs)
 
-            # Queue every newly detected emailed device for a targeted scan.
-            # New queue entries always start with a clean retry state.
-            with sqlite3.connect(DB_FILE) as queue_conn:
-                for device in email_devs:
-                    queue_conn.execute('''
-                        UPDATE devices
-                        SET nmap_scan_pending = 1,
-                            nmap_scan_attempts = 0,
-                            nmap_next_attempt = NULL,
-                            nmap_last_error = NULL
-                        WHERE mac = ?
-                    ''', (device['mac'],))
+            if config.get('targeted_nmap_enabled', True):
+                # Queue every newly detected emailed device for a targeted scan.
+                # New queue entries always start with a clean retry state.
+                with sqlite3.connect(DB_FILE) as queue_conn:
+                    for device in email_devs:
+                        queue_conn.execute('''
+                            UPDATE devices
+                            SET nmap_scan_pending = 1,
+                                nmap_scan_attempts = 0,
+                                nmap_next_attempt = NULL,
+                                nmap_last_error = NULL
+                            WHERE mac = ?
+                        ''', (device['mac'],))
 
-            log(f"[NMAP] Queued {len(email_devs)} new device(s) for targeted scanning")
+                log(f"[NMAP] Queued {len(email_devs)} new device(s) for targeted scanning")
 
         if webhook_devs and config.get('webhook_enabled') and config.get('webhook_url'):
             send_webhook_via_php_api(webhook_devs)
 
     # Drain a bounded number of queued targeted scans each cycle.
     # Retry backoff after failures: 15m, 1h, 6h, 24h, then stop.
-    if config['enabled'] and config.get('email_enabled') and config.get('email_to'):
+    if (
+        config['enabled']
+        and config.get('email_enabled')
+        and config.get('email_to')
+        and config.get('targeted_nmap_enabled', True)
+    ):
         retry_now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        nmap_max_per_cycle = int(config.get('nmap_max_per_cycle', 2))
 
         with sqlite3.connect(DB_FILE) as queue_conn:
             queue_conn.row_factory = sqlite3.Row
@@ -756,12 +790,12 @@ def full_scan():
                 WHERE nmap_scan_pending = 1
                   AND (nmap_next_attempt IS NULL OR nmap_next_attempt <= ?)
                 ORDER BY first_seen ASC
-                LIMIT 2
-            ''', (retry_now,)).fetchall()
+                LIMIT ?
+            ''', (retry_now, nmap_max_per_cycle)).fetchall()
 
         for row in scan_rows:
             device = dict(row)
-            success, error = targeted_scan_and_email(device)
+            success, error = targeted_scan_and_email(device, config)
 
             if success:
                 with sqlite3.connect(DB_FILE) as queue_conn:

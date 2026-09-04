@@ -203,6 +203,71 @@
                                 <small class="text-muted">{{ lang._('Seconds between scans (60-3600)') }}</small>
                             </td>
                         </tr>
+
+                        <tr>
+                            <td colspan="2">
+                                <h4 style="margin:5px 0;">{{ lang._('Targeted Nmap Scanning') }}</h4>
+                                <small class="text-muted">{{ lang._('Optional detailed scan performed for newly detected devices after notification.') }}</small>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>{{ lang._('Enable Targeted Nmap') }}</strong></td>
+                            <td>
+                                <input type="checkbox" id="targeted_nmap_enabled" />
+                                <small class="text-muted" style="margin-left:8px;">{{ lang._('Automatically scan newly detected devices') }}</small>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>{{ lang._('Top TCP Ports') }}</strong></td>
+                            <td>
+                                <input type="number" id="nmap_top_ports" class="form-control" value="100" min="1" max="1000" style="max-width:120px;" />
+                                <small class="text-muted">{{ lang._('Number of most common TCP ports to scan (1-1000)') }}</small>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>{{ lang._('Timing Template') }}</strong></td>
+                            <td>
+                                <select id="nmap_timing" class="form-control" style="max-width:180px;">
+                                    <option value="0">T0</option>
+                                    <option value="1">T1</option>
+                                    <option value="2">T2</option>
+                                    <option value="3">T3</option>
+                                    <option value="4">T4</option>
+                                    <option value="5">T5</option>
+                                </select>
+                                <small class="text-muted">{{ lang._('Nmap timing template. T4 is the default.') }}</small>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>{{ lang._('Host Timeout') }}</strong></td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <input type="number" id="nmap_host_timeout" class="form-control" value="45" min="10" max="300" style="max-width:120px;" />
+                                    <span class="text-muted">{{ lang._('seconds') }}</span>
+                                </div>
+                                <small class="text-muted">{{ lang._('Maximum Nmap scan time per device (10-300 seconds)') }}</small>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>{{ lang._('Version Detection') }}</strong></td>
+                            <td>
+                                <input type="checkbox" id="nmap_version_detection" />
+                                <small class="text-muted" style="margin-left:8px;">{{ lang._('Detect services and versions using light detection') }}</small>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>{{ lang._('Maximum Scans Per Cycle') }}</strong></td>
+                            <td>
+                                <input type="number" id="nmap_max_per_cycle" class="form-control" value="2" min="1" max="10" style="max-width:120px;" />
+                                <small class="text-muted">{{ lang._('Maximum queued targeted scans processed during one monitoring cycle (1-10)') }}</small>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
                 <div style="padding:10px 0 0 0;">
@@ -302,6 +367,12 @@ $().ready(function() {
         $.ajax({ url:'/api/devicemonitor/config/get', type:'GET', success:function(d) {
             $('#enabled').prop('checked', d.enabled==='1');
             $('#scan_interval').val(d.scan_interval||300);
+            $('#targeted_nmap_enabled').prop('checked', (d.targeted_nmap_enabled||'1')==='1');
+            $('#nmap_top_ports').val(d.nmap_top_ports||100);
+            $('#nmap_timing').val(d.nmap_timing||4);
+            $('#nmap_host_timeout').val(d.nmap_host_timeout||45);
+            $('#nmap_version_detection').prop('checked', (d.nmap_version_detection||'1')==='1');
+            $('#nmap_max_per_cycle').val(d.nmap_max_per_cycle||2);
             $('#email_enabled').prop('checked', d.email_enabled==='1');
             $('#email_to').val(d.email_to||'');
             $('#email_from').val(d.email_from||'devicemonitor@opnsense.local');
@@ -357,7 +428,13 @@ $().ready(function() {
             webhook_enabled:  $('#webhook_enabled').is(':checked')?'1':'0',
             webhook_url:      $('#webhook_url').val(),
             webhook_vlans:    getSelectedVlans('webhook-vlan-list'),
-            scan_interval:    $('#scan_interval').val()
+            scan_interval: $('#scan_interval').val(),
+            targeted_nmap_enabled: $('#targeted_nmap_enabled').is(':checked')?'1':'0',
+            nmap_top_ports: $('#nmap_top_ports').val(),
+            nmap_timing: $('#nmap_timing').val(),
+            nmap_host_timeout: $('#nmap_host_timeout').val(),
+            nmap_version_detection: $('#nmap_version_detection').is(':checked')?'1':'0',
+            nmap_max_per_cycle: $('#nmap_max_per_cycle').val()
         };
     }
 

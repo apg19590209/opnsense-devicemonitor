@@ -73,6 +73,13 @@ class ConfigController extends ApiControllerBase
         $email_vlans = $this->request->getPost('email_vlans', 'string', '');
         $webhook_vlans = $this->request->getPost('webhook_vlans', 'string', '');
 
+        $targeted_nmap_enabled = $this->request->getPost('targeted_nmap_enabled', 'string', '1');
+        $nmap_top_ports = (int)$this->request->getPost('nmap_top_ports', 'int', 100);
+        $nmap_timing = (int)$this->request->getPost('nmap_timing', 'int', 4);
+        $nmap_host_timeout = (int)$this->request->getPost('nmap_host_timeout', 'int', 45);
+        $nmap_version_detection = $this->request->getPost('nmap_version_detection', 'string', '1');
+        $nmap_max_per_cycle = (int)$this->request->getPost('nmap_max_per_cycle', 'int', 2);
+
         if (!in_array($email_method, ['sendmail', 'smtp'], true)) {
             return ['result' => 'failed', 'message' => 'Invalid email delivery method'];
         }
@@ -113,6 +120,30 @@ class ConfigController extends ApiControllerBase
             return ['result' => 'failed', 'message' => 'Scan interval must be between 60 and 3600 seconds'];
         }
 
+        if (!in_array($targeted_nmap_enabled, ['0', '1'], true)) {
+            return ['result' => 'failed', 'message' => 'Invalid targeted Nmap enabled value'];
+        }
+
+        if ($nmap_top_ports < 1 || $nmap_top_ports > 1000) {
+            return ['result' => 'failed', 'message' => 'Nmap top ports must be between 1 and 1000'];
+        }
+
+        if ($nmap_timing < 0 || $nmap_timing > 5) {
+            return ['result' => 'failed', 'message' => 'Nmap timing template must be between 0 and 5'];
+        }
+
+        if ($nmap_host_timeout < 10 || $nmap_host_timeout > 300) {
+            return ['result' => 'failed', 'message' => 'Nmap host timeout must be between 10 and 300 seconds'];
+        }
+
+        if (!in_array($nmap_version_detection, ['0', '1'], true)) {
+            return ['result' => 'failed', 'message' => 'Invalid Nmap version detection value'];
+        }
+
+        if ($nmap_max_per_cycle < 1 || $nmap_max_per_cycle > 10) {
+            return ['result' => 'failed', 'message' => 'Nmap scans per cycle must be between 1 and 10'];
+        }
+
         $config = $model->getConfig();
         $config['enabled'] = $enabled;
         $config['email_enabled'] = $email_enabled;
@@ -129,6 +160,12 @@ class ConfigController extends ApiControllerBase
         $config['scan_interval'] = (int)$scan_interval;
         $config['email_vlans'] = $email_vlans;
         $config['webhook_vlans'] = $webhook_vlans;
+        $config['targeted_nmap_enabled'] = $targeted_nmap_enabled;
+        $config['nmap_top_ports'] = $nmap_top_ports;
+        $config['nmap_timing'] = $nmap_timing;
+        $config['nmap_host_timeout'] = $nmap_host_timeout;
+        $config['nmap_version_detection'] = $nmap_version_detection;
+        $config['nmap_max_per_cycle'] = $nmap_max_per_cycle;
 
         if ($model->setConfig($config)) {
             return ['result' => 'saved', 'message' => 'Configuration saved'];
