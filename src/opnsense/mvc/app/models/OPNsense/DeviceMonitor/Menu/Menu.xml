@@ -2,6 +2,7 @@
     <Services>
         <DeviceMonitor cssClass="fa fa-plug fw" VisibleName="Device Monitor">
             <Devices url="/ui/devicemonitor/index/devices" VisibleName="Devices" order="10"/>
+            <NmapScanHistory url="/ui/devicemonitor/index/scanhistory" VisibleName="Nmap Scan History" order="15"/>
             <Settings url="/ui/devicemonitor/index/settings" VisibleName="Settings" order="20"/>
         </DeviceMonitor>
     </Services>
