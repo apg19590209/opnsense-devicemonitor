@@ -1344,7 +1344,7 @@ def record_identity_event(conn, mac, event_type, severity,
     return True
 
 
-def detect_recent_hostwatch_identity_events(conn, minutes=5):
+def detect_recent_hostwatch_identity_events(conn, minutes=5, kea_leases=None):
     """Detect recent duplicate-MAC evidence without changing device state."""
     if not os.path.exists(HOSTWATCH_DB):
         return 0
@@ -1367,6 +1367,12 @@ def detect_recent_hostwatch_identity_events(conn, minutes=5):
 
     recent = {}
     ip_owners = {}
+    kea_by_ip = {
+        lease['ip']: lease
+        for lease in (kea_leases or [])
+        if lease.get('active') and lease.get('ip') and lease.get('mac')
+    }
+
     for row in rows:
         mac = (row['ether_address'] or '').lower().strip()
         ip = row['ip_address'] or ''
@@ -1468,10 +1474,28 @@ def detect_recent_hostwatch_identity_events(conn, minutes=5):
         if len(macs) <= 1:
             continue
 
-        details = json.dumps({
+        details_data = {
             'window_minutes': minutes,
             'observations': observations,
-        }, sort_keys=True)
+        }
+
+        kea_lease = kea_by_ip.get(ip)
+        if kea_lease:
+            if kea_lease['mac'] in macs:
+                kea_status = 'matches_one_hostwatch_mac'
+            else:
+                kea_status = 'conflicts_with_all_hostwatch_macs'
+
+            details_data['kea_evidence'] = {
+                'status': kea_status,
+                'mac': kea_lease['mac'],
+                'hostname': kea_lease.get('hostname', ''),
+                'subnet_id': kea_lease.get('subnet_id'),
+                'cltt': kea_lease.get('cltt'),
+                'expires_at': kea_lease.get('expires_at'),
+            }
+
+        details = json.dumps(details_data, sort_keys=True)
 
         if record_identity_event(
             conn,
@@ -1615,7 +1639,19 @@ def full_scan():
             if is_truly_new:
                 new_devices.append(device)
 
-    identity_events = detect_recent_hostwatch_identity_events(conn, minutes=5)
+    kea_identity_leases = []
+    if (
+        capabilities['kea']['active']
+        and capabilities['kea']['queryable']
+        and capabilities['kea']['lease4_get_all']
+    ):
+        kea_identity_leases = get_kea_ipv4_leases()
+
+    identity_events = detect_recent_hostwatch_identity_events(
+        conn,
+        minutes=5,
+        kea_leases=kea_identity_leases,
+    )
     if identity_events:
         log(f'Identity detection: recorded {identity_events} event(s)')
 
