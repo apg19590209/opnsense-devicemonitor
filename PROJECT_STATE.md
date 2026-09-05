@@ -61,11 +61,14 @@ For the current Settings-page work:
 - Licensing & Compatibility source inspection: PASS
 - deployment to OPNsense: PASS
 - live browser validation of all Settings tabs after deployment: PASS
+- populated Identity Events row rendering using browser-only synthetic API data: PASS
+- Identity Events expandable details rendering: PASS
+- browser refresh restored the real empty-state API view: PASS
 - GitHub push to `origin/v2.7-development`: PASS
 
 ## Known unresolved issues
 
-- Populated Identity Events row/details rendering has not yet been observed because the event table is currently empty.
+- No known unresolved Identity Events UI validation issues remain.
 
 ## Current operating values
 
@@ -78,4 +81,4 @@ Current numeric security-scan queue rate limit should be confirmed from current 
 
 ## Next step
 
-Review the current project roadmap and source state to select the next Device Monitor development objective.
+Select and document the next Device Monitor development objective.
