@@ -24,11 +24,13 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-Validate the v2.8 Identity Events Resolve/Reopen workflow on OPNsense.
+Validate v2.8 Identity Events resolution-status filtering on OPNsense.
 
 The v2.7 identity, Settings UI, CI and README documentation work is complete and validated.
 
 ## Previously completed
+
+- v2.8 Identity Events resolution filter implemented for All, Unresolved and Resolved events.
 
 - v2.8 Identity Events Resolve/Reopen API and UI implemented; event history is preserved through the existing `resolved_at` field.
 

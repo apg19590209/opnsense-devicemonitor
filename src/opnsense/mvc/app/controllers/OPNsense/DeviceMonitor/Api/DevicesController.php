@@ -679,6 +679,21 @@ class DevicesController extends ApiControllerBase
             $limit = (int)$this->request->get('limit', 'int', 100);
             $limit = max(1, min(500, $limit));
 
+            $status = strtolower(trim(
+                (string)$this->request->get('status', 'string', 'all')
+            ));
+
+            if (!in_array($status, ['all', 'unresolved', 'resolved'], true)) {
+                $status = 'all';
+            }
+
+            $whereClause = '';
+            if ($status === 'unresolved') {
+                $whereClause = ' WHERE resolved_at IS NULL';
+            } elseif ($status === 'resolved') {
+                $whereClause = ' WHERE resolved_at IS NOT NULL';
+            }
+
             $db = new \SQLite3(
                 $paths['dbFile'],
                 SQLITE3_OPEN_READONLY
@@ -698,15 +713,17 @@ class DevicesController extends ApiControllerBase
             }
 
             $result['total'] = (int)$db->querySingle(
-                'SELECT COUNT(*) FROM device_identity_events'
+                'SELECT COUNT(*) FROM device_identity_events' .
+                $whereClause
             );
 
             $stmt = $db->prepare(
                 'SELECT id, mac, event_type, severity, detected_at, ' .
                 'ip, other_ip, other_mac, interface, other_interface, ' .
                 'details, resolved_at ' .
-                'FROM device_identity_events ' .
-                'ORDER BY id DESC LIMIT :limit'
+                'FROM device_identity_events' .
+                $whereClause .
+                ' ORDER BY id DESC LIMIT :limit'
             );
             $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
 

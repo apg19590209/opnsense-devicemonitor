@@ -20,6 +20,18 @@
                 </strong>
 
                 <div class="identity-events-controls">
+                    <label for="identity-events-status"
+                           style="margin:0;font-size:12px;font-weight:600;">
+                        {{ lang._('Status') }}
+                    </label>
+
+                    <select id="identity-events-status"
+                            class="form-control input-sm">
+                        <option value="all" selected>{{ lang._('All') }}</option>
+                        <option value="unresolved">{{ lang._('Unresolved') }}</option>
+                        <option value="resolved">{{ lang._('Resolved') }}</option>
+                    </select>
+
                     <label for="identity-events-limit"
                            style="margin:0;font-size:12px;font-weight:600;">
                         {{ lang._('Rows') }}
@@ -84,6 +96,13 @@
     align-items: center;
     gap: 8px;
     white-space: nowrap;
+}
+
+#identity-events-status {
+    width: 115px;
+    height: 28px;
+    padding: 0 24px 0 8px;
+    margin: 0;
 }
 
 #identity-events-limit {
@@ -441,11 +460,15 @@ $(document).ready(function() {
                 10
             ) || 10;
 
+        var status =
+            $('#identity-events-status').val() || 'all';
+
         $.ajax({
             url: '/api/devicemonitor/devices/identityevents',
             type: 'GET',
             data: {
-                limit: limit
+                limit: limit,
+                status: status
             },
 
             success: function(data) {
@@ -472,6 +495,13 @@ $(document).ready(function() {
 
     $('#btn-identity-refresh').on(
         'click',
+        function() {
+            loadIdentityEvents();
+        }
+    );
+
+    $('#identity-events-status').on(
+        'change',
         function() {
             loadIdentityEvents();
         }

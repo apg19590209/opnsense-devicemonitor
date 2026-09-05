@@ -485,3 +485,12 @@ msgstr "Znovu otevřít událost"
 
 msgid "Unable to update identity event"
 msgstr "Událost identity nelze aktualizovat"
+
+msgid "All"
+msgstr "Vše"
+
+msgid "Unresolved"
+msgstr "Nevyřešené"
+
+msgid "Resolved"
+msgstr "Vyřešené"
