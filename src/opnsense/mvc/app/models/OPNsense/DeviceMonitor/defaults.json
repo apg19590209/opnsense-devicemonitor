@@ -1,5 +1,5 @@
 {
-  "version": "2.6",
+  "version": "2.7",
   "paths": {
     "dbFile": "/var/db/devicemonitor/devices.db",
     "configFile": "/var/db/devicemonitor/config.json",
