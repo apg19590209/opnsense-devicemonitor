@@ -19,21 +19,19 @@
                           style="margin-left:6px;">0</span>
 
                     <span class="identity-events-summary">
-                        <button type="button"
-                                id="identity-events-show-unresolved"
-                                class="btn btn-link btn-xs identity-events-summary-link">
+                        <a href="?status=unresolved"
+                           class="identity-events-summary-link">
                             {{ lang._('Unresolved') }}
                             <span id="identity-events-unresolved"
                                   class="badge">0</span>
-                        </button>
+                        </a>
 
-                        <button type="button"
-                                id="identity-events-show-resolved"
-                                class="btn btn-link btn-xs identity-events-summary-link">
+                        <a href="?status=resolved"
+                           class="identity-events-summary-link">
                             {{ lang._('Resolved') }}
                             <span id="identity-events-resolved"
                                   class="badge">0</span>
-                        </button>
+                        </a>
                     </span>
                 </strong>
 
@@ -45,9 +43,9 @@
 
                     <select id="identity-events-status"
                             class="form-control input-sm">
-                        <option value="all" selected>{{ lang._('All') }}</option>
-                        <option value="unresolved">{{ lang._('Unresolved') }}</option>
-                        <option value="resolved">{{ lang._('Resolved') }}</option>
+                        <option value="all"{% if identityEventsStatus == 'all' %} selected{% endif %}>{{ lang._('All') }}</option>
+                        <option value="unresolved"{% if identityEventsStatus == 'unresolved' %} selected{% endif %}>{{ lang._('Unresolved') }}</option>
+                        <option value="resolved"{% if identityEventsStatus == 'resolved' %} selected{% endif %}>{{ lang._('Resolved') }}</option>
                     </select>
 
                     <label for="identity-events-limit"
@@ -116,33 +114,9 @@
     font-weight: normal;
 }
 
-.identity-events-summary {
-    margin-left: 12px;
-    font-size: 11px;
-    font-weight: normal;
-}
-
-.identity-events-summary {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.identity-events-summary-link {
-    white-space: nowrap;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.identity-events-summary-link:hover,
-.identity-events-summary-link:focus {
-    text-decoration: underline;
-}
-
 .identity-events-summary .badge {
-    margin-left: 3px;
+    margin: 0 6px 0 3px;
 }
-
 .identity-events-controls {
     display: flex;
     align-items: center;
@@ -150,18 +124,41 @@
     white-space: nowrap;
 }
 
+.identity-events-controls > label {
+    height: 28px;
+    line-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    transform: translateY(4px);
+}
+
+.identity-events-summary-link {
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.identity-events-summary-link:hover,
+.identity-events-summary-link:focus {
+    text-decoration: underline;
+}
+
 #identity-events-status {
     width: 115px;
+    height: 28px;
+    padding: 0 24px 0 8px;
     margin: 0;
 }
 
 #identity-events-limit {
     width: 70px;
+    height: 28px;
+    padding: 0 24px 0 8px;
     margin: 0;
 }
 
 #btn-identity-refresh {
-    height: 30px;
+    height: 28px;
     min-width: 28px;
     padding: 0 8px;
     display: inline-flex;
@@ -581,15 +578,7 @@ $(document).ready(function() {
         }
     );
 
-    $('#identity-events-show-unresolved').on('click', function() {
-        $('#identity-events-status').val('unresolved');
-        loadIdentityEvents();
-    });
 
-    $('#identity-events-show-resolved').on('click', function() {
-        $('#identity-events-status').val('resolved');
-        loadIdentityEvents();
-    });
     $('#identity-events-status').on(
         'change',
         function() {

@@ -11,6 +11,13 @@ class IndexController extends \OPNsense\Base\IndexController
     
     public function identityeventsAction()
     {
+        $status = (string)$this->request->getQuery('status');
+
+        if (!in_array($status, ['all', 'unresolved', 'resolved'], true)) {
+            $status = 'all';
+        }
+
+        $this->view->identityEventsStatus = $status;
         $this->view->pick('OPNsense/DeviceMonitor/identityevents');
     }
 

@@ -485,9 +485,6 @@ msgstr "Reopen event"
 msgid "Unable to update identity event"
 msgstr "Unable to update identity event"
 
-msgid "Status"
-msgstr "Status"
-
 msgid "All"
 msgstr "All"
 
