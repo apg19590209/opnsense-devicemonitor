@@ -581,4 +581,70 @@ class DevicesController extends ApiControllerBase
 
         return ['result' => 'failed'];
     }
+    /**
+     * Return recent device identity events
+     * GET /api/devicemonitor/devices/identityevents
+     */
+    public function identityeventsAction()
+    {
+        $result = [
+            'rows' => [],
+            'total' => 0
+        ];
+
+        try {
+            $paths = $this->getPaths();
+
+            if (!isset($paths['dbFile']) || !is_file($paths['dbFile'])) {
+                return $result;
+            }
+
+            $limit = (int)$this->request->get('limit', 'int', 100);
+            $limit = max(1, min(500, $limit));
+
+            $db = new \SQLite3(
+                $paths['dbFile'],
+                SQLITE3_OPEN_READONLY
+            );
+            $db->busyTimeout(2000);
+
+            $tableExists = (int)$db->querySingle(
+                "SELECT COUNT(*) " .
+                "FROM sqlite_master " .
+                "WHERE type = 'table' " .
+                "AND name = 'device_identity_events'"
+            );
+
+            if ($tableExists !== 1) {
+                $db->close();
+                return $result;
+            }
+
+            $result['total'] = (int)$db->querySingle(
+                'SELECT COUNT(*) FROM device_identity_events'
+            );
+
+            $stmt = $db->prepare(
+                'SELECT id, mac, event_type, severity, detected_at, ' .
+                'ip, other_ip, other_mac, interface, other_interface, ' .
+                'details, resolved_at ' .
+                'FROM device_identity_events ' .
+                'ORDER BY id DESC LIMIT :limit'
+            );
+            $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+
+            $query = $stmt->execute();
+
+            while ($row = $query->fetchArray(SQLITE3_ASSOC)) {
+                $row['id'] = (int)$row['id'];
+                $result['rows'][] = $row;
+            }
+
+            $db->close();
+        } catch (\Throwable $e) {
+            return $result;
+        }
+
+        return $result;
+    }
 }

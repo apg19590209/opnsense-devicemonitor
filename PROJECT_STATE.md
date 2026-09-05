@@ -24,7 +24,7 @@ Phase G — expose Device Monitor identity anomaly events through the OPNsense A
 
 Current subtask:
 
-Validate the newly added read-only `identityeventsAction()` API endpoint before any UI work proceeds.
+Begin Identity Events UI/menu implementation using the validated read-only API endpoint.
 
 ## Work completed
 
@@ -32,6 +32,8 @@ Validate the newly added read-only `identityeventsAction()` API endpoint before 
 - Existing Device Monitor API/UI pattern inspected.
 - Local `identityeventsAction()` added to `DevicesController.php`.
 - Project-control information split into purpose-specific Markdown files.
+- Live `identityeventsAction()` API endpoint validated successfully.
+- Identity-event runtime/schema deployed to OPNsense and `device_identity_events` created successfully.
 
 ## Files changed
 
@@ -64,8 +66,8 @@ Current Phase G API endpoint:
 
 - local diff inspection: PASS
 - `git diff --check`: PASS
-- PHP syntax validation: NOT YET PERFORMED
-- runtime/API behaviour validation: NOT YET PERFORMED
+- PHP syntax validation: PASS
+- runtime/API behaviour validation: PASS
 
 ## Current operating values
 
@@ -78,12 +80,8 @@ Current numeric security-scan queue rate limit should be confirmed from current 
 
 ## Known unresolved issues
 
-- `identityeventsAction()` has not yet passed PHP syntax validation.
-- The new endpoint has not yet been exercised through the actual OPNsense API.
 - Identity Events UI/menu work has not started.
 
 ## Next step
 
-Copy the modified `DevicesController.php` to `/tmp` on OPNsense and run `php -l` against that temporary copy.
-
-Do not replace the live controller yet.
+Inspect the existing Device Monitor UI/menu pattern and identify the smallest safe change required to add an Identity Events view.
