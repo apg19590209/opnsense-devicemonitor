@@ -285,16 +285,16 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 
 ### Method 1: Download release ZIP + WinSCP
 
-1. Download the **v2.6 Source code (zip)** from:
-   https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.6
+1. Download the **v2.7 source code (zip)** from:
+   https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.7.zip
 2. Enable SSH in OPNsense: **System -> Settings -> Administration -> Secure Shell -> Enable**.
 3. Upload the ZIP to `/tmp/` using WinSCP.
 4. Connect by SSH and install:
 
 ```sh
 cd /tmp
-unzip opnsense-devicemonitor-2.6.zip
-cd opnsense-devicemonitor-2.6
+unzip opnsense-devicemonitor-2.7.zip
+cd opnsense-devicemonitor-2.7
 sh install.sh
 ```
 
@@ -305,9 +305,9 @@ No reboot is normally required.
 ```sh
 ssh root@your.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.6.zip
-unzip v2.6.zip
-cd opnsense-devicemonitor-2.6
+fetch https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.7.zip
+unzip v2.7.zip
+cd opnsense-devicemonitor-2.7
 sh install.sh
 ```
 
@@ -319,7 +319,7 @@ Before upgrading, back up the runtime data:
 tar -czf /root/devicemonitor-backup.tgz /var/db/devicemonitor
 ```
 
-Then install v2.6 using either method above.
+Then install v2.7 using either method above.
 
 Existing configuration and device data are preserved during the upgrade.
 
