@@ -16,7 +16,7 @@ OPNsense 26.7.2_2
 
 Latest confirmed completed identity-work commit:
 
-`548bb3b` — `feat: detect non-link-local IPv6 identity conflicts`
+`418ea5c` — `feat: add identity events UI`
 
 ## Current phase or objective
 
@@ -24,7 +24,7 @@ Phase G — expose Device Monitor identity anomaly events through the OPNsense A
 
 Current subtask:
 
-Begin Identity Events UI/menu implementation using the validated read-only API endpoint.
+Validate the deployed identity-detection runtime through one normal Device Monitor scan.
 
 ## Work completed
 
@@ -34,40 +34,47 @@ Begin Identity Events UI/menu implementation using the validated read-only API e
 - Project-control information split into purpose-specific Markdown files.
 - Live `identityeventsAction()` API endpoint validated successfully.
 - Identity-event runtime/schema deployed to OPNsense and `device_identity_events` created successfully.
+- Identity Events UI deployed and validated on OPNsense.
+- Identity Events UI committed as `418ea5c`.
 
 ## Files changed
 
-Current/recent working-tree files relevant to this checkpoint:
+Current/recent files relevant to this checkpoint:
 
 - `src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/DevicesController.php`
-- `PROJECT_RULES.md`
+- `src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/IndexController.php`
+- `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/Menu/Menu.xml`
+- `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/identityevents.volt`
 - `PROJECT_STATE.md`
-- `DECISIONS.md`
-- `SYSTEM_MAP.md`
 
 ## Validation performed
 
-Phase F.2:
+Identity Events API/runtime:
 
-- Python syntax compile
-- synthetic IPv6 identity tests
-- live read-only Hostwatch validation
+- `DevicesController.php` PHP syntax validation
+- live `/api/devicemonitor/devices/identityevents` request
+- development and installed `scan_network.py` Python syntax validation
+- `init_db()` execution
+- live `device_identity_events` schema inspection
 
-Current Phase G API work:
+Identity Events UI:
 
-- local diff inspection
+- `Menu.xml` XML validation
+- `IndexController.php` PHP syntax validation on OPNsense
 - `git diff --check`
+- live `/ui/devicemonitor/index/identityevents` browser validation
 
 ## Validation results
 
-Phase F.2 validation passed.
-
-Current Phase G API endpoint:
-
-- local diff inspection: PASS
+- Identity Events API endpoint: PASS
+- API empty-state response (`rows: []`, `total: 0`): PASS
+- identity-event database schema creation: PASS
+- Python runtime syntax validation: PASS
+- `Menu.xml` validation: PASS
+- `IndexController.php` syntax validation: PASS
+- Identity Events live page rendering: PASS
 - `git diff --check`: PASS
-- PHP syntax validation: PASS
-- runtime/API behaviour validation: PASS
+- normal full Device Monitor scan with deployed identity detection: NOT YET PERFORMED
 
 ## Current operating values
 
@@ -80,8 +87,9 @@ Current numeric security-scan queue rate limit should be confirmed from current 
 
 ## Known unresolved issues
 
-- Identity Events UI/menu work has not started.
+- Deployed identity-detection runtime has not yet been exercised by a normal full Device Monitor scan.
+- Populated Identity Events row/details rendering has not yet been observed because the event table is currently empty.
 
 ## Next step
 
-Inspect the existing Device Monitor UI/menu pattern and identify the smallest safe change required to add an Identity Events view.
+Run one normal Device Monitor scan on OPNsense and inspect the result for identity-detection errors and newly recorded identity events.
