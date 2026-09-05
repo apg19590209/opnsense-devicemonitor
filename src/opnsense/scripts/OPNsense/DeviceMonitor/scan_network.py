@@ -468,6 +468,18 @@ def get_dnsmasq_descriptions():
         log(f"Error reading Dnsmasq config.xml: {e}")
     return descriptions
 
+def is_process_running(process_name):
+    """Return True when an exact process name is currently running."""
+    try:
+        return subprocess.run(
+            ['pgrep', '-x', process_name],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        ).returncode == 0
+    except Exception:
+        return False
+
 def detect_source_capabilities():
     """Report available identity/enrichment sources without changing state."""
     capabilities = {
@@ -480,6 +492,7 @@ def detect_source_capabilities():
         'kea': {
             'configured': False,
             'enabled': False,
+            'active': False,
             'socket_present': False,
             'queryable': False,
             'lease4_get_all': False,
@@ -487,9 +500,11 @@ def detect_source_capabilities():
         'isc': {
             'configured': False,
             'enabled': False,
+            'active': False,
         },
         'dnsmasq': {
             'configured': False,
+            'active': False,
         },
     }
 
@@ -520,6 +535,10 @@ def detect_source_capabilities():
     except Exception as e:
         log(f'Source capability config check failed: {e}')
 
+    capabilities['kea']['active'] = is_process_running('kea-dhcp4')
+    capabilities['isc']['active'] = is_process_running('dhcpd')
+    capabilities['dnsmasq']['active'] = is_process_running('dnsmasq')
+
     kea_socket = '/var/run/kea/kea4-ctrl-socket'
     capabilities['kea']['socket_present'] = os.path.exists(kea_socket)
 
@@ -549,6 +568,11 @@ def detect_source_capabilities():
     capabilities['core_identity_source'] = (
         'hostwatch' if capabilities['hostwatch']['readable'] else 'unavailable'
     )
+
+    capabilities['active_dhcp_services'] = [
+        name for name in ('kea', 'isc', 'dnsmasq')
+        if capabilities[name]['active']
+    ]
 
     return capabilities
 
