@@ -408,3 +408,360 @@ jobs:
 
           print("Device Monitor identity regression checks passed")
           PY
+      - name: Validate v2.8 identity email alerts
+        run: |
+          set -eu
+
+          python3 <<'PY'
+          import importlib.util
+          import json
+          import sqlite3
+          import tempfile
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from types import SimpleNamespace
+
+          SOURCE = Path("src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py")
+          DEFAULTS = Path("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json")
+
+          defaults = json.loads(DEFAULTS.read_text(encoding="utf-8"))
+          assert defaults["config"]["identity_email_enabled"] == "0"
+
+          spec = importlib.util.spec_from_file_location(
+              "devicemonitor_scan_network",
+              SOURCE
+          )
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+
+          # Avoid writing Device Monitor logs during regression testing.
+          module.log = lambda message: None
+
+          with tempfile.TemporaryDirectory() as tmp:
+              tmp_path = Path(tmp)
+              hostwatch_db = tmp_path / "hostwatch.db"
+              devices_db = tmp_path / "devices.db"
+
+              module.HOSTWATCH_DB = str(hostwatch_db)
+              module.DB_FILE = str(devices_db)
+
+              with sqlite3.connect(hostwatch_db) as hw:
+                  hw.execute("""
+                      CREATE TABLE v_hosts (
+                          interface_name TEXT,
+                          ip_address TEXT,
+                          ether_address TEXT,
+                          last_seen TEXT,
+                          protocol TEXT
+                      )
+                  """)
+
+              conn = sqlite3.connect(devices_db)
+              conn.execute("""
+                  CREATE TABLE device_identity_events (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      mac TEXT NOT NULL,
+                      event_type TEXT NOT NULL,
+                      severity TEXT NOT NULL,
+                      detected_at DATETIME NOT NULL
+                          DEFAULT CURRENT_TIMESTAMP,
+                      ip TEXT,
+                      other_ip TEXT,
+                      other_mac TEXT,
+                      interface TEXT,
+                      other_interface TEXT,
+                      details TEXT,
+                      resolved_at DATETIME
+                  )
+              """)
+              conn.commit()
+
+              now = (
+                  datetime.now(timezone.utc)
+                  .replace(tzinfo=None)
+                  .strftime("%Y-%m-%d %H:%M:%S")
+              )
+
+              def clear_events():
+                  conn.execute("DELETE FROM device_identity_events")
+                  conn.commit()
+
+              def set_hosts(rows):
+                  with sqlite3.connect(hostwatch_db) as hw:
+                      hw.execute("DELETE FROM v_hosts")
+                      hw.executemany("""
+                          INSERT INTO v_hosts
+                          (
+                              interface_name,
+                              ip_address,
+                              ether_address,
+                              last_seen,
+                              protocol
+                          )
+                          VALUES (?, ?, ?, ?, ?)
+                      """, rows)
+
+              def max_event_id():
+                  return conn.execute("""
+                      SELECT COALESCE(MAX(id), 0)
+                      FROM device_identity_events
+                  """).fetchone()[0]
+
+              # --------------------------------------------------------
+              # IPv4 high-severity event is collected.
+              # --------------------------------------------------------
+              clear_events()
+              set_hosts([
+                  ("IGC1", "192.0.2.10",
+                   "aa:bb:cc:dd:ee:01", now, "inet"),
+                  ("IGC1", "192.0.2.10",
+                   "aa:bb:cc:dd:ee:02", now, "inet"),
+              ])
+
+              kea = [{
+                  "ip": "192.0.2.10",
+                  "mac": "aa:bb:cc:dd:ee:02",
+                  "active": True,
+                  "hostname": "test-device",
+                  "subnet_id": 1,
+                  "cltt": 1,
+                  "expires_at": "2099-01-01 00:00:00",
+              }]
+
+              start = max_event_id()
+
+              created = module.detect_recent_hostwatch_identity_events(
+                  conn,
+                  minutes=5,
+                  kea_leases=kea
+              )
+
+              assert isinstance(created, int)
+              assert created == 1
+
+              events = module.get_new_high_identity_events(conn, start)
+              assert len(events) == 1
+              assert events[0]["event_type"] == "IP_IDENTITY_CHANGED"
+              assert events[0]["severity"] == "high"
+
+              # Same evidence is deduplicated and therefore not recollected.
+              start = max_event_id()
+
+              created = module.detect_recent_hostwatch_identity_events(
+                  conn,
+                  minutes=5,
+                  kea_leases=kea
+              )
+
+              assert created == 0
+              assert module.get_new_high_identity_events(conn, start) == []
+
+              # --------------------------------------------------------
+              # IPv6 high-severity event is collected.
+              # --------------------------------------------------------
+              clear_events()
+              set_hosts([
+                  ("IGC1", "fd00::20",
+                   "aa:bb:cc:dd:ee:06", now, "inet6"),
+                  ("IGC1", "fd00::20",
+                   "aa:bb:cc:dd:ee:07", now, "inet6"),
+              ])
+
+              start = max_event_id()
+
+              created = module.detect_recent_hostwatch_ipv6_identity_events(
+                  conn,
+                  minutes=5
+              )
+
+              assert isinstance(created, int)
+              assert created == 1
+
+              events = module.get_new_high_identity_events(conn, start)
+              assert len(events) == 1
+              assert events[0]["event_type"] == "IPV6_IDENTITY_CHANGED"
+
+              # --------------------------------------------------------
+              # Medium MAC_MULTI_IP is recorded but excluded from email.
+              # --------------------------------------------------------
+              clear_events()
+              set_hosts([
+                  ("IGC1", "192.0.2.20",
+                   "aa:bb:cc:dd:ee:03", now, "inet"),
+                  ("IGC1", "192.0.2.21",
+                   "aa:bb:cc:dd:ee:03", now, "inet"),
+              ])
+
+              start = max_event_id()
+
+              created = module.detect_recent_hostwatch_identity_events(
+                  conn,
+                  minutes=5
+              )
+
+              assert created == 1
+              assert module.get_new_high_identity_events(conn, start) == []
+
+              # --------------------------------------------------------
+              # Medium MAC_MULTI_INTERFACE is also excluded.
+              # --------------------------------------------------------
+              clear_events()
+              set_hosts([
+                  ("IGC1", "192.0.2.30",
+                   "aa:bb:cc:dd:ee:04", now, "inet"),
+                  ("IGC2", "192.0.2.30",
+                   "aa:bb:cc:dd:ee:04", now, "inet"),
+              ])
+
+              start = max_event_id()
+
+              created = module.detect_recent_hostwatch_identity_events(
+                  conn,
+                  minutes=5
+              )
+
+              assert created == 1
+              assert module.get_new_high_identity_events(conn, start) == []
+
+              # --------------------------------------------------------
+              # Configuration gating.
+              # --------------------------------------------------------
+              sample_events = [
+                  {
+                      "event_type": "IP_IDENTITY_CHANGED",
+                      "severity": "high",
+                      "mac": "aa:bb:cc:dd:ee:01",
+                      "other_mac": "aa:bb:cc:dd:ee:02",
+                      "ip": "192.0.2.10",
+                  }
+              ]
+
+              base_config = {
+                  "enabled": True,
+                  "email_enabled": True,
+                  "email_to": "admin@example.test",
+              }
+
+              off_config = dict(base_config)
+              off_config["identity_email_enabled"] = False
+
+              assert not module.should_send_identity_email(
+                  off_config,
+                  sample_events
+              )
+
+              on_config = dict(base_config)
+              on_config["identity_email_enabled"] = True
+
+              assert module.should_send_identity_email(
+                  on_config,
+                  sample_events
+              )
+
+              assert not module.should_send_identity_email(
+                  on_config,
+                  []
+              )
+
+              # --------------------------------------------------------
+              # Multiple events result in exactly one PHP invocation.
+              # --------------------------------------------------------
+              calls = []
+
+              def successful_run(command, **kwargs):
+                  calls.append((command, kwargs))
+                  return SimpleNamespace(
+                      returncode=0,
+                      stdout='{"result":"sent"}',
+                      stderr=""
+                  )
+
+              module.subprocess.run = successful_run
+
+              two_events = [
+                  sample_events[0],
+                  {
+                      "event_type": "IPV6_IDENTITY_CHANGED",
+                      "severity": "high",
+                      "mac": "aa:bb:cc:dd:ee:06",
+                      "other_mac": "aa:bb:cc:dd:ee:07",
+                      "ip": "fd00::20",
+                  },
+              ]
+
+              assert module.send_identity_email(two_events) is True
+              assert len(calls) == 1
+
+              payload = json.loads(calls[0][1]["input"])
+              assert len(payload["events"]) == 2
+
+              # --------------------------------------------------------
+              # Helper-side skip is not a successful delivery.
+              # --------------------------------------------------------
+              def skipped_run(command, **kwargs):
+                  return SimpleNamespace(
+                      returncode=0,
+                      stdout=json.dumps({
+                          "result": "skipped",
+                          "message": "Email disabled",
+                      }),
+                      stderr="",
+                  )
+
+              module.subprocess.run = skipped_run
+
+              assert module.send_identity_email(sample_events) is False
+              # --------------------------------------------------------
+              # Disabled setting means no notification process is invoked.
+              # --------------------------------------------------------
+              calls.clear()
+
+              if module.should_send_identity_email(off_config, two_events):
+                  module.send_identity_email(two_events)
+
+              assert calls == []
+
+              # --------------------------------------------------------
+              # Mail failure does not remove the already-stored event and
+              # is returned as False rather than aborting scan handling.
+              # --------------------------------------------------------
+              clear_events()
+
+              conn.execute("""
+                  INSERT INTO device_identity_events
+                  (mac, event_type, severity, ip, other_mac)
+                  VALUES (?, ?, ?, ?, ?)
+              """, (
+                  "aa:bb:cc:dd:ee:01",
+                  "IP_IDENTITY_CHANGED",
+                  "high",
+                  "192.0.2.10",
+                  "aa:bb:cc:dd:ee:02",
+              ))
+              conn.commit()
+
+              before = conn.execute("""
+                  SELECT COUNT(*) FROM device_identity_events
+              """).fetchone()[0]
+
+              def failing_run(command, **kwargs):
+                  return SimpleNamespace(
+                      returncode=1,
+                      stdout="",
+                      stderr="simulated mail failure"
+                  )
+
+              module.subprocess.run = failing_run
+
+              assert module.send_identity_email(sample_events) is False
+
+              after = conn.execute("""
+                  SELECT COUNT(*) FROM device_identity_events
+              """).fetchone()[0]
+
+              assert after == before == 1
+
+              conn.close()
+
+          print("Device Monitor v2.8 identity email regression checks passed")
+          PY

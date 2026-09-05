@@ -58,6 +58,7 @@ class ConfigController extends ApiControllerBase
 
         $enabled = $this->request->getPost('enabled', 'string', '0');
         $email_enabled = $this->request->getPost('email_enabled', 'string', '0');
+        $identity_email_enabled = $this->request->getPost('identity_email_enabled', 'string', '0');
         $email_to = trim($this->request->getPost('email_to', 'string', ''));
         $email_from = trim($this->request->getPost('email_from', 'string', 'devicemonitor@opnsense.local'));
         $email_method = strtolower(trim($this->request->getPost('email_method', 'string', 'sendmail')));
@@ -79,6 +80,10 @@ class ConfigController extends ApiControllerBase
         $nmap_host_timeout = (int)$this->request->getPost('nmap_host_timeout', 'int', 45);
         $nmap_version_detection = $this->request->getPost('nmap_version_detection', 'string', '1');
         $nmap_max_per_cycle = (int)$this->request->getPost('nmap_max_per_cycle', 'int', 2);
+
+        if (!in_array($identity_email_enabled, ['0', '1'], true)) {
+            return ['result' => 'failed', 'message' => 'Invalid identity email enabled value'];
+        }
 
         if (!in_array($email_method, ['sendmail', 'smtp'], true)) {
             return ['result' => 'failed', 'message' => 'Invalid email delivery method'];
@@ -147,6 +152,7 @@ class ConfigController extends ApiControllerBase
         $config = $model->getConfig();
         $config['enabled'] = $enabled;
         $config['email_enabled'] = $email_enabled;
+        $config['identity_email_enabled'] = $identity_email_enabled;
         $config['email_to'] = $email_to;
         $config['email_from'] = $email_from;
         $config['email_method'] = $email_method;

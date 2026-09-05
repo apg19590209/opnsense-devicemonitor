@@ -494,3 +494,11 @@ msgstr "Nevyřešené"
 
 msgid "Resolved"
 msgstr "Vyřešené"
+
+#: settings.volt - upozornění na anomálie identity
+msgid "Email high-severity conflict alerts"
+msgstr "E-mailová upozornění na závažné anomálie identity"
+
+#: settings.volt - upozornění na anomálie identity
+msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
+msgstr "Odeslat e-mail při zjištění nového závažného konfliktu identity IPv4 nebo IPv6."

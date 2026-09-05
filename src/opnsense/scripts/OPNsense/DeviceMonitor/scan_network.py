@@ -59,6 +59,7 @@ def load_config():
         return {
             'enabled': DEFAULT_CONFIG['enabled'] == '1',
             'email_enabled': DEFAULT_CONFIG.get('email_enabled', '1') == '1',
+            'identity_email_enabled': DEFAULT_CONFIG.get('identity_email_enabled', '0') == '1',
             'email_to': DEFAULT_CONFIG.get('email_to', ''),
             'email_from': DEFAULT_CONFIG.get('email_from', 'devicemonitor@opnsense.local'),
             'webhook_enabled': DEFAULT_CONFIG.get('webhook_enabled', '0') == '1',
@@ -83,6 +84,7 @@ def load_config():
             return {
                 'enabled': config.get('enabled', '0') == '1',
                 'email_enabled': config.get('email_enabled', '1') == '1',
+                'identity_email_enabled': config.get('identity_email_enabled', '0') == '1',
                 'email_to': config.get('email_to', ''),
                 'email_from': config.get('email_from', 'devicemonitor@opnsense.local'),
                 'webhook_enabled': config.get('webhook_enabled', '0') == '1',
@@ -105,6 +107,7 @@ def load_config():
         return {
             'enabled': False,
             'email_enabled': True,
+            'identity_email_enabled': False,
             'email_to': '',
             'email_from': 'devicemonitor@opnsense.local',
             'webhook_enabled': False,
@@ -1307,6 +1310,111 @@ def send_webhook_via_php_api(new_devices):
         log(f"[WEBHOOK] Error: {e}")
 
 
+def get_new_high_identity_events(conn, start_id):
+    """Return qualifying identity events inserted during this scan cycle."""
+    columns = [
+        'detected_at',
+        'event_type',
+        'severity',
+        'mac',
+        'other_mac',
+        'ip',
+        'other_ip',
+        'interface',
+        'other_interface',
+        'details',
+    ]
+
+    rows = conn.execute('''
+        SELECT detected_at, event_type, severity, mac, other_mac,
+               ip, other_ip, interface, other_interface, details
+        FROM device_identity_events
+        WHERE id > ?
+          AND severity = 'high'
+          AND event_type IN (
+              'IP_IDENTITY_CHANGED',
+              'IPV6_IDENTITY_CHANGED'
+          )
+        ORDER BY id ASC
+    ''', (int(start_id),)).fetchall()
+
+    return [dict(zip(columns, row)) for row in rows]
+
+
+def should_send_identity_email(config, events):
+    """Return whether this scan cycle should emit an identity alert."""
+    return bool(
+        events
+        and config.get('enabled')
+        and config.get('email_enabled')
+        and config.get('identity_email_enabled')
+        and config.get('email_to')
+    )
+
+
+def send_identity_email(events):
+    """Send one batched identity alert without affecting scan success."""
+    if not events:
+        return True
+
+    helper = (
+        '/usr/local/opnsense/scripts/OPNsense/'
+        'DeviceMonitor/notify_identity_email.php'
+    )
+
+    try:
+        result = subprocess.run(
+            ['/usr/local/bin/php', helper],
+            input=json.dumps({'events': events}),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or '').strip()
+            log(
+                '[IDENTITY-EMAIL] Failed: ' +
+                (detail[:500] if detail else f'exit {result.returncode}')
+            )
+            return False
+
+        try:
+            response = json.loads(result.stdout or '{}')
+        except (json.JSONDecodeError, TypeError):
+            log('[IDENTITY-EMAIL] Failed: invalid helper response')
+            return False
+
+        status = response.get('result')
+        message = str(response.get('message') or '').strip()
+
+        if status == 'skipped':
+            log(
+                '[IDENTITY-EMAIL] Skipped: ' +
+                (message if message else 'helper declined notification')
+            )
+            return False
+
+        if status != 'sent':
+            log(
+                '[IDENTITY-EMAIL] Failed: unexpected helper result ' +
+                repr(status)
+            )
+            return False
+
+        log(
+            f'[IDENTITY-EMAIL] Sent batched alert for '
+            f'{len(events)} high-severity event(s)'
+        )
+        return True
+
+    except subprocess.TimeoutExpired:
+        log('[IDENTITY-EMAIL] Failed: email process timed out')
+        return False
+    except Exception as e:
+        log(f'[IDENTITY-EMAIL] Failed: {e}')
+        return False
+
 # ================================================================
 # MAIN FUNCTIONS - REFACTORED
 # ================================================================
@@ -1731,6 +1839,10 @@ def full_scan():
             if is_truly_new:
                 new_devices.append(device)
 
+    identity_event_start_id = conn.execute(
+        'SELECT COALESCE(MAX(id), 0) FROM device_identity_events'
+    ).fetchone()[0]
+
     kea_identity_leases = []
     if (
         capabilities['kea']['active']
@@ -1753,11 +1865,20 @@ def full_scan():
         log(f'Identity detection: recorded {identity_events} event(s)')
 
     conn.commit()
+
+    new_high_identity_events = get_new_high_identity_events(
+        conn,
+        identity_event_start_id,
+    )
+
     online = conn.execute(
         "SELECT COUNT(*) FROM devices WHERE is_active = 1"
     ).fetchone()[0]
     total = conn.execute("SELECT COUNT(*) FROM devices").fetchone()[0]
     conn.close()
+
+    if should_send_identity_email(config, new_high_identity_events):
+        send_identity_email(new_high_identity_events)
 
     # 4. Notifications filtered by VLAN
     log(f"New devices: {len(new_devices)}, Online: {online}/{total}")

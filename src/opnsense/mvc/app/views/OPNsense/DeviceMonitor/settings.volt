@@ -54,6 +54,7 @@
                             </td>
                             <td>
                                 <div id="email_config">
+
                                     <label>{{ lang._('Email Recipient') }}:</label>
                                     <input type="email" id="email_to" class="form-control" placeholder="admin@example.com" style="max-width:400px;" />
                                     <small class="text-muted">{{ lang._('Where to send notifications') }}</small>
@@ -119,6 +120,19 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:top;padding-top:16px;">
+                                <strong>{{ lang._('IP & MAC Conflicts') }}</strong>
+                            </td>
+                            <td style="padding-top:16px;">
+                                <label style="margin:0;">
+                                    <input type="checkbox" id="identity_email_enabled" />
+                                    <strong>{{ lang._('Email high-severity conflict alerts') }}</strong>
+                                </label>
+                                <br>
+                                <small class="text-muted">{{ lang._('Send an email when a new high-severity IPv4 or IPv6 address conflict is detected.') }}</small>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:top;padding-top:16px;">
                                 <strong>{{ lang._('Notify for interfaces') }}</strong>
                             </td>
                             <td>
@@ -169,6 +183,7 @@
                                 </div>
                             </td>
                         </tr>
+
                         <tr>
                             <td style="vertical-align:top;padding-top:16px;">
                                 <strong>{{ lang._('Notify for interfaces') }}</strong>
@@ -434,6 +449,7 @@ $().ready(function() {
             );
             $('#nmap_max_per_cycle').val(d.nmap_max_per_cycle||2);
             $('#email_enabled').prop('checked', d.email_enabled==='1');
+            $('#identity_email_enabled').prop('checked', d.identity_email_enabled==='1');
             $('#email_to').val(d.email_to||'');
             $('#email_from').val(d.email_from||'devicemonitor@opnsense.local');
             $('#email_method').val(d.email_method||'sendmail');
@@ -476,6 +492,7 @@ $().ready(function() {
         return {
             enabled:          $('#enabled').is(':checked')?'1':'0',
             email_enabled:    $('#email_enabled').is(':checked')?'1':'0',
+            identity_email_enabled: $('#identity_email_enabled').is(':checked')?'1':'0',
             email_to:         $('#email_to').val(),
             email_from:       $('#email_from').val(),
             email_method:     $('#email_method').val(),

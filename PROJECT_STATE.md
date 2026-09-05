@@ -24,9 +24,9 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-Determine the next Device Monitor v2.8 development objective.
+Complete and validate v2.8 IP & MAC identity-conflict email alerts before commit and push.
 
-The v2.7 identity, Settings UI, CI and README documentation work is complete and validated.
+The alert implementation is deployed and live-message validation has passed. Repository commit/push and GitHub CI validation remain outstanding.
 
 ## Previously completed
 
@@ -81,10 +81,23 @@ Current validated work:
 - GitHub push to `origin/v2.8-development`: PASS
 - CI workflow includes `v2.8-development` for push and pull requests: PASS
 - GitHub Actions CI run for `cf1a90e`: PASS
+- v2.8 identity-email `git diff --check`: PASS
+- live `scan_network.py` Python syntax validation: PASS
+- isolated identity-email sent/skipped/invalid-result handling: PASS
+- live `notify_identity_email.php` PHP syntax validation: PASS
+- live synthetic IP & MAC conflict email delivery: PASS
+- configured recipient validation: PASS
+- final subject validation: `OPNsense: IP & MAC conflict alert (1 conflict)`: PASS
+- final live email pluralisation validation (`conflict` / `conflicts`): PASS
+- final live email font consistency validation (Arial body / monospace technical values): PASS
+- final live email value-column alignment validation: PASS
+- final live email visual consistency validation: PASS
+- observational-only message wording and IP/MAC evidence rendering: PASS
 
 ## Known unresolved issues
 
 - No known unresolved Identity Events UI validation issues remain.
+- v2.8 identity-conflict email alert changes are not yet committed/pushed and the updated CI workflow has not yet run on GitHub.
 
 ## Current operating values
 
@@ -97,6 +110,6 @@ Current numeric security-scan queue rate limit should be confirmed from current 
 
 ## Next step
 
-Deploy the v2.8 Identity Events Resolve/Reopen changes to OPNsense and validate Resolve/Reopen behavior in the live UI.
+Commit the staged v2.8 identity-conflict email alert change.
 
 - CI uses actions/checkout@v7 to avoid the deprecated Node.js 20 runtime.

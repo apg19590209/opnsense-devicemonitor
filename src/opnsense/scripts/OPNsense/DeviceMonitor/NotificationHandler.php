@@ -153,6 +153,71 @@ class NotificationHandler
     }
 
     /**
+     * Send a caller-supplied Device Monitor email through the configured
+     * transport without using the new-device notification queue.
+     */
+    public function sendCustomEmail($subject, $html)
+    {
+        $model = new \OPNsense\DeviceMonitor\DeviceMonitor();
+        $config = $model->getConfig();
+
+        if (($config['email_enabled'] ?? '0') != '1' || empty($config['email_to'])) {
+            $this->fLog("Custom email skipped: email disabled", 'EMAIL');
+            return ['result' => 'skipped', 'message' => 'Email disabled'];
+        }
+
+        $email_to = $config['email_to'];
+        $email_from = $config['email_from'] ?? 'devicemonitor@opnsense.local';
+        $email_method = strtolower($config['email_method'] ?? 'sendmail');
+
+        try {
+            if ($email_method === 'smtp') {
+                $sendResult = $this->sendViaDirectSmtp((string)$subject, (string)$html);
+            } else {
+                $sendResult = $this->sendViaSendmail(
+                    $email_to,
+                    $email_from,
+                    (string)$subject,
+                    (string)$html
+                );
+                $email_method = 'sendmail';
+            }
+
+            if (($sendResult['result'] ?? '') === 'sent') {
+                $this->fLog(
+                    "SUCCESS: Custom email sent (transport={$email_method})",
+                    'EMAIL'
+                );
+
+                return [
+                    'result' => 'sent',
+                    'message' => "Email sent to: $email_to",
+                    'transport' => $email_method,
+                ];
+            }
+
+            $detail = $sendResult['message'] ?? 'Unknown email transport error';
+            $this->fLog("FAILED: Custom email - {$detail}", 'EMAIL');
+
+            return [
+                'result' => 'failed',
+                'message' => $detail,
+                'transport' => $email_method,
+            ];
+        } catch (\Exception $e) {
+            $this->fLog(
+                "FAILED: Custom email exception - " . $e->getMessage(),
+                'EMAIL'
+            );
+
+            return [
+                'result' => 'failed',
+                'message' => $e->getMessage(),
+                'transport' => $email_method,
+            ];
+        }
+    }
+    /**
      * UNIVERSAL EMAIL - TEST AND REAL - WITH INLINE STYLES
      */
     public function sendEmail($is_test = false)
