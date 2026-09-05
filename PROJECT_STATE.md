@@ -98,3 +98,5 @@ Current numeric security-scan queue rate limit should be confirmed from current 
 ## Next step
 
 Deploy the v2.8 Identity Events Resolve/Reopen changes to OPNsense and validate Resolve/Reopen behavior in the live UI.
+
+- CI uses actions/checkout@v7 to avoid the deprecated Node.js 20 runtime.
