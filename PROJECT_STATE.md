@@ -97,19 +97,48 @@ Current validated work:
 - GitHub Actions CI run `33970099256` for `c92b61b`: PASS
 - observational-only message wording and IP/MAC evidence rendering: PASS
 
+## Infrastructure service discovery — Phase 1
+
+Phase 1 is implemented and validated live.
+
+Implemented and verified:
+
+- persistent infrastructure-service inventory
+- protocol-verified DHCP discovery
+- protocol-verified DNS discovery
+- OPNsense-configured DNS resolvers included as candidates
+- DHCP and DNS availability lifecycle handling
+- `last_verified` persistence
+- automatic discovery rate-limited to 3600 seconds
+- manual `--discover-services` mode
+- Devices page Services badges
+
+Validated live inventory:
+
+- DHCP `192.168.20.254` — UDP/67 — verified
+- DNS `192.168.20.1` — UDP/53 — verified
+- DNS `192.168.20.2` — UDP/53 — verified
+- DNS `192.168.20.101` — UDP/53 — verified
+
+Automatic discovery rate limiting was validated with an immediate repeat
+returning `RAN=False`.
+
+The Devices UI was visually validated after correcting the Services/VLAN
+column alignment.
+
 ## Known unresolved issues
 
-- No known unresolved v2.8 identity-conflict email alert issues remain.
-- Separate unstaged IP & MAC Conflicts UI terminology changes and `.gitattributes` maintenance remain outside commit `c92b61b`.
-## Current operating values
+- No known unresolved Phase 1 DHCP/DNS service-discovery issues remain.
+- No known unresolved v2.8 identity-conflict email issues remain.
+- Device Monitor version-display review remains separate.
+- `.gitattributes` line-ending maintenance remains outside this feature.
 
-Previously established:
+## Current operating values
 
 - monitored interface: IGC1
 - scan interval: 300 seconds
-
-Current numeric security-scan queue rate limit should be confirmed from current source/configuration before being recorded here.
+- infrastructure-service discovery interval: 3600 seconds
 
 ## Next step
 
-Review and validate the remaining unstaged IP & MAC Conflicts UI terminology changes before committing them.
+Proceed to Phase 2 infrastructure-service discovery.
