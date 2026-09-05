@@ -19,19 +19,21 @@
                           style="margin-left:6px;">0</span>
 
                     <span class="identity-events-summary">
-                        <a href="?status=unresolved"
-                           class="identity-events-summary-link">
+                        <button type="button"
+                                id="identity-events-show-unresolved"
+                                class="btn btn-link btn-xs identity-events-summary-link">
                             {{ lang._('Unresolved') }}
                             <span id="identity-events-unresolved"
                                   class="badge">0</span>
-                        </a>
+                        </button>
 
-                        <a href="?status=resolved"
-                           class="identity-events-summary-link">
+                        <button type="button"
+                                id="identity-events-show-resolved"
+                                class="btn btn-link btn-xs identity-events-summary-link">
                             {{ lang._('Resolved') }}
                             <span id="identity-events-resolved"
                                   class="badge">0</span>
-                        </a>
+                        </button>
                     </span>
                 </strong>
 
@@ -572,16 +574,6 @@ $(document).ready(function() {
             }
         });
     }
-
-    var requestedStatus =
-        new URLSearchParams(window.location.search).get('status');
-
-    if (
-        requestedStatus === 'unresolved' ||
-        requestedStatus === 'resolved'
-    ) {
-        $('#identity-events-status').val(requestedStatus);
-    }
     $('#btn-identity-refresh').on(
         'click',
         function() {
@@ -589,6 +581,15 @@ $(document).ready(function() {
         }
     );
 
+    $('#identity-events-show-unresolved').on('click', function() {
+        $('#identity-events-status').val('unresolved');
+        loadIdentityEvents();
+    });
+
+    $('#identity-events-show-resolved').on('click', function() {
+        $('#identity-events-status').val('resolved');
+        loadIdentityEvents();
+    });
     $('#identity-events-status').on(
         'change',
         function() {

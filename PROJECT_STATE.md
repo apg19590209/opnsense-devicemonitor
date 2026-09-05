@@ -24,7 +24,7 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-Validate corrected Identity Events summary links and control alignment on OPNsense.
+Validate direct Identity Events Unresolved/Resolved filter buttons on OPNsense.
 
 The v2.7 identity, Settings UI, CI and README documentation work is complete and validated.
 
