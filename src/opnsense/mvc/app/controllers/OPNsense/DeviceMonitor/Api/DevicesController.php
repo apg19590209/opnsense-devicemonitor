@@ -298,7 +298,9 @@ class DevicesController extends ApiControllerBase
     {
         $result = [
             'rows' => [],
-            'total' => 0
+            'total' => 0,
+            'unresolved' => 0,
+            'resolved' => 0
         ];
 
         try {
@@ -666,7 +668,9 @@ class DevicesController extends ApiControllerBase
     {
         $result = [
             'rows' => [],
-            'total' => 0
+            'total' => 0,
+            'unresolved' => 0,
+            'resolved' => 0
         ];
 
         try {
@@ -711,6 +715,16 @@ class DevicesController extends ApiControllerBase
                 $db->close();
                 return $result;
             }
+
+            $result['unresolved'] = (int)$db->querySingle(
+                'SELECT COUNT(*) FROM device_identity_events ' .
+                'WHERE resolved_at IS NULL'
+            );
+
+            $result['resolved'] = (int)$db->querySingle(
+                'SELECT COUNT(*) FROM device_identity_events ' .
+                'WHERE resolved_at IS NOT NULL'
+            );
 
             $result['total'] = (int)$db->querySingle(
                 'SELECT COUNT(*) FROM device_identity_events' .

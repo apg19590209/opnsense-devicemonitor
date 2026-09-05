@@ -24,11 +24,13 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-Validate the v2.8 Identity Events visible resolution-status badge on OPNsense.
+Validate v2.8 Identity Events unresolved/resolved summary counts on OPNsense.
 
 The v2.7 identity, Settings UI, CI and README documentation work is complete and validated.
 
 ## Previously completed
+
+- v2.8 Identity Events heading now shows separate Unresolved and Resolved counts.
 
 - v2.8 Identity Events table now shows an explicit Unresolved/Resolved status badge.
 

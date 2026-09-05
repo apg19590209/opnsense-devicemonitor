@@ -17,6 +17,16 @@
                     <span id="identity-events-total"
                           class="badge"
                           style="margin-left:6px;">0</span>
+
+                    <span class="identity-events-summary">
+                        {{ lang._('Unresolved') }}
+                        <span id="identity-events-unresolved"
+                              class="badge">0</span>
+
+                        {{ lang._('Resolved') }}
+                        <span id="identity-events-resolved"
+                              class="badge">0</span>
+                    </span>
                 </strong>
 
                 <div class="identity-events-controls">
@@ -90,6 +100,16 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+.identity-events-summary {
+    margin-left: 12px;
+    font-size: 11px;
+    font-weight: normal;
+}
+
+.identity-events-summary .badge {
+    margin: 0 6px 0 3px;
 }
 
 .identity-events-controls {
@@ -496,6 +516,22 @@ $(document).ready(function() {
                         data &&
                         data.total !== undefined
                             ? data.total
+                            : 0
+                    );
+
+                $('#identity-events-unresolved')
+                    .text(
+                        data &&
+                        data.unresolved !== undefined
+                            ? data.unresolved
+                            : 0
+                    );
+
+                $('#identity-events-resolved')
+                    .text(
+                        data &&
+                        data.resolved !== undefined
+                            ? data.resolved
                             : 0
                     );
 
