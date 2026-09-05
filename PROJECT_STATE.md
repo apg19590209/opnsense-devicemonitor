@@ -66,8 +66,8 @@ Current validated work:
 - populated Identity Events row rendering using browser-only synthetic API data: PASS
 - Identity Events expandable details rendering: PASS
 - browser refresh restored the real empty-state API view: PASS
-- GitHub push to `origin/v2.7-development`: PASS
-- CI workflow includes `v2.7-development` for push and pull requests: PASS
+- GitHub push to `origin/v2.8-development`: PASS
+- CI workflow includes `v2.8-development` for push and pull requests: PASS
 - GitHub Actions CI run for `cf1a90e`: PASS
 
 ## Known unresolved issues
