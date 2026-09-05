@@ -10,6 +10,16 @@
 
         <ul class="nav nav-tabs" role="tablist" style="margin:10px 0 0 0;">
             <li role="presentation" class="active">
+                <a href="#tab-monitoring" role="tab" data-toggle="tab">
+                    <i class="fa fa-desktop"></i> {{ lang._('Monitoring') }}
+                </a>
+            </li>
+            <li role="presentation">
+                <a href="#tab-nmap" role="tab" data-toggle="tab">
+                    <i class="fa fa-search"></i> {{ lang._('Nmap Scanning') }}
+                </a>
+            </li>
+            <li role="presentation">
                 <a href="#tab-email" role="tab" data-toggle="tab">
                     <i class="fa fa-envelope-o"></i> {{ lang._('Email Notifications') }}
                 </a>
@@ -17,11 +27,6 @@
             <li role="presentation">
                 <a href="#tab-webhook" role="tab" data-toggle="tab">
                     <i class="fa fa-bell-o"></i> {{ lang._('Webhook Notifications') }}
-                </a>
-            </li>
-            <li role="presentation">
-                <a href="#tab-other" role="tab" data-toggle="tab">
-                    <i class="fa fa-cog"></i> {{ lang._('Other Settings') }}
                 </a>
             </li>
             <li role="presentation">
@@ -33,8 +38,8 @@
 
         <div class="tab-content" style="padding:15px 0;">
 
-            <!-- TAB 1: Email -->
-            <div role="tabpanel" class="tab-pane active" id="tab-email">
+            <!-- TAB 3: Email -->
+            <div role="tabpanel" class="tab-pane" id="tab-email">
                 <div class="alert alert-info">
                     {{ lang._('Configure email notifications for new devices on the network') }}
                 </div>
@@ -130,7 +135,7 @@
                 </div>
             </div>
 
-            <!-- TAB 2: Webhook -->
+            <!-- TAB 4: Webhook -->
             <div role="tabpanel" class="tab-pane" id="tab-webhook">
                 <div class="alert alert-info">
                     {{ lang._('Configure webhook notifications for new devices on the network') }}
@@ -182,8 +187,8 @@
                 </div>
             </div>
 
-            <!-- TAB 3: Other Settings -->
-            <div role="tabpanel" class="tab-pane" id="tab-other">
+            <!-- TAB 1: Monitoring -->
+            <div role="tabpanel" class="tab-pane active" id="tab-monitoring">
                 <table class="table table-striped">
                     <tbody>
                         <tr>
@@ -204,6 +209,22 @@
                             </td>
                         </tr>
 
+                    </tbody>
+                </table>
+
+                <div style="padding:10px 0 0 0;">
+                    <button type="button"
+                            class="btn btn-primary btn-apply"
+                            id="btn-apply-monitoring">
+                        <i class="fa fa-check"></i> {{ lang._('Apply') }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 2: Nmap Scanning -->
+            <div role="tabpanel" class="tab-pane" id="tab-nmap">
+                <table class="table table-striped">
+                    <tbody>
                         <tr>
                             <td colspan="2">
                                 <h4 style="margin:5px 0;">{{ lang._('Targeted Nmap Scanning') }}</h4>
@@ -271,25 +292,43 @@
                     </tbody>
                 </table>
                 <div style="padding:10px 0 0 0;">
-                    <button type="button" class="btn btn-primary btn-apply" id="btn-apply-other">
+                    <button type="button" class="btn btn-primary btn-apply" id="btn-apply-nmap">
                         <i class="fa fa-check"></i> {{ lang._('Apply') }}
                     </button>
                 </div>
             </div>
 
-            <!-- TAB 4: About -->
+            <!-- TAB 5: About -->
             <div role="tabpanel" class="tab-pane" id="tab-about">
                 <div style="max-width:600px;padding:10px 0;">
                     <h3 style="margin-top:0;">{{ lang._('Device Monitor') }} <span id="about-version" style="color:#888;font-size:16px;"></span></h3>
                     <p class="text-muted">{{ lang._('OPNsense plugin for monitoring network devices using the native hostwatch database.') }}</p>
                     <table class="table table-condensed" style="margin-top:20px;">
                         <tr>
-                            <td style="width:40%;color:#888;">{{ lang._('Author') }}</td>
+                            <th colspan="2" style="padding-top:14px;">{{ lang._('Original Project') }}</th>
+                        </tr>
+                        <tr>
+                            <td style="width:40%;color:#888;">{{ lang._('Creator') }}</td>
                             <td>Hacesoft</td>
                         </tr>
                         <tr>
-                            <td style="color:#888;">{{ lang._('GitHub Repository') }}</td>
+                            <td style="color:#888;">{{ lang._('Repository') }}</td>
                             <td><a href="https://github.com/hacesoft/opnsense-devicemonitor" target="_blank">github.com/hacesoft/opnsense-devicemonitor</a></td>
+                        </tr>
+
+                        <tr>
+                            <th colspan="2" style="padding-top:18px;">{{ lang._('v2.7 Development & Enhancements') }}</th>
+                        </tr>
+                        <tr>
+                            <td style="color:#888;">{{ lang._('Developer') }}</td>
+                            <td>Anthony Gonzalez</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#888;">{{ lang._('Repository') }}</td>
+                            <td><a href="https://github.com/apg19590209/opnsense-devicemonitor" target="_blank">github.com/apg19590209/opnsense-devicemonitor</a></td>
+                        </tr>
+                        <tr>
+                            <th colspan="2" style="padding-top:18px;">{{ lang._('Licensing & Compatibility') }}</th>
                         </tr>
                         <tr>
                             <td style="color:#888;">{{ lang._('License') }}</td>
@@ -367,7 +406,7 @@ $().ready(function() {
         $.ajax({ url:'/api/devicemonitor/config/get', type:'GET', success:function(d) {
             $('#enabled').prop('checked', d.enabled==='1');
             $('#scan_interval').val(d.scan_interval||300);
-            #targeted_nmap_enabled.prop(
+            $('#targeted_nmap_enabled').prop(
                 'checked',
                 String(
                     d.targeted_nmap_enabled !== undefined &&
@@ -377,14 +416,14 @@ $().ready(function() {
                 ) === '1'
             );
             $('#nmap_top_ports').val(d.nmap_top_ports||100);
-            #nmap_timing.val(
+            $('#nmap_timing').val(
                 d.nmap_timing !== undefined &&
                 d.nmap_timing !== null
                     ? d.nmap_timing
                     : 4
             );
             $('#nmap_host_timeout').val(d.nmap_host_timeout||45);
-            #nmap_version_detection.prop(
+            $('#nmap_version_detection').prop(
                 'checked',
                 String(
                     d.nmap_version_detection !== undefined &&

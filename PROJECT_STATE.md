@@ -2,13 +2,17 @@
 
 ## Last updated
 
-September 2026
+5 September 2026
 
 ## Current version / branch / environment
 
 Development branch:
 
 `v2.7-development`
+
+Active Windows checkout:
+
+`C:\Users\apg19\Downloads\opnsense-devicemonitor-upstream`
 
 Primary deployment target:
 
@@ -18,78 +22,59 @@ Latest confirmed completed identity-work commit:
 
 `418ea5c` — `feat: add identity events UI`
 
-## Current phase or objective
+## Current objective
 
-Phase G — expose Device Monitor identity anomaly events through the OPNsense API/UI.
+Prepare the committed and validated Device Monitor Settings UI work for push.
 
-Current subtask:
+Current local work is in:
 
-Complete Phase G validation and determine the next development objective.
+`src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`
 
-## Work completed
+The Settings-page changes are committed locally and have been deployed and visually validated on OPNsense.
+
+## Previously completed
 
 - Phase F.2 IPv6 identity-conflict detection completed and validated.
-- Existing Device Monitor API/UI pattern inspected.
-- Local `identityeventsAction()` added to `DevicesController.php`.
-- Project-control information split into purpose-specific Markdown files.
-- Live `identityeventsAction()` API endpoint validated successfully.
-- Identity-event runtime/schema deployed to OPNsense and `device_identity_events` created successfully.
+- Device Monitor Identity Events API/runtime completed and validated.
 - Identity Events UI deployed and validated on OPNsense.
 - Identity Events UI committed as `418ea5c`.
-- Full Device Monitor scans completed successfully with deployed identity detection enabled; no identity anomalies were recorded.
+- Full Device Monitor scans completed successfully with deployed identity detection enabled.
+- No identity anomalies were recorded during the validated scans.
 
-## Files changed
+## Current Settings-page work
 
-Current/recent files relevant to this checkpoint:
+The current local `settings.volt` diff includes Settings UI restructuring and About-page metadata changes, including:
 
-- `src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/DevicesController.php`
-- `src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/IndexController.php`
-- `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/Menu/Menu.xml`
-- `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/identityevents.volt`
-- `PROJECT_STATE.md`
+- Monitoring tab
+- Nmap Scanning tab
+- removal/replacement of the previous Other Settings tab arrangement
+- developer attribution
+- development repository link
+- Licensing & Compatibility section heading
 
-## Validation performed
 
-Identity Events API/runtime:
+## Current validation
 
-- `DevicesController.php` PHP syntax validation
-- live `/api/devicemonitor/devices/identityevents` request
-- development and installed `scan_network.py` Python syntax validation
-- `init_db()` execution
-- live `device_identity_events` schema inspection
+For the current Settings-page work:
 
-Identity Events UI:
-
-- `Menu.xml` XML validation
-- `IndexController.php` PHP syntax validation on OPNsense
-- `git diff --check`
-- live `/ui/devicemonitor/index/identityevents` browser validation
-
-## Validation results
-
-- Identity Events API endpoint: PASS
-- API empty-state response (`rows: []`, `total: 0`): PASS
-- identity-event database schema creation: PASS
-- Python runtime syntax validation: PASS
-- `Menu.xml` validation: PASS
-- `IndexController.php` syntax validation: PASS
-- Identity Events live page rendering: PASS
 - `git diff --check`: PASS
-- normal full Device Monitor scan with deployed identity detection: PASS
+- Licensing & Compatibility source inspection: PASS
+- deployment to OPNsense: PASS
+- live browser validation of all Settings tabs after deployment: PASS
+
+## Known unresolved issues
+
+- Populated Identity Events row/details rendering has not yet been observed because the event table is currently empty.
 
 ## Current operating values
 
-Values previously established for the current environment:
+Previously established:
 
 - monitored interface: IGC1
 - scan interval: 300 seconds
 
 Current numeric security-scan queue rate limit should be confirmed from current source/configuration before being recorded here.
 
-## Known unresolved issues
-
-- Populated Identity Events row/details rendering has not yet been observed because the event table is currently empty.
-
 ## Next step
 
-Review the current project state and roadmap to identify the next Device Monitor development objective.
+Confirm the configured Git remote and target branch before pushing the validated Settings-page commit.
