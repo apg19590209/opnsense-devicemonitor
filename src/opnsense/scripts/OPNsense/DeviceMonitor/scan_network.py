@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3
 
 import sqlite3
+import socket
 from datetime import datetime, UTC, timedelta
 import os
 import json
@@ -466,6 +467,90 @@ def get_dnsmasq_descriptions():
     except Exception as e:
         log(f"Error reading Dnsmasq config.xml: {e}")
     return descriptions
+
+def detect_source_capabilities():
+    """Report available identity/enrichment sources without changing state."""
+    capabilities = {
+        'hostwatch': {
+            'path': HOSTWATCH_DB,
+            'configured': bool(HOSTWATCH_DB),
+            'readable': bool(HOSTWATCH_DB and os.path.isfile(HOSTWATCH_DB)
+                             and os.access(HOSTWATCH_DB, os.R_OK)),
+        },
+        'kea': {
+            'configured': False,
+            'enabled': False,
+            'socket_present': False,
+            'queryable': False,
+            'lease4_get_all': False,
+        },
+        'isc': {
+            'configured': False,
+            'enabled': False,
+        },
+        'dnsmasq': {
+            'configured': False,
+        },
+    }
+
+    try:
+        root = ET.parse('/conf/config.xml').getroot()
+
+        isc = root.find('dhcpd')
+        capabilities['isc']['configured'] = isc is not None
+        if isc is not None:
+            capabilities['isc']['enabled'] = any(
+                iface.find('enable') is not None for iface in isc
+            )
+
+        capabilities['dnsmasq']['configured'] = (
+            root.find('dnsmasq') is not None
+        )
+
+        kea = root.find('./OPNsense/Kea')
+        if kea is not None:
+            dhcp4 = kea.find('dhcp4')
+            capabilities['kea']['configured'] = dhcp4 is not None
+            if dhcp4 is not None:
+                enabled_el = dhcp4.find('./general/enabled')
+                capabilities['kea']['enabled'] = (
+                    enabled_el is not None
+                    and (enabled_el.text or '').strip() == '1'
+                )
+    except Exception as e:
+        log(f'Source capability config check failed: {e}')
+
+    kea_socket = '/var/run/kea/kea4-ctrl-socket'
+    capabilities['kea']['socket_present'] = os.path.exists(kea_socket)
+
+    if capabilities['kea']['socket_present']:
+        try:
+            request = json.dumps({'command': 'list-commands'}).encode() + bytes([10])
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+                sock.settimeout(2)
+                sock.connect(kea_socket)
+                sock.sendall(request)
+                response = b''
+                while True:
+                    chunk = sock.recv(65536)
+                    if not chunk:
+                        break
+                    response += chunk
+
+            payload = json.loads(response.decode())
+            capabilities['kea']['queryable'] = payload.get('result') == 0
+            commands = payload.get('arguments') or []
+            capabilities['kea']['lease4_get_all'] = (
+                'lease4-get-all' in commands
+            )
+        except Exception as e:
+            log(f'Kea capability query failed: {e}')
+
+    capabilities['core_identity_source'] = (
+        'hostwatch' if capabilities['hostwatch']['readable'] else 'unavailable'
+    )
+
+    return capabilities
 
 def is_recently_seen(last_seen_str, minutes=15):
     """True if the device was seen within the last N minutes using UTC comparison"""
@@ -1211,6 +1296,15 @@ def full_scan():
     log("Starting full scan from Hostwatch DB...")
     config = load_config()
     init_db()
+
+    capabilities = detect_source_capabilities()
+    log(
+        'Identity sources: '
+        f'Hostwatch={capabilities["hostwatch"]["readable"]}, '
+        f'Kea={capabilities["kea"]["queryable"]}, '
+        f'ISC={capabilities["isc"]["enabled"]}, '
+        f'Dnsmasq={capabilities["dnsmasq"]["configured"]}'
+    )
 
     # 1. Data z hostwatch
     devices = get_hostwatch_devices()
