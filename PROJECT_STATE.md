@@ -8,7 +8,7 @@
 
 Development branch:
 
-`v2.7-development`
+`v2.8-development`
 
 Active Windows checkout:
 
