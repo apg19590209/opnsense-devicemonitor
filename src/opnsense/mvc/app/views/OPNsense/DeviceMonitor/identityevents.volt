@@ -61,6 +61,7 @@
                         <tr>
                             <th>{{ lang._('Detected') }}</th>
                             <th>{{ lang._('Severity') }}</th>
+                            <th>{{ lang._('Status') }}</th>
                             <th>{{ lang._('Event Type') }}</th>
                             <th>{{ lang._('MAC Address') }}</th>
                             <th>{{ lang._('IP Address') }}</th>
@@ -72,7 +73,7 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td colspan="9" class="text-muted">
+                            <td colspan="10" class="text-muted">
                                 {{ lang._('Loading identity events...') }}
                             </td>
                         </tr>
@@ -212,7 +213,7 @@ $(document).ready(function() {
         details: "{{ lang._('Details') }}",
         resolve: "{{ lang._('Resolve event') }}",
         reopen: "{{ lang._('Reopen event') }}",
-        updateFailed: "{{ lang._('Unable to update identity event') }}"
+        updateFailed: "{{ lang._('Unable to update identity event') }}",`n        resolved: "{{ lang._('Resolved') }}",`n        unresolved: "{{ lang._('Unresolved') }}"
     };
 
     function dash(value) {
@@ -240,6 +241,23 @@ $(document).ready(function() {
             .text(dash(value));
     }
 
+    function resolutionLabel(row) {
+        var resolved =
+            row.resolved_at !== null &&
+            row.resolved_at !== undefined &&
+            row.resolved_at !== '';
+
+        return $('<span>')
+            .addClass(
+                'label ' +
+                (resolved ? 'label-success' : 'label-default')
+            )
+            .text(
+                resolved
+                    ? identityText.resolved
+                    : identityText.unresolved
+            );
+    }
     function formatDetails(value) {
         if (value === null || value === undefined || value === '') {
             return '\u2014';
@@ -298,7 +316,7 @@ $(document).ready(function() {
             .hide()
             .append(
                 $('<td>')
-                    .attr('colspan', 9)
+                    .attr('colspan', 10)
                     .append($box)
             );
     }
@@ -339,7 +357,7 @@ $(document).ready(function() {
             $('<tr>')
                 .append(
                     $('<td>')
-                        .attr('colspan', 9)
+                        .attr('colspan', 10)
                         .addClass('text-muted')
                         .text(identityText.noEvents)
                 )
@@ -421,6 +439,7 @@ $(document).ready(function() {
                 .append(
                     $('<td>').text(dash(row.detected_at)),
                     $('<td>').append(severityLabel(row.severity)),
+                    $('<td>').append(resolutionLabel(row)),
                     $('<td>').text(dash(row.event_type)),
                     $('<td>').text(dash(row.mac)),
                     $('<td>').text(dash(row.ip)),
@@ -446,7 +465,7 @@ $(document).ready(function() {
             .append(
                 $('<tr>').append(
                     $('<td>')
-                        .attr('colspan', 9)
+                        .attr('colspan', 10)
                         .addClass('text-danger')
                         .text(identityText.loadError)
                 )
