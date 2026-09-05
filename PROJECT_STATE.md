@@ -20,14 +20,14 @@ OPNsense 26.7.2_2
 
 Latest confirmed completed identity-work commit:
 
-`418ea5c` — `feat: add identity events UI`
+`c92b61b` — `feat: add identity conflict email alerts`
+
 
 ## Current objective
 
-Complete and validate v2.8 IP & MAC identity-conflict email alerts before commit and push.
+v2.8 IP & MAC identity-conflict email alerts are complete and validated.
 
-The alert implementation is deployed and live-message validation has passed. Repository commit/push and GitHub CI validation remain outstanding.
-
+Implementation, live deployment, real-email validation, repository commit, remote push and GitHub CI validation have all passed.
 ## Previously completed
 
 - v2.8 Identity Events supports All/Unresolved/Resolved filtering through the Status selector and clickable Unresolved/Resolved summary links.
@@ -92,13 +92,15 @@ Current validated work:
 - final live email font consistency validation (Arial body / monospace technical values): PASS
 - final live email value-column alignment validation: PASS
 - final live email visual consistency validation: PASS
+- identity-conflict email commit `c92b61b`: PASS
+- push of `c92b61b` to `origin/v2.8-development`: PASS
+- GitHub Actions CI run `33970099256` for `c92b61b`: PASS
 - observational-only message wording and IP/MAC evidence rendering: PASS
 
 ## Known unresolved issues
 
-- No known unresolved Identity Events UI validation issues remain.
-- v2.8 identity-conflict email alert changes are not yet committed/pushed and the updated CI workflow has not yet run on GitHub.
-
+- No known unresolved v2.8 identity-conflict email alert issues remain.
+- Separate unstaged IP & MAC Conflicts UI terminology changes and `.gitattributes` maintenance remain outside commit `c92b61b`.
 ## Current operating values
 
 Previously established:
@@ -110,6 +112,4 @@ Current numeric security-scan queue rate limit should be confirmed from current 
 
 ## Next step
 
-Commit the staged v2.8 identity-conflict email alert change.
-
-- CI uses actions/checkout@v7 to avoid the deprecated Node.js 20 runtime.
+Review and validate the remaining unstaged IP & MAC Conflicts UI terminology changes before committing them.
