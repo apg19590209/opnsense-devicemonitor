@@ -24,13 +24,13 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-Prepare the committed and validated Device Monitor Settings UI work for push.
+Close out the completed and pushed Device Monitor Settings UI work.
 
 Current local work is in:
 
 `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`
 
-The Settings-page changes are committed locally and have been deployed and visually validated on OPNsense.
+The Settings-page changes are committed and pushed to `origin/v2.7-development`, and have been deployed and visually validated on OPNsense.
 
 ## Previously completed
 
@@ -61,6 +61,7 @@ For the current Settings-page work:
 - Licensing & Compatibility source inspection: PASS
 - deployment to OPNsense: PASS
 - live browser validation of all Settings tabs after deployment: PASS
+- GitHub push to `origin/v2.7-development`: PASS
 
 ## Known unresolved issues
 
@@ -77,4 +78,4 @@ Current numeric security-scan queue rate limit should be confirmed from current 
 
 ## Next step
 
-Confirm the configured Git remote and target branch before pushing the validated Settings-page commit.
+Push the project-state closeout commit to `origin/v2.7-development`.
