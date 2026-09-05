@@ -494,11 +494,11 @@ msgstr "Unresolved"
 msgid "Resolved"
 msgstr "Resolved"
 
-#: settings.volt - identity anomaly email alerts
+#: settings.volt - IP & MAC conflict email alerts
 msgid "Email high-severity conflict alerts"
 msgstr "Email high-severity conflict alerts"
 
-#: settings.volt - identity anomaly email alerts
+#: settings.volt - IP & MAC conflict email alerts
 msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
 msgstr "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
 
