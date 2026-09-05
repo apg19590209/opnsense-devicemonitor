@@ -1101,11 +1101,54 @@ def detect_recent_hostwatch_identity_events(conn, minutes=5):
             ):
                 created += 1
 
-        if len(interfaces) > 1:
+        # Require the same IPv4 address on two interfaces within 60 seconds.
+        # This avoids flagging normal interface moves or stale Hostwatch rows.
+        interface_conflicts = []
+        for observed_ip in ips:
+            ip_observations = [
+                o for o in observations
+                if o['ip'] == observed_ip and o['interface']
+            ]
+
+            for index, first in enumerate(ip_observations):
+                for second in ip_observations[index + 1:]:
+                    if first['interface'] == second['interface']:
+                        continue
+
+                    try:
+                        first_seen = datetime.strptime(
+                            first['last_seen'], '%Y-%m-%d %H:%M:%S'
+                        )
+                        second_seen = datetime.strptime(
+                            second['last_seen'], '%Y-%m-%d %H:%M:%S'
+                        )
+                    except (TypeError, ValueError):
+                        continue
+
+                    delta = abs((first_seen - second_seen).total_seconds())
+                    if delta <= 60:
+                        first_iface, second_iface = sorted((
+                            first['interface'], second['interface']
+                        ))
+                        interface_conflicts.append((
+                            delta, observed_ip, first_iface, second_iface
+                        ))
+
+        if interface_conflicts:
+            delta, conflict_ip, first_iface, second_iface = min(
+                interface_conflicts
+            )
+            interface_details = json.dumps({
+                'window_minutes': minutes,
+                'interface_time_delta_seconds': delta,
+                'locally_administered': is_locally_administered_mac(mac),
+                'observations': observations,
+            }, sort_keys=True)
+
             if record_identity_event(
-                conn, mac, 'MAC_MULTI_INTERFACE', 'high',
-                ips[0] if ips else '', '',
-                interfaces[0], interfaces[1], details
+                conn, mac, 'MAC_MULTI_INTERFACE', 'medium',
+                conflict_ip, '', first_iface, second_iface,
+                interface_details
             ):
                 created += 1
 
