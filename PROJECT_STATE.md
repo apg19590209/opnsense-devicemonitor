@@ -24,13 +24,13 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-Validate clickable Identity Events resolution summary filters on OPNsense.
+Determine the next Device Monitor v2.8 development objective.
 
 The v2.7 identity, Settings UI, CI and README documentation work is complete and validated.
 
 ## Previously completed
 
-- v2.8 Identity Events Unresolved/Resolved summary controls use real buttons with delegated click handling.
+- v2.8 Identity Events heading shows separate Unresolved and Resolved counts; filtering remains through the Status selector.
 
 - v2.8 Identity Events heading now shows separate Unresolved and Resolved counts.
 

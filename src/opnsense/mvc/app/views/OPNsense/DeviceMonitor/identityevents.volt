@@ -19,23 +19,13 @@
                           style="margin-left:6px;">0</span>
 
                     <span class="identity-events-summary">
-                        <button type="button"
-                                class="btn btn-xs btn-default identity-events-filter-shortcut"
-                                data-status="unresolved"
-                                title="{{ lang._('Show unresolved events') }}">
-                            {{ lang._('Unresolved') }}
-                            <span id="identity-events-unresolved"
-                                  class="badge">0</span>
-                        </button>
+                        {{ lang._('Unresolved') }}
+                        <span id="identity-events-unresolved"
+                              class="badge">0</span>
 
-                        <button type="button"
-                                class="btn btn-xs btn-default identity-events-filter-shortcut"
-                                data-status="resolved"
-                                title="{{ lang._('Show resolved events') }}">
-                            {{ lang._('Resolved') }}
-                            <span id="identity-events-resolved"
-                                  class="badge">0</span>
-                        </button>
+                        {{ lang._('Resolved') }}
+                        <span id="identity-events-resolved"
+                              class="badge">0</span>
                     </span>
                 </strong>
 
@@ -119,17 +109,13 @@
 }
 
 .identity-events-summary {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+    margin-left: 12px;
+    font-size: 11px;
+    font-weight: normal;
 }
 
 .identity-events-summary .badge {
-    margin-left: 4px;
-}
-
-.identity-events-filter-shortcut {
-    cursor: pointer;
+    margin: 0 6px 0 3px;
 }
 
 .identity-events-controls {
@@ -575,15 +561,6 @@ $(document).ready(function() {
         }
     );
 
-    $(document).on(
-        'click',
-        '.identity-events-filter-shortcut',
-        function() {
-            $('#identity-events-status')
-                .val($(this).attr('data-status'))
-                .trigger('change');
-        }
-    );
     $('#identity-events-status').on(
         'change',
         function() {
