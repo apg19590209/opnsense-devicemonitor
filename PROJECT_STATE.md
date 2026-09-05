@@ -24,13 +24,13 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-Determine the next Device Monitor development objective.
+Enable automatic CI validation for the v2.7 development branch.
 
 Current local work is in:
 
-`src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`
+`.github/workflows/ci.yml`
 
-The Settings-page changes are committed and pushed to `origin/v2.7-development`, and have been deployed and visually validated on OPNsense.
+The workflow change is currently uncommitted and adds `v2.7-development` to both push and pull-request CI triggers.
 
 ## Previously completed
 
@@ -55,7 +55,7 @@ The current local `settings.volt` diff includes Settings UI restructuring and Ab
 
 ## Current validation
 
-For the current Settings-page work:
+Current validated work:
 
 - `git diff --check`: PASS
 - Licensing & Compatibility source inspection: PASS
@@ -65,6 +65,7 @@ For the current Settings-page work:
 - Identity Events expandable details rendering: PASS
 - browser refresh restored the real empty-state API view: PASS
 - GitHub push to `origin/v2.7-development`: PASS
+- CI workflow includes `v2.7-development` for push and pull requests: PASS
 
 ## Known unresolved issues
 
@@ -81,4 +82,4 @@ Current numeric security-scan queue rate limit should be confirmed from current 
 
 ## Next step
 
-Select and document the next Device Monitor development objective.
+Review and commit the v2.7 CI workflow update.
