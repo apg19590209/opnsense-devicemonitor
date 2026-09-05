@@ -19,17 +19,23 @@
                           style="margin-left:6px;">0</span>
 
                     <span class="identity-events-summary">
-                        {{ lang._('Unresolved') }}
-                        <span id="identity-events-unresolved"
-                              class="badge identity-events-filter-badge"
-                              data-status="unresolved"
-                              title="{{ lang._('Show unresolved events') }}">0</span>
+                        <button type="button"
+                                class="btn btn-xs btn-default identity-events-filter-shortcut"
+                                data-status="unresolved"
+                                title="{{ lang._('Show unresolved events') }}">
+                            {{ lang._('Unresolved') }}
+                            <span id="identity-events-unresolved"
+                                  class="badge">0</span>
+                        </button>
 
-                        {{ lang._('Resolved') }}
-                        <span id="identity-events-resolved"
-                              class="badge identity-events-filter-badge"
-                              data-status="resolved"
-                              title="{{ lang._('Show resolved events') }}">0</span>
+                        <button type="button"
+                                class="btn btn-xs btn-default identity-events-filter-shortcut"
+                                data-status="resolved"
+                                title="{{ lang._('Show resolved events') }}">
+                            {{ lang._('Resolved') }}
+                            <span id="identity-events-resolved"
+                                  class="badge">0</span>
+                        </button>
                     </span>
                 </strong>
 
@@ -112,11 +118,17 @@
     font-weight: normal;
 }
 
-.identity-events-summary .badge {
-    margin: 0 6px 0 3px;
+.identity-events-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
-.identity-events-filter-badge {
+.identity-events-summary .badge {
+    margin-left: 4px;
+}
+
+.identity-events-filter-shortcut {
     cursor: pointer;
 }
 
@@ -563,11 +575,12 @@ $(document).ready(function() {
         }
     );
 
-    $('.identity-events-filter-badge').on(
+    $(document).on(
         'click',
+        '.identity-events-filter-shortcut',
         function() {
             $('#identity-events-status')
-                .val($(this).data('status'))
+                .val($(this).attr('data-status'))
                 .trigger('change');
         }
     );

@@ -30,7 +30,7 @@ The v2.7 identity, Settings UI, CI and README documentation work is complete and
 
 ## Previously completed
 
-- v2.8 Identity Events Unresolved/Resolved summary badges are clickable filter shortcuts.
+- v2.8 Identity Events Unresolved/Resolved summary controls use real buttons with delegated click handling.
 
 - v2.8 Identity Events heading now shows separate Unresolved and Resolved counts.
 
