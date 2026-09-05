@@ -24,7 +24,7 @@ Phase G — expose Device Monitor identity anomaly events through the OPNsense A
 
 Current subtask:
 
-Validate the deployed identity-detection runtime through one normal Device Monitor scan.
+Complete Phase G validation and determine the next development objective.
 
 ## Work completed
 
@@ -36,6 +36,7 @@ Validate the deployed identity-detection runtime through one normal Device Monit
 - Identity-event runtime/schema deployed to OPNsense and `device_identity_events` created successfully.
 - Identity Events UI deployed and validated on OPNsense.
 - Identity Events UI committed as `418ea5c`.
+- Full Device Monitor scans completed successfully with deployed identity detection enabled; no identity anomalies were recorded.
 
 ## Files changed
 
@@ -74,7 +75,7 @@ Identity Events UI:
 - `IndexController.php` syntax validation: PASS
 - Identity Events live page rendering: PASS
 - `git diff --check`: PASS
-- normal full Device Monitor scan with deployed identity detection: NOT YET PERFORMED
+- normal full Device Monitor scan with deployed identity detection: PASS
 
 ## Current operating values
 
@@ -87,9 +88,8 @@ Current numeric security-scan queue rate limit should be confirmed from current 
 
 ## Known unresolved issues
 
-- Deployed identity-detection runtime has not yet been exercised by a normal full Device Monitor scan.
 - Populated Identity Events row/details rendering has not yet been observed because the event table is currently empty.
 
 ## Next step
 
-Run one normal Device Monitor scan on OPNsense and inspect the result for identity-detection errors and newly recorded identity events.
+Review the current project state and roadmap to identify the next Device Monitor development objective.
