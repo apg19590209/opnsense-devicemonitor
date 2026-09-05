@@ -24,7 +24,7 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-Close out the completed and pushed Device Monitor Settings UI work.
+Determine the next Device Monitor development objective.
 
 Current local work is in:
 
@@ -78,4 +78,4 @@ Current numeric security-scan queue rate limit should be confirmed from current 
 
 ## Next step
 
-Push the project-state closeout commit to `origin/v2.7-development`.
+Review the current project roadmap and source state to select the next Device Monitor development objective.
