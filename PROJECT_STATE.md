@@ -24,11 +24,13 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-Validate v2.8 Identity Events unresolved/resolved summary counts on OPNsense.
+Validate clickable Identity Events resolution summary filters on OPNsense.
 
 The v2.7 identity, Settings UI, CI and README documentation work is complete and validated.
 
 ## Previously completed
+
+- v2.8 Identity Events Unresolved/Resolved summary badges are clickable filter shortcuts.
 
 - v2.8 Identity Events heading now shows separate Unresolved and Resolved counts.
 

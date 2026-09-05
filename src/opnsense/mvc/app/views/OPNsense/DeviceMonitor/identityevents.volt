@@ -21,11 +21,15 @@
                     <span class="identity-events-summary">
                         {{ lang._('Unresolved') }}
                         <span id="identity-events-unresolved"
-                              class="badge">0</span>
+                              class="badge identity-events-filter-badge"
+                              data-status="unresolved"
+                              title="{{ lang._('Show unresolved events') }}">0</span>
 
                         {{ lang._('Resolved') }}
                         <span id="identity-events-resolved"
-                              class="badge">0</span>
+                              class="badge identity-events-filter-badge"
+                              data-status="resolved"
+                              title="{{ lang._('Show resolved events') }}">0</span>
                     </span>
                 </strong>
 
@@ -110,6 +114,10 @@
 
 .identity-events-summary .badge {
     margin: 0 6px 0 3px;
+}
+
+.identity-events-filter-badge {
+    cursor: pointer;
 }
 
 .identity-events-controls {
@@ -555,6 +563,14 @@ $(document).ready(function() {
         }
     );
 
+    $('.identity-events-filter-badge').on(
+        'click',
+        function() {
+            $('#identity-events-status')
+                .val($(this).data('status'))
+                .trigger('change');
+        }
+    );
     $('#identity-events-status').on(
         'change',
         function() {
