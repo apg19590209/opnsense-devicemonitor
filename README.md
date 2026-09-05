@@ -38,6 +38,15 @@ The plugin automatically monitors the network and alerts you about:
 
 ## Version history
 
+### v2.7 (September 2026) — Device identity anomaly detection
+
+- Adds read-only Kea DHCP identity-source detection and normalized IPv4 lease evidence when available.
+- Correlates Hostwatch and Kea evidence to detect conflicting device identity without changing device state.
+- Detects duplicate ownership of the same non-link-local IPv6 address across different MAC addresses while excluding normal link-local and multiple-address IPv6 behaviour.
+- Records identity anomalies as observational SQLite events; no automatic blocking, deletion, firewall changes or remediation is performed.
+- Adds a dedicated **Identity Events** API and UI with severity, MAC/IP/interface evidence and expandable event details.
+- Refines Settings into Monitoring, Nmap Scanning, Email Notifications, Webhook Notifications and About sections.
+- Extends automated CI validation to the 2.7-development branch.
 ### v2.6 (September 2026) — Detailed targeted Nmap scan history
 
 - Records targeted scan settings, Nmap version, elapsed time, OS hint and email outcome.
@@ -244,6 +253,7 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 ✅ **Webhook notifications** — ntfy.sh, Discord, custom HTTP POST endpoints
 ✅ **Device history** — first/last detection timestamps
 ✅ **Vendor lookup** — manufacturer from MAC address (IEEE OUI database)
+✅ **Identity anomaly detection** — correlates Hostwatch, Kea and IPv6 evidence without automatic remediation
 
 ### 🖥️ Web interface
 

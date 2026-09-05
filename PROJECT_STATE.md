@@ -26,13 +26,11 @@ Latest confirmed completed identity-work commit:
 
 Determine the next Device Monitor development objective.
 
-Current local work is in:
-
-`.github/workflows/ci.yml`
-
-The CI workflow update is committed and pushed, and `v2.7-development` is now automatically validated on push and pull requests.
+The v2.7 identity, Settings UI, CI and README documentation work is complete and validated.
 
 ## Previously completed
+
+- v2.7 README/version-history documentation updated for identity anomaly detection and Identity Events.
 
 - Phase F.2 IPv6 identity-conflict detection completed and validated.
 - Device Monitor Identity Events API/runtime completed and validated.
