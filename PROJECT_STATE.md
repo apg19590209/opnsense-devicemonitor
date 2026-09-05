@@ -30,6 +30,8 @@ The v2.7 identity, Settings UI, CI and README documentation work is complete and
 
 ## Previously completed
 
+- Added automated v2.7 identity regression coverage using isolated temporary SQLite databases.
+
 - v2.7 README/version-history documentation updated for identity anomaly detection and Identity Events.
 
 - Phase F.2 IPv6 identity-conflict detection completed and validated.

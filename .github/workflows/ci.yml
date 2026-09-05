@@ -182,3 +182,227 @@ jobs:
 
           print("Device Monitor migration checks passed")
           PY
+      - name: Validate v2.7 identity detection
+        run: |
+          set -eu
+
+          python3 <<'PY'
+          import importlib.util
+          import json
+          import sqlite3
+          import tempfile
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          source = Path(
+              "src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py"
+          )
+
+          spec = importlib.util.spec_from_file_location(
+              "devicemonitor_scan_network",
+              source
+          )
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+
+          with tempfile.TemporaryDirectory() as tmp:
+              tmp_path = Path(tmp)
+              hostwatch_db = tmp_path / "hostwatch.db"
+              devices_db = tmp_path / "devices.db"
+
+              module.HOSTWATCH_DB = str(hostwatch_db)
+              module.DB_FILE = str(devices_db)
+
+              with sqlite3.connect(hostwatch_db) as hw:
+                  hw.execute("""
+                      CREATE TABLE v_hosts (
+                          interface_name TEXT,
+                          ip_address TEXT,
+                          ether_address TEXT,
+                          last_seen TEXT,
+                          protocol TEXT
+                      )
+                  """)
+
+              conn = sqlite3.connect(devices_db)
+              conn.execute("""
+                  CREATE TABLE device_identity_events (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      mac TEXT NOT NULL,
+                      event_type TEXT NOT NULL,
+                      severity TEXT NOT NULL,
+                      detected_at DATETIME NOT NULL
+                          DEFAULT CURRENT_TIMESTAMP,
+                      ip TEXT,
+                      other_ip TEXT,
+                      other_mac TEXT,
+                      interface TEXT,
+                      other_interface TEXT,
+                      details TEXT,
+                      resolved_at DATETIME
+                  )
+              """)
+              conn.commit()
+
+              now = (
+                  datetime.now(timezone.utc)
+                  .replace(tzinfo=None)
+                  .strftime("%Y-%m-%d %H:%M:%S")
+              )
+
+              def set_hosts(rows):
+                  with sqlite3.connect(hostwatch_db) as hw:
+                      hw.execute("DELETE FROM v_hosts")
+                      hw.executemany("""
+                          INSERT INTO v_hosts
+                          (
+                              interface_name,
+                              ip_address,
+                              ether_address,
+                              last_seen,
+                              protocol
+                          )
+                          VALUES (?, ?, ?, ?, ?)
+                      """, rows)
+
+                  conn.execute("DELETE FROM device_identity_events")
+                  conn.commit()
+
+              # Same IPv4 owned by two MACs.
+              set_hosts([
+                  ("IGC1", "192.0.2.10",
+                   "aa:bb:cc:dd:ee:01", now, "inet"),
+                  ("IGC1", "192.0.2.10",
+                   "aa:bb:cc:dd:ee:02", now, "inet"),
+              ])
+
+              kea = [{
+                  "ip": "192.0.2.10",
+                  "mac": "aa:bb:cc:dd:ee:02",
+                  "active": True,
+                  "hostname": "test-device",
+                  "subnet_id": 1,
+                  "cltt": 1,
+                  "expires_at": "2099-01-01 00:00:00",
+              }]
+
+              created = module.detect_recent_hostwatch_identity_events(
+                  conn,
+                  minutes=5,
+                  kea_leases=kea
+              )
+              assert created == 1, created
+
+              row = conn.execute("""
+                  SELECT event_type, severity, mac, other_mac, details
+                  FROM device_identity_events
+              """).fetchone()
+
+              assert row[0] == "IP_IDENTITY_CHANGED", row
+              assert row[1] == "high", row
+              assert row[2] == "aa:bb:cc:dd:ee:01", row
+              assert row[3] == "aa:bb:cc:dd:ee:02", row
+
+              details = json.loads(row[4])
+              assert (
+                  details["kea_evidence"]["status"]
+                  == "matches_one_hostwatch_mac"
+              ), details
+
+              # Re-running identical evidence must not duplicate the event.
+              created = module.detect_recent_hostwatch_identity_events(
+                  conn,
+                  minutes=5,
+                  kea_leases=kea
+              )
+              assert created == 0, created
+
+              # One MAC on multiple IPv4 addresses.
+              set_hosts([
+                  ("IGC1", "192.0.2.20",
+                   "aa:bb:cc:dd:ee:03", now, "inet"),
+                  ("IGC1", "192.0.2.21",
+                   "aa:bb:cc:dd:ee:03", now, "inet"),
+              ])
+
+              created = module.detect_recent_hostwatch_identity_events(
+                  conn,
+                  minutes=5
+              )
+              assert created == 1, created
+
+              event_type = conn.execute("""
+                  SELECT event_type
+                  FROM device_identity_events
+              """).fetchone()[0]
+              assert event_type == "MAC_MULTI_IP", event_type
+
+              # Same MAC/IP simultaneously visible on two interfaces.
+              set_hosts([
+                  ("IGC1", "192.0.2.30",
+                   "aa:bb:cc:dd:ee:04", now, "inet"),
+                  ("IGC2", "192.0.2.30",
+                   "aa:bb:cc:dd:ee:04", now, "inet"),
+              ])
+
+              created = module.detect_recent_hostwatch_identity_events(
+                  conn,
+                  minutes=5
+              )
+              assert created == 1, created
+
+              event_type = conn.execute("""
+                  SELECT event_type
+                  FROM device_identity_events
+              """).fetchone()[0]
+              assert event_type == "MAC_MULTI_INTERFACE", event_type
+
+              # Link-local IPv6 and multiple IPv6 addresses on one MAC
+              # are deliberately non-anomalous.
+              set_hosts([
+                  ("IGC1", "fe80::1",
+                   "aa:bb:cc:dd:ee:05", now, "inet6"),
+                  ("IGC1", "fd00::10",
+                   "aa:bb:cc:dd:ee:05", now, "inet6"),
+                  ("IGC1", "fd00::11",
+                   "aa:bb:cc:dd:ee:05", now, "inet6"),
+              ])
+
+              created = (
+                  module.detect_recent_hostwatch_ipv6_identity_events(
+                      conn,
+                      minutes=5
+                  )
+              )
+              assert created == 0, created
+
+              # Same non-link-local IPv6 owned by two MACs is anomalous.
+              set_hosts([
+                  ("IGC1", "fd00::20",
+                   "aa:bb:cc:dd:ee:06", now, "inet6"),
+                  ("IGC1", "fd00::20",
+                   "aa:bb:cc:dd:ee:07", now, "inet6"),
+              ])
+
+              created = (
+                  module.detect_recent_hostwatch_ipv6_identity_events(
+                      conn,
+                      minutes=5
+                  )
+              )
+              assert created == 1, created
+
+              row = conn.execute("""
+                  SELECT event_type, severity, other_mac, details
+                  FROM device_identity_events
+              """).fetchone()
+
+              assert row[0] == "IPV6_IDENTITY_CHANGED", row
+              assert row[1] == "high", row
+              assert row[2] == "aa:bb:cc:dd:ee:07", row
+              assert json.loads(row[3])["address_scope"] == "ula"
+
+              conn.close()
+
+          print("Device Monitor identity regression checks passed")
+          PY
