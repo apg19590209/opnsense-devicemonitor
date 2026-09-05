@@ -70,7 +70,8 @@
                     <th class="sortable" data-col="mac" style="cursor:pointer;white-space:nowrap;">{{ lang._('MAC Address') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable" data-col="ip" style="cursor:pointer;white-space:nowrap;">{{ lang._('IP Address') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable" data-col="hostname" style="cursor:pointer;white-space:nowrap;">{{ lang._('Hostname') }} <i class="fa fa-sort"></i></th>
-                    <th class="sortable" data-col="vendor" style="cursor:pointer;white-space:nowrap;">{{ lang._('Vendor') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable" data-col="vendor" style="cursor:pointer;white-space:nowrap;">{{ lang._('Vendor') }} <i class="fa fa-sort"></i></th>                    <th style="white-space:nowrap;">{{ lang._('Services') }}</th>
+
                     <th class="sortable" data-col="vlan" style="cursor:pointer;white-space:nowrap;">{{ lang._('VLAN') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable" data-col="status" style="cursor:pointer;white-space:nowrap;">{{ lang._('Status') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable" data-col="nmap_scan_status" style="cursor:pointer;white-space:nowrap;">{{ lang._('Scan Status') }} <i class="fa fa-sort"></i></th>
@@ -322,6 +323,73 @@ $(document).ready(function() {
         return $cell;
     }
 
+    function buildServicesCell(row) {
+        var $cell = $('<td>').css('white-space', 'nowrap');
+        var services = Array.isArray(row.services) ? row.services : [];
+
+        if (!services.length) {
+            return $cell.append(
+                $('<span>')
+                    .addClass('text-muted')
+                    .text('\u2014')
+            );
+        }
+
+        var seen = {};
+
+        services.forEach(function(service) {
+            var type = (service.service_type || '')
+                .toString()
+                .toUpperCase();
+
+            if (!type || seen[type]) {
+                return;
+            }
+
+            seen[type] = true;
+
+            var confidence = (service.confidence || '').toString();
+            var method = (service.detection_method || '').toString();
+            var endpoint =
+                (service.protocol || '').toString().toUpperCase() +
+                '/' +
+                (service.port || '');
+
+            var title = type;
+
+            if (endpoint !== '/') {
+                title += ' - ' + endpoint;
+            }
+
+            if (confidence) {
+                title += ' - ' + confidence;
+            }
+
+            if (method) {
+                title += ' (' + method + ')';
+            }
+
+            var labelClass = 'label-default';
+
+            if (type === 'DNS') {
+                labelClass = 'label-info';
+            } else if (type === 'DHCP') {
+                labelClass = 'label-warning';
+            }
+
+            $('<span>')
+                .addClass('label ' + labelClass)
+                .attr('title', title)
+                .css({
+                    'display': 'inline-block',
+                    'margin-right': '4px'
+                })
+                .text(type)
+                .appendTo($cell);
+        });
+
+        return $cell;
+    }
     // Render table
     function renderTable(rows) {
         var $tbody = $('#grid-devices tbody').empty();
@@ -347,6 +415,7 @@ $(document).ready(function() {
                 $('<td>').html(ipHtml),
                 $('<td>').html(hostnameHtml),
                 $('<td>').text(row.vendor||''),
+                buildServicesCell(row),
                 $('<td>').text(vlanLabel),
                 $('<td>').html(statusHtml),
                 buildScanStatusCell(row),

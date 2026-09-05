@@ -541,3 +541,5 @@ msgstr "Zařízení používá více adres IPv4"
 
 msgid "Device seen on multiple interfaces"
 msgstr "Zařízení zjištěno na více rozhraních"
+msgid "Services"
+msgstr "Služby"

@@ -9,6 +9,9 @@ import sys
 import argparse
 import subprocess
 import re
+import time
+import select
+import struct
 import ipaddress
 import xml.etree.ElementTree as ET
 
@@ -264,6 +267,50 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_nmap_scan_ports_history
         ON nmap_scan_ports(scan_history_id)
     ''')
+
+    # Persistent infrastructure-service inventory.
+    #
+    # This is deliberately separate from individual Nmap scan history:
+    # scan history records what one scan observed; device_services records
+    # the latest known service role for a device.
+    c.execute('''CREATE TABLE IF NOT EXISTS device_services (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mac TEXT,
+        ip TEXT NOT NULL,
+        interface TEXT NOT NULL DEFAULT '',
+        service_type TEXT NOT NULL,
+        port INTEGER NOT NULL,
+        protocol TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'available',
+        detection_method TEXT NOT NULL,
+        confidence TEXT NOT NULL,
+        product TEXT,
+        version TEXT,
+        first_detected DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_verified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(ip, service_type, port, protocol, detection_method, interface)
+    )''')
+
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS idx_device_services_mac
+        ON device_services(mac)
+    ''')
+
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS idx_device_services_type
+        ON device_services(service_type)
+    ''')
+    c.execute('''CREATE TABLE IF NOT EXISTS service_discovery_state (
+        id INTEGER PRIMARY KEY CHECK(id = 1),
+        last_run DATETIME
+    )''')
+
+    c.execute(
+        '''
+        INSERT OR IGNORE INTO service_discovery_state (id, last_run)
+        VALUES (1, NULL)
+        '''
+    )
     # Observational identity anomaly events. v2.7 Phase A records evidence
     # only; it does not automatically alert, block, merge, or delete devices.
     c.execute('''CREATE TABLE IF NOT EXISTS device_identity_events (
@@ -793,6 +840,759 @@ def is_recently_seen(last_seen_str, minutes=15):
         return False
 
 
+def upsert_device_service(
+    conn,
+    mac,
+    ip,
+    interface,
+    service_type,
+    port,
+    protocol,
+    detection_method,
+    confidence,
+    verified_at,
+    status='available',
+    product='',
+    version=''
+):
+    """Insert or refresh one infrastructure-service endpoint."""
+    mac = (mac or '').strip().lower() or None
+    ip = (ip or '').strip()
+    interface = (interface or '').strip()
+    service_type = (service_type or '').strip().upper()
+    protocol = (protocol or '').strip().lower()
+    detection_method = (detection_method or '').strip()
+
+    if not ip or not service_type or not protocol or not detection_method:
+        return False
+
+    conn.execute(
+        '''
+        INSERT INTO device_services (
+            mac,
+            ip,
+            interface,
+            service_type,
+            port,
+            protocol,
+            status,
+            detection_method,
+            confidence,
+            product,
+            version,
+            first_detected,
+            last_verified
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(
+            ip,
+            service_type,
+            port,
+            protocol,
+            detection_method,
+            interface
+        )
+        DO UPDATE SET
+            mac = COALESCE(excluded.mac, device_services.mac),
+            status = excluded.status,
+            confidence = excluded.confidence,
+            product = excluded.product,
+            version = excluded.version,
+            last_verified = excluded.last_verified
+        ''',
+        (
+            mac,
+            ip,
+            interface,
+            service_type,
+            int(port),
+            protocol,
+            status,
+            detection_method,
+            confidence,
+            product or '',
+            version or '',
+            verified_at,
+            verified_at,
+        )
+    )
+
+    return True
+
+
+def update_service_inventory_from_nmap(
+    conn,
+    mac,
+    ip,
+    interface,
+    services,
+    verified_at
+):
+    """Update infrastructure-service roles positively identified by Nmap."""
+    recorded = 0
+
+    for item in services or []:
+        try:
+            port = int(item.get('port'))
+        except (TypeError, ValueError):
+            continue
+
+        protocol = str(item.get('protocol') or '').strip().lower()
+        state = str(item.get('state') or '').strip().lower()
+        service_name = str(item.get('service') or '').strip().lower()
+
+        if state != 'open':
+            continue
+
+        # Port 53 by itself is not proof of DNS. Require Nmap service
+        # identification as DNS/domain.
+        if (
+            port == 53
+            and protocol in ('tcp', 'udp')
+            and service_name in ('domain', 'dns')
+        ):
+            if upsert_device_service(
+                conn,
+                mac,
+                ip,
+                interface,
+                'DNS',
+                port,
+                protocol,
+                'nmap_service',
+                'discovered',
+                verified_at,
+                product=str(item.get('product') or '').strip(),
+                version=str(item.get('version') or '').strip()
+            ):
+                recorded += 1
+
+    return recorded
+
+
+def discover_dns_servers(timeout=1.5):
+    """
+    Verify DNS servers using one real UDP DNS query per active IPv4 device.
+
+    A device is recorded only when it returns a syntactically valid DNS
+    response with the matching transaction ID.
+    """
+    init_db()
+
+    with sqlite3.connect(DB_FILE) as conn:
+        rows = conn.execute(
+            '''
+            SELECT mac, ip, vlan, is_active
+            FROM devices
+            WHERE ip IS NOT NULL
+              AND TRIM(ip) <> ''
+            ORDER BY last_seen DESC
+            '''
+        ).fetchall()
+
+        candidates = []
+        seen_ips = set()
+        device_by_ip = {}
+
+        def add_dns_candidate(ip, mac=None, interface=''):
+            ip = str(ip or '').strip()
+
+            try:
+                parsed = ipaddress.ip_address(ip)
+            except ValueError:
+                return
+
+            if parsed.version != 4:
+                return
+
+            if (
+                parsed.is_loopback
+                or parsed.is_link_local
+                or parsed.is_multicast
+                or parsed.is_unspecified
+            ):
+                return
+
+            if ip in seen_ips:
+                return
+
+            seen_ips.add(ip)
+
+            candidates.append({
+                'mac': (mac or '').strip().lower() or None,
+                'ip': ip,
+                'interface': (interface or '').strip()
+            })
+
+        # Build endpoint metadata from every known Device Monitor record.
+        # Active devices are always DNS-verification candidates.
+        for mac, ip, interface, is_active in rows:
+            ip = str(ip or '').strip()
+
+            if not ip:
+                continue
+
+            if ip not in device_by_ip:
+                device_by_ip[ip] = {
+                    'mac': (mac or '').strip().lower() or None,
+                    'interface': (interface or '').strip()
+                }
+
+            if int(is_active or 0) == 1:
+                add_dns_candidate(
+                    ip,
+                    mac,
+                    interface
+                )
+
+        # Re-test every DNS endpoint previously verified by Device Monitor.
+        # This lets a previously available resolver transition to unavailable
+        # even when its owning device is now considered offline.
+        known_dns = conn.execute(
+            '''
+            SELECT mac, ip, interface
+            FROM device_services
+            WHERE service_type = 'DNS'
+              AND detection_method = 'dns_query'
+            '''
+        ).fetchall()
+
+        for known_mac, known_ip, known_interface in known_dns:
+            add_dns_candidate(
+                known_ip,
+                known_mac,
+                known_interface
+            )
+        # Also verify resolvers configured on OPNsense itself. Infrastructure
+        # services must not disappear merely because the endpoint is currently
+        # considered offline by Device Monitor.
+        try:
+            with open(
+                '/etc/resolv.conf',
+                'r',
+                encoding='utf-8',
+                errors='ignore'
+            ) as resolver_file:
+                for line in resolver_file:
+                    line = line.split('#', 1)[0].strip()
+
+                    if not line.lower().startswith('nameserver '):
+                        continue
+
+                    parts = line.split()
+
+                    if len(parts) < 2:
+                        continue
+
+                    resolver_ip = parts[1].strip()
+
+                    try:
+                        parsed = ipaddress.ip_address(resolver_ip)
+                    except ValueError:
+                        continue
+
+                    if parsed.version != 4:
+                        continue
+
+                    metadata = device_by_ip.get(
+                        resolver_ip,
+                        {}
+                    )
+
+                    # Avoid inventorying an arbitrary public upstream as a
+                    # local infrastructure device unless it already belongs
+                    # to Device Monitor.
+                    if not parsed.is_private and not metadata:
+                        continue
+
+                    add_dns_candidate(
+                        resolver_ip,
+                        metadata.get('mac'),
+                        metadata.get('interface', '')
+                    )
+
+        except OSError as e:
+            log(
+                "[SERVICES] Unable to read configured DNS "
+                f"resolvers: {e}"
+            )
+
+        if not candidates:
+            return []
+
+        log(
+            "[SERVICES] DNS verification starting for "
+            f"{len(candidates)} active IPv4 device(s)"
+        )
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setblocking(False)
+
+        pending = {}
+
+        # example.com A query. We care about receiving a valid DNS
+        # response, not what answer the resolver returns.
+        qname = (
+            b'\x07example'
+            b'\x03com'
+            b'\x00'
+        )
+
+        try:
+            for candidate in candidates:
+                # Generate a transaction ID not currently in use.
+                for _ in range(100):
+                    txid = int.from_bytes(os.urandom(2), 'big')
+                    if txid not in pending:
+                        break
+                else:
+                    continue
+
+                packet = (
+                    struct.pack(
+                        '!HHHHHH',
+                        txid,
+                        0x0100,  # recursion desired
+                        1,
+                        0,
+                        0,
+                        0
+                    )
+                    + qname
+                    + struct.pack('!HH', 1, 1)  # A / IN
+                )
+
+                try:
+                    sock.sendto(
+                        packet,
+                        (candidate['ip'], 53)
+                    )
+                    pending[txid] = candidate
+                except OSError:
+                    continue
+
+            found = []
+            verified_ips = set()
+            deadline = time.monotonic() + float(timeout)
+
+            while pending:
+                remaining = deadline - time.monotonic()
+
+                if remaining <= 0:
+                    break
+
+                readable, _, _ = select.select(
+                    [sock],
+                    [],
+                    [],
+                    remaining
+                )
+
+                if not readable:
+                    break
+
+                try:
+                    data, source = sock.recvfrom(4096)
+                except OSError:
+                    continue
+
+                if len(data) < 12:
+                    continue
+
+                try:
+                    (
+                        rxid,
+                        flags,
+                        _questions,
+                        _answers,
+                        _authority,
+                        _additional
+                    ) = struct.unpack('!HHHHHH', data[:12])
+                except struct.error:
+                    continue
+
+                candidate = pending.get(rxid)
+
+                if candidate is None:
+                    continue
+
+                # The reply must come from the device that was queried.
+                if source[0] != candidate['ip']:
+                    continue
+
+                # QR flag = this is a DNS response, not another query.
+                if not (flags & 0x8000):
+                    continue
+
+                verified_at = datetime.now().strftime(
+                    '%Y-%m-%d %H:%M:%S'
+                )
+
+                if upsert_device_service(
+                    conn,
+                    candidate['mac'],
+                    candidate['ip'],
+                    candidate['interface'],
+                    'DNS',
+                    53,
+                    'udp',
+                    'dns_query',
+                    'verified',
+                    verified_at
+                ):
+                    item = {
+                        'service_type': 'DNS',
+                        'ip': candidate['ip'],
+                        'mac': candidate['mac'],
+                        'interface': candidate['interface'],
+                        'port': 53,
+                        'protocol': 'udp',
+                        'confidence': 'verified'
+                    }
+
+                    found.append(item)
+                    verified_ips.add(candidate['ip'])
+
+                    log(
+                        "[SERVICES] DNS server verified: "
+                        f"{candidate['ip']}"
+                    )
+
+                del pending[rxid]
+
+            # Every candidate was actively queried during this run. Existing
+            # dns_query inventory entries that did not answer are no longer
+            # considered currently available. Preserve last_verified so the
+            # UI can still show when the endpoint was last known-good.
+            for candidate in candidates:
+                candidate_ip = candidate['ip']
+
+                if candidate_ip in verified_ips:
+                    continue
+
+                changed = conn.execute(
+                    '''
+                    UPDATE device_services
+                    SET status = 'unavailable'
+                    WHERE service_type = 'DNS'
+                      AND detection_method = 'dns_query'
+                      AND ip = ?
+                      AND status <> 'unavailable'
+                    ''',
+                    (candidate_ip,)
+                ).rowcount
+
+                if changed:
+                    log(
+                        "[SERVICES] DNS server unavailable: "
+                        f"{candidate_ip}"
+                    )
+
+            conn.commit()
+            return found
+
+        finally:
+            sock.close()
+
+def discover_dhcp_servers():
+    """
+    Actively discover DHCPv4 servers by DHCP OFFER.
+
+    Only interfaces already represented by Device Monitor devices are probed.
+    A DHCP server is recorded only when broadcast-dhcp-discover returns a
+    Server Identifier IPv4 address.
+    """
+    init_db()
+
+    with sqlite3.connect(DB_FILE) as conn:
+        monitored = [
+            str(row[0]).strip()
+            for row in conn.execute(
+                '''
+                SELECT DISTINCT vlan
+                FROM devices
+                WHERE vlan IS NOT NULL
+                  AND TRIM(vlan) <> ''
+                '''
+            )
+            if row[0]
+        ]
+
+        try:
+            result = subprocess.run(
+                ['/sbin/ifconfig', '-l'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode != 0:
+                log("[SERVICES] Unable to enumerate interfaces")
+                return []
+
+            actual_interfaces = {
+                item.lower(): item
+                for item in result.stdout.split()
+            }
+        except Exception as e:
+            log(f"[SERVICES] Interface enumeration failed: {e}")
+            return []
+
+        excluded = {
+            'lo0',
+            'enc0',
+            'pflog0',
+            'pfsync0'
+        }
+
+        interfaces = []
+        for configured in monitored:
+            real_name = actual_interfaces.get(configured.lower())
+            if not real_name:
+                continue
+            if real_name.lower() in excluded:
+                continue
+            if real_name not in interfaces:
+                interfaces.append(real_name)
+
+        found = []
+        tested_interfaces = set()
+        verified_by_interface = {}
+        verified_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        for interface in interfaces:
+            cmd = [
+                '/usr/local/bin/nmap',
+                '--script', 'broadcast-dhcp-discover',
+                '-e', interface,
+                '-oX', '-'
+            ]
+
+            log(
+                f"[SERVICES] DHCP discovery starting on {interface}"
+            )
+
+            try:
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=20
+                )
+            except subprocess.TimeoutExpired:
+                log(
+                    f"[SERVICES] DHCP discovery timeout on {interface}"
+                )
+                continue
+            except Exception as e:
+                log(
+                    f"[SERVICES] DHCP discovery failed on "
+                    f"{interface}: {e}"
+                )
+                continue
+
+            if result.returncode != 0:
+                log(
+                    f"[SERVICES] DHCP discovery returned "
+                    f"{result.returncode} on {interface}"
+                )
+                continue
+
+            tested_interfaces.add(interface)
+            output = result.stdout or ''
+
+            # Nmap XML stores NSE output in script attributes. Looking at
+            # the complete XML text also covers structured/script variations.
+            candidates = re.findall(
+                r'Server Identifier(?:\s*\([^)]*\))?'
+                r'[^0-9]+'
+                r'((?:\d{1,3}\.){3}\d{1,3})',
+                output,
+                flags=re.IGNORECASE
+            )
+
+            for server_ip in candidates:
+                try:
+                    parsed = ipaddress.ip_address(server_ip)
+                    if parsed.version != 4:
+                        continue
+                except ValueError:
+                    continue
+
+                mac_row = conn.execute(
+                    '''
+                    SELECT mac
+                    FROM devices
+                    WHERE ip = ?
+                    ORDER BY last_seen DESC
+                    LIMIT 1
+                    ''',
+                    (server_ip,)
+                ).fetchone()
+
+                server_mac = mac_row[0] if mac_row else None
+
+                if upsert_device_service(
+                    conn,
+                    server_mac,
+                    server_ip,
+                    interface,
+                    'DHCP',
+                    67,
+                    'udp',
+                    'dhcp_offer',
+                    'verified',
+                    verified_at
+                ):
+                    item = {
+                        'service_type': 'DHCP',
+                        'ip': server_ip,
+                        'mac': server_mac,
+                        'interface': interface,
+                        'port': 67,
+                        'protocol': 'udp',
+                        'confidence': 'verified'
+                    }
+
+                    if item not in found:
+                        found.append(item)
+
+                    verified_by_interface.setdefault(
+                        interface,
+                        set()
+                    ).add(server_ip)
+
+                    log(
+                        f"[SERVICES] DHCP server verified: "
+                        f"{server_ip} via {interface}"
+                    )
+
+        for interface in tested_interfaces:
+            verified_ips = verified_by_interface.get(
+                interface,
+                set()
+            )
+
+            known_rows = conn.execute(
+                '''
+                SELECT ip
+                FROM device_services
+                WHERE service_type = 'DHCP'
+                  AND detection_method = 'dhcp_offer'
+                  AND LOWER(interface) = LOWER(?)
+                ''',
+                (interface,)
+            ).fetchall()
+
+            for row in known_rows:
+                known_ip = str(row[0] or '').strip()
+
+                if not known_ip or known_ip in verified_ips:
+                    continue
+
+                changed = conn.execute(
+                    '''
+                    UPDATE device_services
+                    SET status = 'unavailable'
+                    WHERE service_type = 'DHCP'
+                      AND detection_method = 'dhcp_offer'
+                      AND ip = ?
+                      AND LOWER(interface) = LOWER(?)
+                      AND status <> 'unavailable'
+                    ''',
+                    (known_ip, interface)
+                ).rowcount
+
+                if changed:
+                    log(
+                        "[SERVICES] DHCP server unavailable: "
+                        f"{known_ip} via {interface}"
+                    )
+
+        conn.commit()
+        return found
+
+def discover_infrastructure_services():
+    """Run all currently supported infrastructure-service discovery."""
+    services = []
+
+    services.extend(discover_dhcp_servers())
+    services.extend(discover_dns_servers())
+
+    completed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute(
+            '''
+            INSERT INTO service_discovery_state (id, last_run)
+            VALUES (1, ?)
+            ON CONFLICT(id)
+            DO UPDATE SET last_run = excluded.last_run
+            ''',
+            (completed_at,)
+        )
+        conn.commit()
+
+    return services
+
+
+def run_scheduled_service_discovery(interval_seconds=3600):
+    """
+    Run infrastructure discovery at most once per interval.
+
+    Discovery failure is observational and must never make the normal
+    Device Monitor scan fail.
+    """
+    try:
+        init_db()
+
+        with sqlite3.connect(DB_FILE) as conn:
+            row = conn.execute(
+                '''
+                SELECT last_run
+                FROM service_discovery_state
+                WHERE id = 1
+                '''
+            ).fetchone()
+
+        last_run = row[0] if row else None
+
+        if last_run:
+            try:
+                last_dt = datetime.strptime(
+                    last_run,
+                    '%Y-%m-%d %H:%M:%S'
+                )
+
+                age = (
+                    datetime.now() - last_dt
+                ).total_seconds()
+
+                if age < interval_seconds:
+                    log(
+                        "[SERVICES] Scheduled discovery not due "
+                        f"({int(age)}s since last run)"
+                    )
+                    return False
+
+            except (TypeError, ValueError):
+                pass
+
+        services = discover_infrastructure_services()
+
+        log(
+            "[SERVICES] Scheduled discovery completed: "
+            f"{len(services)} verified service(s)"
+        )
+
+        return True
+
+    except Exception as e:
+        log(
+            "[SERVICES] Scheduled discovery failed: "
+            f"{e}"
+        )
+        return False
+
 def config_bool(value, default=False):
     """Convert configuration values such as 0/1 strings safely to bool."""
     if value is None:
@@ -955,6 +1755,22 @@ def run_targeted_scan_with_history(device, config, scan_type):
                     'WHERE scan_history_id = ?',
                     (history_id,)
                 )
+
+                if scan_success:
+                    discovered_count = update_service_inventory_from_nmap(
+                        history_conn,
+                        mac,
+                        ip,
+                        device.get('vlan') or '',
+                        services,
+                        finished_at
+                    )
+                    if discovered_count:
+                        log(
+                            "[SERVICES] Updated "
+                            f"{discovered_count} infrastructure service(s) "
+                            f"for {mac}"
+                        )
 
                 for service in services:
                     try:
@@ -1880,6 +2696,10 @@ def full_scan():
     if should_send_identity_email(config, new_high_identity_events):
         send_identity_email(new_high_identity_events)
 
+    # Infrastructure-service discovery is intentionally rate-limited.
+    # It must not add DHCP/DNS probes to every normal monitoring cycle.
+    run_scheduled_service_discovery()
+
     # 4. Notifications filtered by VLAN
     log(f"New devices: {len(new_devices)}, Online: {online}/{total}")
     if new_devices and config['enabled']:
@@ -2082,12 +2902,25 @@ Examples:
         help='Enable verbose output'
     )
 
+    parser.add_argument(
+        '--discover-services',
+        action='store_true',
+        help='Discover infrastructure services such as DHCP servers'
+    )
     args = parser.parse_args()
 
     # Verbose mode
     global DEBUG_LOGGING
     if args.verbose:
         DEBUG_LOGGING = True
+    if args.discover_services:
+        services = discover_infrastructure_services()
+
+        print(json.dumps({
+            'result': 'ok',
+            'services': services
+        }))
+        return 0
 
     try:
         # Dispatch according to mode

@@ -242,6 +242,48 @@ class DeviceMonitor
             $db = $this->getDb();
             $result = $db->query('SELECT * FROM devices ORDER BY last_seen DESC');
             
+            // Load the current infrastructure-service inventory once so the
+            // Devices API can expose compact service badges without one
+            // database query per device.
+            $serviceMapByIp = [];
+            $serviceMapByMac = [];
+
+            $serviceTableExists = (int)$db->querySingle(
+                "SELECT COUNT(*) FROM sqlite_master " .
+                "WHERE type = 'table' AND name = 'device_services'"
+            ) > 0;
+
+            if ($serviceTableExists) {
+                $serviceResult = $db->query(
+                    "SELECT mac, ip, service_type, port, protocol, " .
+                    "detection_method, confidence, product, version, " .
+                    "last_verified " .
+                    "FROM device_services " .
+                    "WHERE status = 'available' " .
+                    "ORDER BY service_type, port, protocol"
+                );
+
+                while ($service = $serviceResult->fetchArray(SQLITE3_ASSOC)) {
+                    $serviceIp = trim((string)($service['ip'] ?? ''));
+                    $serviceMac = strtolower(
+                        trim((string)($service['mac'] ?? ''))
+                    );
+
+                    if ($serviceIp !== '') {
+                        if (!isset($serviceMapByIp[$serviceIp])) {
+                            $serviceMapByIp[$serviceIp] = [];
+                        }
+                        $serviceMapByIp[$serviceIp][] = $service;
+                    }
+
+                    if ($serviceMac !== '') {
+                        if (!isset($serviceMapByMac[$serviceMac])) {
+                            $serviceMapByMac[$serviceMac] = [];
+                        }
+                        $serviceMapByMac[$serviceMac][] = $service;
+                    }
+                }
+            }
             while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
                 
                 // Determine status from the is_active column instead of time
@@ -280,6 +322,26 @@ class DeviceMonitor
                     $row['nmap_scan_status'] = 'failed';
                 } else {
                     $row['nmap_scan_status'] = '';
+                }
+                $deviceIp = trim((string)($row['ip'] ?? ''));
+                $deviceMac = strtolower(
+                    trim((string)($row['mac'] ?? ''))
+                );
+
+                // Service roles belong to an endpoint IP. Prefer the IP
+                // mapping and use MAC only as a fallback.
+                if (
+                    $deviceIp !== '' &&
+                    isset($serviceMapByIp[$deviceIp])
+                ) {
+                    $row['services'] = $serviceMapByIp[$deviceIp];
+                } elseif (
+                    $deviceMac !== '' &&
+                    isset($serviceMapByMac[$deviceMac])
+                ) {
+                    $row['services'] = $serviceMapByMac[$deviceMac];
+                } else {
+                    $row['services'] = [];
                 }
 
                 $devices[] = $row;

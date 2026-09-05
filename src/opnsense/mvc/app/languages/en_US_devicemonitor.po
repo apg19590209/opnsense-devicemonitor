@@ -540,3 +540,5 @@ msgstr "Device using multiple IPv4 addresses"
 
 msgid "Device seen on multiple interfaces"
 msgstr "Device seen on multiple interfaces"
+msgid "Services"
+msgstr "Services"
