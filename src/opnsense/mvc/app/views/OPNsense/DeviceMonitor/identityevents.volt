@@ -19,13 +19,19 @@
                           style="margin-left:6px;">0</span>
 
                     <span class="identity-events-summary">
-                        {{ lang._('Unresolved') }}
-                        <span id="identity-events-unresolved"
-                              class="badge">0</span>
+                        <a href="?status=unresolved"
+                           class="identity-events-summary-link">
+                            {{ lang._('Unresolved') }}
+                            <span id="identity-events-unresolved"
+                                  class="badge">0</span>
+                        </a>
 
-                        {{ lang._('Resolved') }}
-                        <span id="identity-events-resolved"
-                              class="badge">0</span>
+                        <a href="?status=resolved"
+                           class="identity-events-summary-link">
+                            {{ lang._('Resolved') }}
+                            <span id="identity-events-resolved"
+                                  class="badge">0</span>
+                        </a>
                     </span>
                 </strong>
 
@@ -114,8 +120,25 @@
     font-weight: normal;
 }
 
+.identity-events-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.identity-events-summary-link {
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.identity-events-summary-link:hover,
+.identity-events-summary-link:focus {
+    text-decoration: underline;
+}
+
 .identity-events-summary .badge {
-    margin: 0 6px 0 3px;
+    margin-left: 3px;
 }
 
 .identity-events-controls {
@@ -127,20 +150,16 @@
 
 #identity-events-status {
     width: 115px;
-    height: 28px;
-    padding: 0 24px 0 8px;
     margin: 0;
 }
 
 #identity-events-limit {
     width: 70px;
-    height: 28px;
-    padding: 0 24px 0 8px;
     margin: 0;
 }
 
 #btn-identity-refresh {
-    height: 28px;
+    height: 30px;
     min-width: 28px;
     padding: 0 8px;
     display: inline-flex;
@@ -554,6 +573,15 @@ $(document).ready(function() {
         });
     }
 
+    var requestedStatus =
+        new URLSearchParams(window.location.search).get('status');
+
+    if (
+        requestedStatus === 'unresolved' ||
+        requestedStatus === 'resolved'
+    ) {
+        $('#identity-events-status').val(requestedStatus);
+    }
     $('#btn-identity-refresh').on(
         'click',
         function() {

@@ -24,11 +24,13 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-Determine the next Device Monitor v2.8 development objective.
+Validate corrected Identity Events summary links and control alignment on OPNsense.
 
 The v2.7 identity, Settings UI, CI and README documentation work is complete and validated.
 
 ## Previously completed
+
+- v2.8 Identity Events summary counts use reliable status hyperlinks; Status/Rows controls use standard input-sm vertical sizing.
 
 - v2.8 Identity Events heading shows separate Unresolved and Resolved counts; filtering remains through the Status selector.
 
