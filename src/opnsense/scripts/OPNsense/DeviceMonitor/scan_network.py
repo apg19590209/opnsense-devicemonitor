@@ -468,6 +468,83 @@ def get_dnsmasq_descriptions():
         log(f"Error reading Dnsmasq config.xml: {e}")
     return descriptions
 
+KEA_READ_ONLY_COMMANDS = {
+    'list-commands',
+    'lease4-get-all',
+}
+
+
+def query_kea_command(command, timeout=5):
+    """Run an approved read-only Kea command and return its JSON response."""
+    if command not in KEA_READ_ONLY_COMMANDS:
+        raise ValueError(f'Kea command is not approved as read-only: {command}')
+
+    kea_socket = '/var/run/kea/kea4-ctrl-socket'
+    request = json.dumps({'command': command}).encode() + bytes([10])
+
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.settimeout(timeout)
+        sock.connect(kea_socket)
+        sock.sendall(request)
+
+        response = b''
+        while True:
+            chunk = sock.recv(65536)
+            if not chunk:
+                break
+            response += chunk
+
+    return json.loads(response.decode())
+
+
+def get_kea_ipv4_leases():
+    """Return normalized Kea DHCPv4 leases without changing Kea state."""
+    try:
+        payload = query_kea_command('lease4-get-all')
+    except Exception as e:
+        log(f'Kea lease query failed: {e}')
+        return []
+
+    if payload.get('result') != 0:
+        log(f'Kea lease query returned result {payload.get("result")}')
+        return []
+
+    leases = []
+    now_ts = int(datetime.now(UTC).timestamp())
+
+    for raw in (payload.get('arguments') or {}).get('leases') or []:
+        ip = (raw.get('ip-address') or '').strip()
+        mac = (raw.get('hw-address') or '').strip().lower()
+
+        if not ip or not mac:
+            continue
+
+        try:
+            parsed_ip = ipaddress.ip_address(ip)
+            if parsed_ip.version != 4:
+                continue
+        except ValueError:
+            continue
+
+        cltt = int(raw.get('cltt') or 0)
+        valid_lft = int(raw.get('valid-lft') or 0)
+        expires_at = cltt + valid_lft if cltt and valid_lft else 0
+        state = int(raw.get('state') or 0)
+
+        leases.append({
+            'ip': ip,
+            'mac': mac,
+            'hostname': (raw.get('hostname') or '').strip(),
+            'subnet_id': raw.get('subnet-id'),
+            'state': state,
+            'cltt': cltt,
+            'valid_lft': valid_lft,
+            'expires_at': expires_at,
+            'active': state == 0 and (expires_at == 0 or expires_at > now_ts),
+        })
+
+    return leases
+
 def is_process_running(process_name):
     """Return True when an exact process name is currently running."""
     try:
@@ -544,19 +621,7 @@ def detect_source_capabilities():
 
     if capabilities['kea']['socket_present']:
         try:
-            request = json.dumps({'command': 'list-commands'}).encode() + bytes([10])
-            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
-                sock.settimeout(2)
-                sock.connect(kea_socket)
-                sock.sendall(request)
-                response = b''
-                while True:
-                    chunk = sock.recv(65536)
-                    if not chunk:
-                        break
-                    response += chunk
-
-            payload = json.loads(response.decode())
+            payload = query_kea_command('list-commands', timeout=2)
             capabilities['kea']['queryable'] = payload.get('result') == 0
             commands = payload.get('arguments') or []
             capabilities['kea']['lease4_get_all'] = (
