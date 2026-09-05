@@ -270,6 +270,7 @@ def init_db():
         detected_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         ip TEXT,
         other_ip TEXT,
+        other_mac TEXT,
         interface TEXT,
         other_interface TEXT,
         details TEXT,
@@ -280,6 +281,16 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_device_identity_events_mac_detected
         ON device_identity_events(mac, detected_at DESC)
     ''')
+
+    identity_columns = {
+        row[1]
+        for row in c.execute('PRAGMA table_info(device_identity_events)')
+    }
+    if 'other_mac' not in identity_columns:
+        c.execute(
+            'ALTER TABLE device_identity_events '
+            'ADD COLUMN other_mac TEXT'
+        )
 
     # Seed historical MACs from both active and deleted device records.
     c.execute('''
@@ -991,7 +1002,7 @@ def send_webhook_via_php_api(new_devices):
 
 def record_identity_event(conn, mac, event_type, severity,
                           ip='', other_ip='', interface='', other_interface='',
-                          details=''):
+                          details='', other_mac=''):
     """Record an identity event unless an equivalent recent event exists."""
     existing = conn.execute('''
         SELECT id
@@ -1000,22 +1011,24 @@ def record_identity_event(conn, mac, event_type, severity,
           AND event_type = ?
           AND COALESCE(ip, '') = ?
           AND COALESCE(other_ip, '') = ?
+          AND COALESCE(other_mac, '') = ?
           AND COALESCE(interface, '') = ?
           AND COALESCE(other_interface, '') = ?
           AND resolved_at IS NULL
           AND detected_at >= datetime('now', '-15 minutes')
         LIMIT 1
-    ''', (mac, event_type, ip, other_ip, interface, other_interface)).fetchone()
+    ''', (mac, event_type, ip, other_ip, other_mac,
+          interface, other_interface)).fetchone()
 
     if existing:
         return False
 
     conn.execute('''
         INSERT INTO device_identity_events
-            (mac, event_type, severity, ip, other_ip,
+            (mac, event_type, severity, ip, other_ip, other_mac,
              interface, other_interface, details)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (mac, event_type, severity, ip, other_ip,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (mac, event_type, severity, ip, other_ip, other_mac,
           interface, other_interface, details))
     return True
 
@@ -1042,6 +1055,7 @@ def detect_recent_hostwatch_identity_events(conn, minutes=5):
         return 0
 
     recent = {}
+    ip_owners = {}
     for row in rows:
         mac = (row['ether_address'] or '').lower().strip()
         ip = row['ip_address'] or ''
@@ -1059,6 +1073,12 @@ def detect_recent_hostwatch_identity_events(conn, minutes=5):
 
         recent.setdefault(mac, []).append({
             'ip': ip,
+            'interface': iface,
+            'last_seen': last_seen,
+        })
+
+        ip_owners.setdefault(ip, []).append({
+            'mac': mac,
             'interface': iface,
             'last_seen': last_seen,
         })
@@ -1088,6 +1108,27 @@ def detect_recent_hostwatch_identity_events(conn, minutes=5):
                 interfaces[0], interfaces[1], details
             ):
                 created += 1
+
+    for ip, observations in ip_owners.items():
+        macs = sorted({o['mac'] for o in observations if o['mac']})
+        if len(macs) <= 1:
+            continue
+
+        details = json.dumps({
+            'window_minutes': minutes,
+            'observations': observations,
+        }, sort_keys=True)
+
+        if record_identity_event(
+            conn,
+            macs[0],
+            'IP_IDENTITY_CHANGED',
+            'high',
+            ip=ip,
+            details=details,
+            other_mac=macs[1]
+        ):
+            created += 1
 
     return created
 
