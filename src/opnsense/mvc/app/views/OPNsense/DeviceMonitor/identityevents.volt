@@ -5,7 +5,7 @@
             <h1 style="margin:0;font-size:20px;">
                 {{ lang._('Device Monitor') }}
                 <span style="color:#555;margin:0 8px;">&ndash;</span>
-                <span style="font-weight:normal;">{{ lang._('Identity Events') }}</span>
+                <span style="font-weight:normal;">{{ lang._('IP & MAC Conflicts') }}</span>
             </h1>
         </div>
 
@@ -13,7 +13,7 @@
             <div class="panel-heading identity-events-heading">
                 <strong style="font-size:13px;">
                     <i class="fa fa-exclamation-triangle"></i>
-                    {{ lang._('Identity Events') }}
+                    {{ lang._('IP & MAC Conflicts') }}
                     <span id="identity-events-total"
                           class="badge"
                           style="margin-left:6px;">0</span>
@@ -63,7 +63,7 @@
 
                     <button id="btn-identity-refresh"
                             class="btn btn-xs btn-default"
-                            title="{{ lang._('Refresh identity events') }}">
+                            title="{{ lang._('Refresh IP & MAC conflicts') }}">
                         <i class="fa fa-refresh"></i>
                     </button>
                 </div>
@@ -90,7 +90,7 @@
                     <tbody>
                         <tr>
                             <td colspan="10" class="text-muted">
-                                {{ lang._('Loading identity events...') }}
+                                {{ lang._('Loading IP & MAC conflicts...') }}
                             </td>
                         </tr>
                     </tbody>
@@ -248,16 +248,22 @@
 $(document).ready(function() {
 
     var identityText = {
-        noEvents: "{{ lang._('No identity events recorded') }}",
-        loadError: "{{ lang._('Unable to load identity events') }}",
-        showDetails: "{{ lang._('Show event details') }}",
-        hideDetails: "{{ lang._('Hide event details') }}",
+        noEvents: "{{ lang._('No IP & MAC conflicts recorded') }}",
+        loadError: "{{ lang._('Unable to load IP & MAC conflicts') }}",
+        showDetails: "{{ lang._('Show conflict details') }}",
+        hideDetails: "{{ lang._('Hide conflict details') }}",
         otherInterface: "{{ lang._('Other interface') }}",
         resolvedAt: "{{ lang._('Resolved at') }}",
         details: "{{ lang._('Details') }}",
-        resolve: "{{ lang._('Resolve event') }}",
-        reopen: "{{ lang._('Reopen event') }}",
-        updateFailed: "{{ lang._('Unable to update identity event') }}",`n        resolved: "{{ lang._('Resolved') }}",`n        unresolved: "{{ lang._('Unresolved') }}"
+        resolve: "{{ lang._('Resolve conflict') }}",
+        reopen: "{{ lang._('Reopen conflict') }}",
+        updateFailed: "{{ lang._('Unable to update IP & MAC conflict') }}",
+        resolved: "{{ lang._('Resolved') }}",
+        unresolved: "{{ lang._('Unresolved') }}",
+        ipv4Conflict: "{{ lang._('IPv4 address used by another device') }}",
+        ipv6Conflict: "{{ lang._('IPv6 address used by another device') }}",
+        multiIpv4: "{{ lang._('Device using multiple IPv4 addresses') }}",
+        multiInterface: "{{ lang._('Device seen on multiple interfaces') }}"
     };
 
     function dash(value) {
@@ -268,6 +274,20 @@ $(document).ready(function() {
             : value;
     }
 
+    function eventTypeLabel(value) {
+        switch ((value || '').toString()) {
+            case 'IP_IDENTITY_CHANGED':
+                return identityText.ipv4Conflict;
+            case 'IPV6_IDENTITY_CHANGED':
+                return identityText.ipv6Conflict;
+            case 'MAC_MULTI_IP':
+                return identityText.multiIpv4;
+            case 'MAC_MULTI_INTERFACE':
+                return identityText.multiInterface;
+            default:
+                return dash(value);
+        }
+    }
     function severityLabel(value) {
         var severity = (value || '').toString().toLowerCase();
         var cssClass = 'label-default';
@@ -484,7 +504,7 @@ $(document).ready(function() {
                     $('<td>').text(dash(row.detected_at)),
                     $('<td>').append(severityLabel(row.severity)),
                     $('<td>').append(resolutionLabel(row)),
-                    $('<td>').text(dash(row.event_type)),
+                    $('<td>').text(eventTypeLabel(row.event_type)),
                     $('<td>').text(dash(row.mac)),
                     $('<td>').text(dash(row.ip)),
                     $('<td>').text(dash(row.other_mac)),

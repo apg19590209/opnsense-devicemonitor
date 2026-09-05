@@ -483,8 +483,8 @@ msgstr "Vyřešit událost"
 msgid "Reopen event"
 msgstr "Znovu otevřít událost"
 
-msgid "Unable to update identity event"
-msgstr "Událost identity nelze aktualizovat"
+msgid "Unable to update IP & MAC conflict"
+msgstr "Konflikt IP a MAC nelze aktualizovat"
 
 msgid "All"
 msgstr "Vše"
@@ -502,3 +502,42 @@ msgstr "E-mailová upozornění na závažné anomálie identity"
 #: settings.volt - upozornění na anomálie identity
 msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
 msgstr "Odeslat e-mail při zjištění nového závažného konfliktu identity IPv4 nebo IPv6."
+
+msgid "IP & MAC Conflicts"
+msgstr "Konflikty IP a MAC"
+
+msgid "Refresh IP & MAC conflicts"
+msgstr "Obnovit konflikty IP a MAC"
+
+msgid "Loading IP & MAC conflicts..."
+msgstr "Načítání konfliktů IP a MAC..."
+
+msgid "No IP & MAC conflicts recorded"
+msgstr "Nejsou zaznamenány žádné konflikty IP a MAC"
+
+msgid "Unable to load IP & MAC conflicts"
+msgstr "Konflikty IP a MAC nelze načíst"
+
+msgid "Show conflict details"
+msgstr "Zobrazit podrobnosti konfliktu"
+
+msgid "Hide conflict details"
+msgstr "Skrýt podrobnosti konfliktu"
+
+msgid "Resolve conflict"
+msgstr "Vyřešit konflikt"
+
+msgid "Reopen conflict"
+msgstr "Znovu otevřít konflikt"
+
+msgid "IPv4 address used by another device"
+msgstr "Adresa IPv4 používaná jiným zařízením"
+
+msgid "IPv6 address used by another device"
+msgstr "Adresa IPv6 používaná jiným zařízením"
+
+msgid "Device using multiple IPv4 addresses"
+msgstr "Zařízení používá více adres IPv4"
+
+msgid "Device seen on multiple interfaces"
+msgstr "Zařízení zjištěno na více rozhraních"
