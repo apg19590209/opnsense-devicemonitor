@@ -2352,6 +2352,1587 @@ def discover_web_admin_services():
     return discovered
 
 
+
+def _classify_phase3_nmap_service(port, protocol, service):
+    """Map strong Nmap service evidence to Phase 3 infrastructure roles."""
+    try:
+        port = int(port)
+    except (TypeError, ValueError):
+        return None
+
+    protocol = (protocol or '').strip().lower()
+    service = (service or '').strip().lower()
+
+    if (
+        protocol == 'tcp'
+        and port in (139, 445)
+        and (
+            service in ('microsoft-ds', 'netbios-ssn', 'smb')
+            or 'smb' in service
+        )
+    ):
+        return 'SMB'
+
+    if (
+        port == 2049
+        and 'nfs' in service
+    ):
+        return 'NFS'
+
+    if (
+        protocol == 'tcp'
+        and (
+            service in ('ms-wbt-server', 'rdp')
+            or 'rdp' in service
+        )
+    ):
+        return 'RDP'
+
+    if (
+        protocol == 'tcp'
+        and 'vnc' in service
+    ):
+        return 'VNC'
+
+    if (
+        protocol == 'tcp'
+        and port in (5985, 5986)
+        and (
+            'http' in service
+            or 'wsman' in service
+            or 'winrm' in service
+        )
+    ):
+        return 'WINRM'
+
+    if (
+        protocol == 'udp'
+        and port in (161, 162)
+        and 'snmp' in service
+    ):
+        return 'SNMP'
+
+    if (
+        port == 389
+        and 'ldap' in service
+    ):
+        return 'LDAP'
+
+    if (
+        port == 636
+        and (
+            'ldap' in service
+            or service in ('ldapssl', 'ldaps')
+        )
+    ):
+        return 'LDAPS'
+
+    if (
+        port == 88
+        and 'kerberos' in service
+    ):
+        return 'KERBEROS'
+
+    vpn_markers = (
+        'openvpn',
+        'isakmp',
+        'ike',
+        'ipsec',
+        'wireguard',
+        'pptp',
+        'l2tp'
+    )
+
+    if any(marker in service for marker in vpn_markers):
+        return 'VPN'
+
+    return None
+
+
+def _phase3_nmap_rows(conn):
+    """Return recent structured Nmap evidence for Phase 3 services."""
+    try:
+        tables = {
+            row[0]
+            for row in conn.execute(
+                '''
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                  AND name IN (
+                      'nmap_scan_history',
+                      'nmap_scan_ports'
+                  )
+                '''
+            ).fetchall()
+        }
+
+        if {
+            'nmap_scan_history',
+            'nmap_scan_ports'
+        } - tables:
+            return []
+
+        return conn.execute(
+            '''
+            SELECT
+                h.ip,
+                h.finished_at,
+                p.port,
+                p.protocol,
+                LOWER(COALESCE(p.service, '')),
+                COALESCE(p.product, ''),
+                COALESCE(p.version, '')
+            FROM nmap_scan_ports p
+            JOIN nmap_scan_history h
+              ON h.id = p.scan_history_id
+            WHERE p.state = 'open'
+              AND h.ip IS NOT NULL
+              AND h.ip != ''
+            ORDER BY h.id DESC
+            LIMIT 3000
+            '''
+        ).fetchall()
+
+    except Exception as e:
+        log(
+            f"[SERVICES] Unable to load Phase 3 "
+            f"Nmap evidence: {e}"
+        )
+        return []
+
+
+def _probe_rdp_service(target, timeout=0.8):
+    """Verify RDP by completing the TPKT/X.224 negotiation exchange."""
+    ip, port = target
+
+    request = bytes.fromhex(
+        '03000013'
+        '0ee00000000000'
+        '0100080003000000'
+    )
+
+    try:
+        sock = socket.create_connection(
+            (ip, port),
+            timeout=timeout
+        )
+    except OSError:
+        return None
+
+    try:
+        sock.settimeout(timeout)
+        sock.sendall(request)
+
+        data = sock.recv(128)
+
+        if (
+            len(data) >= 11
+            and data[0:2] == b'\x03\x00'
+            and data[5] == 0xd0
+        ):
+            return {
+                'product': 'RDP',
+                'version': ''
+            }
+
+        return None
+
+    except (OSError, socket.timeout):
+        return None
+
+    finally:
+        sock.close()
+
+
+def _probe_vnc_service(target, timeout=0.8):
+    """Verify VNC using its RFB server protocol banner."""
+    ip, port = target
+
+    try:
+        sock = socket.create_connection(
+            (ip, port),
+            timeout=timeout
+        )
+    except OSError:
+        return None
+
+    try:
+        sock.settimeout(timeout)
+        data = sock.recv(64)
+
+        if not data.startswith(b'RFB '):
+            return None
+
+        banner = data.decode(
+            'ascii',
+            errors='replace'
+        ).strip()
+
+        return {
+            'product': 'VNC',
+            'version': banner
+        }
+
+    except (OSError, socket.timeout):
+        return None
+
+    finally:
+        sock.close()
+
+
+def _probe_winrm_service(target, timeout=0.9):
+    """Verify WinRM using an actual HTTP(S) request to /wsman."""
+    ip, port, secure = target
+
+    try:
+        sock = socket.create_connection(
+            (ip, port),
+            timeout=timeout
+        )
+    except OSError:
+        return None
+
+    try:
+        sock.settimeout(timeout)
+
+        if secure:
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+
+            sock = context.wrap_socket(
+                sock,
+                server_hostname=ip
+            )
+            sock.settimeout(timeout)
+
+        request = (
+            "POST /wsman HTTP/1.1\r\n"
+            f"Host: {ip}\r\n"
+            "User-Agent: OPNsense-DeviceMonitor/2.8\r\n"
+            "Content-Length: 0\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+        ).encode('ascii')
+
+        sock.sendall(request)
+
+        data = b''
+
+        while len(data) < 8192:
+            try:
+                chunk = sock.recv(1024)
+            except socket.timeout:
+                break
+
+            if not chunk:
+                break
+
+            data += chunk
+
+            if b'\r\n\r\n' in data:
+                break
+
+        if not data:
+            return None
+
+        text = data.decode(
+            'iso-8859-1',
+            errors='replace'
+        )
+
+        lower = text.lower()
+
+        if not lower.startswith('http/'):
+            return None
+
+        markers = (
+            'microsoft-httpapi',
+            'www-authenticate: negotiate',
+            'www-authenticate: kerberos',
+            'www-authenticate: ntlm',
+            'application/soap+xml',
+            'wsman'
+        )
+
+        if not any(marker in lower for marker in markers):
+            return None
+
+        return {
+            'product': 'WinRM',
+            'version': 'HTTPS' if secure else 'HTTP'
+        }
+
+    except (
+        OSError,
+        socket.timeout,
+        ssl.SSLError
+    ):
+        return None
+
+    finally:
+        try:
+            sock.close()
+        except Exception:
+            pass
+
+
+def _probe_ldap_service(target, timeout=0.9):
+    """
+    Verify LDAP/LDAPS with an anonymous LDAPv3 Bind request.
+
+    Authentication success is not required. Any valid LDAP BindResponse
+    proves that the endpoint is speaking LDAP.
+    """
+    ip, port, secure = target
+
+    bind_request = bytes.fromhex(
+        '300c'
+        '020101'
+        '6007'
+        '020103'
+        '0400'
+        '8000'
+    )
+
+    try:
+        sock = socket.create_connection(
+            (ip, port),
+            timeout=timeout
+        )
+    except OSError:
+        return None
+
+    try:
+        sock.settimeout(timeout)
+
+        if secure:
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+
+            sock = context.wrap_socket(
+                sock,
+                server_hostname=ip
+            )
+            sock.settimeout(timeout)
+
+        sock.sendall(bind_request)
+
+        data = sock.recv(512)
+
+        if (
+            len(data) >= 7
+            and data[0] == 0x30
+            and b'\x02\x01\x01\x61' in data[:32]
+        ):
+            return {
+                'product': 'LDAPS' if secure else 'LDAP',
+                'version': 'LDAPv3'
+            }
+
+        return None
+
+    except (
+        OSError,
+        socket.timeout,
+        ssl.SSLError
+    ):
+        return None
+
+    finally:
+        try:
+            sock.close()
+        except Exception:
+            pass
+
+
+
+def _probe_smb_service(target, timeout=0.9):
+    """
+    Verify SMB using Nmap's smb-protocols NSE script.
+
+    TCP connectivity is checked first so the NSE script is only invoked
+    against endpoints that actually accept the candidate SMB connection.
+    """
+    ip, port = target
+
+    try:
+        sock = socket.create_connection(
+            (ip, port),
+            timeout=timeout
+        )
+        sock.close()
+    except OSError:
+        return None
+
+    try:
+        result = subprocess.run(
+            [
+                '/usr/local/bin/nmap',
+                '-n',
+                '-Pn',
+                '-sT',
+                '-p',
+                str(port),
+                '--script',
+                'smb-protocols',
+                ip
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+    except (
+        OSError,
+        subprocess.TimeoutExpired
+    ):
+        return None
+
+    if result.returncode != 0:
+        return None
+
+    dialects = []
+
+    for line in result.stdout.splitlines():
+        value = line.strip()
+
+        while value.startswith('|') or value.startswith('_'):
+            value = value[1:].strip()
+
+        if re.fullmatch(r'\d+(?:\.\d+)+', value):
+            dialects.append(value)
+
+    if not dialects:
+        return None
+
+    def dialect_key(value):
+        return tuple(
+            int(part)
+            for part in value.split('.')
+        )
+
+    highest = max(
+        dialects,
+        key=dialect_key
+    )
+
+    return {
+        'product': 'SMB',
+        'version': f'max {highest}'
+    }
+
+def _probe_nfs_rpc_version(ip, port, version, timeout):
+    """Send an ONC-RPC NULL call to the NFS program."""
+    xid = int(time.time() * 1000000) & 0xffffffff
+
+    # RPC CALL:
+    # rpcvers=2, program=100003 (NFS), requested version,
+    # procedure=0 (NULL), AUTH_NULL credentials/verifier.
+    payload = struct.pack(
+        '!IIIIIIIIII',
+        xid,
+        0,
+        2,
+        100003,
+        version,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+
+    record = struct.pack(
+        '!I',
+        0x80000000 | len(payload)
+    ) + payload
+
+    try:
+        sock = socket.create_connection(
+            (ip, port),
+            timeout=timeout
+        )
+    except OSError:
+        return False
+
+    try:
+        sock.settimeout(timeout)
+        sock.sendall(record)
+
+        data = b''
+
+        while len(data) < 512:
+            try:
+                chunk = sock.recv(512)
+            except socket.timeout:
+                break
+
+            if not chunk:
+                break
+
+            data += chunk
+
+            if len(data) >= 28:
+                break
+
+        if len(data) < 28:
+            return False
+
+        # TCP record marker occupies first four bytes.
+        reply_xid = struct.unpack(
+            '!I',
+            data[4:8]
+        )[0]
+
+        message_type = struct.unpack(
+            '!I',
+            data[8:12]
+        )[0]
+
+        reply_status = struct.unpack(
+            '!I',
+            data[12:16]
+        )[0]
+
+        if (
+            reply_xid != xid
+            or message_type != 1
+            or reply_status != 0
+        ):
+            return False
+
+        verifier_length = struct.unpack(
+            '!I',
+            data[20:24]
+        )[0]
+
+        padded_verifier = (
+            verifier_length + 3
+        ) & ~3
+
+        accept_offset = 24 + padded_verifier
+
+        if len(data) < accept_offset + 4:
+            return False
+
+        accept_status = struct.unpack(
+            '!I',
+            data[
+                accept_offset:
+                accept_offset + 4
+            ]
+        )[0]
+
+        # RPC SUCCESS proves the requested NFS program/version.
+        return accept_status == 0
+
+    except (OSError, socket.timeout):
+        return False
+
+    finally:
+        try:
+            sock.close()
+        except Exception:
+            pass
+
+
+def _probe_nfs_service(target, timeout=0.9):
+    """Verify NFS with an ONC-RPC NULL call to NFS program 100003."""
+    ip, port = target
+
+    # Prefer NFSv4, then NFSv3.
+    for version in (4, 3):
+        if _probe_nfs_rpc_version(
+            ip,
+            port,
+            version,
+            timeout
+        ):
+            return {
+                'product': 'NFS',
+                'version': f'NFSv{version}'
+            }
+
+    return None
+
+
+def _probe_phase3_target(item):
+    """Dispatch one lightweight protocol verification target."""
+    kind, ip, port, method = item
+
+    if kind == 'SMB':
+        return _probe_smb_service((ip, port))
+
+    if kind == 'NFS':
+        return _probe_nfs_service((ip, port))
+
+    if kind == 'RDP':
+        return _probe_rdp_service((ip, port))
+
+    if kind == 'VNC':
+        return _probe_vnc_service((ip, port))
+
+    if kind == 'WINRM':
+        return _probe_winrm_service(
+            (
+                ip,
+                port,
+                method == 'winrm_https'
+            )
+        )
+
+    if kind in ('LDAP', 'LDAPS'):
+        return _probe_ldap_service(
+            (
+                ip,
+                port,
+                kind == 'LDAPS'
+            )
+        )
+
+    return None
+
+
+
+
+def _discover_local_wireguard(conn, candidates):
+    """
+    Discover WireGuard hosted locally by OPNsense from authoritative
+    runtime state. No peer keys, endpoints or allowed networks are stored.
+    """
+    method = 'opnsense_wireguard_runtime'
+    discovered = []
+    current = set()
+
+    try:
+        result = subprocess.run(
+            ['/usr/bin/wg', 'show', 'interfaces'],
+            capture_output=True,
+            text=True,
+            timeout=3
+        )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        log(f"[SERVICES] WireGuard runtime query failed: {e}")
+        return discovered
+
+    if result.returncode != 0:
+        return discovered
+
+    interfaces = [
+        value.strip()
+        for value in result.stdout.split()
+        if value.strip()
+    ]
+
+    if not interfaces:
+        return discovered
+
+    local_ip = ''
+
+    for candidate_ip, meta in candidates.items():
+        if candidate_ip.endswith('.254'):
+            local_ip = candidate_ip
+            break
+
+    if not local_ip:
+        try:
+            root = ET.parse('/conf/config.xml').getroot()
+            local_ip = (
+                root.findtext('./interfaces/lan/ipaddr')
+                or ''
+            ).strip()
+        except (OSError, ET.ParseError):
+            local_ip = ''
+
+    if not _valid_service_probe_ipv4(local_ip):
+        log("[SERVICES] WireGuard local IPv4 could not be determined")
+        return discovered
+
+    meta = candidates.get(
+        local_ip,
+        {
+            'mac': '',
+            'interface': ''
+        }
+    )
+
+    verified_at = datetime.now().strftime(
+        '%Y-%m-%d %H:%M:%S'
+    )
+
+    for wg_interface in interfaces:
+        try:
+            port_result = subprocess.run(
+                [
+                    '/usr/bin/wg',
+                    'show',
+                    wg_interface,
+                    'listen-port'
+                ],
+                capture_output=True,
+                text=True,
+                timeout=3
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+
+        if port_result.returncode != 0:
+            continue
+
+        try:
+            port = int(port_result.stdout.strip())
+        except (TypeError, ValueError):
+            continue
+
+        if port < 1 or port > 65535:
+            continue
+
+        current.add((local_ip, port, wg_interface))
+
+        upsert_device_service(
+            conn,
+            meta.get('mac', ''),
+            local_ip,
+            meta.get('interface', ''),
+            'VPN',
+            port,
+            'udp',
+            method,
+            'authoritative',
+            verified_at,
+            status='available',
+            product='WireGuard',
+            version=wg_interface
+        )
+
+        discovered.append({
+            'service_type': 'VPN',
+            'ip': local_ip,
+            'mac': meta.get('mac', ''),
+            'interface': meta.get('interface', ''),
+            'port': port,
+            'protocol': 'udp',
+            'status': 'available',
+            'detection_method': method,
+            'confidence': 'authoritative',
+            'product': 'WireGuard',
+            'version': wg_interface
+        })
+
+        log(
+            f"[SERVICES] WireGuard authoritative: "
+            f"{local_ip}:{port}/udp ({wg_interface})"
+        )
+
+    previous = conn.execute(
+        '''
+        SELECT ip, port, version
+        FROM device_services
+        WHERE service_type = 'VPN'
+          AND detection_method = ?
+        ''',
+        (method,)
+    ).fetchall()
+
+    for ip, port, wg_interface in previous:
+        try:
+            key = (
+                (ip or '').strip(),
+                int(port),
+                (wg_interface or '').strip()
+            )
+        except (TypeError, ValueError):
+            continue
+
+        if key not in current:
+            conn.execute(
+                '''
+                UPDATE device_services
+                SET status = 'unavailable'
+                WHERE service_type = 'VPN'
+                  AND detection_method = ?
+                  AND ip = ?
+                  AND port = ?
+                ''',
+                (
+                    method,
+                    key[0],
+                    key[1]
+                )
+            )
+
+    return discovered
+
+
+def _probe_phase3_nmap_identification(candidates):
+    """
+    Perform bounded single-host service identification for protocols
+    that cannot be reliably verified with a generic unauthenticated probe.
+
+    Every Nmap invocation targets exactly one literal IPv4 address.
+
+    Only Nmap results with state=open and a recognized service fingerprint
+    are returned. open|filtered by itself is deliberately ignored.
+    """
+    targets = sorted(
+        ip
+        for ip in candidates.keys()
+        if _valid_service_probe_ipv4(ip)
+    )
+
+    if not targets:
+        return []
+
+    identified = []
+
+    scans = (
+        (
+            'tcp',
+            [
+                '-sT',
+                '-sV',
+                '--version-light',
+                '--max-retries',
+                '1',
+                '-p',
+                '88,1723'
+            ]
+        ),
+        (
+            'udp',
+            [
+                '-sU',
+                '-sV',
+                '--version-light',
+                '--max-retries',
+                '0',
+                '-p',
+                '88,161,500,1194,1701,4500,51820'
+            ]
+        )
+    )
+
+    # Deliberately serial. Device Monitor runs on the firewall and
+    # each Nmap subprocess must remain bounded to one literal host.
+    for target_ip in targets:
+        for scan_protocol, options in scans:
+            detected_at = datetime.now().strftime(
+                '%Y-%m-%d %H:%M:%S'
+            )
+
+            command = [
+                '/usr/local/bin/nmap',
+                '-n',
+                '-Pn',
+                '--host-timeout',
+                '6s',
+            ]
+
+            command.extend(options)
+
+            command.extend([
+                '-oX',
+                '-',
+                target_ip
+            ])
+
+            try:
+                result = subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    timeout=12
+                )
+
+            except subprocess.TimeoutExpired:
+                log(
+                    f"[SERVICES] Phase 3 {scan_protocol} "
+                    f"identification timed out for {target_ip}"
+                )
+                continue
+
+            except OSError as e:
+                log(
+                    f"[SERVICES] Unable to run Phase 3 "
+                    f"{scan_protocol} identification for "
+                    f"{target_ip}: {e}"
+                )
+                continue
+
+            if result.returncode != 0:
+                log(
+                    f"[SERVICES] Phase 3 {scan_protocol} "
+                    f"identification for {target_ip} returned "
+                    f"{result.returncode}"
+                )
+                continue
+
+            try:
+                root = ET.fromstring(result.stdout)
+
+            except ET.ParseError as e:
+                log(
+                    f"[SERVICES] Unable to parse Phase 3 "
+                    f"{scan_protocol} Nmap XML for "
+                    f"{target_ip}: {e}"
+                )
+                continue
+
+            for host in root.findall('host'):
+                address = ''
+
+                for address_element in host.findall('address'):
+                    if address_element.get('addrtype') == 'ipv4':
+                        address = (
+                            address_element.get('addr')
+                            or ''
+                        ).strip()
+                        break
+
+                if address != target_ip:
+                    continue
+
+                ports_element = host.find('ports')
+
+                if ports_element is None:
+                    continue
+
+                for port_element in ports_element.findall('port'):
+                    port_protocol = (
+                        port_element.get('protocol')
+                        or ''
+                    ).lower()
+
+                    try:
+                        port_number = int(
+                            port_element.get('portid')
+                        )
+                    except (TypeError, ValueError):
+                        continue
+
+                    state_element = port_element.find('state')
+
+                    if (
+                        state_element is None
+                        or state_element.get('state') != 'open'
+                    ):
+                        continue
+
+                    service_element = port_element.find('service')
+
+                    if service_element is None:
+                        continue
+
+                    service = (
+                        service_element.get('name')
+                        or ''
+                    ).lower().strip()
+
+                    product = (
+                        service_element.get('product')
+                        or ''
+                    ).strip()
+
+                    version = (
+                        service_element.get('version')
+                        or ''
+                    ).strip()
+
+                    service_type = (
+                        _classify_phase3_nmap_service(
+                            port_number,
+                            port_protocol,
+                            service
+                        )
+                    )
+
+                    if service_type not in (
+                        'SNMP',
+                        'KERBEROS',
+                        'VPN'
+                    ):
+                        continue
+
+                    identified.append((
+                        address,
+                        detected_at,
+                        port_number,
+                        port_protocol,
+                        service,
+                        product,
+                        version
+                    ))
+
+                    log(
+                        f"[SERVICES] {service_type} "
+                        f"identified by Nmap: "
+                        f"{address}:{port_number}/"
+                        f"{port_protocol} ({service})"
+                    )
+
+    return identified
+
+
+def _run_phase3_protocol_probes(target_list):
+    """
+    Run lightweight protocol probes with bounded concurrency.
+
+    SMB verification invokes Nmap, so SMB targets are deliberately
+    serialized and are never submitted to the general worker pool.
+    """
+    target_list = list(target_list)
+
+    if not target_list:
+        return []
+
+    results = {}
+
+    lightweight_targets = [
+        target
+        for target in target_list
+        if target[0] != 'SMB'
+    ]
+
+    smb_targets = [
+        target
+        for target in target_list
+        if target[0] == 'SMB'
+    ]
+
+    if lightweight_targets:
+        workers = min(
+            12,
+            len(lightweight_targets)
+        )
+
+        with ThreadPoolExecutor(
+            max_workers=workers
+        ) as pool:
+            lightweight_results = list(
+                pool.map(
+                    _probe_phase3_target,
+                    lightweight_targets
+                )
+            )
+
+        for target, result in zip(
+            lightweight_targets,
+            lightweight_results
+        ):
+            results[target] = result
+
+    # _probe_smb_service() invokes Nmap. Run one at a time.
+    for target in smb_targets:
+        results[target] = _probe_phase3_target(target)
+
+    return [
+        results.get(target)
+        for target in target_list
+    ]
+
+
+def discover_phase3_services():
+    """
+    Discover Phase 3 infrastructure services.
+
+    SMB, NFS, RDP, VNC, WinRM and LDAP/LDAPS are actively protocol
+    verified.
+
+    SNMP, Kerberos and VPN are recorded only when structured Nmap service
+    evidence identifies the protocol. An open port by itself is never
+    treated as proof of those services.
+    """
+    init_db()
+
+    discovered = []
+    verified = set()
+
+    protocol_methods = (
+        'rdp_negotiation',
+        'vnc_banner',
+        'winrm_http',
+        'winrm_https',
+        'ldap_bind',
+        'ldaps_bind'
+    )
+
+    with sqlite3.connect(DB_FILE) as conn:
+        candidates = _service_probe_candidates(conn)
+        # Automatic discovery reuses existing targeted Nmap evidence.
+        # It does not launch fresh Nmap identification across all devices.
+        nmap_rows = _phase3_nmap_rows(conn)
+
+        discovered.extend(
+            _discover_local_wireguard(
+                conn,
+                candidates
+            )
+        )
+
+        # ----------------------------------------------------
+        # Persist strong Nmap service identification
+        # ----------------------------------------------------
+
+        now_text = datetime.now().strftime(
+            '%Y-%m-%d %H:%M:%S'
+        )
+
+        seen_nmap = set()
+
+        for (
+            ip,
+            finished_at,
+            port,
+            protocol,
+            service,
+            product,
+            version
+        ) in nmap_rows:
+            ip = (ip or '').strip()
+
+            if not _valid_service_probe_ipv4(ip):
+                continue
+
+            service_type = _classify_phase3_nmap_service(
+                port,
+                protocol,
+                service
+            )
+
+            if not service_type:
+                continue
+
+            try:
+                port_number = int(port)
+            except (TypeError, ValueError):
+                continue
+
+            evidence_key = (
+                service_type,
+                ip,
+                port_number,
+                (protocol or '').lower()
+            )
+
+            if evidence_key in seen_nmap:
+                continue
+
+            seen_nmap.add(evidence_key)
+
+            meta = candidates.get(
+                ip,
+                {
+                    'mac': '',
+                    'interface': ''
+                }
+            )
+
+            evidence_time = (
+                (finished_at or '').strip()
+                or now_text
+            )
+
+            upsert_device_service(
+                conn,
+                meta.get('mac', ''),
+                ip,
+                meta.get('interface', ''),
+                service_type,
+                port_number,
+                protocol,
+                'nmap_service',
+                'discovered',
+                evidence_time,
+                product=product or '',
+                version=version or ''
+            )
+
+            discovered.append({
+                'service_type': service_type,
+                'ip': ip,
+                'mac': meta.get('mac', ''),
+                'interface': meta.get('interface', ''),
+                'port': port_number,
+                'protocol': protocol,
+                'detection_method': 'nmap_service',
+                'confidence': 'discovered',
+                'product': product or '',
+                'version': version or ''
+            })
+
+        # ----------------------------------------------------
+        # Build protocol verification targets
+        # ----------------------------------------------------
+
+        targets = {}
+
+        def add_target(kind, ip, port, method, meta=None):
+            ip = (ip or '').strip()
+
+            if not _valid_service_probe_ipv4(ip):
+                return
+
+            try:
+                port = int(port)
+            except (TypeError, ValueError):
+                return
+
+            if port < 1 or port > 65535:
+                return
+
+            if meta is None:
+                meta = candidates.get(
+                    ip,
+                    {
+                        'mac': '',
+                        'interface': ''
+                    }
+                )
+
+            targets[
+                (kind, ip, port, method)
+            ] = meta
+
+        # Standard protocol endpoints on active/known devices.
+        for ip, meta in candidates.items():
+            add_target(
+                'SMB',
+                ip,
+                445,
+                'smb_protocols',
+                meta
+            )
+
+            add_target(
+                'NFS',
+                ip,
+                2049,
+                'nfs_rpc',
+                meta
+            )
+
+            add_target(
+                'RDP',
+                ip,
+                3389,
+                'rdp_negotiation',
+                meta
+            )
+
+            add_target(
+                'VNC',
+                ip,
+                5900,
+                'vnc_banner',
+                meta
+            )
+
+            add_target(
+                'WINRM',
+                ip,
+                5985,
+                'winrm_http',
+                meta
+            )
+
+            add_target(
+                'WINRM',
+                ip,
+                5986,
+                'winrm_https',
+                meta
+            )
+
+            add_target(
+                'LDAP',
+                ip,
+                389,
+                'ldap_bind',
+                meta
+            )
+
+            add_target(
+                'LDAPS',
+                ip,
+                636,
+                'ldaps_bind',
+                meta
+            )
+
+        # Previously verified endpoints must continue to be retested.
+        previous = conn.execute(
+            '''
+            SELECT DISTINCT
+                service_type,
+                ip,
+                port,
+                detection_method,
+                mac,
+                interface
+            FROM device_services
+            WHERE detection_method IN (
+                'smb_protocols',
+                'nfs_rpc',
+                'rdp_negotiation',
+                'vnc_banner',
+                'winrm_http',
+                'winrm_https',
+                'ldap_bind',
+                'ldaps_bind'
+            )
+            '''
+        ).fetchall()
+
+        for (
+            service_type,
+            ip,
+            port,
+            method,
+            mac,
+            interface
+        ) in previous:
+            add_target(
+                service_type,
+                ip,
+                port,
+                method,
+                {
+                    'mac': (mac or '').strip().lower(),
+                    'interface': (interface or '').strip()
+                }
+            )
+
+        # Nmap evidence may reveal non-standard ports.
+        for (
+            ip,
+            finished_at,
+            port,
+            protocol,
+            service,
+            product,
+            version
+        ) in nmap_rows:
+            if (protocol or '').lower() != 'tcp':
+                continue
+
+            service_type = _classify_phase3_nmap_service(
+                port,
+                protocol,
+                service
+            )
+
+            if service_type == 'SMB':
+                add_target(
+                    'SMB',
+                    ip,
+                    port,
+                    'smb_protocols'
+                )
+
+            elif service_type == 'NFS':
+                add_target(
+                    'NFS',
+                    ip,
+                    port,
+                    'nfs_rpc'
+                )
+
+            elif service_type == 'RDP':
+                add_target(
+                    'RDP',
+                    ip,
+                    port,
+                    'rdp_negotiation'
+                )
+
+            elif service_type == 'VNC':
+                add_target(
+                    'VNC',
+                    ip,
+                    port,
+                    'vnc_banner'
+                )
+
+            elif service_type == 'WINRM':
+                secure = int(port) == 5986
+
+                add_target(
+                    'WINRM',
+                    ip,
+                    port,
+                    (
+                        'winrm_https'
+                        if secure
+                        else 'winrm_http'
+                    )
+                )
+
+            elif service_type == 'LDAP':
+                add_target(
+                    'LDAP',
+                    ip,
+                    port,
+                    'ldap_bind'
+                )
+
+            elif service_type == 'LDAPS':
+                add_target(
+                    'LDAPS',
+                    ip,
+                    port,
+                    'ldaps_bind'
+                )
+
+        # ----------------------------------------------------
+        # Run bounded protocol verification
+        # ----------------------------------------------------
+
+        target_list = sorted(targets.keys())
+
+        if target_list:
+            results = _run_phase3_protocol_probes(
+                target_list
+            )
+
+            verified_at = datetime.now().strftime(
+                '%Y-%m-%d %H:%M:%S'
+            )
+
+            for target, result in zip(
+                target_list,
+                results
+            ):
+                if result is None:
+                    continue
+
+                (
+                    service_type,
+                    ip,
+                    port,
+                    method
+                ) = target
+
+                meta = targets[target]
+
+                upsert_device_service(
+                    conn,
+                    meta.get('mac', ''),
+                    ip,
+                    meta.get('interface', ''),
+                    service_type,
+                    port,
+                    'tcp',
+                    method,
+                    'verified',
+                    verified_at,
+                    product=result.get(
+                        'product',
+                        ''
+                    ),
+                    version=result.get(
+                        'version',
+                        ''
+                    )
+                )
+
+                verified.add(target)
+
+                discovered.append({
+                    'service_type': service_type,
+                    'ip': ip,
+                    'mac': meta.get('mac', ''),
+                    'interface': meta.get(
+                        'interface',
+                        ''
+                    ),
+                    'port': port,
+                    'protocol': 'tcp',
+                    'detection_method': method,
+                    'confidence': 'verified',
+                    'product': result.get(
+                        'product',
+                        ''
+                    ),
+                    'version': result.get(
+                        'version',
+                        ''
+                    )
+                })
+
+                log(
+                    f"[SERVICES] {service_type} "
+                    f"verified: {ip}:{port}/tcp"
+                )
+
+        # ----------------------------------------------------
+        # Availability lifecycle for actively verified methods
+        # ----------------------------------------------------
+
+        tested = set(target_list)
+
+        for (
+            service_type,
+            ip,
+            port,
+            method,
+            mac,
+            interface
+        ) in previous:
+            try:
+                key = (
+                    service_type,
+                    (ip or '').strip(),
+                    int(port),
+                    method
+                )
+            except (TypeError, ValueError):
+                continue
+
+            if key in tested and key not in verified:
+                conn.execute(
+                    '''
+                    UPDATE device_services
+                    SET status = 'unavailable'
+                    WHERE service_type = ?
+                      AND ip = ?
+                      AND port = ?
+                      AND detection_method = ?
+                    ''',
+                    key
+                )
+
+        conn.commit()
+
+    counts = {}
+
+    for item in discovered:
+        service_type = item.get(
+            'service_type',
+            'UNKNOWN'
+        )
+
+        counts[service_type] = (
+            counts.get(service_type, 0) + 1
+        )
+
+    summary = ', '.join(
+        f"{name}={count}"
+        for name, count in sorted(
+            counts.items()
+        )
+    )
+
+    log(
+        "[SERVICES] Phase 3 discovery complete: "
+        + (summary or 'no services found')
+    )
+
+    return discovered
+
+
 def discover_infrastructure_services():
     """Run all supported infrastructure-service discovery."""
     services = []
@@ -2362,6 +3943,7 @@ def discover_infrastructure_services():
         ('NTP', discover_ntp_servers),
         ('SSH', discover_ssh_servers),
         ('WEB_ADMIN', discover_web_admin_services),
+        ('PHASE3', discover_phase3_services),
     )
 
     for name, discovery in discoveries:

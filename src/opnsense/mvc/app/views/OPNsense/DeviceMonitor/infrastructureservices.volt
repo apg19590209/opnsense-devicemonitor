@@ -281,7 +281,9 @@ $(document).ready(function() {
             WINRM: 'Remote Access',
             LDAP: 'Directory / Authentication',
             LDAPS: 'Directory / Authentication',
-            KERBEROS: 'Directory / Authentication'
+            KERBEROS: 'Directory / Authentication',
+            SNMP: 'SNMP / Management',
+            VPN: 'VPN Endpoints'
         };
 
         return names[type] || (type + ' Services');
@@ -551,7 +553,9 @@ $(document).ready(function() {
             'WINRM',
             'LDAP',
             'LDAPS',
-            'KERBEROS'
+            'KERBEROS',
+            'SNMP',
+            'VPN'
         ];
 
         var types = Object.keys(groups);

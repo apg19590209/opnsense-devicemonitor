@@ -98,6 +98,41 @@ Notification configuration is provided through the Device Monitor configuration/
 
 Recipient and delivery behaviour are defined in `DECISIONS.md`.
 
+### Infrastructure service discovery
+
+Infrastructure Services uses the persistent `device_services` inventory in
+the Device Monitor SQLite database.
+
+Current discovery coverage includes:
+
+- DHCP
+- DNS
+- NTP
+- SSH
+- HTTP/HTTPS Web/Admin
+- SMB
+- NFS
+- RDP
+- VNC
+- WinRM
+- SNMP
+- LDAP/LDAPS
+- Kerberos
+- VPN endpoints
+
+Evidence sources include:
+
+- protocol-specific network probes
+- existing structured targeted-Nmap evidence
+- authoritative OPNsense runtime state for locally hosted WireGuard
+
+Automatic Phase 3 discovery does not perform a fresh Nmap sweep over all
+known devices.
+
+The production UI is available at:
+
+`Services -> Device Monitor -> Infrastructure Services`
+
 ### Scan queue
 
 Security scans are coordinated through persistent queue data stored in the Device Monitor database.
@@ -130,7 +165,9 @@ Relevant repository areas include:
         |
         +--> Device/state SQLite records
         |
-        +--> Identity-event records
+        +--> IP & MAC conflict-event records
+        |
+        +--> Infrastructure-service inventory
         |
         +--> Persistent Nmap scan queue
         |        |

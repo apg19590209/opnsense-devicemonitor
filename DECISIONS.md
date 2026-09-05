@@ -121,3 +121,54 @@ For identity anomaly detection:
 ### Reason
 
 Link-local and multiple-address IPv6 behaviour are normal parts of IPv6 operation. Treating them as suspicious by themselves would create false positives.
+## 9. Infrastructure service evidence must be protocol-specific
+
+### Decision
+
+Infrastructure-service discovery must not treat an open port by itself as
+proof that a service exists.
+
+Where practical, Device Monitor must verify the actual application protocol.
+
+For services that cannot be reliably verified with a lightweight
+unauthenticated probe, structured service-identification evidence may be used.
+
+In particular:
+
+- `open|filtered` Nmap state alone is not proof of a service.
+- SNMP, Kerberos and VPN identification require recognized service evidence.
+- local OPNsense WireGuard runtime state is authoritative evidence for the
+  locally hosted WireGuard service.
+
+### Reason
+
+Port numbers are commonly reused, filtered or exposed without the expected
+application protocol. Protocol-specific or authoritative evidence reduces
+false positives in the persistent infrastructure-service inventory.
+
+## 10. Automatic infrastructure discovery must not perform broad Nmap sweeps
+
+### Decision
+
+Automatic Infrastructure Services discovery must not launch fresh Nmap scans
+across all known Device Monitor hosts.
+
+Automatic Phase 3 discovery may use:
+
+- existing targeted Nmap scan evidence
+- bounded lightweight protocol probes
+- authoritative local runtime/configuration evidence
+
+Any Nmap invocation performed by service verification must:
+
+- target one literal IPv4 address only
+- remain bounded in execution time
+- avoid uncontrolled parallel Nmap subprocesses
+
+Nmap-backed SMB verification is serialized.
+
+### Reason
+
+Device Monitor runs on the production firewall. Broad or highly concurrent
+Nmap activity would unnecessarily increase firewall CPU, memory and network
+load and would conflict with the existing single-host Nmap architecture.

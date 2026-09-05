@@ -2,7 +2,7 @@
 
 ## Last updated
 
-5 September 2026
+6 September 2026
 
 ## Current version / branch / environment
 
@@ -25,33 +25,38 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-v2.8 IP & MAC identity-conflict email alerts are complete and validated.
+v2.8 Infrastructure Services Phase 3 is implemented and live validated.
 
-Implementation, live deployment, real-email validation, repository commit, remote push and GitHub CI validation have all passed.
+Phase 3 adds SMB/NFS, RDP/VNC/WinRM, SNMP, LDAP/LDAPS/Kerberos
+and VPN discovery using bounded protocol verification, existing targeted
+Nmap evidence and authoritative local WireGuard runtime state.
+
+Automatic infrastructure discovery does not perform a fresh Nmap sweep
+across all known devices.
 ## Previously completed
 
-- v2.8 Identity Events supports All/Unresolved/Resolved filtering through the Status selector and clickable Unresolved/Resolved summary links.
+- v2.8 IP & MAC Conflicts supports All/Unresolved/Resolved filtering through the Status selector and clickable Unresolved/Resolved summary links.
 
-- v2.8 Identity Events heading shows separate Unresolved and Resolved counts; filtering remains through the Status selector.
+- v2.8 IP & MAC Conflicts heading shows separate Unresolved and Resolved counts; filtering remains through the Status selector.
 
-- v2.8 Identity Events heading now shows separate Unresolved and Resolved counts.
+- v2.8 IP & MAC Conflicts heading now shows separate Unresolved and Resolved counts.
 
-- v2.8 Identity Events table now shows an explicit Unresolved/Resolved status badge.
+- v2.8 IP & MAC Conflicts table now shows an explicit Unresolved/Resolved status badge.
 
-- v2.8 Identity Events resolution filter implemented for All, Unresolved and Resolved events.
+- v2.8 IP & MAC Conflicts resolution filter implemented for All, Unresolved and Resolved events.
 
-- v2.8 Identity Events Resolve/Reopen API and UI implemented; event history is preserved through the existing `resolved_at` field.
+- v2.8 IP & MAC Conflicts Resolve/Reopen API and UI implemented; event history is preserved through the existing `resolved_at` field.
 
 - v2.7 release preparation completed: version metadata, English/Czech version history, installation references and automated identity regression coverage are current.
 
 - Added automated v2.7 identity regression coverage using isolated temporary SQLite databases.
 
-- v2.7 README/version-history documentation updated for identity anomaly detection and Identity Events.
+- v2.7 README/version-history documentation updated for identity anomaly detection and IP & MAC Conflicts.
 
 - Phase F.2 IPv6 identity-conflict detection completed and validated.
-- Device Monitor Identity Events API/runtime completed and validated.
-- Identity Events UI deployed and validated on OPNsense.
-- Identity Events UI committed as `418ea5c`.
+- Device Monitor IP & MAC Conflicts API/runtime completed and validated.
+- IP & MAC Conflicts UI deployed and validated on OPNsense.
+- IP & MAC Conflicts UI committed as `418ea5c`.
 - Full Device Monitor scans completed successfully with deployed identity detection enabled.
 - No identity anomalies were recorded during the validated scans.
 
@@ -75,8 +80,8 @@ Current validated work:
 - Licensing & Compatibility source inspection: PASS
 - deployment to OPNsense: PASS
 - live browser validation of all Settings tabs after deployment: PASS
-- populated Identity Events row rendering using browser-only synthetic API data: PASS
-- Identity Events expandable details rendering: PASS
+- populated IP & MAC Conflicts row rendering using browser-only synthetic API data: PASS
+- IP & MAC Conflicts expandable details rendering: PASS
 - browser refresh restored the real empty-state API view: PASS
 - GitHub push to `origin/v2.8-development`: PASS
 - CI workflow includes `v2.8-development` for push and pull requests: PASS
@@ -96,6 +101,21 @@ Current validated work:
 - push of `c92b61b` to `origin/v2.8-development`: PASS
 - GitHub Actions CI run `33970099256` for `c92b61b`: PASS
 - observational-only message wording and IP/MAC evidence rendering: PASS
+- Phase 3 single-host Nmap regression: PASS
+- Phase 3 Nmap serialization and SMB-Nmap serialization: PASS
+- Phase 3 lightweight protocol-probe worker bound (maximum 12): PASS
+- Phase 3 protocol regression for SMB, NFS, RDP, VNC, WinRM, LDAP, SNMP/Kerberos/VPN classification and WireGuard runtime discovery: PASS
+- Phase 3 strong-Nmap-evidence handling (`open|filtered` and unidentified services rejected): PASS
+- isolated three-host real-network Phase 3 test: PASS
+- isolated real-network test preserved the live Device Monitor database: PASS
+- automatic fresh Phase 3 Nmap sweep removed after performance validation: PASS
+- Phase 3 live deployment with pre-deployment SQLite backup: PASS
+- live `--discover-services` execution: exit 0
+- live Phase 3 RDP discovery: `192.168.20.111:3389/tcp` — verified
+- live Phase 3 SMB discovery: `192.168.20.111:445/tcp` — verified, SMB 3.1.1
+- live Phase 3 SNMP discovery: `192.168.20.214:161/udp` — structured Nmap service evidence
+- live Phase 3 WireGuard discovery: `192.168.20.254:51821/udp` — authoritative runtime evidence
+- Infrastructure Services Phase 3 UI groups and column alignment visually validated: PASS
 
 ## Infrastructure service discovery — Phase 1
 
@@ -188,6 +208,42 @@ GoAhead-Webs and OPNsense web services.
 The Infrastructure Services page now displays DHCP, DNS, NTP, SSH and
 Web/Admin Services. All service groups use consistent column positions.
 
+## Infrastructure service discovery — Phase 3
+
+Phase 3 is implemented and validated live.
+
+Supported service roles now include:
+
+- SMB and NFS file services
+- RDP, VNC and WinRM remote access
+- SNMP management
+- LDAP and LDAPS directory services
+- Kerberos authentication services
+- VPN endpoints
+
+Evidence handling is intentionally conservative:
+
+- SMB, NFS, RDP, VNC, WinRM and LDAP/LDAPS use protocol-specific verification.
+- SNMP, Kerberos and non-local VPN identification require structured Nmap
+  service evidence; an open port alone is not sufficient.
+- `open|filtered` Nmap results are not treated as proof of a service.
+- local OPNsense WireGuard is discovered from authoritative `wg` runtime state.
+- automatic Phase 3 discovery reuses existing targeted Nmap evidence and does
+  not launch a fresh Nmap sweep across all known devices.
+- any Nmap invocation used by Phase 3 remains limited to one literal IPv4
+  target at a time.
+
+Live Phase 3 inventory validated:
+
+- RDP `192.168.20.111:3389/tcp` — verified
+- SMB `192.168.20.111:445/tcp` — verified, SMB 3.1.1
+- SNMP `192.168.20.214:161/udp` — discovered from Nmap service evidence
+- WireGuard `192.168.20.254:51821/udp` — authoritative OPNsense runtime evidence
+
+The Infrastructure Services page was visually validated with the new
+File / NAS Services, Remote Access, SNMP / Management and VPN Endpoints
+groups.
+
 ## Known unresolved issues
 
 - No known unresolved Phase 1 DHCP/DNS discovery issues remain.
@@ -216,9 +272,10 @@ Discover Now was tested successfully against the live service inventory.
 - No known unresolved Phase 1 DHCP/DNS discovery issues remain.
 - No known unresolved Phase 2 NTP/SSH/Web discovery issues remain.
 - No known unresolved Infrastructure Services usability issues remain.
+- No known unresolved Phase 3 infrastructure-service discovery issues remain.
 - `.gitattributes` maintenance remains outside feature commits.
 
 ## Next step
 
-Proceed to Phase 3 infrastructure-service discovery: SMB/NFS,
-RDP/VNC/WinRM, SNMP, LDAP/LDAPS/Kerberos and reliable VPN detection.
+Validate Phase 3 service lifecycle transitions across later discovery cycles,
+including available-to-unavailable and stale-state handling.
