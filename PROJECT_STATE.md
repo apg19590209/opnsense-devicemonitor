@@ -24,11 +24,13 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-Determine the next Device Monitor development objective.
+Validate the v2.8 Identity Events Resolve/Reopen workflow on OPNsense.
 
 The v2.7 identity, Settings UI, CI and README documentation work is complete and validated.
 
 ## Previously completed
+
+- v2.8 Identity Events Resolve/Reopen API and UI implemented; event history is preserved through the existing `resolved_at` field.
 
 - v2.7 release preparation completed: version metadata, English/Czech version history, installation references and automated identity regression coverage are current.
 
@@ -85,4 +87,4 @@ Current numeric security-scan queue rate limit should be confirmed from current 
 
 ## Next step
 
-Review current capabilities and select the next Device Monitor development objective.
+Deploy the v2.8 Identity Events Resolve/Reopen changes to OPNsense and validate Resolve/Reopen behavior in the live UI.

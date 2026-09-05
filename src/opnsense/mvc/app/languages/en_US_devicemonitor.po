@@ -476,3 +476,11 @@ msgstr "Show scan details"
 
 msgid "Hide scan details"
 msgstr "Hide scan details"
+msgid "Resolve event"
+msgstr "Resolve event"
+
+msgid "Reopen event"
+msgstr "Reopen event"
+
+msgid "Unable to update identity event"
+msgstr "Unable to update identity event"

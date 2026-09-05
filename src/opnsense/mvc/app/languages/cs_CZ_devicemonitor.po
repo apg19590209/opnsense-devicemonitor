@@ -477,3 +477,11 @@ msgstr "Zobrazit podrobnosti skenu"
 
 msgid "Hide scan details"
 msgstr "Skrýt podrobnosti skenu"
+msgid "Resolve event"
+msgstr "Vyřešit událost"
+
+msgid "Reopen event"
+msgstr "Znovu otevřít událost"
+
+msgid "Unable to update identity event"
+msgstr "Událost identity nelze aktualizovat"

@@ -163,6 +163,11 @@
     min-width: 30px;
 }
 
+.identity-event-state-button {
+    min-width: 30px;
+    margin-left: 4px;
+}
+
 @media (max-width: 767px) {
     .identity-events-heading {
         align-items: flex-start;
@@ -185,7 +190,10 @@ $(document).ready(function() {
         hideDetails: "{{ lang._('Hide event details') }}",
         otherInterface: "{{ lang._('Other interface') }}",
         resolvedAt: "{{ lang._('Resolved at') }}",
-        details: "{{ lang._('Details') }}"
+        details: "{{ lang._('Details') }}",
+        resolve: "{{ lang._('Resolve event') }}",
+        reopen: "{{ lang._('Reopen event') }}",
+        updateFailed: "{{ lang._('Unable to update identity event') }}"
     };
 
     function dash(value) {
@@ -276,6 +284,35 @@ $(document).ready(function() {
             );
     }
 
+    function setIdentityEventResolved(row, resolved, $button) {
+        $button.prop('disabled', true);
+
+        $.ajax({
+            url: '/api/devicemonitor/devices/identityeventstatus',
+            type: 'POST',
+            data: {
+                id: row.id,
+                resolved: resolved ? 1 : 0
+            },
+
+            success: function(data) {
+                if (data && data.result === 'saved') {
+                    loadIdentityEvents();
+                    return;
+                }
+
+                alert(identityText.updateFailed);
+            },
+
+            error: function() {
+                alert(identityText.updateFailed);
+            },
+
+            complete: function() {
+                $button.prop('disabled', false);
+            }
+        });
+    }
     function renderIdentityEvents(rows) {
         var $tbody = $('#grid-identity-events tbody').empty();
 
@@ -331,6 +368,36 @@ $(document).ready(function() {
                     .toggleClass('fa-chevron-up', !visible);
             });
 
+            var isResolved =
+                row.resolved_at !== null &&
+                row.resolved_at !== undefined &&
+                row.resolved_at !== '';
+
+            var $stateButton = $('<button>')
+                .attr({
+                    type: 'button',
+                    title: isResolved
+                        ? identityText.reopen
+                        : identityText.resolve
+                })
+                .addClass(
+                    'btn btn-xs ' +
+                    (isResolved ? 'btn-warning' : 'btn-success') +
+                    ' identity-event-state-button'
+                )
+                .append(
+                    $('<i>').addClass(
+                        isResolved ? 'fa fa-undo' : 'fa fa-check'
+                    )
+                );
+
+            $stateButton.on('click', function() {
+                setIdentityEventResolved(
+                    row,
+                    !isResolved,
+                    $(this)
+                );
+            });
             $('<tr>')
                 .append(
                     $('<td>').text(dash(row.detected_at)),
@@ -343,7 +410,7 @@ $(document).ready(function() {
                     $('<td>').text(dash(row.interface)),
                     $('<td>')
                         .addClass('text-center')
-                        .append($button)
+                        .append($button, $stateButton)
                 )
                 .appendTo($tbody);
 
