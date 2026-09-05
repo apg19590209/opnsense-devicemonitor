@@ -755,4 +755,153 @@ class DevicesController extends ApiControllerBase
 
         return $result;
     }
+
+    /**
+     * Return discovered infrastructure services.
+     * GET /api/devicemonitor/devices/services
+     */
+    public function servicesAction()
+    {
+        $result = [
+            'rows' => [],
+            'total' => 0,
+            'available' => 0,
+            'unavailable' => 0,
+            'types' => []
+        ];
+
+        try {
+            $paths = $this->getPaths();
+
+            if (
+                !isset($paths['dbFile']) ||
+                !is_file($paths['dbFile'])
+            ) {
+                return $result;
+            }
+
+            $db = new \SQLite3(
+                $paths['dbFile'],
+                SQLITE3_OPEN_READONLY
+            );
+            $db->busyTimeout(2000);
+
+            $exists = (int)$db->querySingle(
+                "SELECT COUNT(*) FROM sqlite_master " .
+                "WHERE type='table' AND name='device_services'"
+            );
+
+            if ($exists !== 1) {
+                $db->close();
+                return $result;
+            }
+
+            $deviceByMac = [];
+            $deviceByIp = [];
+
+            $deviceQuery = $db->query(
+                'SELECT mac, ip, hostname, custom_hostname, vendor, vlan ' .
+                'FROM devices ORDER BY last_seen DESC'
+            );
+
+            while (
+                $deviceQuery &&
+                ($device = $deviceQuery->fetchArray(SQLITE3_ASSOC))
+            ) {
+                $mac = strtolower(trim((string)($device['mac'] ?? '')));
+                $ip = trim((string)($device['ip'] ?? ''));
+
+                if ($mac !== '' && !isset($deviceByMac[$mac])) {
+                    $deviceByMac[$mac] = $device;
+                }
+
+                if ($ip !== '' && !isset($deviceByIp[$ip])) {
+                    $deviceByIp[$ip] = $device;
+                }
+            }
+
+            $query = $db->query(
+                'SELECT id, mac, ip, interface, service_type, port, ' .
+                'protocol, status, detection_method, confidence, ' .
+                'product, version, first_detected, last_verified ' .
+                'FROM device_services ' .
+                'ORDER BY service_type, ip, port, protocol'
+            );
+
+            $types = [];
+
+            while (
+                $query &&
+                ($row = $query->fetchArray(SQLITE3_ASSOC))
+            ) {
+                $row['id'] = (int)$row['id'];
+                $row['port'] = (int)$row['port'];
+
+                $mac = strtolower(trim((string)($row['mac'] ?? '')));
+                $ip = trim((string)($row['ip'] ?? ''));
+
+                $device = null;
+
+                if ($mac !== '' && isset($deviceByMac[$mac])) {
+                    $device = $deviceByMac[$mac];
+                }
+
+                if ($device === null && isset($deviceByIp[$ip])) {
+                    $device = $deviceByIp[$ip];
+                }
+
+                $row['hostname'] = '';
+                $row['vendor'] = '';
+                $row['vlan'] = '';
+
+                if ($device !== null) {
+                    $custom = trim(
+                        (string)($device['custom_hostname'] ?? '')
+                    );
+                    $hostname = trim(
+                        (string)($device['hostname'] ?? '')
+                    );
+
+                    $row['hostname'] =
+                        $custom !== '' ? $custom : $hostname;
+
+                    $row['vendor'] =
+                        (string)($device['vendor'] ?? '');
+
+                    $row['vlan'] =
+                        (string)($device['vlan'] ?? '');
+                }
+
+                $type = strtoupper(
+                    trim((string)($row['service_type'] ?? ''))
+                );
+
+                if ($type !== '') {
+                    $types[$type] = true;
+                }
+
+                if (($row['status'] ?? '') === 'available') {
+                    $result['available']++;
+                }
+
+                if (($row['status'] ?? '') === 'unavailable') {
+                    $result['unavailable']++;
+                }
+
+                $result['rows'][] = $row;
+            }
+
+            $db->close();
+
+            ksort($types);
+
+            $result['types'] = array_keys($types);
+            $result['total'] = count($result['rows']);
+
+        } catch (\Throwable $e) {
+            return $result;
+        }
+
+        return $result;
+    }
 }

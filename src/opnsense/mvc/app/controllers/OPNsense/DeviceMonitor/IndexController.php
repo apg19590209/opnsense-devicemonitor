@@ -30,4 +30,11 @@ class IndexController extends \OPNsense\Base\IndexController
     {
         $this->view->pick('OPNsense/DeviceMonitor/settings');
     }
+
+    public function infrastructureservicesAction()
+    {
+        $this->view->pick(
+            'OPNsense/DeviceMonitor/infrastructureservices'
+        );
+    }
 }

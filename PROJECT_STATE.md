@@ -139,6 +139,30 @@ column alignment.
 - scan interval: 300 seconds
 - infrastructure-service discovery interval: 3600 seconds
 
+## Infrastructure Services page
+
+A dedicated Infrastructure Services page is implemented and visually
+validated.
+
+The page:
+
+- reads the persistent `device_services` inventory through a read-only API
+- groups services by infrastructure role
+- shows IP, hostname, status, port/protocol, interface/VLAN, detection method,
+  confidence, product/version and last verified time
+- includes service-type, status and text-search filters
+- shows both available and unavailable known services
+- currently displays the verified DHCP and DNS Phase 1 inventory
+- is designed to automatically accommodate later NTP, SSH, Web/Admin and other
+  infrastructure-service discovery phases
+
+The page is available from:
+
+`Services -> Device Monitor -> Infrastructure Services`
+
+Menu registration, routing, API loading and UI rendering were validated live.
+Toolbar selector alignment was corrected and visually approved.
+
 ## Next step
 
-Proceed to Phase 2 infrastructure-service discovery.
+Proceed to Phase 2 infrastructure discovery: NTP, SSH and Web/Admin services.

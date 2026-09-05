@@ -2,6 +2,7 @@
     <Services>
         <DeviceMonitor cssClass="fa fa-plug fw" VisibleName="Device Monitor">
             <Devices url="/ui/devicemonitor/index/devices" VisibleName="Devices" order="10"/>
+            <InfrastructureServices url="/ui/devicemonitor/index/infrastructureservices" VisibleName="Infrastructure Services" order="11"/>
             <IdentityEvents url="/ui/devicemonitor/index/identityevents" VisibleName="IP &amp; MAC Conflicts" order="12"/>
             <NmapScanHistory url="/ui/devicemonitor/index/scanhistory" VisibleName="Nmap Scan History" order="15"/>
             <Settings url="/ui/devicemonitor/index/settings" VisibleName="Settings" order="20"/>
