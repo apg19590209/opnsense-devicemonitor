@@ -38,6 +38,15 @@ Plugin automaticky sleduje síť a upozorňuje na:
 
 ## Historie verzí
 
+### v2.7 (září 2026) — Detekce anomálií identity zařízení
+
+- Přidává detekci zdroje identity z Kea DHCP pouze pro čtení a normalizované důkazy z IPv4 pronájmů, pokud jsou dostupné.
+- Koreluje důkazy Hostwatch a Kea pro zjištění konfliktní identity zařízení bez změny jeho stavu.
+- Detekuje duplicitní vlastnictví stejné nelokální IPv6 adresy různými MAC adresami; běžné link-local a víceadresové IPv6 chování se neoznačuje jako anomálie.
+- Zaznamenává anomálie identity jako pozorovací SQLite události bez automatického blokování, mazání, změn firewallu nebo nápravných zásahů.
+- Přidává samostatné API a rozhraní **Identity Events** se závažností, důkazy MAC/IP/rozhraní a rozbalitelnými podrobnostmi.
+- Upravuje stránku Settings do částí Monitoring, Nmap Scanning, Email Notifications, Webhook Notifications a About.
+- Rozšiřuje automatické CI ověřování na větev `v2.7-development`.
 ### v2.6 (září 2026) — Podrobná historie cílených skenů Nmap
 
 - Zaznamenává nastavení skenu, verzi Nmap, dobu běhu, odhad OS a výsledek odeslání e-mailu.
