@@ -760,6 +760,61 @@ class DevicesController extends ApiControllerBase
      * Return discovered infrastructure services.
      * GET /api/devicemonitor/devices/services
      */
+    /**
+     * Run infrastructure-service discovery now.
+     * POST /api/devicemonitor/devices/discoverservices
+     */
+    public function discoverservicesAction()
+    {
+        if (!$this->request->isPost()) {
+            return [
+                'result' => 'failed',
+                'error' => 'POST required'
+            ];
+        }
+
+        try {
+            $paths = $this->getPaths();
+
+            if (
+                !isset($paths['scanScript']) ||
+                !is_file($paths['scanScript'])
+            ) {
+                return [
+                    'result' => 'failed',
+                    'error' => 'Scanner not found'
+                ];
+            }
+
+            $command =
+                escapeshellarg($paths['scanScript']) .
+                ' --discover-services 2>&1';
+
+            $output = [];
+            $returnCode = 0;
+
+            exec($command, $output, $returnCode);
+
+            if ($returnCode !== 0) {
+                return [
+                    'result' => 'failed',
+                    'error' => 'Infrastructure discovery failed',
+                    'code' => $returnCode
+                ];
+            }
+
+            return [
+                'result' => 'ok'
+            ];
+
+        } catch (\Throwable $e) {
+            return [
+                'result' => 'failed',
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
     public function servicesAction()
     {
         $result = [

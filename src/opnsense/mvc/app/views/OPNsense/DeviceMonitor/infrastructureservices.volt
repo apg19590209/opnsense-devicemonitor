@@ -23,6 +23,10 @@
                     {{ lang._('Unavailable') }}:
                     <strong id="services-unavailable">0</strong>
                 </span>
+                <span>
+                    {{ lang._('Stale') }}:
+                    <strong id="services-stale">0</strong>
+                </span>
             </div>
         </div>
 
@@ -34,6 +38,14 @@
             >
                 <i class="fa fa-refresh"></i>
                 {{ lang._('Refresh View') }}
+            </button>
+            <button
+                id="btn-services-discover"
+                type="button"
+                class="btn btn-success btn-sm"
+            >
+                <i class="fa fa-search"></i>
+                {{ lang._('Discover Now') }}
             </button>
 
             <select
@@ -57,6 +69,9 @@
                 </option>
                 <option value="unavailable">
                     {{ lang._('Unavailable') }}
+                </option>
+                <option value="stale">
+                    {{ lang._('Stale') }}
                 </option>
             </select>
 
@@ -160,12 +175,13 @@
 /* Keep identical column widths across every service group */
 .infrastructure-service-table th:nth-child(1),
 .infrastructure-service-table td:nth-child(1) {
-    width: 11%;
+    width: 13%;
+    white-space: nowrap;
 }
 
 .infrastructure-service-table th:nth-child(2),
 .infrastructure-service-table td:nth-child(2) {
-    width: 14%;
+    width: 13%;
 }
 
 .infrastructure-service-table th:nth-child(3),
@@ -195,7 +211,7 @@
 
 .infrastructure-service-table th:nth-child(8),
 .infrastructure-service-table td:nth-child(8) {
-    width: 14%;
+    width: 13%;
 }
 
 .infrastructure-service-table th:nth-child(9),
@@ -228,7 +244,16 @@
     white-space: normal;
     min-width: 120px;
 }
-</style>
+
+/* Last Verified timestamp wrapping */
+.infrastructure-service-table th:nth-child(9),
+.infrastructure-service-table td:nth-child(9) {
+    white-space: normal;
+    overflow-wrap: normal;
+    word-break: normal;
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+}</style>
 
 <script>
 $(document).ready(function() {
@@ -261,20 +286,24 @@ $(document).ready(function() {
 
         return names[type] || (type + ' Services');
     }
-
     function statusBadge(status) {
-        var available = status === 'available';
+        var className = 'label-default';
+        var label = status || 'Unknown';
+
+        if (status === 'available') {
+            className = 'label-success';
+            label = 'Available';
+        } else if (status === 'unavailable') {
+            className = 'label-danger';
+            label = 'Unavailable';
+        } else if (status === 'stale') {
+            className = 'label-warning';
+            label = 'Stale';
+        }
 
         return $('<span>')
-            .addClass(
-                'label ' +
-                (available ? 'label-success' : 'label-danger')
-            )
-            .text(
-                available
-                    ? 'Available'
-                    : 'Unavailable'
-            );
+            .addClass('label ' + className)
+            .text(label);
     }
 
     function productText(row) {
@@ -314,7 +343,7 @@ $(document).ready(function() {
             row.vendor,
             row.interface,
             row.vlan,
-            row.status,
+            row.display_status || row.status,
             row.detection_method,
             row.confidence,
             row.product,
@@ -322,6 +351,137 @@ $(document).ready(function() {
             row.port,
             row.protocol
         ].join(' ').toLowerCase();
+    }
+    function verifiedTime(value) {
+        if (!value) {
+            return 0;
+        }
+
+        var parsed = Date.parse(
+            value.replace(' ', 'T')
+        );
+
+        return isNaN(parsed) ? 0 : parsed;
+    }
+
+    function confidenceRank(value) {
+        var ranks = {
+            authoritative: 3,
+            verified: 2,
+            discovered: 1
+        };
+
+        return ranks[value] || 0;
+    }
+
+    function effectiveStatus(row) {
+        if (row.status !== 'available') {
+            return row.status;
+        }
+
+        var verified = verifiedTime(row.last_verified);
+
+        if (!verified) {
+            return 'stale';
+        }
+
+        /* Two missed hourly discovery windows = stale. */
+        if (
+            Date.now() - verified >
+            2 * 60 * 60 * 1000
+        ) {
+            return 'stale';
+        }
+
+        return 'available';
+    }
+
+    function consolidateServices(rows) {
+        var grouped = {};
+
+        (rows || []).forEach(function(row) {
+            var type =
+                (row.service_type || '').toUpperCase();
+
+            var key = [
+                type,
+                row.ip || '',
+                row.port || '',
+                (row.protocol || '').toLowerCase()
+            ].join('|');
+
+            var method = row.detection_method || '';
+
+            if (!grouped[key]) {
+                grouped[key] = $.extend({}, row);
+                grouped[key].service_type = type;
+                grouped[key].evidence = [];
+
+                if (method) {
+                    grouped[key].evidence.push(method);
+                }
+
+                return;
+            }
+
+            var current = grouped[key];
+
+            if (
+                method &&
+                current.evidence.indexOf(method) === -1
+            ) {
+                current.evidence.push(method);
+            }
+
+            if (
+                confidenceRank(row.confidence) >
+                confidenceRank(current.confidence)
+            ) {
+                current.confidence = row.confidence;
+
+                if (row.product) {
+                    current.product = row.product;
+                }
+
+                if (row.version) {
+                    current.version = row.version;
+                }
+            }
+
+            if (
+                verifiedTime(row.last_verified) >
+                verifiedTime(current.last_verified)
+            ) {
+                current.last_verified = row.last_verified;
+            }
+
+            if (row.status === 'available') {
+                current.status = 'available';
+            }
+
+            [
+                'hostname',
+                'vendor',
+                'mac',
+                'interface',
+                'vlan',
+                'product',
+                'version'
+            ].forEach(function(field) {
+                if (!current[field] && row[field]) {
+                    current[field] = row[field];
+                }
+            });
+        });
+
+        return Object.keys(grouped).map(function(key) {
+            var row = grouped[key];
+
+            row.evidence.sort();
+            row.display_status = effectiveStatus(row);
+
+            return row;
+        });
     }
 
     function filteredRows() {
@@ -339,7 +499,7 @@ $(document).ready(function() {
                 return false;
             }
 
-            if (status && row.status !== status) {
+            if (status && (row.display_status || row.status) !== status) {
                 return false;
             }
 
@@ -481,12 +641,14 @@ $(document).ready(function() {
                         $('<td>').text(dash(row.ip)),
                         $hostname,
                         $('<td>').append(
-                            statusBadge(row.status)
+                            statusBadge(row.display_status || row.status)
                         ),
                         $('<td>').text(endpoint),
                         $('<td>').text(locationText(row)),
                         $('<td>').text(
-                            dash(row.detection_method)
+                            row.evidence && row.evidence.length
+                                ? row.evidence.join(' + ')
+                                : dash(row.detection_method)
                         ),
                         $('<td>').text(
                             dash(row.confidence)
@@ -538,28 +700,33 @@ $(document).ready(function() {
             type: 'GET',
 
             success: function(data) {
-                allServices =
+                allServices = consolidateServices(
                     data && Array.isArray(data.rows)
                         ? data.rows
-                        : [];
-
-                $('#services-total').text(
-                    data && data.total !== undefined
-                        ? data.total
-                        : 0
+                        : []
                 );
 
-                $('#services-available').text(
-                    data && data.available !== undefined
-                        ? data.available
-                        : 0
-                );
+                var available = 0;
+                var unavailable = 0;
+                var stale = 0;
 
-                $('#services-unavailable').text(
-                    data && data.unavailable !== undefined
-                        ? data.unavailable
-                        : 0
-                );
+                allServices.forEach(function(row) {
+                    var status =
+                        row.display_status || row.status;
+
+                    if (status === 'available') {
+                        available++;
+                    } else if (status === 'unavailable') {
+                        unavailable++;
+                    } else if (status === 'stale') {
+                        stale++;
+                    }
+                });
+
+                $('#services-total').text(allServices.length);
+                $('#services-available').text(available);
+                $('#services-unavailable').text(unavailable);
+                $('#services-stale').text(stale);
 
                 populateTypes(
                     data && Array.isArray(data.types)
@@ -592,6 +759,45 @@ $(document).ready(function() {
     }
 
     $('#btn-services-refresh').on('click', loadServices);
+    $('#btn-services-discover').on('click', function() {
+        var $button = $(this);
+
+        $button
+            .prop('disabled', true)
+            .find('i')
+            .removeClass('fa-search')
+            .addClass('fa-refresh fa-spin');
+
+        $.ajax({
+            url: '/api/devicemonitor/devices/discoverservices',
+            type: 'POST',
+
+            success: function(data) {
+                if (!data || data.result !== 'ok') {
+                    alert(
+                        data && data.error
+                            ? data.error
+                            : 'Infrastructure discovery failed.'
+                    );
+                    return;
+                }
+
+                loadServices();
+            },
+
+            error: function() {
+                alert('Infrastructure discovery failed.');
+            },
+
+            complete: function() {
+                $button
+                    .prop('disabled', false)
+                    .find('i')
+                    .removeClass('fa-refresh fa-spin')
+                    .addClass('fa-search');
+            }
+        });
+    });
 
     $('#services-type-filter, #services-status-filter')
         .on('change', renderServices);

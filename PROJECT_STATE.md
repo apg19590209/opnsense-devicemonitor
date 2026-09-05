@@ -194,7 +194,31 @@ Web/Admin Services. All service groups use consistent column positions.
 - No known unresolved Phase 2 NTP/SSH/Web discovery issues remain.
 - `.gitattributes` line-ending maintenance remains outside feature commits.
 
+## Infrastructure Services usability foundations
+
+Infrastructure Services usability improvements are implemented and validated.
+
+Added:
+
+- Discover Now button with automatic refresh after discovery
+- consolidated evidence for duplicate service endpoints
+- Available, Unavailable and Stale presentation states
+- Stale after two missed hourly verification windows
+- consolidated service counts
+- consistent column positions across all service groups
+- Last Verified timestamps wrap cleanly
+- IPv4 column accommodates addresses such as `192.168.xxx.xxx` without wrapping
+
+Discover Now was tested successfully against the live service inventory.
+
+## Known unresolved issues
+
+- No known unresolved Phase 1 DHCP/DNS discovery issues remain.
+- No known unresolved Phase 2 NTP/SSH/Web discovery issues remain.
+- No known unresolved Infrastructure Services usability issues remain.
+- `.gitattributes` maintenance remains outside feature commits.
+
 ## Next step
 
-Add Infrastructure Services usability foundations before Phase 3:
-GUI Discover Now, consolidated service evidence, and stale-service status.
+Proceed to Phase 3 infrastructure-service discovery: SMB/NFS,
+RDP/VNC/WinRM, SNMP, LDAP/LDAPS/Kerberos and reliable VPN detection.
