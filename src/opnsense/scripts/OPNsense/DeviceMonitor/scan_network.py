@@ -2,6 +2,8 @@
 
 import sqlite3
 import socket
+import ssl
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, UTC, timedelta
 import os
 import json
@@ -1511,26 +1513,890 @@ def discover_dhcp_servers():
         conn.commit()
         return found
 
-def discover_infrastructure_services():
-    """Run all currently supported infrastructure-service discovery."""
-    services = []
 
-    services.extend(discover_dhcp_servers())
-    services.extend(discover_dns_servers())
+def _valid_service_probe_ipv4(ip):
+    """Return True for usable IPv4 service-discovery targets."""
+    try:
+        address = ipaddress.ip_address((ip or '').strip())
+    except ValueError:
+        return False
 
-    completed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    return (
+        address.version == 4
+        and not address.is_unspecified
+        and not address.is_loopback
+        and not address.is_multicast
+    )
+
+
+def _service_probe_candidates(conn, limit=128):
+    """
+    Build a bounded set of IPv4 endpoints for infrastructure probing.
+
+    Includes currently active Device Monitor devices plus endpoints already
+    known to host infrastructure services.
+    """
+    candidates = {}
+
+    def add_candidate(mac, ip, interface):
+        ip = (ip or '').strip()
+
+        if not _valid_service_probe_ipv4(ip):
+            return
+
+        mac = (mac or '').strip().lower()
+        interface = (interface or '').strip()
+
+        existing = candidates.get(ip)
+
+        if existing is None:
+            candidates[ip] = {
+                'mac': mac,
+                'interface': interface
+            }
+            return
+
+        if not existing.get('mac') and mac:
+            existing['mac'] = mac
+
+        if not existing.get('interface') and interface:
+            existing['interface'] = interface
+
+    try:
+        rows = conn.execute(
+            '''
+            SELECT mac, ip, vlan
+            FROM devices
+            WHERE is_active = 1
+            ORDER BY last_seen DESC
+            LIMIT ?
+            ''',
+            (int(limit),)
+        ).fetchall()
+
+        for mac, ip, interface in rows:
+            add_candidate(mac, ip, interface)
+    except Exception as e:
+        log(f"[SERVICES] Unable to load active probe candidates: {e}")
+
+    try:
+        rows = conn.execute(
+            '''
+            SELECT mac, ip, interface
+            FROM device_services
+            ORDER BY last_verified DESC
+            '''
+        ).fetchall()
+
+        for mac, ip, interface in rows:
+            add_candidate(mac, ip, interface)
+    except Exception as e:
+        log(f"[SERVICES] Unable to load known service candidates: {e}")
+
+    return candidates
+
+
+def _nmap_tcp_service_candidates(conn):
+    """Return bounded structured Nmap TCP service evidence."""
+    try:
+        tables = {
+            row[0]
+            for row in conn.execute(
+                '''
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                  AND name IN ('nmap_scan_history', 'nmap_scan_ports')
+                '''
+            ).fetchall()
+        }
+
+        if {
+            'nmap_scan_history',
+            'nmap_scan_ports'
+        } - tables:
+            return []
+
+        return conn.execute(
+            '''
+            SELECT DISTINCT
+                h.ip,
+                p.port,
+                LOWER(COALESCE(p.service, ''))
+            FROM nmap_scan_ports p
+            JOIN nmap_scan_history h
+              ON h.id = p.scan_history_id
+            WHERE p.protocol = 'tcp'
+              AND p.state = 'open'
+              AND h.ip IS NOT NULL
+              AND h.ip != ''
+            ORDER BY h.id DESC
+            LIMIT 1000
+            '''
+        ).fetchall()
+
+    except Exception as e:
+        log(f"[SERVICES] Unable to read Nmap service evidence: {e}")
+        return []
+
+
+def _probe_ntp_service(ip, timeout=0.8):
+    """Verify NTP using a real client request and matching originate time."""
+    request = bytearray(48)
+
+    # LI=0, VN=4, Mode=3 (client)
+    request[0] = 0x23
+
+    ntp_now = time.time() + 2208988800
+    seconds = int(ntp_now)
+    fraction = int(
+        (ntp_now - seconds) * 4294967296
+    )
+
+    struct.pack_into(
+        '!II',
+        request,
+        40,
+        seconds,
+        fraction
+    )
+
+    expected_originate = bytes(request[40:48])
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    try:
+        sock.settimeout(timeout)
+        sock.sendto(bytes(request), (ip, 123))
+
+        data, source = sock.recvfrom(512)
+
+        if source[0] != ip or len(data) < 48:
+            return None
+
+        mode = data[0] & 0x07
+        version = (data[0] >> 3) & 0x07
+
+        if mode != 4:
+            return None
+
+        # Server should echo our transmit timestamp as originate timestamp.
+        if data[24:32] != expected_originate:
+            return None
+
+        return {
+            'product': 'NTP',
+            'version': f'v{version}'
+        }
+
+    except (OSError, socket.timeout):
+        return None
+
+    finally:
+        sock.close()
+
+
+def discover_ntp_servers():
+    """Protocol-verify NTP servers on known infrastructure endpoints."""
+    init_db()
+
+    discovered = []
+    verified = set()
 
     with sqlite3.connect(DB_FILE) as conn:
-        conn.execute(
+        candidates = _service_probe_candidates(conn)
+
+        previous = conn.execute(
             '''
-            INSERT INTO service_discovery_state (id, last_run)
-            VALUES (1, ?)
-            ON CONFLICT(id)
-            DO UPDATE SET last_run = excluded.last_run
-            ''',
-            (completed_at,)
-        )
+            SELECT DISTINCT ip
+            FROM device_services
+            WHERE service_type = 'NTP'
+              AND detection_method = 'ntp_query'
+            '''
+        ).fetchall()
+
+        for row in previous:
+            ip = (row[0] or '').strip()
+
+            if (
+                _valid_service_probe_ipv4(ip)
+                and ip not in candidates
+            ):
+                candidates[ip] = {
+                    'mac': '',
+                    'interface': ''
+                }
+
+        targets = sorted(candidates.keys())
+
+        if targets:
+            workers = min(16, len(targets))
+
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                results = list(
+                    pool.map(_probe_ntp_service, targets)
+                )
+
+            verified_at = datetime.now().strftime(
+                '%Y-%m-%d %H:%M:%S'
+            )
+
+            for ip, result in zip(targets, results):
+                if result is None:
+                    continue
+
+                meta = candidates[ip]
+
+                upsert_device_service(
+                    conn,
+                    meta.get('mac', ''),
+                    ip,
+                    meta.get('interface', ''),
+                    'NTP',
+                    123,
+                    'udp',
+                    'ntp_query',
+                    'verified',
+                    verified_at,
+                    product=result.get('product', ''),
+                    version=result.get('version', '')
+                )
+
+                verified.add(ip)
+
+                discovered.append({
+                    'service_type': 'NTP',
+                    'ip': ip,
+                    'mac': meta.get('mac', ''),
+                    'interface': meta.get('interface', ''),
+                    'port': 123,
+                    'protocol': 'udp',
+                    'detection_method': 'ntp_query',
+                    'confidence': 'verified',
+                    'product': result.get('product', ''),
+                    'version': result.get('version', '')
+                })
+
+                log(
+                    f"[SERVICES] NTP server verified: "
+                    f"{ip}:123/udp"
+                )
+
+        tested = set(targets)
+
+        for row in previous:
+            ip = (row[0] or '').strip()
+
+            if ip in tested and ip not in verified:
+                conn.execute(
+                    '''
+                    UPDATE device_services
+                    SET status = 'unavailable'
+                    WHERE ip = ?
+                      AND service_type = 'NTP'
+                      AND detection_method = 'ntp_query'
+                    ''',
+                    (ip,)
+                )
+
         conn.commit()
+
+    log(
+        f"[SERVICES] NTP discovery complete: "
+        f"{len(discovered)} verified"
+    )
+
+    return discovered
+
+
+def _probe_ssh_service(target, timeout=0.8):
+    """Verify SSH by receiving an SSH protocol identification banner."""
+    ip, port = target
+
+    try:
+        sock = socket.create_connection(
+            (ip, port),
+            timeout=timeout
+        )
+    except OSError:
+        return None
+
+    try:
+        sock.settimeout(timeout)
+        data = b''
+
+        while len(data) < 1024:
+            try:
+                chunk = sock.recv(256)
+            except socket.timeout:
+                break
+
+            if not chunk:
+                break
+
+            data += chunk
+
+            for line in data.splitlines():
+                if line.startswith(b'SSH-'):
+                    banner = line.decode(
+                        'ascii',
+                        errors='replace'
+                    ).strip()
+
+                    parts = banner.split('-', 2)
+
+                    software = (
+                        parts[2]
+                        if len(parts) >= 3
+                        else banner
+                    )
+
+                    return {
+                        'product': 'SSH',
+                        'version': software
+                    }
+
+        return None
+
+    except OSError:
+        return None
+
+    finally:
+        sock.close()
+
+
+def discover_ssh_servers():
+    """Protocol-verify SSH services using server identification banners."""
+    init_db()
+
+    discovered = []
+    verified = set()
+
+    with sqlite3.connect(DB_FILE) as conn:
+        candidates = _service_probe_candidates(conn)
+        targets = {}
+
+        # Standard SSH port on current/known infrastructure endpoints.
+        for ip, meta in candidates.items():
+            targets[(ip, 22)] = meta
+
+        previous = conn.execute(
+            '''
+            SELECT DISTINCT ip, port, mac, interface
+            FROM device_services
+            WHERE service_type = 'SSH'
+              AND detection_method = 'ssh_banner'
+            '''
+        ).fetchall()
+
+        for ip, port, mac, interface in previous:
+            ip = (ip or '').strip()
+
+            try:
+                port = int(port)
+            except (TypeError, ValueError):
+                continue
+
+            if not _valid_service_probe_ipv4(ip):
+                continue
+
+            targets.setdefault(
+                (ip, port),
+                {
+                    'mac': (mac or '').strip().lower(),
+                    'interface': (interface or '').strip()
+                }
+            )
+
+        # Reuse Nmap service/version evidence to find non-standard SSH ports,
+        # but still require a real SSH banner before marking verified.
+        for ip, port, service in _nmap_tcp_service_candidates(conn):
+            ip = (ip or '').strip()
+
+            try:
+                port = int(port)
+            except (TypeError, ValueError):
+                continue
+
+            if (
+                service == 'ssh'
+                and _valid_service_probe_ipv4(ip)
+                and 1 <= port <= 65535
+            ):
+                targets.setdefault(
+                    (ip, port),
+                    candidates.get(
+                        ip,
+                        {
+                            'mac': '',
+                            'interface': ''
+                        }
+                    )
+                )
+
+        target_list = sorted(targets.keys())
+
+        if target_list:
+            workers = min(24, len(target_list))
+
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                results = list(
+                    pool.map(_probe_ssh_service, target_list)
+                )
+
+            verified_at = datetime.now().strftime(
+                '%Y-%m-%d %H:%M:%S'
+            )
+
+            for target, result in zip(target_list, results):
+                if result is None:
+                    continue
+
+                ip, port = target
+                meta = targets[target]
+
+                upsert_device_service(
+                    conn,
+                    meta.get('mac', ''),
+                    ip,
+                    meta.get('interface', ''),
+                    'SSH',
+                    port,
+                    'tcp',
+                    'ssh_banner',
+                    'verified',
+                    verified_at,
+                    product=result.get('product', ''),
+                    version=result.get('version', '')
+                )
+
+                verified.add(target)
+
+                discovered.append({
+                    'service_type': 'SSH',
+                    'ip': ip,
+                    'mac': meta.get('mac', ''),
+                    'interface': meta.get('interface', ''),
+                    'port': port,
+                    'protocol': 'tcp',
+                    'detection_method': 'ssh_banner',
+                    'confidence': 'verified',
+                    'product': result.get('product', ''),
+                    'version': result.get('version', '')
+                })
+
+                log(
+                    f"[SERVICES] SSH server verified: "
+                    f"{ip}:{port}/tcp "
+                    f"{result.get('version', '')}"
+                )
+
+        tested = set(target_list)
+
+        for ip, port, mac, interface in previous:
+            try:
+                key = ((ip or '').strip(), int(port))
+            except (TypeError, ValueError):
+                continue
+
+            if key in tested and key not in verified:
+                conn.execute(
+                    '''
+                    UPDATE device_services
+                    SET status = 'unavailable'
+                    WHERE ip = ?
+                      AND port = ?
+                      AND service_type = 'SSH'
+                      AND detection_method = 'ssh_banner'
+                    ''',
+                    key
+                )
+
+        conn.commit()
+
+    log(
+        f"[SERVICES] SSH discovery complete: "
+        f"{len(discovered)} verified"
+    )
+
+    return discovered
+
+
+def _probe_web_service(target, timeout=0.6):
+    """
+    Verify an HTTP/HTTPS endpoint using a real request and HTTP response.
+    TLS certificate validation is deliberately disabled because local
+    infrastructure commonly uses private/self-signed certificates.
+    """
+    ip, port, scheme = target
+
+    try:
+        sock = socket.create_connection(
+            (ip, port),
+            timeout=timeout
+        )
+    except OSError:
+        return None
+
+    try:
+        sock.settimeout(timeout)
+
+        if scheme == 'https':
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+
+            sock = context.wrap_socket(
+                sock,
+                server_hostname=ip
+            )
+            sock.settimeout(timeout)
+
+        request = (
+            f"GET / HTTP/1.0\r\n"
+            f"Host: {ip}\r\n"
+            f"User-Agent: OPNsense-DeviceMonitor/2.8\r\n"
+            f"Connection: close\r\n"
+            f"\r\n"
+        ).encode('ascii')
+
+        sock.sendall(request)
+
+        data = b''
+
+        while len(data) < 8192:
+            try:
+                chunk = sock.recv(1024)
+            except socket.timeout:
+                break
+
+            if not chunk:
+                break
+
+            data += chunk
+
+            if b'\r\n\r\n' in data:
+                break
+
+        if not data:
+            return None
+
+        text = data.decode(
+            'iso-8859-1',
+            errors='replace'
+        )
+
+        lines = text.splitlines()
+
+        if not lines or not lines[0].startswith('HTTP/'):
+            return None
+
+        server = ''
+
+        for line in lines[1:]:
+            if line.lower().startswith('server:'):
+                server = line.split(':', 1)[1].strip()
+                break
+
+        product = scheme.upper()
+        version = ''
+
+        if server:
+            if '/' in server:
+                product, version = server.split('/', 1)
+                product = product.strip()
+                version = version.strip()
+            else:
+                product = server
+
+        return {
+            'product': product,
+            'version': version
+        }
+
+    except (
+        OSError,
+        socket.timeout,
+        ssl.SSLError
+    ):
+        return None
+
+    finally:
+        try:
+            sock.close()
+        except Exception:
+            pass
+
+
+def discover_web_admin_services():
+    """
+    Protocol-verify common Web/Admin HTTP and HTTPS endpoints.
+
+    Common ports are tested on current infrastructure candidates.
+    Structured Nmap HTTP service evidence adds non-standard ports, but a real
+    HTTP response is still required before a service becomes verified.
+    """
+    init_db()
+
+    discovered = []
+    verified = set()
+
+    with sqlite3.connect(DB_FILE) as conn:
+        candidates = _service_probe_candidates(conn)
+        targets = {}
+
+        common_ports = (
+            (80, 'http'),
+            (443, 'https'),
+            (8080, 'http'),
+            (8443, 'https')
+        )
+
+        for ip, meta in candidates.items():
+            for port, scheme in common_ports:
+                targets[(ip, port, scheme)] = meta
+
+        previous = conn.execute(
+            '''
+            SELECT DISTINCT
+                ip,
+                port,
+                detection_method,
+                mac,
+                interface
+            FROM device_services
+            WHERE service_type = 'WEB_ADMIN'
+              AND detection_method IN (
+                  'http_response',
+                  'https_response'
+              )
+            '''
+        ).fetchall()
+
+        for ip, port, method, mac, interface in previous:
+            ip = (ip or '').strip()
+
+            try:
+                port = int(port)
+            except (TypeError, ValueError):
+                continue
+
+            if not _valid_service_probe_ipv4(ip):
+                continue
+
+            scheme = (
+                'https'
+                if method == 'https_response'
+                else 'http'
+            )
+
+            targets.setdefault(
+                (ip, port, scheme),
+                {
+                    'mac': (mac or '').strip().lower(),
+                    'interface': (interface or '').strip()
+                }
+            )
+
+        secure_ports = {
+            443,
+            8443,
+            9443,
+            5001
+        }
+
+        for ip, port, service in _nmap_tcp_service_candidates(conn):
+            ip = (ip or '').strip()
+
+            try:
+                port = int(port)
+            except (TypeError, ValueError):
+                continue
+
+            if (
+                'http' not in service
+                or not _valid_service_probe_ipv4(ip)
+                or port < 1
+                or port > 65535
+            ):
+                continue
+
+            scheme = (
+                'https'
+                if (
+                    'https' in service
+                    or 'ssl' in service
+                    or port in secure_ports
+                )
+                else 'http'
+            )
+
+            targets.setdefault(
+                (ip, port, scheme),
+                candidates.get(
+                    ip,
+                    {
+                        'mac': '',
+                        'interface': ''
+                    }
+                )
+            )
+
+        target_list = sorted(targets.keys())
+
+        if target_list:
+            workers = min(32, len(target_list))
+
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                results = list(
+                    pool.map(_probe_web_service, target_list)
+                )
+
+            verified_at = datetime.now().strftime(
+                '%Y-%m-%d %H:%M:%S'
+            )
+
+            for target, result in zip(target_list, results):
+                if result is None:
+                    continue
+
+                ip, port, scheme = target
+                meta = targets[target]
+
+                method = (
+                    'https_response'
+                    if scheme == 'https'
+                    else 'http_response'
+                )
+
+                upsert_device_service(
+                    conn,
+                    meta.get('mac', ''),
+                    ip,
+                    meta.get('interface', ''),
+                    'WEB_ADMIN',
+                    port,
+                    'tcp',
+                    method,
+                    'verified',
+                    verified_at,
+                    product=result.get('product', ''),
+                    version=result.get('version', '')
+                )
+
+                verified.add(
+                    (ip, port, method)
+                )
+
+                discovered.append({
+                    'service_type': 'WEB_ADMIN',
+                    'ip': ip,
+                    'mac': meta.get('mac', ''),
+                    'interface': meta.get('interface', ''),
+                    'port': port,
+                    'protocol': 'tcp',
+                    'detection_method': method,
+                    'confidence': 'verified',
+                    'product': result.get('product', ''),
+                    'version': result.get('version', '')
+                })
+
+                log(
+                    f"[SERVICES] Web service verified: "
+                    f"{scheme}://{ip}:{port}"
+                )
+
+        tested = {
+            (
+                ip,
+                port,
+                (
+                    'https_response'
+                    if scheme == 'https'
+                    else 'http_response'
+                )
+            )
+            for ip, port, scheme in target_list
+        }
+
+        for ip, port, method, mac, interface in previous:
+            try:
+                key = (
+                    (ip or '').strip(),
+                    int(port),
+                    method
+                )
+            except (TypeError, ValueError):
+                continue
+
+            if key in tested and key not in verified:
+                conn.execute(
+                    '''
+                    UPDATE device_services
+                    SET status = 'unavailable'
+                    WHERE ip = ?
+                      AND port = ?
+                      AND service_type = 'WEB_ADMIN'
+                      AND detection_method = ?
+                    ''',
+                    key
+                )
+
+        conn.commit()
+
+    log(
+        f"[SERVICES] Web/Admin discovery complete: "
+        f"{len(discovered)} verified"
+    )
+
+    return discovered
+
+
+def discover_infrastructure_services():
+    """Run all supported infrastructure-service discovery."""
+    services = []
+
+    discoveries = (
+        ('DHCP', discover_dhcp_servers),
+        ('DNS', discover_dns_servers),
+        ('NTP', discover_ntp_servers),
+        ('SSH', discover_ssh_servers),
+        ('WEB_ADMIN', discover_web_admin_services),
+    )
+
+    for name, discovery in discoveries:
+        try:
+            found = discovery()
+
+            if found:
+                services.extend(found)
+
+        except Exception as e:
+            log(
+                f"[SERVICES] {name} discovery failed: {e}"
+            )
+
+    completed_at = datetime.now().strftime(
+        '%Y-%m-%d %H:%M:%S'
+    )
+
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            conn.execute(
+                '''
+                INSERT INTO service_discovery_state (id, last_run)
+                VALUES (1, ?)
+                ON CONFLICT(id)
+                DO UPDATE SET last_run = excluded.last_run
+                ''',
+                (completed_at,)
+            )
+            conn.commit()
+
+    except Exception as e:
+        log(
+            f"[SERVICES] Unable to update discovery state: {e}"
+        )
 
     return services
 

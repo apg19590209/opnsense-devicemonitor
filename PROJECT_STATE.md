@@ -163,6 +163,38 @@ The page is available from:
 Menu registration, routing, API loading and UI rendering were validated live.
 Toolbar selector alignment was corrected and visually approved.
 
+## Infrastructure service discovery — Phase 2
+
+Phase 2 is implemented and validated live.
+
+Protocol-verified discovery now includes:
+
+- NTP using a real NTP request/response
+- SSH using the SSH server identification banner
+- Web/Admin services using real HTTP/HTTPS responses
+
+Nmap evidence may identify non-standard SSH or web ports, but a service is
+not marked verified until its protocol probe succeeds.
+
+Validated live Phase 2 inventory:
+
+- 2 NTP endpoints
+- 7 SSH endpoints
+- 14 HTTP/HTTPS endpoints
+
+Observed verified products included OpenSSH, Dropbear, nginx, TP-LINK HTTPD,
+GoAhead-Webs and OPNsense web services.
+
+The Infrastructure Services page now displays DHCP, DNS, NTP, SSH and
+Web/Admin Services. All service groups use consistent column positions.
+
+## Known unresolved issues
+
+- No known unresolved Phase 1 DHCP/DNS discovery issues remain.
+- No known unresolved Phase 2 NTP/SSH/Web discovery issues remain.
+- `.gitattributes` line-ending maintenance remains outside feature commits.
+
 ## Next step
 
-Proceed to Phase 2 infrastructure discovery: NTP, SSH and Web/Admin services.
+Add Infrastructure Services usability foundations before Phase 3:
+GUI Discover Now, consolidated service evidence, and stale-service status.

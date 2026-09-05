@@ -152,7 +152,71 @@
 }
 
 .infrastructure-service-table {
+    width: 100%;
+    table-layout: fixed;
     margin-bottom: 0;
+}
+
+/* Keep identical column widths across every service group */
+.infrastructure-service-table th:nth-child(1),
+.infrastructure-service-table td:nth-child(1) {
+    width: 11%;
+}
+
+.infrastructure-service-table th:nth-child(2),
+.infrastructure-service-table td:nth-child(2) {
+    width: 14%;
+}
+
+.infrastructure-service-table th:nth-child(3),
+.infrastructure-service-table td:nth-child(3) {
+    width: 8%;
+}
+
+.infrastructure-service-table th:nth-child(4),
+.infrastructure-service-table td:nth-child(4) {
+    width: 10%;
+}
+
+.infrastructure-service-table th:nth-child(5),
+.infrastructure-service-table td:nth-child(5) {
+    width: 11%;
+}
+
+.infrastructure-service-table th:nth-child(6),
+.infrastructure-service-table td:nth-child(6) {
+    width: 12%;
+}
+
+.infrastructure-service-table th:nth-child(7),
+.infrastructure-service-table td:nth-child(7) {
+    width: 9%;
+}
+
+.infrastructure-service-table th:nth-child(8),
+.infrastructure-service-table td:nth-child(8) {
+    width: 14%;
+}
+
+.infrastructure-service-table th:nth-child(9),
+.infrastructure-service-table td:nth-child(9) {
+    width: 11%;
+}
+
+.infrastructure-service-table th,
+.infrastructure-service-table td {
+    overflow-wrap: anywhere;
+}
+
+.infrastructure-service-table th:nth-child(3),
+.infrastructure-service-table td:nth-child(3),
+.infrastructure-service-table th:nth-child(4),
+.infrastructure-service-table td:nth-child(4),
+.infrastructure-service-table th:nth-child(7),
+.infrastructure-service-table td:nth-child(7),
+.infrastructure-service-table th:nth-child(9),
+.infrastructure-service-table td:nth-child(9) {
+    white-space: nowrap;
 }
 
 .infrastructure-service-table td,
@@ -184,7 +248,7 @@ $(document).ready(function() {
             DNS: 'DNS Servers',
             NTP: 'NTP Servers',
             SSH: 'SSH Servers',
-            WEB_ADMIN: 'Web / Admin Interfaces',
+            WEB_ADMIN: 'Web / Admin Services',
             SMB: 'File / NAS Services',
             NFS: 'File / NAS Services',
             RDP: 'Remote Access',
