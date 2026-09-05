@@ -545,6 +545,143 @@ def get_kea_ipv4_leases():
 
     return leases
 
+def get_recent_hostwatch_ipv4_observations(minutes=15):
+    """Return recent IPv4 Hostwatch observations without changing state."""
+    if not os.path.exists(HOSTWATCH_DB):
+        return []
+
+    observations = []
+
+    try:
+        with sqlite3.connect(f'file:{HOSTWATCH_DB}?mode=ro', uri=True) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute('''
+                SELECT interface_name, ip_address, ether_address,
+                       first_seen, last_seen
+                FROM v_hosts
+                WHERE ether_address NOT IN
+                      ('ff:ff:ff:ff:ff:ff', '00:00:00:00:00:00')
+            ''').fetchall()
+    except Exception as e:
+        log(f'Hostwatch correlation query failed: {e}')
+        return []
+
+    for row in rows:
+        ip = (row['ip_address'] or '').strip()
+        mac = (row['ether_address'] or '').strip().lower()
+        last_seen = row['last_seen'] or ''
+
+        if not ip or not mac or not is_recently_seen(last_seen, minutes):
+            continue
+
+        try:
+            parsed_ip = ipaddress.ip_address(ip)
+            if parsed_ip.version != 4:
+                continue
+        except ValueError:
+            continue
+
+        if ip.startswith('169.254.'):
+            continue
+
+        observations.append({
+            'ip': ip,
+            'mac': mac,
+            'interface': row['interface_name'] or '',
+            'first_seen': row['first_seen'] or '',
+            'last_seen': last_seen,
+        })
+
+    return observations
+
+
+def correlate_hostwatch_kea(minutes=15):
+    """Compare recent Hostwatch identity evidence with active Kea leases."""
+    hostwatch = get_recent_hostwatch_ipv4_observations(minutes)
+    kea_leases = [lease for lease in get_kea_ipv4_leases() if lease['active']]
+
+    hostwatch_by_ip = {}
+    for observation in hostwatch:
+        hostwatch_by_ip.setdefault(observation['ip'], []).append(observation)
+
+    for observations in hostwatch_by_ip.values():
+        observations.sort(key=lambda item: item['last_seen'], reverse=True)
+
+    kea_by_ip = {lease['ip']: lease for lease in kea_leases}
+
+    agreement = []
+    hostwatch_only = []
+    kea_only = []
+    mismatch = []
+    mixed = []
+
+    all_ips = sorted(set(hostwatch_by_ip) | set(kea_by_ip))
+
+    for ip in all_ips:
+        observations = hostwatch_by_ip.get(ip, [])
+        lease = kea_by_ip.get(ip)
+
+        if lease is None:
+            hostwatch_only.extend(observations)
+            continue
+
+        if not observations:
+            kea_only.append({
+                'ip': ip,
+                'mac': lease['mac'],
+                'hostname': lease['hostname'],
+                'subnet_id': lease['subnet_id'],
+                'cltt': lease['cltt'],
+                'expires_at': lease['expires_at'],
+            })
+            continue
+
+        matching = [
+            observation for observation in observations
+            if observation['mac'] == lease['mac']
+        ]
+        conflicting = [
+            observation for observation in observations
+            if observation['mac'] != lease['mac']
+        ]
+
+        if matching and conflicting:
+            mixed.append({
+                'ip': ip,
+                'kea_mac': lease['mac'],
+                'kea_hostname': lease['hostname'],
+                'kea_subnet_id': lease['subnet_id'],
+                'matching_observations': matching,
+                'conflicting_observations': conflicting,
+            })
+        elif matching:
+            newest = matching[0]
+            agreement.append({
+                'ip': ip,
+                'mac': lease['mac'],
+                'interface': newest['interface'],
+                'hostwatch_last_seen': newest['last_seen'],
+                'kea_hostname': lease['hostname'],
+                'kea_subnet_id': lease['subnet_id'],
+            })
+        else:
+            mismatch.append({
+                'ip': ip,
+                'kea_mac': lease['mac'],
+                'kea_hostname': lease['hostname'],
+                'kea_subnet_id': lease['subnet_id'],
+                'hostwatch_observations': observations,
+            })
+
+    return {
+        'window_minutes': minutes,
+        'agreement': agreement,
+        'hostwatch_only': hostwatch_only,
+        'kea_only': kea_only,
+        'mismatch': mismatch,
+        'mixed': mixed,
+    }
+
 def is_process_running(process_name):
     """Return True when an exact process name is currently running."""
     try:
