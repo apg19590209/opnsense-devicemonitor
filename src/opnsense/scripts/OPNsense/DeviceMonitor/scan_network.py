@@ -1510,6 +1510,98 @@ def detect_recent_hostwatch_identity_events(conn, minutes=5, kea_leases=None):
 
     return created
 
+def detect_recent_hostwatch_ipv6_identity_events(conn, minutes=5):
+    """Detect strong non-link-local IPv6 ownership conflicts."""
+    if not os.path.exists(HOSTWATCH_DB):
+        return 0
+
+    try:
+        with sqlite3.connect(f'file:{HOSTWATCH_DB}?mode=ro', uri=True) as hw_conn:
+            hw_conn.row_factory = sqlite3.Row
+            rows = hw_conn.execute('''
+                SELECT interface_name, ip_address, ether_address, last_seen
+                FROM v_hosts
+                WHERE protocol = 'inet6'
+                  AND ether_address NOT IN
+                      ('ff:ff:ff:ff:ff:ff', '00:00:00:00:00:00')
+            ''').fetchall()
+    except Exception as e:
+        log(f'IPv6 identity detection: Hostwatch read failed: {e}')
+        return 0
+
+    owners = {}
+
+    for row in rows:
+        ip_text = (row['ip_address'] or '').strip()
+        mac = (row['ether_address'] or '').strip().lower()
+        interface = row['interface_name'] or ''
+        last_seen = row['last_seen'] or ''
+
+        if not ip_text or not mac or not is_recently_seen(last_seen, minutes):
+            continue
+
+        try:
+            parsed_ip = ipaddress.ip_address(ip_text)
+        except ValueError:
+            continue
+
+        if parsed_ip.version != 6:
+            continue
+
+        # Link-local addresses are normal per-interface identity evidence and
+        # are deliberately excluded from anomaly scoring.
+        if parsed_ip.is_link_local:
+            continue
+
+        # Ignore non-unicast/special addresses. Only ULA or globally routable
+        # IPv6 addresses participate in conflict detection.
+        if parsed_ip.is_unspecified or parsed_ip.is_loopback or parsed_ip.is_multicast:
+            continue
+
+        ula = parsed_ip in ipaddress.ip_network('fc00::/7')
+        if not ula and not parsed_ip.is_global:
+            continue
+
+        canonical_ip = str(parsed_ip)
+        owners.setdefault(canonical_ip, []).append({
+            'mac': mac,
+            'interface': interface,
+            'last_seen': last_seen,
+        })
+
+    created = 0
+
+    for ip, observations in owners.items():
+        macs = sorted({item['mac'] for item in observations if item['mac']})
+        if len(macs) <= 1:
+            continue
+
+        parsed_ip = ipaddress.ip_address(ip)
+        scope = (
+            'ula'
+            if parsed_ip in ipaddress.ip_network('fc00::/7')
+            else 'global'
+        )
+
+        details = json.dumps({
+            'window_minutes': minutes,
+            'address_scope': scope,
+            'observations': observations,
+        }, sort_keys=True)
+
+        if record_identity_event(
+            conn,
+            macs[0],
+            'IPV6_IDENTITY_CHANGED',
+            'high',
+            ip=ip,
+            details=details,
+            other_mac=macs[1],
+        ):
+            created += 1
+
+    return created
+
 def update_status_only():
     """Quick online/offline status update from Hostwatch DB"""
     log("Quick status update (hostwatch DB)")
@@ -1652,6 +1744,11 @@ def full_scan():
         minutes=5,
         kea_leases=kea_identity_leases,
     )
+    identity_events += detect_recent_hostwatch_ipv6_identity_events(
+        conn,
+        minutes=5,
+    )
+
     if identity_events:
         log(f'Identity detection: recorded {identity_events} event(s)')
 
