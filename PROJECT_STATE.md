@@ -381,6 +381,8 @@ Release-facing metadata and documentation have been reviewed and corrected.
   `BSD 2-Clause License`
 - repository release-reference residual audit found no remaining stale v2.7
   installation or obsolete development-heading references
+- release-readiness changes committed as `e308f9f`
+- GitHub Actions Device Monitor CI #51 for `e308f9f`: PASS
 - no v2.8 tag has been created yet
 
 ## Known unresolved issues
@@ -393,4 +395,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Commit and push the validated v2.8 release-readiness documentation and About-page updates.
+Create and push the annotated v2.8 release tag.
