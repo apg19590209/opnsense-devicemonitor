@@ -5026,10 +5026,20 @@ def full_scan():
         log("ERROR: No data from Hostwatch DB")
         return 1
 
-    # 2. DHCP labels from ISC and Dnsmasq, with Dnsmasq taking precedence
+    # 2. DHCP labels from ISC, Kea and Dnsmasq.
+    # Priority: Dnsmasq overrides Kea, Kea overrides ISC.
     dhcp_descriptions = get_dhcp_descriptions()
+
+    kea_descriptions = {
+        lease['mac']: lease['hostname']
+        for lease in get_kea_ipv4_leases()
+        if lease.get('hostname')
+    }
+
+    dhcp_descriptions.update(kea_descriptions)
+
     dnsmasq_descriptions = get_dnsmasq_descriptions()
-    dhcp_descriptions.update(dnsmasq_descriptions)  # Dnsmasq overrides ISC when the same MAC exists
+    dhcp_descriptions.update(dnsmasq_descriptions)
 
     # 3. Update local database
     new_devices = []
