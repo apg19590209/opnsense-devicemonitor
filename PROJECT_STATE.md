@@ -25,7 +25,8 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-v2.8 Infrastructure Services Phase 3 is implemented and live validated.
+v2.8 Infrastructure Services Phase 3 implementation and lifecycle validation
+are complete.
 
 Phase 3 adds SMB/NFS, RDP/VNC/WinRM, SNMP, LDAP/LDAPS/Kerberos
 and VPN discovery using bounded protocol verification, existing targeted
@@ -116,6 +117,15 @@ Current validated work:
 - live Phase 3 SNMP discovery: `192.168.20.214:161/udp` — structured Nmap service evidence
 - live Phase 3 WireGuard discovery: `192.168.20.254:51821/udp` — authoritative runtime evidence
 - Infrastructure Services Phase 3 UI groups and column alignment visually validated: PASS
+- isolated Phase 3 active-service lifecycle regression using temporary SQLite: PASS
+- Phase 3 Available -> Unavailable transition across all 8 actively verified service methods: PASS
+- Phase 3 Unavailable -> Available recovery: PASS
+- Phase 3 failed verification preserves the last known-good `last_verified`: PASS
+- Phase 3 successful recovery refreshes `last_verified`: PASS
+- Infrastructure Services actual UI stale-state JavaScript regression: PASS
+- exact two-hour stale boundary: PASS
+- older-than-two-hours, missing and invalid `last_verified` values derive Stale: PASS
+- explicit Unavailable status takes precedence over derived Stale: PASS
 
 ## Infrastructure service discovery — Phase 1
 
@@ -151,7 +161,6 @@ column alignment.
 - No known unresolved Phase 1 DHCP/DNS service-discovery issues remain.
 - No known unresolved v2.8 identity-conflict email issues remain.
 - Device Monitor version-display review remains separate.
-- `.gitattributes` line-ending maintenance remains outside this feature.
 
 ## Current operating values
 
@@ -248,7 +257,6 @@ groups.
 
 - No known unresolved Phase 1 DHCP/DNS discovery issues remain.
 - No known unresolved Phase 2 NTP/SSH/Web discovery issues remain.
-- `.gitattributes` line-ending maintenance remains outside feature commits.
 
 ## Infrastructure Services usability foundations
 
@@ -273,9 +281,8 @@ Discover Now was tested successfully against the live service inventory.
 - No known unresolved Phase 2 NTP/SSH/Web discovery issues remain.
 - No known unresolved Infrastructure Services usability issues remain.
 - No known unresolved Phase 3 infrastructure-service discovery issues remain.
-- `.gitattributes` maintenance remains outside feature commits.
 
 ## Next step
 
-Validate Phase 3 service lifecycle transitions across later discovery cycles,
-including available-to-unavailable and stale-state handling.
+Add permanent automated regression coverage for Infrastructure Services
+Phase 3 lifecycle and protocol-safety behaviour to the repository CI suite.
