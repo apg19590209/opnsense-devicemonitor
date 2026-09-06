@@ -906,6 +906,7 @@ class DevicesController extends ApiControllerBase
                 }
 
                 $row['hostname'] = '';
+                $row['custom_hostname'] = '';
                 $row['vendor'] = '';
                 $row['vlan'] = '';
 
@@ -917,9 +918,7 @@ class DevicesController extends ApiControllerBase
                         (string)($device['hostname'] ?? '')
                     );
 
-                    $row['hostname'] =
-                        $custom !== '' ? $custom : $hostname;
-
+                    $row['hostname'] = $hostname;
                     $row['custom_hostname'] = $custom;
 
                     $row['vendor'] =

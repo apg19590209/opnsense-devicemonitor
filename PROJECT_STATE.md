@@ -25,12 +25,16 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-v2.8 Infrastructure Services Phase 3 implementation and lifecycle validation
-are complete.
+v2.8 version/display consistency, Kea DHCP hostname enrichment and
+friendly-name/hostname separation are implemented and live validated.
 
-Phase 3 adds SMB/NFS, RDP/VNC/WinRM, SNMP, LDAP/LDAPS/Kerberos
-and VPN discovery using bounded protocol verification, existing targeted
-Nmap evidence and authoritative local WireGuard runtime state.
+Device identity presentation now keeps the two concepts separate:
+
+- `hostname` is detected network evidence from Kea/DHCP and other discovery.
+- `custom_hostname` is a user-assigned Friendly Name overlay.
+- Saving, clearing and subsequent scans do not overwrite the detected hostname.
+- Devices shows separate Friendly Name and Hostname columns plus First Seen and Last Seen.
+- Infrastructure Services can show a Friendly Name while retaining the detected hostname.
 
 Automatic infrastructure discovery does not perform a fresh Nmap sweep
 across all known devices.
@@ -283,13 +287,54 @@ Added:
 
 Discover Now was tested successfully against the live service inventory.
 
+## v2.8 metadata, hostname and friendly-name work
+
+Completed and validated:
+
+- version metadata and user-facing v2.8 wording are consistent
+- About-page summary and `IP and MAC` wording are current
+- Kea DHCP hostname enrichment is implemented and live validated
+- five active named Kea leases were confirmed to populate detected hostnames
+- Friendly Name is stored separately in `custom_hostname`
+- detected Hostname remains in `hostname`
+- Friendly Name save, persistence across scan, and clear behavior were validated live
+- clearing a Friendly Name now reports `Friendly name cleared`
+- Devices exposes Friendly Name, Hostname, First Seen and Last Seen separately
+- CSV export includes Friendly Name, Hostname, First Seen and Last Seen
+- Infrastructure Services search/display supports Friendly Name without hiding Hostname
+- PHP syntax, Python syntax, gettext catalogs and `git diff --check` passed
+- live Device Monitor daemon remained running during deployment
+- stale Infrastructure Services were traced to the daemon having been cleanly stopped;
+  restarting it restored scheduled discovery, so no stale-state source fix was required
+
+Current logical-change files:
+
+- `src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/DevicesController.php`
+- `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php`
+- `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt`
+- `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/infrastructureservices.volt`
+- `src/opnsense/mvc/app/languages/en_US_devicemonitor.po`
+- `src/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po`
+- `src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py`
+
+Related completed commits already on `origin/v2.8-development`:
+
+- `9f27bcd` — `Add Kea DHCP hostname enrichment to device discovery`
+- `7550774` — `Update Device Monitor v2.8 UI wording and about description`
+- `f714254` — `Display device friendly names with hostname fallback`
+
+The current working-tree correction supersedes the fallback behavior from `f714254`
+by preserving Friendly Name and detected Hostname as separate identity fields.
+
 ## Known unresolved issues
 
 - No known unresolved Phase 1 DHCP/DNS discovery issues remain.
 - No known unresolved Phase 2 NTP/SSH/Web discovery issues remain.
 - No known unresolved Infrastructure Services usability issues remain.
 - No known unresolved Phase 3 infrastructure-service discovery issues remain.
+- No known unresolved Friendly Name / detected Hostname separation issue remains.
 
 ## Next step
 
-Review Device Monitor v2.8 version display and version-metadata consistency.
+Design user-confirmed physical-device identity grouping for cases where one device
+may legitimately use multiple MAC addresses, without automatic merging.

@@ -112,13 +112,17 @@ msgstr "Database cleared"
 msgid "Error clearing database"
 msgstr "Error clearing database"
 
-#: devices.volt - toast after successful hostname save
-msgid "Hostname saved"
-msgstr "Hostname saved"
+#: devices.volt - friendly-name column
+msgid "Friendly Name"
+msgstr "Friendly Name"
 
-#: devices.volt - toast on hostname save error
-msgid "Error saving hostname"
-msgstr "Error saving hostname"
+#: devices.volt - toast after successful friendly-name save
+msgid "Friendly name saved"
+msgstr "Friendly name saved"
+
+#: devices.volt - toast on friendly-name save error
+msgid "Error saving friendly name"
+msgstr "Error saving friendly name"
 
 
 # ============================================
@@ -542,3 +546,11 @@ msgid "Device seen on multiple interfaces"
 msgstr "Device seen on multiple interfaces"
 msgid "Services"
 msgstr "Services"
+
+#: devices.volt - first-seen column
+msgid "First Seen"
+msgstr "First Seen"
+
+#: devices.volt - toast after clearing friendly name
+msgid "Friendly name cleared"
+msgstr "Friendly name cleared"

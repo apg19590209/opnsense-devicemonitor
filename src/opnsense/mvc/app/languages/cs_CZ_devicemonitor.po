@@ -113,13 +113,17 @@ msgstr "Databáze vyčištěna"
 msgid "Error clearing database"
 msgstr "Chyba při čištění databáze"
 
-#: devices.volt - toast po úspěšném uložení hostname
-msgid "Hostname saved"
-msgstr "Hostname uložen"
+#: devices.volt - sloupec uživatelského názvu
+msgid "Friendly Name"
+msgstr "Vlastní název"
 
-#: devices.volt - toast při chybě uložení hostname
-msgid "Error saving hostname"
-msgstr "Chyba při ukládání hostname"
+#: devices.volt - toast po úspěšném uložení uživatelského názvu
+msgid "Friendly name saved"
+msgstr "Vlastní název uložen"
+
+#: devices.volt - toast při chybě uložení uživatelského názvu
+msgid "Error saving friendly name"
+msgstr "Chyba při ukládání vlastního názvu"
 
 
 # ============================================
@@ -543,3 +547,11 @@ msgid "Device seen on multiple interfaces"
 msgstr "Zařízení zjištěno na více rozhraních"
 msgid "Services"
 msgstr "Služby"
+
+#: devices.volt - first-seen column
+msgid "First Seen"
+msgstr "Poprvé zaznamenáno"
+
+#: devices.volt - toast after clearing friendly name
+msgid "Friendly name cleared"
+msgstr "Vlastní název odstraněn"

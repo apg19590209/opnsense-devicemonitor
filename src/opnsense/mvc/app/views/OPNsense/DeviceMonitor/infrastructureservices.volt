@@ -341,6 +341,7 @@ $(document).ready(function() {
             row.service_type,
             row.ip,
             row.mac,
+            row.custom_hostname,
             row.hostname,
             row.vendor,
             row.interface,
@@ -628,14 +629,32 @@ $(document).ready(function() {
                     (row.protocol || '').toUpperCase();
 
                 var $hostname = $('<td>');
+                var friendly = row.custom_hostname || '';
 
-                $('<div>')
-                    .text(dash(row.hostname))
-                    .appendTo($hostname);
+                if (friendly) {
+                    var $friendly = $('<div>');
+                    $('<i>')
+                        .addClass('fa fa-tag')
+                        .attr('title', 'Friendly name')
+                        .appendTo($friendly);
+                    $friendly.append(document.createTextNode(' ' + friendly));
+                    $friendly.appendTo($hostname);
+
+                    $('<small>')
+                        .addClass('text-muted')
+                        .css('display', 'block')
+                        .text(dash(row.hostname))
+                        .appendTo($hostname);
+                } else {
+                    $('<div>')
+                        .text(dash(row.hostname))
+                        .appendTo($hostname);
+                }
 
                 if (row.vendor) {
                     $('<small>')
                         .addClass('text-muted')
+                        .css('display', 'block')
                         .text(row.vendor)
                         .appendTo($hostname);
                 }

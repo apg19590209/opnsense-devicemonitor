@@ -5089,17 +5089,16 @@ def full_scan():
             )
 
         row = conn.execute(
-            'SELECT mac, custom_hostname FROM devices WHERE mac = ?', (mac,)
+            'SELECT mac FROM devices WHERE mac = ?', (mac,)
         ).fetchone()
 
         if row:
-            hostname = row[1] if row[1] else device['hostname']
             conn.execute('''
                 UPDATE devices
                 SET ip = ?, hostname = ?, vendor = ?, vlan = ?,
                     last_seen = ?, is_active = ?
                 WHERE mac = ?
-            ''', (device['ip'], hostname, device['vendor'],
+            ''', (device['ip'], device['hostname'], device['vendor'],
                   device['vlan'], last_seen, is_active, mac))
         else:
             conn.execute('''

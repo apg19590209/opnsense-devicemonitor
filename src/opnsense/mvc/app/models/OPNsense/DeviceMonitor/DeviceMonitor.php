@@ -101,7 +101,7 @@ class DeviceMonitor
             $stmt = $db->prepare('UPDATE devices SET custom_hostname = NULL WHERE mac = :mac');
             $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
         } else {
-            $stmt = $db->prepare('UPDATE devices SET custom_hostname = :hn, hostname = :hn WHERE mac = :mac');
+            $stmt = $db->prepare('UPDATE devices SET custom_hostname = :hn WHERE mac = :mac');
             $stmt->bindValue(':hn', $hostname, SQLITE3_TEXT);
             $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
         }
@@ -294,7 +294,14 @@ class DeviceMonitor
                     $row['vendor'] = 'Unknown';
                 }
 
-                // Format date as DD.MM.YYYY - HH:MM:SS
+                // Format dates as DD.MM.YYYY - HH:MM:SS
+                if (!empty($row['first_seen'])) {
+                    $timestamp = strtotime($row['first_seen']);
+                    if ($timestamp !== false) {
+                        $row['first_seen'] = date('d.m.Y - H:i:s', $timestamp);
+                    }
+                }
+
                 if (!empty($row['last_seen'])) {
                     $timestamp = strtotime($row['last_seen']);
                     if ($timestamp !== false) {

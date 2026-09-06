@@ -69,12 +69,14 @@
                 <tr>
                     <th class="sortable" data-col="mac" style="cursor:pointer;white-space:nowrap;">{{ lang._('MAC Address') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable" data-col="ip" style="cursor:pointer;white-space:nowrap;">{{ lang._('IP Address') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable" data-col="custom_hostname" style="cursor:pointer;white-space:nowrap;">{{ lang._('Friendly Name') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable" data-col="hostname" style="cursor:pointer;white-space:nowrap;">{{ lang._('Hostname') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable" data-col="vendor" style="cursor:pointer;white-space:nowrap;">{{ lang._('Vendor') }} <i class="fa fa-sort"></i></th>                    <th style="white-space:nowrap;">{{ lang._('Services') }}</th>
 
                     <th class="sortable" data-col="vlan" style="cursor:pointer;white-space:nowrap;">{{ lang._('VLAN') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable" data-col="status" style="cursor:pointer;white-space:nowrap;">{{ lang._('Status') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable" data-col="nmap_scan_status" style="cursor:pointer;white-space:nowrap;">{{ lang._('Scan Status') }} <i class="fa fa-sort"></i></th>
+                    <th style="white-space:nowrap;">{{ lang._('First Seen') }}</th>
                     <th class="sortable" data-col="last_seen" style="cursor:pointer;white-space:nowrap;">{{ lang._('Last Seen') }} <i class="fa fa-sort"></i></th>
                     <th style="white-space:nowrap;">{{ lang._('Actions') }}</th>
                 </tr>
@@ -103,8 +105,9 @@ $(document).ready(function() {
         delete_error:   '{{ lang._('Error deleting device') }}',
         db_cleared:     '{{ lang._('Database cleared') }}',
         db_clear_error: '{{ lang._('Error clearing database') }}',
-        hostname_saved: '{{ lang._('Hostname saved') }}',
-        hostname_error: '{{ lang._('Error saving hostname') }}',
+        hostname_saved: '{{ lang._('Friendly name saved') }}',
+        hostname_cleared: '{{ lang._('Friendly name cleared') }}',
+        hostname_error: '{{ lang._('Error saving friendly name') }}',
         confirm_delete: '{{ lang._('Delete device') }}',
         confirm_clear:  '{{ lang._('Really delete all devices from database?') }}',
         all_vlans:      '{{ lang._('All VLANs') }}'
@@ -400,12 +403,42 @@ $(document).ready(function() {
 
             var hn = row.hostname || '';
             var friendly = row.custom_hostname || '';
-            var displayName = friendly || hn || '';
 
-            var hostnameHtml = '<span class="hostname-display" data-mac="'+row.mac+'" title="Click to edit"'
-                +' style="cursor:pointer;border-bottom:1px dashed #666;">'
-                +(displayName||'<em style="color:#555;">\u2014</em>')
-                +(friendly ? ' <small title="Friendly name override">*</small>' : '')+'</span>';
+            var $friendlyCell = $('<td>');
+            var $friendlyDisplay = $('<span>')
+                .addClass('friendly-name-display')
+                .attr('data-mac', row.mac || '')
+                .attr('data-friendly', friendly)
+                .attr('title', 'Click to edit friendly name')
+                .css({
+                    cursor: 'pointer',
+                    'border-bottom': '1px dashed #666'
+                });
+
+            if (friendly) {
+                $('<i>')
+                    .addClass('fa fa-tag')
+                    .attr('title', 'Friendly name')
+                    .appendTo($friendlyDisplay);
+                $friendlyDisplay.append(document.createTextNode(' ' + friendly));
+            } else {
+                $('<em>')
+                    .css('color', '#555')
+                    .text('\u2014')
+                    .appendTo($friendlyDisplay);
+            }
+
+            $friendlyDisplay.appendTo($friendlyCell);
+
+            var $hostnameCell = $('<td>');
+            if (hn) {
+                $hostnameCell.text(hn);
+            } else {
+                $('<em>')
+                    .css('color', '#555')
+                    .text('\u2014')
+                    .appendTo($hostnameCell);
+            }
 
             var ipHtml = row.ip
                 ? '<a href="http://'+row.ip+'" target="_blank" style="color:#5bc0de;">'+row.ip+'</a>'
@@ -417,12 +450,14 @@ $(document).ready(function() {
             $('<tr>').append(
                 $('<td>').text(row.mac||''),
                 $('<td>').html(ipHtml),
-                $('<td>').html(hostnameHtml),
+                $friendlyCell,
+                $hostnameCell,
                 $('<td>').text(row.vendor||''),
                 buildServicesCell(row),
                 $('<td>').text(vlanLabel),
                 $('<td>').html(statusHtml),
                 buildScanStatusCell(row),
+                $('<td>').text(row.first_seen||''),
                 $('<td>').text(row.last_seen||''),
                 $('<td>').html('<button class="btn btn-xs btn-warning command-check" data-row-mac="'+row.mac+'" data-row-ip="'+row.ip+'" title="Check online" style="margin-right:2px;"><i class="fa fa-plug"></i></button>' +
                 '<button class="btn btn-xs btn-info command-nmap" data-row-mac="'+row.mac+'" title="Run targeted Nmap scan" style="margin-right:2px;"><i class="fa fa-search"></i></button>' +
@@ -525,22 +560,24 @@ $(document).ready(function() {
         });
     }
 
-    // Inline editace hostname
-    $(document).on('click','.hostname-display',function(){
+    // Inline edit friendly name
+    $(document).on('click','.friendly-name-display',function(){
         var $span=$(this);
         if ($span.find('input').length) return;
         var mac=$span.data('mac');
-        var cur=$span.text().trim();
-        if (cur==='\u2014') cur='';
+        var cur=$span.attr('data-friendly') || '';
         var $inp=$('<input type="text" class="form-control input-sm">').val(cur).css({width:'150px',display:'inline-block'});
         $span.html($inp);
         $inp.focus().select();
         function save(){
+            var value=$inp.val().trim();
             $.ajax({url:'/api/devicemonitor/devices/updatehostname',type:'POST',
-                data:{mac:mac,hostname:$inp.val().trim()},
+                data:{mac:mac,hostname:value},
                 success:function(r){
-                    showToast(r.result==='saved'?translations.hostname_saved:translations.hostname_error,
-                              r.result==='saved'?'success':'error');
+                    var message = r.result==='saved'
+                        ? (value ? translations.hostname_saved : translations.hostname_cleared)
+                        : translations.hostname_error;
+                    showToast(message, r.result==='saved'?'success':'error');
                     loadDevices();
                 }
             });
@@ -600,8 +637,8 @@ $(document).ready(function() {
         }
 
         // Headers
-        var cols = ['mac', 'ip', 'hostname', 'vendor', 'vlan', 'status', 'last_seen'];
-        var headers = ['MAC Address', 'IP Address', 'Hostname', 'Vendor', 'VLAN', 'Status', 'Last Seen'];
+        var cols = ['mac', 'ip', 'custom_hostname', 'hostname', 'vendor', 'vlan', 'status', 'first_seen', 'last_seen'];
+        var headers = ['MAC Address', 'IP Address', 'Friendly Name', 'Hostname', 'Vendor', 'VLAN', 'Status', 'First Seen', 'Last Seen'];
 
         var csv = headers.join(';') + '\n';
         filtered.forEach(function(row) {
