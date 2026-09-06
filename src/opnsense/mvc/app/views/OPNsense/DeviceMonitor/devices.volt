@@ -399,9 +399,13 @@ $(document).ready(function() {
                 : '<span style="color:#666;font-weight:bold;white-space:nowrap;"><i class="fa fa-circle-o"></i> OFFLINE</span>';
 
             var hn = row.hostname || '';
+            var friendly = row.custom_hostname || '';
+            var displayName = friendly || hn || '';
+
             var hostnameHtml = '<span class="hostname-display" data-mac="'+row.mac+'" title="Click to edit"'
                 +' style="cursor:pointer;border-bottom:1px dashed #666;">'
-                +(hn||'<em style="color:#555;">\u2014</em>')+'</span>';
+                +(displayName||'<em style="color:#555;">\u2014</em>')
+                +(friendly ? ' <small title="Friendly name override">*</small>' : '')+'</span>';
 
             var ipHtml = row.ip
                 ? '<a href="http://'+row.ip+'" target="_blank" style="color:#5bc0de;">'+row.ip+'</a>'

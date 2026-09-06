@@ -920,6 +920,8 @@ class DevicesController extends ApiControllerBase
                     $row['hostname'] =
                         $custom !== '' ? $custom : $hostname;
 
+                    $row['custom_hostname'] = $custom;
+
                     $row['vendor'] =
                         (string)($device['vendor'] ?? '');
 
