@@ -383,7 +383,8 @@ Release-facing metadata and documentation have been reviewed and corrected.
   installation or obsolete development-heading references
 - release-readiness changes committed as `e308f9f`
 - GitHub Actions Device Monitor CI #51 for `e308f9f`: PASS
-- no v2.8 tag has been created yet
+- final release candidate commit `abe1ccb` passed GitHub Actions Device Monitor CI #52
+- annotated `v2.8` release tag created at `abe1ccb7306a4a35e60221d41212beff22aa52d9` and pushed to `origin`
 
 ## Known unresolved issues
 
@@ -395,4 +396,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Create and push the annotated v2.8 release tag.
+Publish the GitHub v2.8 release from the validated v2.8 tag.
