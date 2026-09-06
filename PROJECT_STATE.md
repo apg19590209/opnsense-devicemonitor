@@ -126,6 +126,14 @@ Current validated work:
 - exact two-hour stale boundary: PASS
 - older-than-two-hours, missing and invalid `last_verified` values derive Stale: PASS
 - explicit Unavailable status takes precedence over derived Stale: PASS
+- permanent Phase 3 infrastructure-service Python regression added: PASS
+- permanent Infrastructure Services stale-state JavaScript regression added: PASS
+- permanent Phase 3 regression validates no automatic fresh Nmap identification: PASS
+- permanent Phase 3 regression validates one literal IPv4 per Nmap invocation: PASS
+- permanent Phase 3 regression validates serial Nmap and SMB execution: PASS
+- permanent Phase 3 regression validates lightweight worker bound of 12: PASS
+- permanent Phase 3 regression validates strong Nmap evidence handling: PASS
+- permanent Phase 3 regression validates Available -> Unavailable -> Available recovery: PASS
 
 ## Infrastructure service discovery — Phase 1
 
@@ -284,5 +292,4 @@ Discover Now was tested successfully against the live service inventory.
 
 ## Next step
 
-Add permanent automated regression coverage for Infrastructure Services
-Phase 3 lifecycle and protocol-safety behaviour to the repository CI suite.
+Review Device Monitor v2.8 version display and version-metadata consistency.
