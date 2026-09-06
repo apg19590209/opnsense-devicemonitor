@@ -46,7 +46,7 @@ jobs:
           sh -n uninstall.sh
           sh -n src/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
 
-      - name: Compile gettext catalogs
+      - name: Compile gettext catalogues
         run: |
           set -eu
           mkdir -p /tmp/devicemonitor-mo

@@ -134,7 +134,7 @@ def load_config():
 
 
 def init_db():
-    """Initialize database"""
+    """Initialise database"""
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
 
@@ -550,7 +550,7 @@ def query_kea_command(command, timeout=5):
 
 
 def get_kea_ipv4_leases():
-    """Return normalized Kea DHCPv4 leases without changing Kea state."""
+    """Return normalised Kea DHCPv4 leases without changing Kea state."""
     try:
         payload = query_kea_command('lease4-get-all')
     except Exception as e:
@@ -3174,7 +3174,7 @@ def _probe_phase3_nmap_identification(candidates):
 
     Every Nmap invocation targets exactly one literal IPv4 address.
 
-    Only Nmap results with state=open and a recognized service fingerprint
+    Only Nmap results with state=open and a recognised service fingerprint
     are returned. open|filtered by itself is deliberately ignored.
     """
     targets = sorted(
@@ -3381,7 +3381,7 @@ def _run_phase3_protocol_probes(target_list):
     Run lightweight protocol probes with bounded concurrency.
 
     SMB verification invokes Nmap, so SMB targets are deliberately
-    serialized and are never submitted to the general worker pool.
+    serialised and are never submitted to the general worker pool.
     """
     target_list = list(target_list)
 

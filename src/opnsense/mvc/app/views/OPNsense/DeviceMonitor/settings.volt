@@ -346,8 +346,8 @@
                             <th colspan="2" style="padding-top:18px;">{{ lang._('Licensing & Compatibility') }}</th>
                         </tr>
                         <tr>
-                            <td style="color:#888;">{{ lang._('License') }}</td>
-                            <td>MIT</td>
+                            <td style="color:#888;">{{ lang._('Licence') }}</td>
+                            <td>BSD 2-Clause License</td>
                         </tr>
                         <tr>
                             <td style="color:#888;">{{ lang._('Requires OPNsense') }}</td>

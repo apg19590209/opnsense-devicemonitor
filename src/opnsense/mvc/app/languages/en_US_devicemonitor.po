@@ -88,11 +88,11 @@ msgstr "Last Seen"
 msgid "Actions"
 msgstr "Actions"
 
-#: devices.volt - confirm dialog when deleting a device
+#: devices.volt - confirm dialogue when deleting a device
 msgid "Delete device"
 msgstr "Delete device"
 
-#: devices.volt - confirm dialog when clearing entire DB
+#: devices.volt - confirm dialogue when clearing entire DB
 msgid "Really delete all devices from database?"
 msgstr "Really delete all devices from database?"
 
@@ -247,8 +247,8 @@ msgid "GitHub Repository"
 msgstr "GitHub Repository"
 
 #: settings.volt - tab 4: info table row
-msgid "License"
-msgstr "License"
+msgid "Licence"
+msgstr "Licence"
 
 #: settings.volt - tab 4: minimum OPNsense version
 msgid "Requires OPNsense"

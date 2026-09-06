@@ -2,7 +2,7 @@
 
 ## Last updated
 
-6 September 2026
+7 September 2026
 
 ## Current version / branch / environment
 
@@ -20,7 +20,7 @@ OPNsense 26.7.2_2
 
 Latest confirmed completed identity-work commit:
 
-`c92b61b` — `feat: add identity conflict email alerts`
+`5188dcb` — `Fix friendly name and detected hostname separation`
 
 
 ## Current objective
@@ -107,7 +107,7 @@ Current validated work:
 - GitHub Actions CI run `33970099256` for `c92b61b`: PASS
 - observational-only message wording and IP/MAC evidence rendering: PASS
 - Phase 3 single-host Nmap regression: PASS
-- Phase 3 Nmap serialization and SMB-Nmap serialization: PASS
+- Phase 3 Nmap serialisation and SMB-Nmap serialisation: PASS
 - Phase 3 lightweight protocol-probe worker bound (maximum 12): PASS
 - Phase 3 protocol regression for SMB, NFS, RDP, VNC, WinRM, LDAP, SNMP/Kerberos/VPN classification and WireGuard runtime discovery: PASS
 - Phase 3 strong-Nmap-evidence handling (`open|filtered` and unidentified services rejected): PASS
@@ -297,17 +297,17 @@ Completed and validated:
 - five active named Kea leases were confirmed to populate detected hostnames
 - Friendly Name is stored separately in `custom_hostname`
 - detected Hostname remains in `hostname`
-- Friendly Name save, persistence across scan, and clear behavior were validated live
+- Friendly Name save, persistence across scan, and clear behaviour were validated live
 - clearing a Friendly Name now reports `Friendly name cleared`
 - Devices exposes Friendly Name, Hostname, First Seen and Last Seen separately
 - CSV export includes Friendly Name, Hostname, First Seen and Last Seen
 - Infrastructure Services search/display supports Friendly Name without hiding Hostname
-- PHP syntax, Python syntax, gettext catalogs and `git diff --check` passed
+- PHP syntax, Python syntax, gettext catalogues and `git diff --check` passed
 - live Device Monitor daemon remained running during deployment
 - stale Infrastructure Services were traced to the daemon having been cleanly stopped;
   restarting it restored scheduled discovery, so no stale-state source fix was required
 
-Current logical-change files:
+Files changed for hostname/friendly-name task:
 
 - `src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/DevicesController.php`
 - `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php`
@@ -323,8 +323,41 @@ Related completed commits already on `origin/v2.8-development`:
 - `7550774` — `Update Device Monitor v2.8 UI wording and about description`
 - `f714254` — `Display device friendly names with hostname fallback`
 
-The current working-tree correction supersedes the fallback behavior from `f714254`
+Commit `5188dcb` supersedes the fallback behaviour from `f714254`
 by preserving Friendly Name and detected Hostname as separate identity fields.
+
+## UK English standardisation
+
+Repository-wide English-language review completed and validated.
+
+- user-visible English, documentation and project-owned comments use UK English
+- technical syntax and externally defined identifiers remain unchanged, including CSS/JS
+  `color`/`center`, `grep --color`, the OPNsense `en_US` locale filename and `LICENSE`
+- user-facing `License` was changed to `Licence`
+- the official legal name `BSD 2-Clause License` remains unchanged
+- README and About-page licence metadata were corrected from MIT to BSD 2-Clause License
+  to match the repository `LICENSE` file
+- repository-wide residual spelling audit found no remaining US-English prose requiring change
+- Python syntax validation passed
+- PHP syntax validation passed
+- English and Czech gettext catalogues compiled successfully; only the existing optional
+  gettext header warnings for Last-Translator, Language-Team and Language remain
+- `git diff --check` passed
+
+Files changed for this task:
+
+- `.github/workflows/ci.yml`
+- `DECISIONS.md`
+- `Makefile`
+- `PROJECT_STATE.md`
+- `README.md`
+- `README_CZ.md`
+- `src/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po`
+- `src/opnsense/mvc/app/languages/en_US_devicemonitor.po`
+- `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php`
+- `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt`
+- `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`
+- `src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py`
 
 ## Known unresolved issues
 
@@ -336,5 +369,4 @@ by preserving Friendly Name and detected Hostname as separate identity fields.
 
 ## Next step
 
-Design user-confirmed physical-device identity grouping for cases where one device
-may legitimately use multiple MAC addresses, without automatic merging.
+Review remaining v2.8 release-readiness items before any tag or release.

@@ -89,11 +89,11 @@ msgstr "Poslední výskyt"
 msgid "Actions"
 msgstr "Akce"
 
-#: devices.volt - confirm dialog při mazání zařízení
+#: devices.volt - confirm dialogue při mazání zařízení
 msgid "Delete device"
 msgstr "Smazat zařízení"
 
-#: devices.volt - confirm dialog při mazání celé DB
+#: devices.volt - confirm dialogue při mazání celé DB
 msgid "Really delete all devices from database?"
 msgstr "Opravdu smazat VŠECHNA zařízení z databáze?"
 
@@ -248,7 +248,7 @@ msgid "GitHub Repository"
 msgstr "GitHub repozitář"
 
 #: settings.volt - tab 4: tabulka info - položka
-msgid "License"
+msgid "Licence"
 msgstr "Licence"
 
 #: settings.volt - tab 4: tabulka info - minimální verze OPNsense

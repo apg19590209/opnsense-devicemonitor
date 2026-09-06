@@ -40,7 +40,7 @@ The plugin automatically monitors the network and alerts you about:
 
 ### v2.7 (September 2026) — Device identity anomaly detection
 
-- Adds read-only Kea DHCP identity-source detection and normalized IPv4 lease evidence when available.
+- Adds read-only Kea DHCP identity-source detection and normalised IPv4 lease evidence when available.
 - Correlates Hostwatch and Kea evidence to detect conflicting device identity without changing device state.
 - Detects duplicate ownership of the same non-link-local IPv6 address across different MAC addresses while excluding normal link-local and multiple-address IPv6 behaviour.
 - Records identity anomalies as observational SQLite events; no automatic blocking, deletion, firewall changes or remediation is performed.
@@ -69,7 +69,7 @@ The plugin automatically monitors the network and alerts you about:
 - Added permanent **known MAC history** so a previously seen device does not become a new-device event merely because its active device record was deleted and later rediscovered.
 - Hardened the scan-history API with bounded queries, read-only SQLite access and safer error reporting.
 - Hardened the installer with source validation, dependency checks, temporary upgrade backups and syntax validation.
-- Added automated **CI validation** for Python, PHP, shell scripts, translations and database migration behavior.
+- Added automated **CI validation** for Python, PHP, shell scripts, translations and database migration behaviour.
 
 ### v2.4 (September 2026) — Targeted security scanning and reliability improvements
 
@@ -82,8 +82,8 @@ The plugin automatically monitors the network and alerts you about:
 - Targeted scan reports now support both **Local Sendmail / Postfix** and the v2.3 **Direct SMTP** transport.
 - The installer now automatically installs **Nmap** when it is not already available.
 - Improved Hostwatch de-duplication by selecting the newest IPv4 record for each MAC address directly in SQL.
-- Retained the v2.3 configuration merging, SMTP credential protection, deleted-device tombstones, VLAN notification filtering and notification cleanup behavior.
-- Translated remaining source-code comments, runtime log messages and API validation messages to English while preserving the existing translation catalogs.
+- Retained the v2.3 configuration merging, SMTP credential protection, deleted-device tombstones, VLAN notification filtering and notification cleanup behaviour.
+- Translated remaining source-code comments, runtime log messages and API validation messages to English while preserving the existing translation catalogues.
 ### v2.3 (August 2026) — Direct SMTP and notification improvements
 
 - Added selectable **Email delivery method** in Device Monitor settings.
@@ -196,7 +196,7 @@ Two fixes:
 **5. `service.xml` — fixed tag name, added `<pidfile>`, fixed `<commands>`**
 
 Three bugs in one file:
-- `<n>DeviceMonitor</n>` → `<name>DeviceMonitor</name>` — OPNsense did not recognize the `<n>` tag
+- `<n>DeviceMonitor</n>` → `<name>DeviceMonitor</name>` — OPNsense did not recognise the `<n>` tag
 - Added `<pidfile>/var/run/devicemonitor.pid</pidfile>` — needed for the green/red status dot
 - `<commands>` changed from shell commands (`service devicemonitor start`) to configd action names (`devicemonitor start`)
 
@@ -681,9 +681,9 @@ service configd restart
 
 ---
 
-## License
+## Licence
 
-MIT License — see [LICENSE](LICENSE)
+BSD 2-Clause License — see [LICENSE](LICENSE)
 
 # ============================================
 # [scanhistory.volt] Nmap scan history page

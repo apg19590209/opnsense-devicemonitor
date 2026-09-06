@@ -688,7 +688,7 @@ $(document).ready(function() {
         });
     });
 
-    // Initialize by loading interface labels before devices
+    // Initialise by loading interface labels before devices
     $.ajax({url:'/api/devicemonitor/config/getinterfaces',type:'GET',
         success:function(data){ vlanNames=data||{}; loadDevices(); },
         error:function(){ loadDevices(); }

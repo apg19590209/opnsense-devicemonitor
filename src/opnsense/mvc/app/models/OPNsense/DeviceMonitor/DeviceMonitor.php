@@ -289,7 +289,7 @@ class DeviceMonitor
                 // Determine status from the is_active column instead of time
                 $row['status'] = (isset($row['is_active']) && $row['is_active'] == 1) ? 'online' : 'offline';
                 
-                // Vendor may be NULL; normalize it
+                // Vendor may be NULL; normalise it
                 if (empty($row['vendor'])) {
                     $row['vendor'] = 'Unknown';
                 }

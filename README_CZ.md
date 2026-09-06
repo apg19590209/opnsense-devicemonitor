@@ -651,4 +651,4 @@ service configd restart
 
 ## Licence
 
-MIT License — viz [LICENSE](LICENSE)
+BSD 2-Clause License — viz [LICENSE](LICENSE)

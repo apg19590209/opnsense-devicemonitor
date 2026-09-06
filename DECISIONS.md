@@ -136,7 +136,7 @@ unauthenticated probe, structured service-identification evidence may be used.
 In particular:
 
 - `open|filtered` Nmap state alone is not proof of a service.
-- SNMP, Kerberos and VPN identification require recognized service evidence.
+- SNMP, Kerberos and VPN identification require recognised service evidence.
 - local OPNsense WireGuard runtime state is authoritative evidence for the
   locally hosted WireGuard service.
 
@@ -165,7 +165,7 @@ Any Nmap invocation performed by service verification must:
 - remain bounded in execution time
 - avoid uncontrolled parallel Nmap subprocesses
 
-Nmap-backed SMB verification is serialized.
+Nmap-backed SMB verification is serialised.
 
 ### Reason
 
