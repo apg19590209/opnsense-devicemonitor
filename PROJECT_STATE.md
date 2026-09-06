@@ -398,4 +398,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Perform post-release v2.8 installation and upgrade smoke validation.
+Select the next Device Monitor development task.
