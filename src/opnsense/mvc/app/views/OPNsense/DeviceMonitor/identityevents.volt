@@ -5,7 +5,7 @@
             <h1 style="margin:0;font-size:20px;">
                 {{ lang._('Device Monitor') }}
                 <span style="color:#555;margin:0 8px;">&ndash;</span>
-                <span style="font-weight:normal;">{{ lang._('IP & MAC Conflicts') }}</span>
+                <span style="font-weight:normal;">{{ lang._('IP and MAC Conflicts') }}</span>
             </h1>
         </div>
 
@@ -13,7 +13,7 @@
             <div class="panel-heading identity-events-heading">
                 <strong style="font-size:13px;">
                     <i class="fa fa-exclamation-triangle"></i>
-                    {{ lang._('IP & MAC Conflicts') }}
+                    {{ lang._('IP and MAC Conflicts') }}
                     <span id="identity-events-total"
                           class="badge"
                           style="margin-left:6px;">0</span>
@@ -63,7 +63,7 @@
 
                     <button id="btn-identity-refresh"
                             class="btn btn-xs btn-default"
-                            title="{{ lang._('Refresh IP & MAC conflicts') }}">
+                            title="{{ lang._('Refresh IP and MAC conflicts') }}">
                         <i class="fa fa-refresh"></i>
                     </button>
                 </div>
@@ -90,7 +90,7 @@
                     <tbody>
                         <tr>
                             <td colspan="10" class="text-muted">
-                                {{ lang._('Loading IP & MAC conflicts...') }}
+                                {{ lang._('Loading IP and MAC conflicts...') }}
                             </td>
                         </tr>
                     </tbody>
@@ -248,8 +248,8 @@
 $(document).ready(function() {
 
     var identityText = {
-        noEvents: "{{ lang._('No IP & MAC conflicts recorded') }}",
-        loadError: "{{ lang._('Unable to load IP & MAC conflicts') }}",
+        noEvents: "{{ lang._('No IP and MAC conflicts recorded') }}",
+        loadError: "{{ lang._('Unable to load IP and MAC conflicts') }}",
         showDetails: "{{ lang._('Show conflict details') }}",
         hideDetails: "{{ lang._('Hide conflict details') }}",
         otherInterface: "{{ lang._('Other interface') }}",
@@ -257,7 +257,7 @@ $(document).ready(function() {
         details: "{{ lang._('Details') }}",
         resolve: "{{ lang._('Resolve conflict') }}",
         reopen: "{{ lang._('Reopen conflict') }}",
-        updateFailed: "{{ lang._('Unable to update IP & MAC conflict') }}",
+        updateFailed: "{{ lang._('Unable to update IP and MAC conflict') }}",
         resolved: "{{ lang._('Resolved') }}",
         unresolved: "{{ lang._('Unresolved') }}",
         ipv4Conflict: "{{ lang._('IPv4 address used by another device') }}",

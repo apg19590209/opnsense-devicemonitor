@@ -7,7 +7,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Device Monitor 2.7\n"
+"Project-Id-Version: Device Monitor 2.8\n"
 "POT-Creation-Date: 2026-04-10 00:00+0000\n"
 "PO-Revision-Date: 2026-04-10 00:00+0000\n"
 "MIME-Version: 1.0\n"
@@ -231,8 +231,8 @@ msgid "Seconds between scans (60-3600)"
 msgstr "Seconds between scans (60-3600)"
 
 #: settings.volt - tab 4: plugin description
-msgid "OPNsense plugin for monitoring network devices using the native hostwatch database."
-msgstr "OPNsense plugin for monitoring network devices using the native hostwatch database."
+msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
+msgstr "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
 
 #: settings.volt - tab 4: info table row
 msgid "Author"
@@ -482,8 +482,8 @@ msgstr "Resolve event"
 msgid "Reopen event"
 msgstr "Reopen event"
 
-msgid "Unable to update IP & MAC conflict"
-msgstr "Unable to update IP & MAC conflict"
+msgid "Unable to update IP and MAC conflict"
+msgstr "Unable to update IP and MAC conflict"
 
 msgid "All"
 msgstr "All"
@@ -494,28 +494,28 @@ msgstr "Unresolved"
 msgid "Resolved"
 msgstr "Resolved"
 
-#: settings.volt - IP & MAC conflict email alerts
+#: settings.volt - IP and MAC conflict email alerts
 msgid "Email high-severity conflict alerts"
 msgstr "Email high-severity conflict alerts"
 
-#: settings.volt - IP & MAC conflict email alerts
+#: settings.volt - IP and MAC conflict email alerts
 msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
 msgstr "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
 
-msgid "IP & MAC Conflicts"
-msgstr "IP & MAC Conflicts"
+msgid "IP and MAC Conflicts"
+msgstr "IP and MAC Conflicts"
 
-msgid "Refresh IP & MAC conflicts"
-msgstr "Refresh IP & MAC conflicts"
+msgid "Refresh IP and MAC conflicts"
+msgstr "Refresh IP and MAC conflicts"
 
-msgid "Loading IP & MAC conflicts..."
-msgstr "Loading IP & MAC conflicts..."
+msgid "Loading IP and MAC conflicts..."
+msgstr "Loading IP and MAC conflicts..."
 
-msgid "No IP & MAC conflicts recorded"
-msgstr "No IP & MAC conflicts recorded"
+msgid "No IP and MAC conflicts recorded"
+msgstr "No IP and MAC conflicts recorded"
 
-msgid "Unable to load IP & MAC conflicts"
-msgstr "Unable to load IP & MAC conflicts"
+msgid "Unable to load IP and MAC conflicts"
+msgstr "Unable to load IP and MAC conflicts"
 
 msgid "Show conflict details"
 msgstr "Show conflict details"

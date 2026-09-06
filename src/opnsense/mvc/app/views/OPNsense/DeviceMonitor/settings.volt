@@ -120,7 +120,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:top;padding-top:16px;">
-                                <strong>{{ lang._('IP & MAC Conflicts') }}</strong>
+                                <strong>{{ lang._('IP and MAC Conflicts') }}</strong>
                             </td>
                             <td style="padding-top:16px;">
                                 <label style="margin:0;">
@@ -317,7 +317,7 @@
             <div role="tabpanel" class="tab-pane" id="tab-about">
                 <div style="max-width:600px;padding:10px 0;">
                     <h3 style="margin-top:0;">{{ lang._('Device Monitor') }} <span id="about-version" style="color:#888;font-size:16px;"></span></h3>
-                    <p class="text-muted">{{ lang._('OPNsense plugin for monitoring network devices using the native hostwatch database.') }}</p>
+                    <p class="text-muted">{{ lang._('OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data.') }}</p>
                     <table class="table table-condensed" style="margin-top:20px;">
                         <tr>
                             <th colspan="2" style="padding-top:14px;">{{ lang._('Original Project') }}</th>
@@ -332,7 +332,7 @@
                         </tr>
 
                         <tr>
-                            <th colspan="2" style="padding-top:18px;">{{ lang._('v2.7 Development & Enhancements') }}</th>
+                            <th colspan="2" style="padding-top:18px;">{{ lang._('v2.8 Development & Enhancements') }}</th>
                         </tr>
                         <tr>
                             <td style="color:#888;">{{ lang._('Developer') }}</td>

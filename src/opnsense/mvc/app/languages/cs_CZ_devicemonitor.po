@@ -7,7 +7,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Device Monitor 2.7\n"
+"Project-Id-Version: Device Monitor 2.8\n"
 "POT-Creation-Date: 2026-04-10 00:00+0000\n"
 "PO-Revision-Date: 2026-04-10 00:00+0100\n"
 "MIME-Version: 1.0\n"
@@ -232,8 +232,8 @@ msgid "Seconds between scans (60-3600)"
 msgstr "Sekund mezi skeny (60-3600)"
 
 #: settings.volt - tab 4: popis pluginu
-msgid "OPNsense plugin for monitoring network devices using the native hostwatch database."
-msgstr "Plugin pro OPNsense pro sledování síťových zařízení pomocí nativní hostwatch databáze."
+msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
+msgstr "Plugin pro OPNsense pro sledování síťových zařízení, konfliktů IP a MAC adres, zjišťování infrastrukturních služeb, provádění cílených bezpečnostních skenů a odesílání konfigurovatelných upozornění s využitím nativních dat hostwatch."
 
 #: settings.volt - tab 4: tabulka info - položka
 msgid "Author"
@@ -483,7 +483,7 @@ msgstr "Vyřešit událost"
 msgid "Reopen event"
 msgstr "Znovu otevřít událost"
 
-msgid "Unable to update IP & MAC conflict"
+msgid "Unable to update IP and MAC conflict"
 msgstr "Konflikt IP a MAC nelze aktualizovat"
 
 msgid "All"
@@ -503,19 +503,19 @@ msgstr "E-mailová upozornění na závažné konflikty IP a MAC"
 msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
 msgstr "Odeslat e-mail při zjištění nového závažného konfliktu adres IPv4 nebo IPv6."
 
-msgid "IP & MAC Conflicts"
+msgid "IP and MAC Conflicts"
 msgstr "Konflikty IP a MAC"
 
-msgid "Refresh IP & MAC conflicts"
+msgid "Refresh IP and MAC conflicts"
 msgstr "Obnovit konflikty IP a MAC"
 
-msgid "Loading IP & MAC conflicts..."
+msgid "Loading IP and MAC conflicts..."
 msgstr "Načítání konfliktů IP a MAC..."
 
-msgid "No IP & MAC conflicts recorded"
+msgid "No IP and MAC conflicts recorded"
 msgstr "Nejsou zaznamenány žádné konflikty IP a MAC"
 
-msgid "Unable to load IP & MAC conflicts"
+msgid "Unable to load IP and MAC conflicts"
 msgstr "Konflikty IP a MAC nelze načíst"
 
 msgid "Show conflict details"

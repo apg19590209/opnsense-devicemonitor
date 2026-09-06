@@ -65,14 +65,14 @@ foreach ($payload['events'] as $event) {
 if (empty($events)) {
     echo json_encode([
         'result' => 'skipped',
-        'message' => 'No high-severity IP & MAC conflicts',
+        'message' => 'No high-severity IP and MAC conflicts',
     ]) . PHP_EOL;
     exit(0);
 }
 
 $count = count($events);
 $conflictWord = $count === 1 ? 'conflict' : 'conflicts';
-$subject = "OPNsense: IP & MAC conflict alert ({$count} {$conflictWord})";
+$subject = "OPNsense: IP and MAC conflict alert ({$count} {$conflictWord})";
 
 $hostname = identityHtml(gethostname());
 $generated = identityHtml(date('Y-m-d H:i:s'));
@@ -95,7 +95,7 @@ foreach ($events as $index => $event) {
     $eventHtml .= <<<HTML
         <div style="margin:20px 0;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
             <div style="background:#2c3e50;color:white;padding:12px 16px;font-weight:600;">
-                IP &amp; MAC Conflict {$number}
+                IP and MAC Conflict {$number}
             </div>
 
             <table style="width:100%;border-collapse:collapse;">
@@ -155,7 +155,7 @@ $html = <<<HTML
     </div>
 
     <div style="background:#fff3e0;border-left:4px solid #f6821f;padding:20px;margin:20px;border-radius:8px;">
-        <strong style="color:#e65100;font-size:20px;">{$count} high-severity IP &amp; MAC {$conflictWord}</strong>
+        <strong style="color:#e65100;font-size:20px;">{$count} high-severity IP and MAC {$conflictWord}</strong>
         detected
     </div>
 
