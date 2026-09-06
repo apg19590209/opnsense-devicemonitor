@@ -385,6 +385,8 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - GitHub Actions Device Monitor CI #51 for `e308f9f`: PASS
 - final release candidate commit `abe1ccb` passed GitHub Actions Device Monitor CI #52
 - annotated `v2.8` release tag created at `abe1ccb7306a4a35e60221d41212beff22aa52d9` and pushed to `origin`
+- GitHub release `Device Monitor v2.8` published from the validated `v2.8` tag
+- public `refs/tags/v2.8.zip` archive verified successfully
 
 ## Known unresolved issues
 
@@ -396,4 +398,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Publish the GitHub v2.8 release from the validated v2.8 tag.
+Perform post-release v2.8 installation and upgrade smoke validation.
