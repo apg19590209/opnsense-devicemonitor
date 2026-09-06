@@ -172,7 +172,7 @@ column alignment.
 
 - No known unresolved Phase 1 DHCP/DNS service-discovery issues remain.
 - No known unresolved v2.8 identity-conflict email issues remain.
-- Device Monitor version-display review remains separate.
+- No known unresolved Device Monitor version-display issues remain.
 
 ## Current operating values
 
@@ -359,6 +359,30 @@ Files changed for this task:
 - `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`
 - `src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py`
 
+## v2.8 release-readiness review
+
+Release-facing metadata and documentation have been reviewed and corrected.
+
+- `defaults.json` remains authoritative at version `2.8`
+- English and Czech gettext metadata remain at Device Monitor 2.8
+- English and Czech README version histories now include v2.8
+- English and Czech installation instructions now target the `v2.8` tag from
+  `apg19590209/opnsense-devicemonitor`
+- stale v2.7 installation references and the obsolete upstream direct-download
+  reference were removed
+- stale `Device Monitor version-display review remains separate` state was resolved
+- About heading changed from `v2.8 Development & Enhancements` to
+  `v2.8 Features and Enhancements`
+- the new About heading was added to both gettext catalogues
+- English and Czech gettext catalogues compile successfully; only the existing
+  optional gettext header warnings remain
+- live About page was deployed without a service restart and visually validated
+- live About page displays `v2.8 Features and Enhancements`, `Licence`, and
+  `BSD 2-Clause License`
+- repository release-reference residual audit found no remaining stale v2.7
+  installation or obsolete development-heading references
+- no v2.8 tag has been created yet
+
 ## Known unresolved issues
 
 - No known unresolved Phase 1 DHCP/DNS discovery issues remain.
@@ -369,4 +393,4 @@ Files changed for this task:
 
 ## Next step
 
-Review remaining v2.8 release-readiness items before any tag or release.
+Commit and push the validated v2.8 release-readiness documentation and About-page updates.

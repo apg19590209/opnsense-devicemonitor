@@ -38,6 +38,17 @@ The plugin automatically monitors the network and alerts you about:
 
 ## Version history
 
+### v2.8 (September 2026) — Infrastructure services and device identity improvements
+
+- Adds the dedicated **Infrastructure Services** inventory with verified DHCP, DNS, NTP, SSH, Web/Admin, SMB/NFS, remote-access, SNMP, directory/authentication and VPN service discovery.
+- Uses bounded protocol verification, existing targeted Nmap evidence and authoritative local WireGuard runtime state; automatic discovery does not perform broad fresh Nmap sweeps.
+- Expands **IP and MAC Conflicts** with Unresolved/Resolved status, filtering and Resolve/Reopen actions while preserving event history.
+- Adds Kea DHCP hostname enrichment for detected device hostnames.
+- Separates user-assigned **Friendly Name** from detected **Hostname**, preserving detected network identity across edits and scans.
+- Adds Friendly Name, Hostname, First Seen and Last Seen presentation/export improvements.
+- Standardises project-owned English text to UK English while preserving required technical identifiers and syntax.
+- Corrects licence metadata to **BSD 2-Clause License**, matching the repository `LICENSE` file.
+
 ### v2.7 (September 2026) — Device identity anomaly detection
 
 - Adds read-only Kea DHCP identity-source detection and normalised IPv4 lease evidence when available.
@@ -46,7 +57,7 @@ The plugin automatically monitors the network and alerts you about:
 - Records identity anomalies as observational SQLite events; no automatic blocking, deletion, firewall changes or remediation is performed.
 - Adds a dedicated **Identity Events** API and UI with severity, MAC/IP/interface evidence and expandable event details.
 - Refines Settings into Monitoring, Nmap Scanning, Email Notifications, Webhook Notifications and About sections.
-- Extends automated CI validation to the 2.7-development branch.
+- Extends automated CI validation to the `v2.7-development` branch.
 ### v2.6 (September 2026) — Detailed targeted Nmap scan history
 
 - Records targeted scan settings, Nmap version, elapsed time, OS hint and email outcome.
@@ -285,16 +296,16 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 
 ### Method 1: Download release ZIP + WinSCP
 
-1. Download the **v2.7 source code (zip)** from:
-   https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.7.zip
+1. Download the **v2.8 source code (zip)** from:
+   https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.8.zip
 2. Enable SSH in OPNsense: **System -> Settings -> Administration -> Secure Shell -> Enable**.
 3. Upload the ZIP to `/tmp/` using WinSCP.
 4. Connect by SSH and install:
 
 ```sh
 cd /tmp
-unzip opnsense-devicemonitor-2.7.zip
-cd opnsense-devicemonitor-2.7
+unzip opnsense-devicemonitor-2.8.zip
+cd opnsense-devicemonitor-2.8
 sh install.sh
 ```
 
@@ -305,9 +316,9 @@ No reboot is normally required.
 ```sh
 ssh root@your.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.7.zip
-unzip v2.7.zip
-cd opnsense-devicemonitor-2.7
+fetch https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.8.zip
+unzip v2.8.zip
+cd opnsense-devicemonitor-2.8
 sh install.sh
 ```
 
@@ -319,7 +330,7 @@ Before upgrading, back up the runtime data:
 tar -czf /root/devicemonitor-backup.tgz /var/db/devicemonitor
 ```
 
-Then install v2.7 using either method above.
+Then install v2.8 using either method above.
 
 Existing configuration and device data are preserved during the upgrade.
 

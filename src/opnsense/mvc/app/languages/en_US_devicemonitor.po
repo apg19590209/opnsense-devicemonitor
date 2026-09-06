@@ -246,6 +246,10 @@ msgstr "Author"
 msgid "GitHub Repository"
 msgstr "GitHub Repository"
 
+#: settings.volt - v2.8 features heading
+msgid "v2.8 Features and Enhancements"
+msgstr "v2.8 Features and Enhancements"
+
 #: settings.volt - tab 4: info table row
 msgid "Licence"
 msgstr "Licence"

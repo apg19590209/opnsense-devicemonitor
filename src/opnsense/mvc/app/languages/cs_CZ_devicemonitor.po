@@ -247,6 +247,10 @@ msgstr "Autor"
 msgid "GitHub Repository"
 msgstr "GitHub repozitář"
 
+#: settings.volt - v2.8 features heading
+msgid "v2.8 Features and Enhancements"
+msgstr "Funkce a vylepšení v2.8"
+
 #: settings.volt - tab 4: tabulka info - položka
 msgid "Licence"
 msgstr "Licence"

@@ -38,6 +38,17 @@ Plugin automaticky sleduje síť a upozorňuje na:
 
 ## Historie verzí
 
+### v2.8 (září 2026) — Infrastrukturní služby a vylepšení identity zařízení
+
+- Přidává samostatný inventář **Infrastructure Services** s ověřenou detekcí služeb DHCP, DNS, NTP, SSH, Web/Admin, SMB/NFS, vzdáleného přístupu, SNMP, adresářových/autentizačních služeb a VPN.
+- Používá omezené protokolové ověřování, existující cílené důkazy Nmap a autoritativní lokální stav WireGuard; automatická detekce nespouští nové plošné Nmap skeny.
+- Rozšiřuje **IP and MAC Conflicts** o stavy Unresolved/Resolved, filtrování a akce Resolve/Reopen při zachování historie událostí.
+- Přidává obohacení detekovaných hostname pomocí Kea DHCP.
+- Odděluje uživatelský **Friendly Name** od detekovaného **Hostname**, takže úpravy a skeny nepřepisují zjištěnou síťovou identitu.
+- Rozšiřuje zobrazení a export o Friendly Name, Hostname, First Seen a Last Seen.
+- Standardizuje projektový anglický text na britskou angličtinu při zachování nutných technických identifikátorů a syntaxe.
+- Opravuje licenční metadata na **BSD 2-Clause License** podle souboru `LICENSE`.
+
 ### v2.7 (září 2026) — Detekce anomálií identity zařízení
 
 - Přidává detekci zdroje identity z Kea DHCP pouze pro čtení a normalizované důkazy z IPv4 pronájmů, pokud jsou dostupné.
@@ -284,7 +295,7 @@ Také odstraněno rozbité `configctl webgui restart` a `service php-fpm restart
 
 ### Metoda 1: WinSCP + SSH (doporučeno)
 
-**Krok 1:** Stáhni nejnovější ZIP z [Release](../../tree/main/release).
+**Krok 1:** Stáhni zdrojový ZIP **v2.8** z `https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.8.zip`.
 
 **Krok 2:** Povol SSH na OPNsense:
 ```
@@ -296,8 +307,8 @@ System → Settings → Administration → Secure Shell → Enable
 **Krok 4:** Připoj se přes SSH a nainstaluj:
 ```bash
 cd /tmp
-unzip opnsense-devicemonitor*.zip
-cd opnsense-devicemonitor
+unzip opnsense-devicemonitor-2.8.zip
+cd opnsense-devicemonitor-2.8
 sh install.sh
 ```
 
@@ -310,9 +321,9 @@ Restart není potřeba. Instalační skript se postará o vše.
 ```bash
 ssh root@tvoje.opnsense.ip
 cd /tmp
-fetch https://github.com/hacesoft/opnsense-devicemonitor/releases/latest/download/opnsense-devicemonitor.zip
-unzip opnsense-devicemonitor.zip
-cd opnsense-devicemonitor
+fetch https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.8.zip
+unzip v2.8.zip
+cd opnsense-devicemonitor-2.8
 sh install.sh
 ```
 
