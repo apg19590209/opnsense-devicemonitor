@@ -388,6 +388,17 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - GitHub release `Device Monitor v2.8` published from the validated `v2.8` tag
 - public `refs/tags/v2.8.zip` archive verified successfully
 
+## Product backlog
+
+- `PRODUCT_BACKLOG.md` created as the authoritative list of explicitly deferred
+  or approved future Device Monitor work.
+- No open backlog items are currently recorded.
+- Backlog items must not duplicate the active task in `PROJECT_STATE.md`.
+- Architectural constraints remain in `DECISIONS.md`; environment facts remain
+  in `SYSTEM_MAP.md`.
+- Files changed: `PRODUCT_BACKLOG.md`, `PROJECT_STATE.md`.
+- Validation: repository diff checks passed.
+
 ## Known unresolved issues
 
 - No known unresolved Phase 1 DHCP/DNS discovery issues remain.
