@@ -392,7 +392,9 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 - `PRODUCT_BACKLOG.md` created as the authoritative list of explicitly deferred
   or approved future Device Monitor work.
-- No open backlog items are currently recorded.
+- One deferred backlog item is recorded: `DM-BL-001`, user-confirmed
+  physical-device identity grouping for legitimate multi-MAC devices without
+  automatic merging.
 - Backlog items must not duplicate the active task in `PROJECT_STATE.md`.
 - Architectural constraints remain in `DECISIONS.md`; environment facts remain
   in `SYSTEM_MAP.md`.

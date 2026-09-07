@@ -15,4 +15,13 @@ or approved for future development.
 
 ## Open backlog
 
-No open backlog items are currently recorded.
+### DM-BL-001 — User-confirmed physical-device identity grouping
+
+Design user-confirmed physical-device identity grouping for cases where one
+physical device may legitimately use multiple MAC addresses.
+
+Constraints:
+
+- grouping must be explicitly user-confirmed
+- do not automatically merge device identities
+- preserve existing device and identity-event history
