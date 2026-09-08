@@ -459,6 +459,8 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - Friendly Name remains independent.
 - UI and CSV expose hostname source.
 - Migration, regression tests, PHP syntax, live deployment, GUI and CSV validation all passed.
+- Implementation commit b5adf85 pushed to origin/v2.8-development.
+- GitHub Actions run 34216125993: PASS.
 
 ## Known unresolved issues
 
@@ -471,4 +473,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Push the completed Hostname Source provenance commit to origin/v2.8-development.
+Inspect and design the smallest safe Device Monitor liveness fallback for stale Hostwatch records.
