@@ -216,6 +216,8 @@ Validation:
 - valid-save PHP test deliberately skipped when using the real live model
 - `git diff --check`: PASS apart from existing CRLF/LF informational warnings
 - live deployed SHA256 values matched the local candidate files exactly
+- implementation commit `e854f0b` pushed to `origin/v2.8-development`
+- GitHub Actions Device Monitor CI run `34177589841` for `e854f0b`: PASS
 
 ## Known unresolved issues
 
@@ -461,4 +463,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Push the validated AdGuard DNS rewrite hostname-enrichment commit to origin and verify GitHub Actions.
+Select the next Device Monitor development task.
