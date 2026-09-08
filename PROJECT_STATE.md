@@ -471,6 +471,8 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - Both update-only and full-scan paths validated live against quiet Omada APs.
 - Regression test passes on OPNsense.
 - Decision 12 records the architecture change.
+- Implementation commit b5a1ca4 pushed to origin/v2.8-development.
+- GitHub Actions run 34223697871: PASS.
 
 ## Known unresolved issues
 
@@ -483,4 +485,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Commit and push the validated Hostwatch liveness fallback.
+Resume identification of the remaining unresolved static LAN devices.
