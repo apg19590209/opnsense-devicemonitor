@@ -98,6 +98,9 @@ class DevicesController extends ApiControllerBase
                     if (isset($device['hostname']) && strpos(strtolower($device['hostname']), $searchPhrase) !== false) {
                         $match = true;
                     }
+                    if (isset($device['hostname_source']) && strpos(strtolower($device['hostname_source']), $searchPhrase) !== false) {
+                        $match = true;
+                    }
                     if (isset($device['vendor']) && strpos(strtolower($device['vendor']), $searchPhrase) !== false) {
                         $match = true;
                     }

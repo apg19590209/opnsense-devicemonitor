@@ -196,6 +196,7 @@ class DeviceMonitor
             mac TEXT PRIMARY KEY,
             ip TEXT,
             hostname TEXT,
+            hostname_source TEXT DEFAULT \'\',
             vendor TEXT,
             vlan TEXT,
             last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -215,6 +216,7 @@ class DeviceMonitor
         // Migration: add columns for older databases
         @$db->exec('ALTER TABLE devices ADD COLUMN first_seen DATETIME DEFAULT CURRENT_TIMESTAMP');
         @$db->exec('ALTER TABLE devices ADD COLUMN custom_hostname TEXT DEFAULT NULL');
+        @$db->exec("ALTER TABLE devices ADD COLUMN hostname_source TEXT DEFAULT ''");
         @$db->exec('ALTER TABLE devices ADD COLUMN nmap_scan_pending INTEGER DEFAULT 0');
         @$db->exec('ALTER TABLE devices ADD COLUMN nmap_scan_attempts INTEGER DEFAULT 0');
         @$db->exec('ALTER TABLE devices ADD COLUMN nmap_next_attempt DATETIME DEFAULT NULL');

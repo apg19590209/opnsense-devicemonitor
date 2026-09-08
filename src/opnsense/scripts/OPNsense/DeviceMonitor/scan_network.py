@@ -158,6 +158,7 @@ def init_db():
         mac TEXT PRIMARY KEY,
         ip TEXT,
         hostname TEXT,
+        hostname_source TEXT DEFAULT '',
         vendor TEXT,
         vlan TEXT,
         last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -174,6 +175,11 @@ def init_db():
 
     try:
         c.execute('ALTER TABLE devices ADD COLUMN custom_hostname TEXT DEFAULT NULL')
+    except:
+        pass
+
+    try:
+        c.execute("ALTER TABLE devices ADD COLUMN hostname_source TEXT DEFAULT ''")
     except:
         pass
 
@@ -5138,6 +5144,40 @@ def update_status_only():
     return 0
 
 
+def apply_hostname_provenance(
+    device,
+    isc_descriptions,
+    kea_descriptions,
+    dnsmasq_descriptions,
+    adguard_rewrite_hostnames
+):
+    """Apply hostname precedence and record the source of the winning hostname."""
+    device['hostname_source'] = (
+        'hostwatch' if device.get('hostname') else ''
+    )
+
+    mac = str(device.get('mac') or '').lower().strip()
+
+    if mac in isc_descriptions:
+        device['hostname'] = isc_descriptions[mac]
+        device['hostname_source'] = 'isc'
+
+    if mac in kea_descriptions:
+        device['hostname'] = kea_descriptions[mac]
+        device['hostname_source'] = 'kea'
+
+    if mac in dnsmasq_descriptions:
+        device['hostname'] = dnsmasq_descriptions[mac]
+        device['hostname_source'] = 'dnsmasq'
+
+    device_ip = str(device.get('ip') or '').strip()
+    if device_ip in adguard_rewrite_hostnames:
+        device['hostname'] = adguard_rewrite_hostnames[device_ip]
+        device['hostname_source'] = 'adguard'
+
+    return device
+
+
 def full_scan():
     """Full scan from OPNsense Hostwatch DB with DHCP labels"""
     log("Starting full scan from Hostwatch DB...")
@@ -5159,9 +5199,9 @@ def full_scan():
         log("ERROR: No data from Hostwatch DB")
         return 1
 
-    # 2. DHCP labels from ISC, Kea and Dnsmasq.
-    # Priority: Dnsmasq overrides Kea, Kea overrides ISC.
-    dhcp_descriptions = get_dhcp_descriptions()
+    # 2. Hostname sources. Precedence is applied explicitly below:
+    # AdGuard > Dnsmasq > Kea > ISC > Hostwatch.
+    isc_descriptions = get_dhcp_descriptions()
 
     kea_descriptions = {
         lease['mac']: lease['hostname']
@@ -5169,11 +5209,7 @@ def full_scan():
         if lease.get('hostname')
     }
 
-    dhcp_descriptions.update(kea_descriptions)
-
     dnsmasq_descriptions = get_dnsmasq_descriptions()
-    dhcp_descriptions.update(dnsmasq_descriptions)
-
     adguard_rewrite_hostnames = get_adguard_rewrite_hostnames(config)
 
     # 3. Update local database
@@ -5187,15 +5223,13 @@ def full_scan():
         if not mac:
             continue
 
-        # Enrich with DHCP description.
-        if mac in dhcp_descriptions:
-            device['hostname'] = dhcp_descriptions[mac]
-
-        # Explicit AdGuard DNS rewrites are user-configured static names and
-        # therefore take precedence over DHCP-derived and Hostwatch hostnames.
-        device_ip = str(device.get('ip') or '').strip()
-        if device_ip in adguard_rewrite_hostnames:
-            device['hostname'] = adguard_rewrite_hostnames[device_ip]
+        apply_hostname_provenance(
+            device,
+            isc_descriptions,
+            kea_descriptions,
+            dnsmasq_descriptions,
+            adguard_rewrite_hostnames
+        )
 
         is_active = 1 if is_recently_seen(device.get('last_seen', '')) else 0
         last_seen = device.get('last_seen') or now
@@ -5236,19 +5270,19 @@ def full_scan():
         if row:
             conn.execute('''
                 UPDATE devices
-                SET ip = ?, hostname = ?, vendor = ?, vlan = ?,
+                SET ip = ?, hostname = ?, hostname_source = ?, vendor = ?, vlan = ?,
                     last_seen = ?, is_active = ?
                 WHERE mac = ?
-            ''', (device['ip'], device['hostname'], device['vendor'],
-                  device['vlan'], last_seen, is_active, mac))
+            ''', (device['ip'], device['hostname'], device['hostname_source'],
+                  device['vendor'], device['vlan'], last_seen, is_active, mac))
         else:
             conn.execute('''
                 INSERT INTO devices
-                    (mac, ip, hostname, vendor, vlan, first_seen, last_seen,
+                    (mac, ip, hostname, hostname_source, vendor, vlan, first_seen, last_seen,
                      is_active, notification_pending)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-            ''', (mac, device['ip'], device['hostname'], device['vendor'],
-                  device['vlan'], first_seen, last_seen, is_active))
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+            ''', (mac, device['ip'], device['hostname'], device['hostname_source'],
+                  device['vendor'], device['vlan'], first_seen, last_seen, is_active))
             device['first_seen'] = first_seen
             if is_truly_new:
                 new_devices.append(device)

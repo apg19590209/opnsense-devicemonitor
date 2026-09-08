@@ -452,6 +452,14 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - Files changed: `PRODUCT_BACKLOG.md`, `PROJECT_STATE.md`.
 - Validation: repository diff checks passed.
 
+## Hostname Source provenance
+
+- Added persistent hostname_source provenance.
+- Precedence remains AdGuard > Dnsmasq > Kea > ISC > Hostwatch.
+- Friendly Name remains independent.
+- UI and CSV expose hostname source.
+- Migration, regression tests, PHP syntax, live deployment, GUI and CSV validation all passed.
+
 ## Known unresolved issues
 
 - No known unresolved Phase 1 DHCP/DNS discovery issues remain.
@@ -463,4 +471,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Inspect the current hostname persistence/API/UI path and design the smallest safe Hostname Source provenance change.
+Push the completed Hostname Source provenance commit to origin/v2.8-development.

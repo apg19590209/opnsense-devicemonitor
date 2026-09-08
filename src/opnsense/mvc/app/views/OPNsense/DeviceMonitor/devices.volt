@@ -393,6 +393,17 @@ $(document).ready(function() {
 
         return $cell;
     }
+    function hostnameSourceLabel(source) {
+        var labels = {
+            adguard: '{{ lang._('AdGuard DNS rewrite') }}',
+            dnsmasq: '{{ lang._('Dnsmasq') }}',
+            kea: '{{ lang._('Kea DHCP') }}',
+            isc: '{{ lang._('ISC DHCP') }}',
+            hostwatch: '{{ lang._('Hostwatch') }}'
+        };
+        return labels[source] || source || '';
+    }
+
     // Render table
     function renderTable(rows) {
         var $tbody = $('#grid-devices tbody').empty();
@@ -402,6 +413,7 @@ $(document).ready(function() {
                 : '<span style="color:#666;font-weight:bold;white-space:nowrap;"><i class="fa fa-circle-o"></i> OFFLINE</span>';
 
             var hn = row.hostname || '';
+            var hostnameSource = hostnameSourceLabel(row.hostname_source || '');
             var friendly = row.custom_hostname || '';
 
             var $friendlyCell = $('<td>');
@@ -432,7 +444,20 @@ $(document).ready(function() {
 
             var $hostnameCell = $('<td>');
             if (hn) {
-                $hostnameCell.text(hn);
+                $('<span>')
+                    .text(hn)
+                    .appendTo($hostnameCell);
+
+                if (hostnameSource) {
+                    $('<small>')
+                        .css({
+                            display: 'block',
+                            color: '#777',
+                            'margin-top': '2px'
+                        })
+                        .text(hostnameSource)
+                        .appendTo($hostnameCell);
+                }
             } else {
                 $('<em>')
                     .css('color', '#555')
@@ -637,13 +662,16 @@ $(document).ready(function() {
         }
 
         // Headers
-        var cols = ['mac', 'ip', 'custom_hostname', 'hostname', 'vendor', 'vlan', 'status', 'first_seen', 'last_seen'];
-        var headers = ['MAC Address', 'IP Address', 'Friendly Name', 'Hostname', 'Vendor', 'VLAN', 'Status', 'First Seen', 'Last Seen'];
+        var cols = ['mac', 'ip', 'custom_hostname', 'hostname', 'hostname_source', 'vendor', 'vlan', 'status', 'first_seen', 'last_seen'];
+        var headers = ['MAC Address', 'IP Address', 'Friendly Name', 'Hostname', 'Hostname Source', 'Vendor', 'VLAN', 'Status', 'First Seen', 'Last Seen'];
 
         var csv = headers.join(';') + '\n';
         filtered.forEach(function(row) {
             var line = cols.map(function(c) {
                 var val = (row[c] || '').toString();
+                if (c === 'hostname_source') {
+                    val = hostnameSourceLabel(row.hostname_source || '');
+                }
                 // Add the VLAN description
                 if (c === 'vlan' && row.vlan && vlanNames[row.vlan]) {
                     val = row.vlan + ' - ' + vlanNames[row.vlan];
