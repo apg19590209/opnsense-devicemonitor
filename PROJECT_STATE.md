@@ -463,4 +463,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Select the next Device Monitor development task.
+Inspect the current hostname persistence/API/UI path and design the smallest safe Hostname Source provenance change.
