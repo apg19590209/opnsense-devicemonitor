@@ -776,6 +776,7 @@ jobs:
           set -eu
           python3 tests/test_adguard_rewrites.py
           python3 tests/test_hostname_provenance.py
+          python3 tests/test_liveness_fallback.py
 
           sudo mkdir -p /usr/local/opnsense/scripts/OPNsense/DeviceMonitor
           sudo tee /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php >/dev/null <<'PHP'

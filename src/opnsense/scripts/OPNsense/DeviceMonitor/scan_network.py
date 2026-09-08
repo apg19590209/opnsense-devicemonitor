@@ -981,6 +981,25 @@ def is_recently_seen(last_seen_str, minutes=15):
         return False
 
 
+def is_device_active(last_seen_str, ip, was_active=False):
+    if is_recently_seen(last_seen_str):
+        return True
+    if not was_active and not is_recently_seen(last_seen_str, minutes=120):
+        return False
+    try:
+        address = ipaddress.ip_address(str(ip or '').strip())
+        if address.version != 4:
+            return False
+        if subprocess.run(
+            ['/sbin/ping', '-n', '-c', '2', str(address)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            timeout=3, check=False,
+        ).returncode == 0:
+            return True
+    except (ValueError, OSError, subprocess.TimeoutExpired):
+        pass
+    return was_active and is_recently_seen(last_seen_str, minutes=30)
+
 def upsert_device_service(
     conn,
     mac,
@@ -5126,9 +5145,10 @@ def update_status_only():
 
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
+    previously_active = {r[0] for r in cursor.execute("SELECT mac FROM devices WHERE is_active = 1")}
     cursor.execute("UPDATE devices SET is_active = 0")
     for d in devices:
-        if is_recently_seen(d.get('last_seen', '')):
+        if is_device_active(d.get('last_seen', ''), d.get('ip', ''), d['mac'] in previously_active):
             cursor.execute(
                 "UPDATE devices SET is_active = 1, last_seen = ? WHERE mac = ?",
                 (d.get('last_seen', ''), d['mac'])
@@ -5216,6 +5236,7 @@ def full_scan():
     new_devices = []
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     conn = sqlite3.connect(DB_FILE)
+    previously_active = {r[0] for r in conn.execute('SELECT mac FROM devices WHERE is_active = 1')}
     conn.execute('UPDATE devices SET is_active = 0, notification_pending = 0')
 
     for device in devices:
@@ -5231,7 +5252,7 @@ def full_scan():
             adguard_rewrite_hostnames
         )
 
-        is_active = 1 if is_recently_seen(device.get('last_seen', '')) else 0
+        is_active = 1 if is_device_active(device.get('last_seen', ''), device.get('ip', ''), mac in previously_active) else 0
         last_seen = device.get('last_seen') or now
         first_seen = device.get('first_seen') or now
 

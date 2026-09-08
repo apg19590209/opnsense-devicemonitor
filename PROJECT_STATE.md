@@ -462,6 +462,16 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - Implementation commit b5adf85 pushed to origin/v2.8-development.
 - GitHub Actions run 34216125993: PASS.
 
+## Hostwatch liveness fallback
+
+- Added bounded ICMP confirmation for stale Hostwatch observations.
+- Recent Hostwatch remains authoritative; no Nmap or subnet sweep is used.
+- Previously-online devices get a 30-minute grace after failed probe.
+- Recently-seen offline devices can recover by ping within 120 minutes.
+- Both update-only and full-scan paths validated live against quiet Omada APs.
+- Regression test passes on OPNsense.
+- Decision 12 records the architecture change.
+
 ## Known unresolved issues
 
 - No known unresolved Phase 1 DHCP/DNS discovery issues remain.
@@ -473,4 +483,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Inspect and design the smallest safe Device Monitor liveness fallback for stale Hostwatch records.
+Commit and push the validated Hostwatch liveness fallback.

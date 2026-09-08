@@ -206,3 +206,28 @@ Hostwatch data.
 Keeping Friendly Name separate preserves user intent, while HTTPS-only,
 no-redirect and fail-soft behaviour prevents an optional enrichment source
 from weakening credential handling or normal device monitoring.
+
+## 12. Stale Hostwatch observations require bounded liveness confirmation
+
+### Decision
+
+Decision 1 remains authoritative for current IP address and interface ownership.
+
+For online/offline state only, this decision supersedes the requirement that
+Hostwatch recency alone determines liveness.
+
+Device Monitor must:
+
+- treat a Hostwatch observation within 15 minutes as online
+- use a bounded ICMP probe when an otherwise relevant Hostwatch observation is stale
+- use two ICMP echo requests with a maximum subprocess duration of 3 seconds
+- retain a previously-online device for up to 30 minutes when the bounded probe fails
+- allow a previously-offline device seen within the last 120 minutes to recover if it responds
+- avoid Nmap or broad subnet probing for liveness confirmation
+
+### Reason
+
+Hostwatch is passive. Quiet but reachable infrastructure devices can therefore
+have stale Hostwatch timestamps and be falsely marked offline. A bounded
+single-host ICMP confirmation preserves Hostwatch ownership semantics while
+avoiding false offline state without introducing broad active scanning.
