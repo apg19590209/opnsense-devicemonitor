@@ -68,6 +68,11 @@ class ConfigController extends ApiControllerBase
         $smtp_username = trim($this->request->getPost('smtp_username', 'string', ''));
         $smtp_password = $this->request->getPost('smtp_password', 'string', '');
 
+        $adguard_rewrite_enabled = $this->request->getPost('adguard_rewrite_enabled', 'string', '0');
+        $adguard_url = trim($this->request->getPost('adguard_url', 'string', ''));
+        $adguard_username = trim($this->request->getPost('adguard_username', 'string', ''));
+        $adguard_password = $this->request->getPost('adguard_password', 'string', '');
+
         $webhook_enabled = $this->request->getPost('webhook_enabled', 'string', '0');
         $webhook_url = $this->request->getPost('webhook_url', 'string', '');
         $scan_interval = $this->request->getPost('scan_interval', 'int', 300);
@@ -91,6 +96,45 @@ class ConfigController extends ApiControllerBase
 
         if (!in_array($smtp_encryption, ['none', 'starttls', 'ssl'], true)) {
             return ['result' => 'failed', 'message' => 'Invalid SMTP encryption type'];
+        }
+
+        if (!in_array($adguard_rewrite_enabled, ['0', '1'], true)) {
+            return ['result' => 'failed', 'message' => 'Invalid AdGuard rewrite enabled value'];
+        }
+
+        if ($adguard_rewrite_enabled === '1') {
+            if ($adguard_url === '' || !filter_var($adguard_url, FILTER_VALIDATE_URL)) {
+                return ['result' => 'failed', 'message' => 'Invalid AdGuard URL'];
+            }
+
+            $adguard_url_parts = parse_url($adguard_url);
+
+            if (
+                !is_array($adguard_url_parts)
+                || strtolower((string)($adguard_url_parts['scheme'] ?? '')) !== 'https'
+            ) {
+                return ['result' => 'failed', 'message' => 'AdGuard URL must use HTTPS'];
+            }
+
+            if (
+                isset($adguard_url_parts['user'])
+                || isset($adguard_url_parts['pass'])
+                || isset($adguard_url_parts['query'])
+                || isset($adguard_url_parts['fragment'])
+            ) {
+                return [
+                    'result' => 'failed',
+                    'message' => 'AdGuard URL must not contain credentials, query or fragment'
+                ];
+            }
+
+            if ($adguard_username === '') {
+                return ['result' => 'failed', 'message' => 'AdGuard username must not be empty'];
+            }
+
+            if ($adguard_password === '') {
+                return ['result' => 'failed', 'message' => 'AdGuard password must not be empty'];
+            }
         }
 
         if ($email_enabled == '1') {
@@ -161,6 +205,10 @@ class ConfigController extends ApiControllerBase
         $config['smtp_encryption'] = $smtp_encryption;
         $config['smtp_username'] = $smtp_username;
         $config['smtp_password'] = $smtp_password;
+        $config['adguard_rewrite_enabled'] = $adguard_rewrite_enabled;
+        $config['adguard_url'] = $adguard_url;
+        $config['adguard_username'] = $adguard_username;
+        $config['adguard_password'] = $adguard_password;
         $config['webhook_enabled'] = $webhook_enabled;
         $config['webhook_url'] = $webhook_url;
         $config['scan_interval'] = (int)$scan_interval;

@@ -172,3 +172,37 @@ Nmap-backed SMB verification is serialised.
 Device Monitor runs on the production firewall. Broad or highly concurrent
 Nmap activity would unnecessarily increase firewall CPU, memory and network
 load and would conflict with the existing single-host Nmap architecture.
+
+## 11. AdGuard DNS rewrites are the highest-priority automatic hostname source
+
+### Decision
+
+AdGuard Home DNS rewrite hostname enrichment is optional and disabled by
+default.
+
+When enabled, automatic hostname precedence is:
+
+`AdGuard rewrite > Dnsmasq > Kea > ISC > Hostwatch`
+
+AdGuard rewrite names must not overwrite `custom_hostname`, which remains the
+separate user-controlled Friendly Name.
+
+Only unambiguous literal IPv4 rewrite answers are accepted. CNAME/non-IP and
+IPv6 answers are ignored.
+
+AdGuard API access must:
+
+- use HTTPS with normal certificate verification
+- reject embedded URL credentials
+- disable HTTP redirects
+- fail soft if configuration, authentication, transport or response parsing fails
+
+### Reason
+
+AdGuard DNS rewrites are explicit user-authored static mappings and therefore
+provide stronger hostname evidence than dynamic DHCP labels or observational
+Hostwatch data.
+
+Keeping Friendly Name separate preserves user intent, while HTTPS-only,
+no-redirect and fail-soft behaviour prevents an optional enrichment source
+from weakening credential handling or normal device monitoring.

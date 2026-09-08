@@ -15,6 +15,10 @@ import time
 import select
 import struct
 import ipaddress
+import base64
+import urllib.error
+import urllib.parse
+import urllib.request
 import xml.etree.ElementTree as ET
 
 # ================================================================
@@ -67,6 +71,10 @@ def load_config():
             'identity_email_enabled': DEFAULT_CONFIG.get('identity_email_enabled', '0') == '1',
             'email_to': DEFAULT_CONFIG.get('email_to', ''),
             'email_from': DEFAULT_CONFIG.get('email_from', 'devicemonitor@opnsense.local'),
+            'adguard_rewrite_enabled': DEFAULT_CONFIG.get('adguard_rewrite_enabled', '0') == '1',
+            'adguard_url': DEFAULT_CONFIG.get('adguard_url', ''),
+            'adguard_username': DEFAULT_CONFIG.get('adguard_username', ''),
+            'adguard_password': DEFAULT_CONFIG.get('adguard_password', ''),
             'webhook_enabled': DEFAULT_CONFIG.get('webhook_enabled', '0') == '1',
             'webhook_url': DEFAULT_CONFIG.get('webhook_url', ''),
             'scan_interval': int(DEFAULT_CONFIG.get('scan_interval', 300)),
@@ -92,6 +100,10 @@ def load_config():
                 'identity_email_enabled': config.get('identity_email_enabled', '0') == '1',
                 'email_to': config.get('email_to', ''),
                 'email_from': config.get('email_from', 'devicemonitor@opnsense.local'),
+                'adguard_rewrite_enabled': config.get('adguard_rewrite_enabled', DEFAULT_CONFIG.get('adguard_rewrite_enabled', '0')) == '1',
+                'adguard_url': config.get('adguard_url', DEFAULT_CONFIG.get('adguard_url', '')),
+                'adguard_username': config.get('adguard_username', DEFAULT_CONFIG.get('adguard_username', '')),
+                'adguard_password': config.get('adguard_password', DEFAULT_CONFIG.get('adguard_password', '')),
                 'webhook_enabled': config.get('webhook_enabled', '0') == '1',
                 'webhook_url': config.get('webhook_url', ''),
                 'scan_interval': int(config.get('scan_interval', DEFAULT_CONFIG.get('scan_interval', 300))),
@@ -115,6 +127,10 @@ def load_config():
             'identity_email_enabled': False,
             'email_to': '',
             'email_from': 'devicemonitor@opnsense.local',
+            'adguard_rewrite_enabled': False,
+            'adguard_url': '',
+            'adguard_username': '',
+            'adguard_password': '',
             'webhook_enabled': False,
             'webhook_url': '',
             'scan_interval': 300,
@@ -520,11 +536,128 @@ def get_dnsmasq_descriptions():
         log(f"Error reading Dnsmasq config.xml: {e}")
     return descriptions
 
+def get_adguard_rewrite_hostnames(config):
+    """Return unambiguous IPv4 -> hostname mappings from AdGuard Home DNS rewrites."""
+    if not config.get('adguard_rewrite_enabled'):
+        return {}
+
+    base_url = str(config.get('adguard_url') or '').strip().rstrip('/')
+    username = str(config.get('adguard_username') or '')
+    password = str(config.get('adguard_password') or '')
+
+    if not base_url or not username or not password:
+        log("AdGuard DNS rewrites: configuration incomplete")
+        return {}
+
+    try:
+        parsed_url = urllib.parse.urlsplit(base_url)
+
+        if (
+            parsed_url.scheme.lower() != 'https'
+            or not parsed_url.hostname
+            or parsed_url.username is not None
+            or parsed_url.password is not None
+            or parsed_url.query
+            or parsed_url.fragment
+        ):
+            log("AdGuard DNS rewrites: invalid HTTPS URL")
+            return {}
+
+        url = f"{base_url}/control/rewrite/list"
+        credentials = f"{username}:{password}".encode('utf-8')
+        authorization = base64.b64encode(credentials).decode('ascii')
+
+        request = urllib.request.Request(
+            url,
+            headers={
+                'Authorization': f'Basic {authorization}',
+                'Accept': 'application/json'
+            },
+            method='GET'
+        )
+
+        class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+            def redirect_request(
+                self,
+                req,
+                fp,
+                code,
+                msg,
+                headers,
+                newurl
+            ):
+                return None
+
+        context = ssl.create_default_context()
+        opener = urllib.request.build_opener(
+            urllib.request.HTTPSHandler(context=context),
+            NoRedirectHandler()
+        )
+
+        with opener.open(request, timeout=4) as response:
+            payload = json.loads(response.read().decode('utf-8'))
+
+    except urllib.error.HTTPError as e:
+        log(f"AdGuard DNS rewrites: HTTP {e.code}")
+        return {}
+    except Exception as e:
+        log(f"AdGuard DNS rewrites: request failed ({type(e).__name__})")
+        return {}
+
+    if not isinstance(payload, list):
+        log("AdGuard DNS rewrites: invalid response")
+        return {}
+
+    mappings = {}
+    ambiguous = set()
+
+    for entry in payload:
+        if not isinstance(entry, dict):
+            continue
+
+        domain = entry.get('domain')
+        answer = entry.get('answer')
+
+        if not isinstance(domain, str) or not isinstance(answer, str):
+            continue
+
+        hostname = domain.strip().rstrip('.')
+        answer = answer.strip()
+
+        if not hostname or not answer:
+            continue
+
+        try:
+            address = ipaddress.ip_address(answer)
+        except ValueError:
+            continue
+
+        if address.version != 4:
+            continue
+
+        ip = str(address)
+
+        if ip in ambiguous:
+            continue
+
+        previous = mappings.get(ip)
+        if previous is not None and previous != hostname:
+            mappings.pop(ip, None)
+            ambiguous.add(ip)
+            continue
+
+        mappings[ip] = hostname
+
+    log(
+        f"AdGuard DNS rewrites: {len(mappings)} IPv4 hostname mappings"
+        + (f", {len(ambiguous)} ambiguous skipped" if ambiguous else "")
+    )
+    return mappings
+
 KEA_READ_ONLY_COMMANDS = {
     'list-commands',
     'lease4-get-all',
 }
-
 
 def query_kea_command(command, timeout=5):
     """Run an approved read-only Kea command and return its JSON response."""
@@ -5041,6 +5174,8 @@ def full_scan():
     dnsmasq_descriptions = get_dnsmasq_descriptions()
     dhcp_descriptions.update(dnsmasq_descriptions)
 
+    adguard_rewrite_hostnames = get_adguard_rewrite_hostnames(config)
+
     # 3. Update local database
     new_devices = []
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -5052,9 +5187,15 @@ def full_scan():
         if not mac:
             continue
 
-        # Enrich with DHCP description
+        # Enrich with DHCP description.
         if mac in dhcp_descriptions:
             device['hostname'] = dhcp_descriptions[mac]
+
+        # Explicit AdGuard DNS rewrites are user-configured static names and
+        # therefore take precedence over DHCP-derived and Hostwatch hostnames.
+        device_ip = str(device.get('ip') or '').strip()
+        if device_ip in adguard_rewrite_hostnames:
+            device['hostname'] = adguard_rewrite_hostnames[device_ip]
 
         is_active = 1 if is_recently_seen(device.get('last_seen', '')) else 0
         last_seen = device.get('last_seen') or now

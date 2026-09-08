@@ -224,6 +224,36 @@
                             </td>
                         </tr>
 
+                        <tr>
+                            <td style="vertical-align:top;">
+                                <strong>{{ lang._('AdGuard DNS Rewrites') }}</strong>
+                            </td>
+                            <td>
+                                <label style="margin:0;">
+                                    <input type="checkbox" id="adguard_rewrite_enabled" />
+                                    <strong>{{ lang._('Enable AdGuard DNS rewrite hostname enrichment') }}</strong>
+                                </label>
+                                <br>
+                                <small class="text-muted">
+                                    {{ lang._('Uses manually configured AdGuard Home DNS rewrites as a high-confidence hostname source. Enable this only if you use AdGuard Home.') }}
+                                </small>
+
+                                <div id="adguard_rewrite_config" style="margin-top:14px;max-width:600px;display:none;">
+                                    <label>{{ lang._('AdGuard URL') }}:</label>
+                                    <input type="text" id="adguard_url" class="form-control" placeholder="https://192.168.1.2" style="max-width:400px;" />
+                                    <small class="text-muted">{{ lang._('HTTPS base URL of your AdGuard Home server') }}</small>
+                                    <br><br>
+
+                                    <label>{{ lang._('Username') }}:</label>
+                                    <input type="text" id="adguard_username" class="form-control" autocomplete="username" style="max-width:400px;" />
+                                    <br>
+
+                                    <label>{{ lang._('Password') }}:</label>
+                                    <input type="password" id="adguard_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
+                                </div>
+                            </td>
+                        </tr>
+
                     </tbody>
                 </table>
 
@@ -421,6 +451,10 @@ $().ready(function() {
         $.ajax({ url:'/api/devicemonitor/config/get', type:'GET', success:function(d) {
             $('#enabled').prop('checked', d.enabled==='1');
             $('#scan_interval').val(d.scan_interval||300);
+            $('#adguard_rewrite_enabled').prop('checked', d.adguard_rewrite_enabled==='1');
+            $('#adguard_url').val(d.adguard_url||'');
+            $('#adguard_username').val(d.adguard_username||'');
+            $('#adguard_password').val(d.adguard_password||'');
             $('#targeted_nmap_enabled').prop(
                 'checked',
                 String(
@@ -465,6 +499,7 @@ $().ready(function() {
             toggleEmailConfig();
             toggleEmailMethod();
             toggleWebhookConfig();
+            toggleAdGuardConfig();
         }});
     }
 
@@ -484,13 +519,21 @@ $().ready(function() {
     function toggleWebhookConfig() {
         $('#webhook_enabled').prop('checked') ? $('#webhook_config').slideDown() : $('#webhook_config').slideUp();
     }
+    function toggleAdGuardConfig() {
+        $('#adguard_rewrite_enabled').prop('checked') ? $('#adguard_rewrite_config').slideDown() : $('#adguard_rewrite_config').slideUp();
+    }
     $('#email_enabled').change(toggleEmailConfig);
     $('#email_method').change(toggleEmailMethod);
     $('#webhook_enabled').change(toggleWebhookConfig);
+    $('#adguard_rewrite_enabled').change(toggleAdGuardConfig);
 
     function collectConfigData() {
         return {
             enabled:          $('#enabled').is(':checked')?'1':'0',
+            adguard_rewrite_enabled: $('#adguard_rewrite_enabled').is(':checked')?'1':'0',
+            adguard_url:      $('#adguard_url').val(),
+            adguard_username: $('#adguard_username').val(),
+            adguard_password: $('#adguard_password').val(),
             email_enabled:    $('#email_enabled').is(':checked')?'1':'0',
             identity_email_enabled: $('#identity_email_enabled').is(':checked')?'1':'0',
             email_to:         $('#email_to').val(),

@@ -168,6 +168,55 @@ returning `RAN=False`.
 The Devices UI was visually validated after correcting the Services/VLAN
 column alignment.
 
+## AdGuard Home DNS rewrite hostname enrichment
+
+Optional AdGuard Home DNS rewrite hostname enrichment is implemented and
+validated on `v2.8-development`. The released `v2.8` tag remains unchanged.
+
+- feature is disabled by default
+- users explicitly configure their own AdGuard Home HTTPS URL, username and password
+- automatic hostname precedence is:
+  `AdGuard rewrite > Dnsmasq > Kea > ISC > Hostwatch`
+- `custom_hostname` remains a separate user-controlled Friendly Name and is untouched
+- only literal IPv4 rewrite answers are accepted
+- CNAME/non-IP and IPv6 answers are ignored
+- conflicting domains for the same IPv4 address are skipped as ambiguous
+- scanner independently enforces HTTPS even if `config.json` is manually edited
+- TLS certificate verification remains enabled through the system trust store
+- HTTP redirects are disabled so the Basic Authorization header cannot be forwarded
+- API/network/JSON failures are fail-soft and do not abort normal device scanning
+- credentials are not placed on command lines or written to Device Monitor logs
+- configuration validation rejects HTTP URLs, embedded credentials, query/fragment components and missing credentials when enabled
+- live OPNsense deployment completed with pre-deployment backup and SHA256 verification
+- no service restart was required; `scan_network.py` is invoked on demand through
+  `actions_devicemonitor.conf`
+- live authenticated AdGuard helper returned five expected IPv4 rewrite mappings
+- live Device Monitor log reported `AdGuard DNS rewrites: 5 IPv4 hostname mappings`
+- database hostnames for all five mapped devices matched the configured rewrites
+
+Files changed:
+
+- `.github/workflows/ci.yml`
+- `DECISIONS.md`
+- `PROJECT_STATE.md`
+- `src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ConfigController.php`
+- `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json`
+- `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`
+- `src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py`
+- `tests/test_adguard_config.php`
+- `tests/test_adguard_rewrites.py`
+
+Validation:
+
+- Python candidate syntax: PASS
+- PHP controller candidate syntax: PASS
+- AdGuard Python regression suite: PASS
+- existing Phase 3 Python regression suite: PASS
+- PHP controller rejection tests on OPNsense, including unsafe URL components: PASS
+- valid-save PHP test deliberately skipped when using the real live model
+- `git diff --check`: PASS apart from existing CRLF/LF informational warnings
+- live deployed SHA256 values matched the local candidate files exactly
+
 ## Known unresolved issues
 
 - No known unresolved Phase 1 DHCP/DNS service-discovery issues remain.
@@ -408,7 +457,8 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - No known unresolved Infrastructure Services usability issues remain.
 - No known unresolved Phase 3 infrastructure-service discovery issues remain.
 - No known unresolved Friendly Name / detected Hostname separation issue remains.
+- No known unresolved AdGuard DNS rewrite hostname-enrichment issue remains.
 
 ## Next step
 
-Select the next Device Monitor development task.
+Push the validated AdGuard DNS rewrite hostname-enrichment commit to origin and verify GitHub Actions.

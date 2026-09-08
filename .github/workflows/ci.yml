@@ -770,3 +770,16 @@ jobs:
           set -eu
           python3 tests/test_phase3_infrastructure.py
           node tests/test_infrastructure_stale.js
+
+      - name: Validate AdGuard DNS rewrite integration
+        run: |
+          set -eu
+          python3 tests/test_adguard_rewrites.py
+
+          sudo mkdir -p /usr/local/opnsense/scripts/OPNsense/DeviceMonitor
+          sudo tee /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php >/dev/null <<'PHP'
+          <?php
+          class NotificationHandler {}
+          PHP
+
+          php tests/test_adguard_config.php
