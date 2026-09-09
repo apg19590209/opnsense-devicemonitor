@@ -231,3 +231,40 @@ Hostwatch is passive. Quiet but reachable infrastructure devices can therefore
 have stale Hostwatch timestamps and be falsely marked offline. A bounded
 single-host ICMP confirmation preserves Hostwatch ownership semantics while
 avoiding false offline state without introducing broad active scanning.
+
+## 13. Full scans may prime Hostwatch visibility for quiet LAN devices
+
+### Decision
+
+A normal Device Monitor full scan may perform a bounded IPv4 ICMP visibility
+priming pass before reading Hostwatch.
+
+The priming pass must:
+
+- derive the LAN IPv4 address and prefix from OPNsense configuration
+- operate on IPv4 only
+- refuse networks larger than `/24`
+- probe only usable host addresses and exclude the OPNsense LAN address itself
+- use one ICMP echo request per address with bounded concurrency and timeout
+- use no Nmap
+- create or update no Device Monitor device records directly
+- allow Hostwatch to observe responding or otherwise ARP-visible devices before
+  Device Monitor reads the Hostwatch database
+- fail soft if configuration or probing fails
+- run only during a full scan, not `--update-only` or manual targeted scans
+
+Hostwatch remains authoritative for discovered device identity, MAC address,
+interface and observation data.
+
+This decision does not change Decision 12: subnet priming is a discovery
+mechanism, not a replacement for the bounded single-device liveness rules.
+
+### Reason
+
+Some quiet static LAN devices communicate only with peers on the same subnet
+and may never generate traffic through OPNsense. Passive Hostwatch observation
+can therefore miss them entirely.
+
+A bounded lightweight ICMP pass causes OPNsense to interact with the LAN hosts
+and allows Hostwatch to observe them, while avoiding broad Nmap discovery,
+direct database fabrication and unbounded network activity.

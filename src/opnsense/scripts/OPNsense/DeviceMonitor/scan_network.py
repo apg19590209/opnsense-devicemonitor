@@ -5198,6 +5198,71 @@ def apply_hostname_provenance(
     return device
 
 
+def prime_hostwatch_lan_visibility():
+    """Prime Hostwatch visibility for quiet devices on the LAN."""
+    try:
+        root = ET.parse('/conf/config.xml').getroot()
+        lan_ip = (root.findtext('./interfaces/lan/ipaddr') or '').strip()
+        lan_subnet = (root.findtext('./interfaces/lan/subnet') or '').strip()
+
+        local_address = ipaddress.ip_address(lan_ip)
+        network = ipaddress.ip_network(
+            f'{lan_ip}/{lan_subnet}',
+            strict=False
+        )
+
+        if local_address.version != 4 or network.version != 4:
+            log("[DISCOVERY] LAN visibility priming skipped: LAN is not IPv4")
+            return
+
+        if network.prefixlen < 24:
+            log(
+                "[DISCOVERY] LAN visibility priming skipped: "
+                f"{network} is larger than /24"
+            )
+            return
+
+    except (OSError, ET.ParseError, ValueError):
+        log("[DISCOVERY] LAN visibility priming skipped: invalid LAN configuration")
+        return
+
+    targets = [
+        str(address)
+        for address in network.hosts()
+        if address != local_address
+    ]
+
+    if not targets:
+        return
+
+    def probe(address):
+        try:
+            return subprocess.run(
+                ['/sbin/ping', '-n', '-c', '1', address],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=2,
+                check=False,
+            ).returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+
+    try:
+        with ThreadPoolExecutor(max_workers=32) as executor:
+            responded = sum(
+                1 for result in executor.map(probe, targets) if result
+            )
+    except Exception:
+        log("[DISCOVERY] LAN visibility priming failed")
+        return
+
+    log(
+        "[DISCOVERY] LAN visibility priming complete: "
+        f"{len(targets)} probed, {responded} responded"
+    )
+
+    time.sleep(2)
+
 def full_scan():
     """Full scan from OPNsense Hostwatch DB with DHCP labels"""
     log("Starting full scan from Hostwatch DB...")
@@ -5212,6 +5277,8 @@ def full_scan():
         f'ISC={capabilities["isc"]["enabled"]}, '
         f'Dnsmasq={capabilities["dnsmasq"]["configured"]}'
     )
+
+    prime_hostwatch_lan_visibility()
 
     # 1. Data z hostwatch
     devices = get_hostwatch_devices()

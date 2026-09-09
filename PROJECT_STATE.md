@@ -474,6 +474,26 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - Implementation commit b5a1ca4 pushed to origin/v2.8-development.
 - GitHub Actions run 34223697871: PASS.
 
+## Quiet LAN visibility discovery
+
+- Added bounded LAN visibility priming before Hostwatch ingestion in full scans.
+- LAN IPv4 address and prefix are read from `/conf/config.xml`.
+- IPv4 networks larger than `/24` are rejected.
+- Each usable address is probed with one ICMP echo using at most 32 workers and
+  a 2-second subprocess timeout.
+- OPNsense's own LAN IPv4 address is excluded.
+- No Nmap scan is performed and no Device Monitor device row is created directly.
+- `--update-only` remains passive and does not run subnet visibility priming.
+- New regression test: `tests/test_hostwatch_lan_visibility.py`.
+- Existing hostname-provenance and liveness-fallback regressions continue to pass.
+- CI now includes the LAN visibility regression.
+- Candidate and live `scan_network.py` SHA256 hashes matched exactly after deployment.
+- Live full scans successfully probed 253 usable LAN targets.
+- Previously-unseen static TP-Link devices `.250`, `.251` and `.252` are now
+  present in Hostwatch and Device Monitor and are active.
+- Decision 13 records the architecture and safety constraints.
+- Implementation is deployed live but not yet committed.
+
 ## Known unresolved issues
 
 - No known unresolved Phase 1 DHCP/DNS discovery issues remain.
@@ -485,4 +505,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Resume identification of the remaining unresolved static LAN devices.
+Review and commit the bounded quiet-LAN visibility discovery implementation.
