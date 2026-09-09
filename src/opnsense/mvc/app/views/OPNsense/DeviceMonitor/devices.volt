@@ -415,6 +415,9 @@ $(document).ready(function() {
             var hn = row.hostname || '';
             var hostnameSource = hostnameSourceLabel(row.hostname_source || '');
             var friendly = row.custom_hostname || '';
+            var friendlyDecoder = document.createElement('textarea');
+            friendlyDecoder.innerHTML = friendly;
+            friendly = friendlyDecoder.value;
 
             var $friendlyCell = $('<td>');
             var $friendlyDisplay = $('<span>')
