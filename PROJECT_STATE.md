@@ -492,7 +492,8 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - Previously-unseen static TP-Link devices `.250`, `.251` and `.252` are now
   present in Hostwatch and Device Monitor and are active.
 - Decision 13 records the architecture and safety constraints.
-- Implementation is deployed live but not yet committed.
+- Implementation commit `f39b90c` pushed to `origin/v2.8-development`.
+- GitHub Actions Device Monitor CI run `34299991865`: PASS.
 
 ## Known unresolved issues
 
@@ -505,4 +506,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Review and commit the bounded quiet-LAN visibility discovery implementation.
+Resume identification of the remaining unresolved static LAN devices.
