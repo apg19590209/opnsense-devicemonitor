@@ -2,7 +2,7 @@
     <div class="content-box-main">
 
         <!-- Header with version and statistics -->
-        <div style="padding:10px 10px 8px 10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:1px solid #333;margin-bottom:12px;">
+        <div id="devices-sticky-summary" style="padding:10px 10px 8px 10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:1px solid #333;margin-bottom:0;">
             <h1 style="margin:0;font-size:20px;">
                 {{ lang._('Device Monitor') }}
                 <small id="plugin-version" style="font-size:13px;color:#888;margin-left:5px;"></small>
@@ -22,7 +22,7 @@
         </div>
 
         <!-- Toolbar -->
-        <div style="padding:0 4px 12px 4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <div id="devices-sticky-toolbar" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
 
             <!-- Multi-select VLAN dropdown -->
             <div class="dropdown" id="vlan-filter-wrapper" style="display:inline-block;">
@@ -94,6 +94,50 @@
     font-weight: 600;
     vertical-align: middle;
     white-space: nowrap;
+    position: sticky;
+    top: 100px;
+    z-index: 10;
+}
+#grid-devices tbody tr {
+    scroll-snap-align: start;
+}
+#devices-sticky-summary {
+    position: sticky;
+    z-index: 30;
+}
+#devices-sticky-summary::before,
+#devices-sticky-summary::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    background-color: inherit;
+    pointer-events: none;
+}
+#devices-sticky-summary::before {
+    top: -15px;
+    height: 15px;
+}
+#devices-sticky-summary::after {
+    bottom: -12px;
+    height: 12px;
+}
+#devices-sticky-toolbar {
+    position: sticky;
+    top: 50px;
+    z-index: 20;
+    padding: 12px 4px 12px 4px;
+    margin: 0;
+    border-bottom: 1px solid #333;
+}
+main.page-content > .row {
+    height: auto;
+    min-height: 100%;
+}
+header.page-content-head {
+    position: sticky;
+    top: 0;
+    z-index: 30;
 }
 </style>
 
@@ -719,7 +763,55 @@ $(document).ready(function() {
         });
     });
 
+    // Keep toolbar and table header sticky while the device list scrolls.
+    function updateStickyOffsets() {
+        var shellHead = $('header.page-head');
+        var pageHead = $('header.page-content-head');
+        var contentMain = $('section.page-content-main');
+        var summary = $('#devices-sticky-summary');
+        var toolbar = $('#devices-sticky-toolbar');
+        var thead = $('#grid-devices thead th');
+
+        var top = shellHead.length ? shellHead.outerHeight() : 62;
+
+        if (pageHead.length) {
+            pageHead.css('top', top + 'px');
+            top += pageHead.outerHeight();
+        }
+
+        if (contentMain.length) {
+            top += parseInt(contentMain.css('padding-top'), 10) || 0;
+            var bg = contentMain.css('background-color');
+            summary.css('background-color', bg);
+            toolbar.css('background-color', bg);
+            thead.css('background-color', bg);
+            $('#grid-devices thead').css('background-color', bg);
+            var shield = '0 0 0 2px ' + bg;
+            summary.css('box-shadow', shield);
+            toolbar.css('box-shadow', shield);
+            thead.css('box-shadow', shield);
+        }
+
+        if (summary.length) {
+            summary.css('top', top + 'px');
+            top += summary.outerHeight(true);
+        }
+
+        if (toolbar.length) {
+            toolbar.css('top', top + 'px');
+            top += toolbar.outerHeight(true);
+        }
+
+        thead.css('top', top + 'px');
+        var scrollRoot = document.scrollingElement || document.documentElement;
+        $(scrollRoot).css('scroll-snap-type', 'y proximity');
+        $(scrollRoot).css('scroll-padding-top', (top + thead.first().outerHeight()) + 'px');
+    }
+    $(window).on('resize', updateStickyOffsets);
+    setTimeout(updateStickyOffsets, 100);
+
     // Initialise by loading interface labels before devices
+
     $.ajax({url:'/api/devicemonitor/config/getinterfaces',type:'GET',
         success:function(data){ vlanNames=data||{}; loadDevices(); },
         error:function(){ loadDevices(); }
