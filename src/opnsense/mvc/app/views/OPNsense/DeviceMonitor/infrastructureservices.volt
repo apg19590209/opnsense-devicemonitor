@@ -583,6 +583,22 @@ $(document).ready(function() {
         types.forEach(function(type) {
             var groupRows = groups[type];
 
+            groupRows.sort(function(a, b) {
+                var aa = (a.ip || "").split(".").map(Number);
+                var bb = (b.ip || "").split(".").map(Number);
+
+                for (var i = 0; i < 4; i++) {
+                    var av = aa[i] || 0;
+                    var bv = bb[i] || 0;
+
+                    if (av !== bv) {
+                        return av - bv;
+                    }
+                }
+
+                return 0;
+            });
+
             var $panel = $('<div>')
                 .addClass(
                     'panel panel-default infrastructure-service-group'
