@@ -25,18 +25,18 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-Continue v2.8-development UI improvements after completion of the Devices-page scrolling enhancement.
+UI improvement — sort order on the Infrastructure Services page to numeric IPv4 order.
 
-Latest completed UI commit:
+Latest completed UI commits:
 
-`c67940d` — `fix: keep Device headers fixed while rows scroll`
+- `c67940d` — `fix: keep Device headers fixed while rows scroll`
+- `4d22a59` — `fix: sort Infrastructure Services by numeric IPv4`
 
 The Devices page now keeps the OPNsense page header, Device Monitor summary, filter/action toolbar and table column headers visible while device rows scroll beneath them. Sticky areas are opaque and scrolling settles on complete device rows.
 
-Remaining UI enhancements:
+Remaining UI enhancement:
 
 1. Add per-device comments with a compact list indicator and popup/editor.
-2. Sort Infrastructure Services IPv4 addresses numerically within each service section.
 
 ## Previously completed
 
@@ -506,4 +506,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Implement and validate numeric IPv4 ordering within each Infrastructure Services section.
+Implement and validate per-device comments with a compact list indicator and popup/editor.
