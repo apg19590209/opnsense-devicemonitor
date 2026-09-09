@@ -2,7 +2,7 @@
 
 ## Last updated
 
-7 September 2026
+9 September 2026
 
 ## Current version / branch / environment
 
@@ -25,19 +25,19 @@ Latest confirmed completed identity-work commit:
 
 ## Current objective
 
-v2.8 version/display consistency, Kea DHCP hostname enrichment and
-friendly-name/hostname separation are implemented and live validated.
+Continue v2.8-development UI improvements after completion of the Devices-page scrolling enhancement.
 
-Device identity presentation now keeps the two concepts separate:
+Latest completed UI commit:
 
-- `hostname` is detected network evidence from Kea/DHCP and other discovery.
-- `custom_hostname` is a user-assigned Friendly Name overlay.
-- Saving, clearing and subsequent scans do not overwrite the detected hostname.
-- Devices shows separate Friendly Name and Hostname columns plus First Seen and Last Seen.
-- Infrastructure Services can show a Friendly Name while retaining the detected hostname.
+`c67940d` — `fix: keep Device headers fixed while rows scroll`
 
-Automatic infrastructure discovery does not perform a fresh Nmap sweep
-across all known devices.
+The Devices page now keeps the OPNsense page header, Device Monitor summary, filter/action toolbar and table column headers visible while device rows scroll beneath them. Sticky areas are opaque and scrolling settles on complete device rows.
+
+Remaining UI enhancements:
+
+1. Add per-device comments with a compact list indicator and popup/editor.
+2. Sort Infrastructure Services IPv4 addresses numerically within each service section.
+
 ## Previously completed
 
 - v2.8 IP & MAC Conflicts supports All/Unresolved/Resolved filtering through the Status selector and clickable Unresolved/Resolved summary links.
@@ -506,4 +506,4 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Next step
 
-Resume identification of the remaining unresolved static LAN devices.
+Implement and validate numeric IPv4 ordering within each Infrastructure Services section.
