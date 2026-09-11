@@ -251,6 +251,27 @@ def init_db():
         ON device_lifecycles(mac, status)
     ''')
 
+    c.execute('''CREATE TABLE IF NOT EXISTS device_activity_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mac TEXT NOT NULL,
+        lifecycle_id INTEGER DEFAULT NULL,
+        event_type TEXT NOT NULL,
+        occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        old_value TEXT DEFAULT NULL,
+        new_value TEXT DEFAULT NULL,
+        details TEXT DEFAULT NULL
+    )''')
+
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS idx_device_activity_events_mac_occurred
+        ON device_activity_events(mac, occurred_at DESC)
+    ''')
+
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS idx_device_activity_events_lifecycle_occurred
+        ON device_activity_events(lifecycle_id, occurred_at DESC)
+    ''')
+
     c.execute('''CREATE TABLE IF NOT EXISTS device_comments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         lifecycle_id INTEGER NOT NULL,
@@ -549,6 +570,85 @@ def update_lifecycle_snapshot(conn, lifecycle_id, device):
     )
 
     return cursor.rowcount > 0
+
+
+def activity_value(value):
+    """Normalize a device-state value for comparison and history."""
+    if value is None:
+        return ''
+    return str(value).strip()
+
+
+def record_device_activity_event(
+    conn,
+    mac,
+    lifecycle_id,
+    event_type,
+    old_value='',
+    new_value='',
+    details=None
+):
+    """Record one meaningful historical device-state transition."""
+    mac = (mac or '').strip().lower()
+    event_type = (event_type or '').strip()
+
+    if not mac or not event_type:
+        return False
+
+    conn.execute(
+        '''
+        INSERT INTO device_activity_events (
+            mac,
+            lifecycle_id,
+            event_type,
+            old_value,
+            new_value,
+            details
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''',
+        (
+            mac,
+            lifecycle_id,
+            event_type,
+            old_value,
+            new_value,
+            details
+        )
+    )
+
+    return True
+
+
+def record_device_state_changes(conn, mac, lifecycle_id, previous, current):
+    """Persist meaningful changes before the current device row is replaced."""
+    fields = (
+        ('ip', 'IP_CHANGED'),
+        ('hostname', 'HOSTNAME_CHANGED'),
+        ('hostname_source', 'HOSTNAME_SOURCE_CHANGED'),
+        ('vlan', 'INTERFACE_CHANGED'),
+    )
+
+    created = 0
+
+    for field, event_type in fields:
+        old_value = activity_value(previous.get(field))
+        new_value = activity_value(current.get(field))
+
+        if old_value == new_value:
+            continue
+
+        if record_device_activity_event(
+            conn,
+            mac,
+            lifecycle_id,
+            event_type,
+            old_value,
+            new_value
+        ):
+            created += 1
+
+    return created
 
 
 def archive_lifecycle(conn, lifecycle_id):
@@ -5626,7 +5726,8 @@ def full_scan():
 
         row = conn.execute(
             '''
-            SELECT lifecycle_id, custom_hostname
+            SELECT lifecycle_id, custom_hostname, ip, hostname,
+                   hostname_source, vlan
             FROM devices
             WHERE mac = ?
             ''',
@@ -5670,6 +5771,13 @@ def full_scan():
             lifecycle_id = row[0]
             device['custom_hostname'] = row[1]
 
+            previous_device = {
+                'ip': row[2],
+                'hostname': row[3],
+                'hostname_source': row[4],
+                'vlan': row[5],
+            }
+
             if not lifecycle_id:
                 lifecycle_id = create_lifecycle(
                     conn,
@@ -5680,6 +5788,14 @@ def full_scan():
                     raise RuntimeError(
                         'Unable to create device lifecycle'
                     )
+
+            record_device_state_changes(
+                conn,
+                mac,
+                lifecycle_id,
+                previous_device,
+                device
+            )
 
             conn.execute('''
                 UPDATE devices

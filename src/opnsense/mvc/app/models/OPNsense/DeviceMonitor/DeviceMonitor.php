@@ -757,6 +757,23 @@ class DeviceMonitor
         $db->exec('CREATE INDEX IF NOT EXISTS idx_device_lifecycles_mac_status
             ON device_lifecycles(mac, status)');
 
+        $db->exec('CREATE TABLE IF NOT EXISTS device_activity_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mac TEXT NOT NULL,
+            lifecycle_id INTEGER DEFAULT NULL,
+            event_type TEXT NOT NULL,
+            occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            old_value TEXT DEFAULT NULL,
+            new_value TEXT DEFAULT NULL,
+            details TEXT DEFAULT NULL
+        )');
+
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_device_activity_events_mac_occurred
+            ON device_activity_events(mac, occurred_at DESC)');
+
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_device_activity_events_lifecycle_occurred
+            ON device_activity_events(lifecycle_id, occurred_at DESC)');
+
         $db->exec('CREATE TABLE IF NOT EXISTS device_comments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             lifecycle_id INTEGER NOT NULL,
