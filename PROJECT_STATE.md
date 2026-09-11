@@ -538,8 +538,20 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - Final live validation: DeviceMonitor model, Devices API controller, and Index
   controller PHP syntax all pass; lifecycle/comment-action regression passes in
   full against the deployed model.
+- Lifecycle/history implementation committed as `fc17e07`:
+  `feat: add device lifecycle history and notes`.
+- `v2.8-development` pushed successfully to `origin`; local and remote branches
+  were confirmed synchronized.
+- GitHub Actions for the pushed lifecycle/history change completed successfully.
+- No known lifecycle/history implementation defect remains.
+- Natural GUI validation of a real `return_pending` device remains deferred until
+  one occurs; regression coverage for that workflow passes.
+- `PRODUCT_BACKLOG.md` remains authoritative for deferred work and currently
+  contains `DM-BL-001` through `DM-BL-007`.
 
 ## Next step
 
-Stage and review the complete lifecycle/history change set, then commit it to
-`v2.8-development`.
+Complete the final repository-to-live OPNsense file audit and remove obsolete
+temporary deployment/test files from `/tmp`, while retaining `/root` rollback
+backups. Then review and prioritise the product backlog before starting new
+development.
