@@ -549,9 +549,21 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - `PRODUCT_BACKLOG.md` remains authoritative for deferred work and currently
   contains `DM-BL-001` through `DM-BL-007`.
 
+## v2.9 development baseline
+
+- `v2.9-development` was created from completed commit `41346b9` and pushed to
+  `origin/v2.9-development`.
+- Local and remote `v2.9-development` branches are synchronized.
+- Final repository-to-live OPNsense audit passed for all audited deployable
+  files.
+- Obsolete Device Monitor deployment/test files were removed from `/tmp`.
+- `/root` rollback backups were intentionally retained.
+- No v2.9 feature implementation has started yet.
+- `PRODUCT_BACKLOG.md` remains authoritative for `DM-BL-001` through
+  `DM-BL-007`.
+
 ## Next step
 
-Complete the final repository-to-live OPNsense file audit and remove obsolete
-temporary deployment/test files from `/tmp`, while retaining `/root` rollback
-backups. Then review and prioritise the product backlog before starting new
-development.
+Begin design and implementation of `DM-BL-002` — Device activity and identity
+timeline — as the first v2.9 feature. Inspect existing lifecycle, identity-event,
+service-discovery and targeted-scan data sources before changing code.
