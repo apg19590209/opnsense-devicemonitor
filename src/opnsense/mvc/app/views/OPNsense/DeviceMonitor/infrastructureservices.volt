@@ -98,6 +98,10 @@
 </div>
 
 <style>
+.content-box .label {
+    font-size: 12px;
+}
+
 .infrastructure-header {
     padding: 10px 10px 8px 10px;
     display: flex;

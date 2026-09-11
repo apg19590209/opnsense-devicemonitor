@@ -102,6 +102,10 @@
 </div>
 
 <style>
+.content-box .label {
+    font-size: 12px;
+}
+
 .identity-events-heading {
     display: flex;
     align-items: center;

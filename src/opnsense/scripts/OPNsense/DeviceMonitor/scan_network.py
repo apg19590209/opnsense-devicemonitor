@@ -184,6 +184,11 @@ def init_db():
         pass
 
     try:
+        c.execute('ALTER TABLE devices ADD COLUMN comments TEXT DEFAULT NULL')
+    except:
+        pass
+
+    try:
         c.execute('ALTER TABLE devices ADD COLUMN nmap_scan_pending INTEGER DEFAULT 0')
     except:
         pass
@@ -218,6 +223,62 @@ def init_db():
         first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
         last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
     )''')
+
+    # Device lifecycle and multi-comment history.
+    c.execute('''CREATE TABLE IF NOT EXISTS device_lifecycles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mac TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
+        custom_hostname TEXT DEFAULT NULL,
+        hostname TEXT DEFAULT NULL,
+        hostname_source TEXT DEFAULT '',
+        ip TEXT DEFAULT NULL,
+        vendor TEXT DEFAULT NULL,
+        vlan TEXT DEFAULT NULL,
+        first_seen DATETIME,
+        last_seen DATETIME,
+        archived_at DATETIME DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    c.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_device_lifecycles_active_mac
+        ON device_lifecycles(mac) WHERE status = 'active'
+    """)
+
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS idx_device_lifecycles_mac_status
+        ON device_lifecycles(mac, status)
+    ''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS device_comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lifecycle_id INTEGER NOT NULL,
+        comment TEXT NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT NULL,
+        deleted_at DATETIME DEFAULT NULL
+    )''')
+
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS idx_device_comments_lifecycle_created
+        ON device_comments(lifecycle_id, created_at DESC)
+    ''')
+
+    device_columns = {
+        row[1]
+        for row in c.execute('PRAGMA table_info(devices)')
+    }
+    if 'lifecycle_id' not in device_columns:
+        c.execute(
+            'ALTER TABLE devices '
+            'ADD COLUMN lifecycle_id INTEGER DEFAULT NULL'
+        )
+    if 'return_pending' not in device_columns:
+        c.execute(
+            'ALTER TABLE devices '
+            'ADD COLUMN return_pending INTEGER DEFAULT 0'
+        )
 
     # Audit history for every targeted Nmap execution.
     c.execute('''CREATE TABLE IF NOT EXISTS nmap_scan_history (
@@ -257,6 +318,7 @@ def init_db():
         'open_port_count': 'INTEGER',
         'email_sent': 'INTEGER',
         'email_error': 'TEXT',
+        'lifecycle_id': 'INTEGER',
     }
     for column, definition in history_migrations.items():
         if column not in history_columns:
@@ -366,6 +428,13 @@ def init_db():
             'ALTER TABLE device_identity_events '
             'ADD COLUMN other_mac TEXT'
         )
+    if 'lifecycle_id' not in identity_columns:
+        c.execute(
+            'ALTER TABLE device_identity_events '
+            'ADD COLUMN lifecycle_id INTEGER DEFAULT NULL'
+        )
+
+    backfill_device_lifecycles(conn)
 
     # Seed historical MACs from both active and deleted device records.
     c.execute('''
@@ -384,6 +453,206 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+
+def find_active_lifecycle_id(conn, mac):
+    """Return the active lifecycle ID for a MAC, or None."""
+    mac = (mac or '').strip().lower()
+    if not mac:
+        return None
+
+    row = conn.execute(
+        '''
+        SELECT id
+        FROM device_lifecycles
+        WHERE mac = ? AND status = 'active'
+        LIMIT 1
+        ''',
+        (mac,)
+    ).fetchone()
+
+    return row[0] if row else None
+
+
+def create_lifecycle(conn, device, first_seen=None):
+    """Create an active lifecycle unless one already exists."""
+    mac = (device.get('mac') or '').strip().lower()
+    if not mac:
+        return None
+
+    existing = find_active_lifecycle_id(conn, mac)
+    if existing is not None:
+        return existing
+
+    if not first_seen:
+        first_seen = device.get('first_seen')
+
+    cursor = conn.execute(
+        '''
+        INSERT INTO device_lifecycles (
+            mac,
+            status,
+            custom_hostname,
+            hostname,
+            hostname_source,
+            ip,
+            vendor,
+            vlan,
+            first_seen,
+            last_seen
+        )
+        VALUES (?, 'active', ?, ?, ?, ?, ?, ?, ?, ?)
+        ''',
+        (
+            mac,
+            device.get('custom_hostname'),
+            device.get('hostname'),
+            device.get('hostname_source') or '',
+            device.get('ip'),
+            device.get('vendor'),
+            device.get('vlan'),
+            first_seen,
+            device.get('last_seen'),
+        )
+    )
+
+    return cursor.lastrowid
+
+
+def update_lifecycle_snapshot(conn, lifecycle_id, device):
+    """Refresh the identity snapshot stored on an active lifecycle."""
+    if not lifecycle_id:
+        return False
+
+    cursor = conn.execute(
+        '''
+        UPDATE device_lifecycles
+        SET custom_hostname = ?,
+            hostname = ?,
+            hostname_source = ?,
+            ip = ?,
+            vendor = ?,
+            vlan = ?,
+            last_seen = ?
+        WHERE id = ? AND status = 'active'
+        ''',
+        (
+            device.get('custom_hostname'),
+            device.get('hostname'),
+            device.get('hostname_source') or '',
+            device.get('ip'),
+            device.get('vendor'),
+            device.get('vlan'),
+            device.get('last_seen'),
+            lifecycle_id,
+        )
+    )
+
+    return cursor.rowcount > 0
+
+
+def archive_lifecycle(conn, lifecycle_id):
+    """Archive an active lifecycle without deleting its history."""
+    if not lifecycle_id:
+        return False
+
+    cursor = conn.execute(
+        '''
+        UPDATE device_lifecycles
+        SET status = 'archived',
+            archived_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND status = 'active'
+        ''',
+        (lifecycle_id,)
+    )
+
+    return cursor.rowcount > 0
+
+
+def backfill_device_lifecycles(conn):
+    """Assign active lifecycles to existing device rows."""
+    cursor = conn.execute(
+        '''
+        SELECT *
+        FROM devices
+        WHERE (lifecycle_id IS NULL OR lifecycle_id = 0)
+          AND COALESCE(return_pending, 0) = 0
+        '''
+    )
+
+    columns = [item[0] for item in cursor.description]
+    devices = [
+        dict(zip(columns, row))
+        for row in cursor.fetchall()
+    ]
+
+    for device in devices:
+        mac = (device.get('mac') or '').strip().lower()
+        if not mac:
+            continue
+
+        lifecycle_id = find_active_lifecycle_id(conn, mac)
+
+        if lifecycle_id is None:
+            lifecycle_id = create_lifecycle(
+                conn,
+                device,
+                device.get('first_seen')
+            )
+
+        if not lifecycle_id:
+            raise RuntimeError(
+                'Unable to create device lifecycle'
+            )
+
+        if not update_lifecycle_snapshot(
+            conn,
+            lifecycle_id,
+            device
+        ):
+            raise RuntimeError(
+                'Unable to update device lifecycle'
+            )
+
+        conn.execute(
+            '''
+            UPDATE devices
+            SET lifecycle_id = ?,
+                return_pending = 0
+            WHERE mac = ?
+              AND (lifecycle_id IS NULL OR lifecycle_id = 0)
+            ''',
+            (lifecycle_id, mac)
+        )
+
+        legacy_comment = (
+            device.get('comments') or ''
+        ).strip()
+
+        if legacy_comment:
+            existing = conn.execute(
+                '''
+                SELECT id
+                FROM device_comments
+                WHERE lifecycle_id = ?
+                  AND deleted_at IS NULL
+                  AND comment = ?
+                LIMIT 1
+                ''',
+                (lifecycle_id, legacy_comment)
+            ).fetchone()
+
+            if existing is None:
+                conn.execute(
+                    '''
+                    INSERT INTO device_comments (
+                        lifecycle_id,
+                        comment
+                    )
+                    VALUES (?, ?)
+                    ''',
+                    (lifecycle_id, legacy_comment)
+                )
 
 
 def get_hostwatch_devices():
@@ -5323,9 +5592,10 @@ def full_scan():
         last_seen = device.get('last_seen') or now
         first_seen = device.get('first_seen') or now
 
-        # If the user manually deleted this device, ignore the same historical
-        # Hostwatch record. A genuinely newer last_seen means the device has
-        # returned to the network, so remove the tombstone and add it again.
+        # If a manually deleted device is seen again, ignore the same historical
+        # Hostwatch record. A genuinely newer observation is a pending return
+        # that requires the user to choose a lifecycle.
+        returning_device = False
         deleted_row = conn.execute(
             'SELECT last_seen FROM deleted_devices WHERE mac = ?', (mac,)
         ).fetchone()
@@ -5333,7 +5603,7 @@ def full_scan():
             deleted_last_seen = deleted_row[0] or ''
             if deleted_last_seen and last_seen <= deleted_last_seen:
                 continue
-            conn.execute('DELETE FROM deleted_devices WHERE mac = ?', (mac,))
+            returning_device = True
 
         known_row = conn.execute(
             'SELECT mac FROM known_macs WHERE mac = ?', (mac,)
@@ -5351,27 +5621,104 @@ def full_scan():
                 (last_seen, mac)
             )
 
+        device['first_seen'] = first_seen
+        device['last_seen'] = last_seen
+
         row = conn.execute(
-            'SELECT mac FROM devices WHERE mac = ?', (mac,)
+            '''
+            SELECT lifecycle_id, custom_hostname
+            FROM devices
+            WHERE mac = ?
+            ''',
+            (mac,)
         ).fetchone()
 
+        if returning_device:
+            if row:
+                conn.execute(
+                    '''
+                    UPDATE devices
+                    SET ip = ?, hostname = ?, hostname_source = ?, vendor = ?,
+                        vlan = ?, first_seen = ?, last_seen = ?, is_active = ?,
+                        lifecycle_id = NULL, return_pending = 1
+                    WHERE mac = ?
+                    ''',
+                    (
+                        device['ip'], device['hostname'],
+                        device['hostname_source'], device['vendor'],
+                        device['vlan'], last_seen, last_seen, is_active, mac
+                    )
+                )
+            else:
+                conn.execute(
+                    '''
+                    INSERT INTO devices
+                        (mac, ip, hostname, hostname_source, vendor, vlan,
+                         first_seen, last_seen, is_active, notification_pending,
+                         lifecycle_id, return_pending)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, 1)
+                    ''',
+                    (
+                        mac, device['ip'], device['hostname'],
+                        device['hostname_source'], device['vendor'],
+                        device['vlan'], last_seen, last_seen, is_active
+                    )
+                )
+            continue
+
         if row:
+            lifecycle_id = row[0]
+            device['custom_hostname'] = row[1]
+
+            if not lifecycle_id:
+                lifecycle_id = create_lifecycle(
+                    conn,
+                    device,
+                    first_seen
+                )
+                if not lifecycle_id:
+                    raise RuntimeError(
+                        'Unable to create device lifecycle'
+                    )
+
             conn.execute('''
                 UPDATE devices
                 SET ip = ?, hostname = ?, hostname_source = ?, vendor = ?, vlan = ?,
-                    last_seen = ?, is_active = ?
+                    last_seen = ?, is_active = ?, lifecycle_id = ?
                 WHERE mac = ?
             ''', (device['ip'], device['hostname'], device['hostname_source'],
-                  device['vendor'], device['vlan'], last_seen, is_active, mac))
+                  device['vendor'], device['vlan'], last_seen, is_active,
+                  lifecycle_id, mac))
+
+            if not update_lifecycle_snapshot(
+                conn,
+                lifecycle_id,
+                device
+            ):
+                raise RuntimeError(
+                    'Unable to update device lifecycle'
+                )
         else:
+            lifecycle_id = create_lifecycle(
+                conn,
+                device,
+                first_seen
+            )
+            if not lifecycle_id:
+                raise RuntimeError(
+                    'Unable to create device lifecycle'
+                )
+
             conn.execute('''
                 INSERT INTO devices
-                    (mac, ip, hostname, hostname_source, vendor, vlan, first_seen, last_seen,
-                     is_active, notification_pending)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                    (mac, ip, hostname, hostname_source, vendor, vlan,
+                     first_seen, last_seen, is_active, notification_pending,
+                     lifecycle_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
             ''', (mac, device['ip'], device['hostname'], device['hostname_source'],
-                  device['vendor'], device['vlan'], first_seen, last_seen, is_active))
-            device['first_seen'] = first_seen
+                  device['vendor'], device['vlan'], first_seen, last_seen,
+                  is_active, lifecycle_id))
+
             if is_truly_new:
                 new_devices.append(device)
 

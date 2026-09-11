@@ -73,6 +73,10 @@
 </div>
 
 <style>
+.content-box .label {
+    font-size: 12px;
+}
+
 .scan-history-heading {
     display: flex;
     align-items: center;

@@ -2,83 +2,80 @@
     <div class="content-box-main">
 
         <!-- Header with version and statistics -->
-        <div id="devices-sticky-summary" style="padding:10px 10px 8px 10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:1px solid #333;margin-bottom:0;">
-            <h1 style="margin:0;font-size:20px;">
+        <div id="devices-sticky-summary" class="devices-header">
+            <h1>
                 {{ lang._('Device Monitor') }}
-                <small id="plugin-version" style="font-size:13px;color:#888;margin-left:5px;"></small>
-                <span style="color:#555;margin:0 8px;">–</span>
-                <span style="font-weight:normal;">{{ lang._('Devices') }}</span>
+                <small id="plugin-version"></small>
+                <span class="devices-divider">&ndash;</span>
+                <span class="devices-title">{{ lang._('Devices') }}</span>
             </h1>
-            <div style="display:flex;gap:20px;align-items:center;">
-                <span style="font-size:13px;color:#888;">
+            <div class="devices-stats">
+                <span>
                     {{ lang._('Total Devices') }}:
-                    <strong id="stat-total" style="color:#ccc;font-size:16px;margin-left:4px;">—</strong>
+                    <strong id="stat-total">—</strong>
                 </span>
-                <span style="font-size:13px;color:#888;">
+                <span>
                     {{ lang._('Online') }}:
-                    <strong id="stat-online" style="color:#4CAF50;font-size:16px;margin-left:4px;">—</strong>
+                    <strong id="stat-online">—</strong>
                 </span>
             </div>
         </div>
-
         <!-- Toolbar -->
-        <div id="devices-sticky-toolbar" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <div id="devices-sticky-toolbar" class="devices-toolbar">
 
             <!-- Multi-select VLAN dropdown -->
-            <div class="dropdown" id="vlan-filter-wrapper" style="display:inline-block;">
-                <button type="button" class="btn btn-default dropdown-toggle"
-                        id="vlan-dropdown-toggle" data-toggle="dropdown"
-                        style="min-width:160px;text-align:left;">
+            <div class="dropdown" id="vlan-filter-wrapper">
+                <button type="button" class="btn btn-default btn-sm dropdown-toggle"
+                        id="vlan-dropdown-toggle" data-toggle="dropdown">
                     <span id="vlan-filter-label">{{ lang._('All VLANs') }}</span>
-                    <span class="caret" style="float:right;margin-top:7px;"></span>
+                    <span class="caret"></span>
                 </button>
-                <ul class="dropdown-menu" id="vlan-checklist"
-                    style="min-width:240px;padding:4px 0;max-height:300px;overflow-y:auto;">
+                <ul class="dropdown-menu" id="vlan-checklist">
                 </ul>
             </div>
 
             <!-- Status filtr -->
-            <select id="filter-status" class="form-control" style="width:auto;min-width:130px;">
+            <select id="filter-status" class="form-control input-sm">
                 <option value="">{{ lang._('All statuses') }}</option>
                 <option value="online">🟢 Online</option>
                 <option value="offline">⚫ Offline</option>
             </select>
 
-            <button id="btn-refresh" class="btn btn-default" title="{{ lang._('Refresh') }}">
+            <button id="btn-refresh" class="btn btn-default btn-sm" title="{{ lang._('Refresh') }}">
                 <i class="fa fa-refresh"></i>
             </button>
 
-            <button id="btn-scan-now" class="btn btn-default" title="{{ lang._('Run scan now') }}">
+            <button id="btn-scan-now" class="btn btn-default btn-sm" title="{{ lang._('Run scan now') }}">
                 <i class="fa fa-search"></i>
             </button>
 
-            <button id="btn-export" class="btn btn-default" title="{{ lang._('Export to CSV') }}">
+            <button id="btn-export" class="btn btn-default btn-sm" title="{{ lang._('Export to CSV') }}">
                 <i class="fa fa-download"></i>
             </button>
 
-            <div style="flex-grow:1;"></div>
+            <div class="devices-toolbar-spacer"></div>
 
-            <button id="btn-clear" class="btn btn-danger">
+            <button id="btn-clear" class="btn btn-danger btn-sm">
                 <i class="fa fa-trash"></i> {{ lang._('Clear Database') }}
             </button>
         </div>
 
         <!-- Tabulka -->
-        <table class="table table-condensed table-hover table-striped" id="grid-devices" style="margin-top:0;border-top:2px solid #444;">
+        <table class="table table-condensed table-hover table-striped devices-table" id="grid-devices">
             <thead>
                 <tr>
-                    <th class="sortable" data-col="mac" style="cursor:pointer;white-space:nowrap;">{{ lang._('MAC Address') }} <i class="fa fa-sort"></i></th>
-                    <th class="sortable" data-col="ip" style="cursor:pointer;white-space:nowrap;">{{ lang._('IP Address') }} <i class="fa fa-sort"></i></th>
-                    <th class="sortable" data-col="custom_hostname" style="cursor:pointer;white-space:nowrap;">{{ lang._('Friendly Name') }} <i class="fa fa-sort"></i></th>
-                    <th class="sortable" data-col="hostname" style="cursor:pointer;white-space:nowrap;">{{ lang._('Hostname') }} <i class="fa fa-sort"></i></th>
-                    <th class="sortable" data-col="vendor" style="cursor:pointer;white-space:nowrap;">{{ lang._('Vendor') }} <i class="fa fa-sort"></i></th>                    <th style="white-space:nowrap;">{{ lang._('Services') }}</th>
+                    <th class="sortable devices-table-header" data-col="mac">{{ lang._('MAC Address') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable devices-table-header" data-col="ip">{{ lang._('IP Address') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable devices-table-header" data-col="custom_hostname">{{ lang._('Friendly Name') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable devices-table-header" data-col="hostname">{{ lang._('Hostname') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable devices-table-header" data-col="vendor">{{ lang._('Vendor') }} <i class="fa fa-sort"></i></th>                    <th class="devices-table-header">{{ lang._('Services') }}</th>
 
-                    <th class="sortable" data-col="vlan" style="cursor:pointer;white-space:nowrap;">{{ lang._('VLAN') }} <i class="fa fa-sort"></i></th>
-                    <th class="sortable" data-col="status" style="cursor:pointer;white-space:nowrap;">{{ lang._('Status') }} <i class="fa fa-sort"></i></th>
-                    <th class="sortable" data-col="nmap_scan_status" style="cursor:pointer;white-space:nowrap;">{{ lang._('Scan Status') }} <i class="fa fa-sort"></i></th>
-                    <th style="white-space:nowrap;">{{ lang._('First Seen') }}</th>
-                    <th class="sortable" data-col="last_seen" style="cursor:pointer;white-space:nowrap;">{{ lang._('Last Seen') }} <i class="fa fa-sort"></i></th>
-                    <th style="white-space:nowrap;">{{ lang._('Actions') }}</th>
+                    <th class="sortable devices-table-header" data-col="vlan">{{ lang._('VLAN') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable devices-table-header" data-col="status">{{ lang._('Status') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable devices-table-header" data-col="nmap_scan_status">{{ lang._('Scan Status') }} <i class="fa fa-sort"></i></th>
+                    <th class="devices-table-header">{{ lang._('First Seen') }}</th>
+                    <th class="sortable devices-table-header" data-col="last_seen">{{ lang._('Last Seen') }} <i class="fa fa-sort"></i></th>
+                    <th class="devices-table-header">{{ lang._('Actions') }}</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -89,6 +86,92 @@
 
 
 <style>
+.content-box .label {
+    font-size: 12px;
+}
+
+.devices-header {
+    padding: 10px 10px 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    border-bottom: 1px solid #444;
+    margin-bottom: 0;
+}
+.devices-header h1 {
+    margin: 0;
+    font-size: 20px;
+}
+.devices-header small {
+    font-size: 13px;
+    color: #888;
+    margin-left: 5px;
+}
+.devices-divider {
+    color: #777;
+    margin: 0 8px;
+}
+.devices-title {
+    font-weight: normal;
+}
+.devices-stats {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    font-size: 13px;
+    color: #888;
+}
+.devices-stats strong {
+    font-size: 16px;
+    margin-left: 4px;
+    color: #ccc;
+}
+#stat-online {
+    color: #4CAF50;
+}
+
+.devices-toolbar {
+    padding: 0 4px 12px 4px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.devices-table {
+    margin-top: 0;
+    border-top: 2px solid #444;
+}
+.devices-table-header {
+    cursor: default;
+    white-space: nowrap;
+}
+.devices-table-header.sortable {
+    cursor: pointer;
+}
+.devices-toolbar-spacer {
+    flex-grow: 1;
+}
+.devices-toolbar .form-control {
+    width: auto;
+    min-width: 130px;
+}
+#vlan-dropdown-toggle {
+    min-width: 160px;
+    text-align: left;
+}
+#vlan-dropdown-toggle .caret {
+    float: right;
+    margin-top: 7px;
+}
+#vlan-checklist {
+    min-width: 240px;
+    padding: 4px 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
 #grid-devices thead th {
     font-size: 12px;
     font-weight: 600;
@@ -452,9 +535,14 @@ $(document).ready(function() {
     function renderTable(rows) {
         var $tbody = $('#grid-devices tbody').empty();
         rows.forEach(function(row) {
-            var statusHtml = row.status==='online'
-                ? '<span style="color:#4CAF50;font-weight:bold;white-space:nowrap;"><i class="fa fa-circle"></i> ONLINE</span>'
-                : '<span style="color:#666;font-weight:bold;white-space:nowrap;"><i class="fa fa-circle-o"></i> OFFLINE</span>';
+            var statusHtml;
+            if (row.return_pending === 1 || row.return_pending === '1') {
+                statusHtml = '<span style="color:#f0ad4e;font-weight:bold;white-space:nowrap;"><i class="fa fa-history"></i> RETURNING</span>';
+            } else {
+                statusHtml = row.status==='online'
+                    ? '<span style="color:#4CAF50;font-weight:bold;white-space:nowrap;"><i class="fa fa-circle"></i> ONLINE</span>'
+                    : '<span style="color:#666;font-weight:bold;white-space:nowrap;"><i class="fa fa-circle-o"></i> OFFLINE</span>';
+            }
 
             var hn = row.hostname || '';
             var hostnameSource = hostnameSourceLabel(row.hostname_source || '');
@@ -531,7 +619,11 @@ $(document).ready(function() {
                 buildScanStatusCell(row),
                 $('<td>').text(row.first_seen||''),
                 $('<td>').text(row.last_seen||''),
-                $('<td>').html('<button class="btn btn-xs btn-warning command-check" data-row-mac="'+row.mac+'" data-row-ip="'+row.ip+'" title="Check online" style="margin-right:2px;"><i class="fa fa-plug"></i></button>' +
+                $('<td>').html(
+                (row.return_pending === 1 || row.return_pending === '1'
+                    ? '<a class="btn btn-xs btn-primary" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+'#lifecycle-history" title="Resolve returning device / lifecycle history" style="margin-right:2px;"><i class="fa fa-history"></i> History</a>'
+                    : '<a class="btn btn-xs btn-default" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+'" title="Device details and notes" style="margin-right:2px;"><i class="fa fa-comment-o"></i></a>') +
+                '<button class="btn btn-xs btn-warning command-check" data-row-mac="'+row.mac+'" data-row-ip="'+row.ip+'" title="Check online" style="margin-right:2px;"><i class="fa fa-plug"></i></button>' +
                 '<button class="btn btn-xs btn-info command-nmap" data-row-mac="'+row.mac+'" title="Run targeted Nmap scan" style="margin-right:2px;"><i class="fa fa-search"></i></button>' +
                 '<button class="btn btn-xs btn-danger command-delete" data-row-mac="'+row.mac+'"><i class="fa fa-trash"></i></button>')
             ).appendTo($tbody);

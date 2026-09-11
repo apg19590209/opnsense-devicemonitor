@@ -27,23 +27,45 @@ class DeviceMonitor
         $data = self::loadDefaults();
         return $data['paths'];
     }
-    
+
     public static function getPath($key)
     {
         $paths = self::getPaths();
         return isset($paths[$key]) ? $paths[$key] : null;
     }
 
+    private static function formatUtcForDisplay($value)
+    {
+        $value = trim((string)$value);
+
+        if ($value === '') {
+            return $value;
+        }
+
+        try {
+            $utc = new \DateTimeZone('UTC');
+            $local = new \DateTimeZone(date_default_timezone_get());
+            $date = new \DateTimeImmutable($value, $utc);
+
+            return $date
+                ->setTimezone($local)
+                ->format('d.m.Y - H:i:s T');
+        } catch (\Exception $e) {
+            return $value;
+        }
+    }
+
+
     public static function getConfig()
     {
         $data = self::loadDefaults();
         $configFilePath = $data['paths']['configFile'];
-        
+
         // Load config.json if it exists
         if (file_exists($configFilePath)) {
             $json = file_get_contents($configFilePath);
             $savedConfig = json_decode($json, true);
-            
+
             // Merge saved values over current defaults. This makes newly
             // added settings (for example Direct SMTP) available immediately
             // after an upgrade without deleting the existing config.json.
@@ -54,7 +76,7 @@ class DeviceMonitor
                 return $config;
             }
         }
-        
+
         // Otherwise return defaults
         $config = $data['config'];
         $config['paths'] = $data['paths'];
@@ -63,7 +85,7 @@ class DeviceMonitor
 
 
     // ========================================
-    // GETTERY PRO CESTY (pro Controllery)
+    // PATH ACCESSORS (for Controllers)
     // ========================================
 
 
@@ -75,7 +97,7 @@ class DeviceMonitor
         return self::getPath('pidFile');
     }
 
-    
+
     /**
      * Return the database path
      */
@@ -83,7 +105,7 @@ class DeviceMonitor
     {
         return self::getPath('dbFile');
     }
-    
+
     /**
      * Return the configuration file path
      */
@@ -91,12 +113,12 @@ class DeviceMonitor
     {
         return self::getPath('configFile');
     }
-    
+
     public function updateHostname($mac, $hostname)
     {
         $db = $this->getDb();
         $hostname = trim($hostname);
-        
+
         if ($hostname === '') {
             $stmt = $db->prepare('UPDATE devices SET custom_hostname = NULL WHERE mac = :mac');
             $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
@@ -105,13 +127,545 @@ class DeviceMonitor
             $stmt->bindValue(':hn', $hostname, SQLITE3_TEXT);
             $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
         }
-        
+
         $stmt->execute();
         $changes = $db->changes();
         $db->close();
         return $changes > 0;
     }
 
+    public function updateComments($mac, $comments)
+    {
+        $db = $this->getDb();
+        $comments = trim((string)$comments);
+
+        if ($comments === '') {
+            $stmt = $db->prepare('UPDATE devices SET comments = NULL WHERE mac = :mac');
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        } else {
+            $stmt = $db->prepare('UPDATE devices SET comments = :comments WHERE mac = :mac');
+            $stmt->bindValue(':comments', $comments, SQLITE3_TEXT);
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        }
+
+        $stmt->execute();
+        $changes = $db->changes();
+        $db->close();
+        return $changes > 0;
+    }
+
+
+    public function getLifecycleComments($lifecycleId)
+    {
+        $db = $this->getDb();
+        $lifecycleId = (int)$lifecycleId;
+
+        if ($lifecycleId <= 0) {
+            $db->close();
+            return [];
+        }
+
+        $stmt = $db->prepare(
+            'SELECT id, lifecycle_id, comment, created_at, updated_at, deleted_at ' .
+            'FROM device_comments ' .
+            'WHERE lifecycle_id = :lifecycle_id ' .
+            'ORDER BY created_at DESC, id DESC'
+        );
+
+        if ($stmt === false) {
+            $db->close();
+            return [];
+        }
+
+        $stmt->bindValue(
+            ':lifecycle_id',
+            $lifecycleId,
+            SQLITE3_INTEGER
+        );
+
+        $result = $stmt->execute();
+        $comments = [];
+
+        if ($result !== false) {
+            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                $versionStmt = $db->prepare(
+                    'SELECT id, comment_id, lifecycle_id, comment, action, created_at ' .
+                    'FROM device_comment_versions ' .
+                    'WHERE comment_id = :comment_id ' .
+                    'AND lifecycle_id = :lifecycle_id ' .
+                    'ORDER BY created_at ASC, id ASC'
+                );
+
+                $versions = [];
+                if ($versionStmt !== false) {
+                    $versionStmt->bindValue(
+                        ':comment_id',
+                        (int)$row['id'],
+                        SQLITE3_INTEGER
+                    );
+                    $versionStmt->bindValue(
+                        ':lifecycle_id',
+                        $lifecycleId,
+                        SQLITE3_INTEGER
+                    );
+
+                    $versionResult = $versionStmt->execute();
+                    if ($versionResult !== false) {
+                        while (
+                            $version = $versionResult->fetchArray(
+                                SQLITE3_ASSOC
+                            )
+                        ) {
+                            $version['created_at'] =
+                                self::formatUtcForDisplay(
+                                    $version['created_at'] ?? ''
+                                );
+                            $versions[] = $version;
+                        }
+                    }
+                }
+
+                foreach (
+                    ['created_at', 'updated_at', 'deleted_at'] as $field
+                ) {
+                    $row[$field] = self::formatUtcForDisplay(
+                        $row[$field] ?? ''
+                    );
+                }
+
+                $row['versions'] = $versions;
+                $comments[] = $row;
+            }
+        }
+
+        $db->close();
+        return $comments;
+    }
+
+    public function addLifecycleComment($lifecycleId, $comment)
+    {
+        $db = $this->getDb();
+        $lifecycleId = (int)$lifecycleId;
+        $comment = trim((string)$comment);
+
+        if ($lifecycleId <= 0 || $comment === '') {
+            $db->close();
+            return 0;
+        }
+
+        try {
+            if (!$db->exec('BEGIN IMMEDIATE TRANSACTION')) {
+                throw new \RuntimeException(
+                    'Unable to begin comment transaction'
+                );
+            }
+
+            $stmt = $db->prepare(
+                "SELECT id FROM device_lifecycles " .
+                "WHERE id = :id AND status = 'active' LIMIT 1"
+            );
+            if ($stmt === false) {
+                throw new \RuntimeException(
+                    'Unable to validate comment lifecycle'
+                );
+            }
+
+            $stmt->bindValue(':id', $lifecycleId, SQLITE3_INTEGER);
+            $result = $stmt->execute();
+            $row = $result
+                ? $result->fetchArray(SQLITE3_ASSOC)
+                : false;
+
+            if (!$row) {
+                throw new \RuntimeException(
+                    'Lifecycle is not active'
+                );
+            }
+
+            $stmt = $db->prepare(
+                'INSERT INTO device_comments (lifecycle_id, comment) ' .
+                'VALUES (:lifecycle_id, :comment)'
+            );
+            if ($stmt === false) {
+                throw new \RuntimeException(
+                    'Unable to prepare comment insert'
+                );
+            }
+
+            $stmt->bindValue(
+                ':lifecycle_id',
+                $lifecycleId,
+                SQLITE3_INTEGER
+            );
+            $stmt->bindValue(':comment', $comment, SQLITE3_TEXT);
+
+            if ($stmt->execute() === false) {
+                throw new \RuntimeException(
+                    'Unable to insert comment'
+                );
+            }
+
+            $commentId = (int)$db->lastInsertRowID();
+
+            $stmt = $db->prepare(
+                'INSERT INTO device_comment_versions ' .
+                '(comment_id, lifecycle_id, comment, action) ' .
+                "VALUES (:comment_id, :lifecycle_id, :comment, 'created')"
+            );
+            if ($stmt === false) {
+                throw new \RuntimeException(
+                    'Unable to prepare comment history insert'
+                );
+            }
+
+            $stmt->bindValue(
+                ':comment_id',
+                $commentId,
+                SQLITE3_INTEGER
+            );
+            $stmt->bindValue(
+                ':lifecycle_id',
+                $lifecycleId,
+                SQLITE3_INTEGER
+            );
+            $stmt->bindValue(':comment', $comment, SQLITE3_TEXT);
+
+            if ($stmt->execute() === false) {
+                throw new \RuntimeException(
+                    'Unable to insert comment history'
+                );
+            }
+
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException(
+                    'Unable to commit comment transaction'
+                );
+            }
+
+            $db->close();
+            return $commentId;
+        } catch (\Exception $e) {
+            $db->exec('ROLLBACK');
+            $db->close();
+            return 0;
+        }
+    }
+
+    public function updateLifecycleComment(
+        $lifecycleId,
+        $commentId,
+        $comment
+    ) {
+        $db = $this->getDb();
+        $lifecycleId = (int)$lifecycleId;
+        $commentId = (int)$commentId;
+        $comment = trim((string)$comment);
+
+        if ($lifecycleId <= 0 || $commentId <= 0 || $comment === '') {
+            $db->close();
+            return false;
+        }
+
+        try {
+            if (!$db->exec('BEGIN IMMEDIATE TRANSACTION')) {
+                throw new \RuntimeException(
+                    'Unable to begin comment update transaction'
+                );
+            }
+
+            $stmt = $db->prepare(
+                'UPDATE device_comments SET comment = :comment, ' .
+                'updated_at = CURRENT_TIMESTAMP ' .
+                'WHERE id = :id AND lifecycle_id = :lifecycle_id ' .
+                'AND deleted_at IS NULL ' .
+                'AND EXISTS (' .
+                'SELECT 1 FROM device_lifecycles ' .
+                "WHERE id = :lifecycle_id AND status = 'active'" .
+                ')'
+            );
+
+            if ($stmt === false) {
+                throw new \RuntimeException(
+                    'Unable to prepare comment update'
+                );
+            }
+
+            $stmt->bindValue(':comment', $comment, SQLITE3_TEXT);
+            $stmt->bindValue(':id', $commentId, SQLITE3_INTEGER);
+            $stmt->bindValue(
+                ':lifecycle_id',
+                $lifecycleId,
+                SQLITE3_INTEGER
+            );
+
+            if ($stmt->execute() === false || $db->changes() <= 0) {
+                throw new \RuntimeException(
+                    'Comment update was not applied'
+                );
+            }
+
+            $stmt = $db->prepare(
+                'INSERT INTO device_comment_versions ' .
+                '(comment_id, lifecycle_id, comment, action) ' .
+                "VALUES (:comment_id, :lifecycle_id, :comment, 'edited')"
+            );
+
+            if ($stmt === false) {
+                throw new \RuntimeException(
+                    'Unable to prepare comment history update'
+                );
+            }
+
+            $stmt->bindValue(
+                ':comment_id',
+                $commentId,
+                SQLITE3_INTEGER
+            );
+            $stmt->bindValue(
+                ':lifecycle_id',
+                $lifecycleId,
+                SQLITE3_INTEGER
+            );
+            $stmt->bindValue(':comment', $comment, SQLITE3_TEXT);
+
+            if ($stmt->execute() === false) {
+                throw new \RuntimeException(
+                    'Unable to insert comment edit history'
+                );
+            }
+
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException(
+                    'Unable to commit comment update transaction'
+                );
+            }
+
+            $db->close();
+            return true;
+        } catch (\Exception $e) {
+            $db->exec('ROLLBACK');
+            $db->close();
+            return false;
+        }
+    }
+
+    public function deleteLifecycleComment($lifecycleId, $commentId)
+    {
+        $db = $this->getDb();
+        $lifecycleId = (int)$lifecycleId;
+        $commentId = (int)$commentId;
+
+        if ($lifecycleId <= 0 || $commentId <= 0) {
+            $db->close();
+            return false;
+        }
+
+        try {
+            if (!$db->exec('BEGIN IMMEDIATE TRANSACTION')) {
+                throw new \RuntimeException(
+                    'Unable to begin comment delete transaction'
+                );
+            }
+
+            $stmt = $db->prepare(
+                'SELECT c.comment FROM device_comments c ' .
+                'JOIN device_lifecycles l ON l.id = c.lifecycle_id ' .
+                'WHERE c.id = :id AND c.lifecycle_id = :lifecycle_id ' .
+                'AND c.deleted_at IS NULL ' .
+                "AND l.status = 'active' LIMIT 1"
+            );
+
+            if ($stmt === false) {
+                throw new \RuntimeException(
+                    'Unable to prepare comment delete validation'
+                );
+            }
+
+            $stmt->bindValue(':id', $commentId, SQLITE3_INTEGER);
+            $stmt->bindValue(
+                ':lifecycle_id',
+                $lifecycleId,
+                SQLITE3_INTEGER
+            );
+
+            $result = $stmt->execute();
+            $row = $result
+                ? $result->fetchArray(SQLITE3_ASSOC)
+                : false;
+
+            if (!$row) {
+                throw new \RuntimeException(
+                    'Comment is not available for deletion'
+                );
+            }
+
+            $comment = (string)$row['comment'];
+
+            $stmt = $db->prepare(
+                'UPDATE device_comments SET deleted_at = CURRENT_TIMESTAMP ' .
+                'WHERE id = :id AND lifecycle_id = :lifecycle_id ' .
+                'AND deleted_at IS NULL'
+            );
+
+            if ($stmt === false) {
+                throw new \RuntimeException(
+                    'Unable to prepare comment delete'
+                );
+            }
+
+            $stmt->bindValue(':id', $commentId, SQLITE3_INTEGER);
+            $stmt->bindValue(
+                ':lifecycle_id',
+                $lifecycleId,
+                SQLITE3_INTEGER
+            );
+
+            if ($stmt->execute() === false || $db->changes() <= 0) {
+                throw new \RuntimeException(
+                    'Comment delete was not applied'
+                );
+            }
+
+            $stmt = $db->prepare(
+                'INSERT INTO device_comment_versions ' .
+                '(comment_id, lifecycle_id, comment, action) ' .
+                "VALUES (:comment_id, :lifecycle_id, :comment, 'deleted')"
+            );
+
+            if ($stmt === false) {
+                throw new \RuntimeException(
+                    'Unable to prepare comment delete history'
+                );
+            }
+
+            $stmt->bindValue(
+                ':comment_id',
+                $commentId,
+                SQLITE3_INTEGER
+            );
+            $stmt->bindValue(
+                ':lifecycle_id',
+                $lifecycleId,
+                SQLITE3_INTEGER
+            );
+            $stmt->bindValue(':comment', $comment, SQLITE3_TEXT);
+
+            if ($stmt->execute() === false) {
+                throw new \RuntimeException(
+                    'Unable to insert comment delete history'
+                );
+            }
+
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException(
+                    'Unable to commit comment delete transaction'
+                );
+            }
+
+            $db->close();
+            return true;
+        } catch (\Exception $e) {
+            $db->exec('ROLLBACK');
+            $db->close();
+            return false;
+        }
+    }
+
+
+    public function getDeviceLifecycles($mac)
+    {
+        $db = $this->getDb();
+        $mac = strtolower(trim((string)$mac));
+
+        if ($mac === '') {
+            $db->close();
+            return [];
+        }
+
+        $stmt = $db->prepare(
+            'SELECT l.*, ' .
+            '(SELECT COUNT(*) FROM device_comments c ' .
+            'WHERE c.lifecycle_id = l.id) ' .
+            'AS comment_count ' .
+            'FROM device_lifecycles l ' .
+            'WHERE lower(trim(l.mac)) = :mac ' .
+            'ORDER BY COALESCE(l.first_seen, l.created_at) DESC, l.id DESC'
+        );
+
+        if ($stmt === false) {
+            $db->close();
+            return [];
+        }
+
+        $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        $result = $stmt->execute();
+
+        $lifecycles = [];
+
+        if ($result !== false) {
+            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                $row['id'] = (int)$row['id'];
+                $row['comment_count'] = (int)$row['comment_count'];
+
+                foreach (
+                    ['first_seen', 'last_seen', 'archived_at', 'created_at']
+                    as $field
+                ) {
+                    $row[$field] = self::formatUtcForDisplay(
+                        $row[$field] ?? ''
+                    );
+                }
+
+                $lifecycles[] = $row;
+            }
+        }
+
+        $db->close();
+        return $lifecycles;
+    }
+
+    public function getDeviceLifecycleState($mac)
+    {
+        $db = $this->getDb();
+        $mac = strtolower(trim((string)$mac));
+
+        if ($mac === '') {
+            $db->close();
+            return null;
+        }
+
+        $stmt = $db->prepare(
+            'SELECT lifecycle_id, return_pending, is_active FROM devices ' .
+            'WHERE lower(trim(mac)) = :mac LIMIT 1'
+        );
+
+        if ($stmt === false) {
+            $db->close();
+            return null;
+        }
+
+        $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        $result = $stmt->execute();
+        $row = $result
+            ? $result->fetchArray(SQLITE3_ASSOC)
+            : false;
+
+        $db->close();
+
+        if (!$row) {
+            return null;
+        }
+
+        return [
+            'lifecycle_id' => $row['lifecycle_id'] === null
+                ? null
+                : (int)$row['lifecycle_id'],
+            'return_pending' => (int)$row['return_pending'],
+            'is_active' => isset($row['is_active'])
+                ? (int)$row['is_active']
+                : 0
+        ];
+    }
 
     /**
      * Save configuration
@@ -121,7 +675,7 @@ class DeviceMonitor
     public function setConfig($data)
     {
         $file_name = self::getPath('configFile');
-        
+
         // Ensure the directory exists without blocking the save
         $dir = dirname($file_name);
         if (!is_dir($dir)) {
@@ -131,7 +685,7 @@ class DeviceMonitor
                 // Ignore the error and attempt to save the file anyway
             }
         }
-        
+
         // Paths are runtime metadata from defaults.json, not user settings.
         // Do not duplicate them into config.json.
         unset($data['paths']);
@@ -140,20 +694,20 @@ class DeviceMonitor
         // only by root/system services.
         $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         $result = @file_put_contents($file_name, $json, LOCK_EX);
-        
+
         if ($result !== false) {
             @chmod($file_name, 0600);
             return true;
         }
-        
+
         return false;
     }
 
-    
+
     // ========================================
     // DATABASE
     // ========================================
-    
+
     private function getDb()
     {
         $file_mame = self::getPath('dbFile');
@@ -177,21 +731,403 @@ class DeviceMonitor
             deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )');
 
+        // Per-device user comments.
+        @$db->exec('ALTER TABLE devices ADD COLUMN comments TEXT DEFAULT NULL');
+
+        // Device lifecycle and multi-comment history.
+        $db->exec('CREATE TABLE IF NOT EXISTS device_lifecycles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mac TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT \'active\',
+            custom_hostname TEXT DEFAULT NULL,
+            hostname TEXT DEFAULT NULL,
+            hostname_source TEXT DEFAULT \'\',
+            ip TEXT DEFAULT NULL,
+            vendor TEXT DEFAULT NULL,
+            vlan TEXT DEFAULT NULL,
+            first_seen DATETIME,
+            last_seen DATETIME,
+            archived_at DATETIME DEFAULT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )');
+
+        $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_device_lifecycles_active_mac
+            ON device_lifecycles(mac) WHERE status = 'active'");
+
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_device_lifecycles_mac_status
+            ON device_lifecycles(mac, status)');
+
+        $db->exec('CREATE TABLE IF NOT EXISTS device_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lifecycle_id INTEGER NOT NULL,
+            comment TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT NULL,
+            deleted_at DATETIME DEFAULT NULL
+        )');
+
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_device_comments_lifecycle_created
+            ON device_comments(lifecycle_id, created_at DESC)');
+
+        $db->exec('CREATE TABLE IF NOT EXISTS device_comment_versions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            comment_id INTEGER NOT NULL,
+            lifecycle_id INTEGER NOT NULL,
+            comment TEXT NOT NULL,
+            action TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )');
+
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_device_comment_versions_comment_created
+            ON device_comment_versions(comment_id, created_at ASC, id ASC)');
+
+        $db->exec(
+            "INSERT INTO device_comment_versions " .
+            "(comment_id, lifecycle_id, comment, action, created_at) " .
+            "SELECT c.id, c.lifecycle_id, c.comment, " .
+            "CASE WHEN c.updated_at IS NOT NULL THEN 'migrated' ELSE 'created' END, " .
+            "COALESCE(c.updated_at, c.created_at, CURRENT_TIMESTAMP) " .
+            "FROM device_comments c " .
+            "WHERE NOT EXISTS (" .
+            "SELECT 1 FROM device_comment_versions v " .
+            "WHERE v.comment_id = c.id" .
+            ")"
+        );
+
+        $db->exec(
+            "INSERT INTO device_comment_versions " .
+            "(comment_id, lifecycle_id, comment, action, created_at) " .
+            "SELECT c.id, c.lifecycle_id, c.comment, 'deleted', c.deleted_at " .
+            "FROM device_comments c " .
+            "WHERE c.deleted_at IS NOT NULL " .
+            "AND NOT EXISTS (" .
+            "SELECT 1 FROM device_comment_versions v " .
+            "WHERE v.comment_id = c.id AND v.action = 'deleted'" .
+            ")"
+        );
+
+        @$db->exec('ALTER TABLE devices ADD COLUMN lifecycle_id INTEGER DEFAULT NULL');
+        @$db->exec('ALTER TABLE devices ADD COLUMN return_pending INTEGER DEFAULT 0');
+        @$db->exec('ALTER TABLE nmap_scan_history ADD COLUMN lifecycle_id INTEGER DEFAULT NULL');
+        @$db->exec('ALTER TABLE device_identity_events ADD COLUMN lifecycle_id INTEGER DEFAULT NULL');
+
         // Nmap targeted-scan queue and retry state.
         @$db->exec('ALTER TABLE devices ADD COLUMN nmap_scan_pending INTEGER DEFAULT 0');
         @$db->exec('ALTER TABLE devices ADD COLUMN nmap_scan_attempts INTEGER DEFAULT 0');
         @$db->exec('ALTER TABLE devices ADD COLUMN nmap_next_attempt DATETIME DEFAULT NULL');
         @$db->exec('ALTER TABLE devices ADD COLUMN nmap_last_error TEXT DEFAULT NULL');
 
+        if (!$this->backfillDeviceLifecycles($db)) {
+            $db->close();
+            throw new \RuntimeException(
+                'Unable to backfill device lifecycles'
+            );
+        }
+
+
         return $db;
     }
 
+
+    private function findActiveLifecycleId($db, $mac)
+    {
+        $mac = strtolower(trim((string)$mac));
+        if ($mac === '') {
+            return 0;
+        }
+
+        $stmt = $db->prepare(
+            "SELECT id FROM device_lifecycles " .
+            "WHERE mac = :mac AND status = 'active' LIMIT 1"
+        );
+        $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        $result = $stmt->execute();
+        $row = $result ? $result->fetchArray(SQLITE3_ASSOC) : false;
+
+        return $row ? (int)$row['id'] : 0;
+    }
+
+    private function createLifecycle($db, $device, $firstSeen = null)
+    {
+        $mac = strtolower(trim((string)($device['mac'] ?? '')));
+        if ($mac === '') {
+            return 0;
+        }
+
+        $existing = $this->findActiveLifecycleId($db, $mac);
+        if ($existing > 0) {
+            return $existing;
+        }
+
+        if ($firstSeen === null || trim((string)$firstSeen) === '') {
+            $firstSeen = $device['first_seen'] ?? null;
+        }
+
+        $stmt = $db->prepare(
+            "INSERT INTO device_lifecycles " .
+            "(mac, status, custom_hostname, hostname, hostname_source, " .
+            "ip, vendor, vlan, first_seen, last_seen) " .
+            "VALUES (:mac, 'active', :custom_hostname, :hostname, " .
+            ":hostname_source, :ip, :vendor, :vlan, :first_seen, :last_seen)"
+        );
+
+        $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+
+        foreach (['custom_hostname', 'hostname', 'ip', 'vendor', 'vlan'] as $field) {
+            $value = $device[$field] ?? null;
+            $stmt->bindValue(
+                ':' . $field,
+                $value,
+                $value === null ? SQLITE3_NULL : SQLITE3_TEXT
+            );
+        }
+
+        $stmt->bindValue(
+            ':hostname_source',
+            $device['hostname_source'] ?? '',
+            SQLITE3_TEXT
+        );
+
+        $stmt->bindValue(
+            ':first_seen',
+            $firstSeen,
+            $firstSeen === null ? SQLITE3_NULL : SQLITE3_TEXT
+        );
+
+        $lastSeen = $device['last_seen'] ?? null;
+        $stmt->bindValue(
+            ':last_seen',
+            $lastSeen,
+            $lastSeen === null ? SQLITE3_NULL : SQLITE3_TEXT
+        );
+
+        if ($stmt->execute() === false) {
+            return 0;
+        }
+
+        return (int)$db->lastInsertRowID();
+    }
+
+    private function updateLifecycleSnapshot($db, $lifecycleId, $device)
+    {
+        $lifecycleId = (int)$lifecycleId;
+        if ($lifecycleId <= 0) {
+            return false;
+        }
+
+        $stmt = $db->prepare(
+            "UPDATE device_lifecycles SET " .
+            "custom_hostname = :custom_hostname, hostname = :hostname, " .
+            "hostname_source = :hostname_source, ip = :ip, vendor = :vendor, " .
+            "vlan = :vlan, last_seen = :last_seen " .
+            "WHERE id = :id AND status = 'active'"
+        );
+
+        foreach (['custom_hostname', 'hostname', 'ip', 'vendor', 'vlan', 'last_seen'] as $field) {
+            $value = $device[$field] ?? null;
+            $stmt->bindValue(
+                ':' . $field,
+                $value,
+                $value === null ? SQLITE3_NULL : SQLITE3_TEXT
+            );
+        }
+
+        $stmt->bindValue(
+            ':hostname_source',
+            $device['hostname_source'] ?? '',
+            SQLITE3_TEXT
+        );
+        $stmt->bindValue(':id', $lifecycleId, SQLITE3_INTEGER);
+
+        return $stmt->execute() !== false;
+    }
+
+    private function archiveLifecycle($db, $lifecycleId)
+    {
+        $lifecycleId = (int)$lifecycleId;
+        if ($lifecycleId <= 0) {
+            return false;
+        }
+
+        $stmt = $db->prepare(
+            "UPDATE device_lifecycles " .
+            "SET status = 'archived', archived_at = CURRENT_TIMESTAMP " .
+            "WHERE id = :id AND status = 'active'"
+        );
+        $stmt->bindValue(':id', $lifecycleId, SQLITE3_INTEGER);
+        $stmt->execute();
+
+        return $db->changes() > 0;
+    }
+
+    private function backfillDeviceLifecycles($db)
+    {
+        $result = $db->query(
+            'SELECT * FROM devices ' .
+            'WHERE (lifecycle_id IS NULL OR lifecycle_id = 0) ' .
+            'AND COALESCE(return_pending, 0) = 0'
+        );
+
+        if ($result === false) {
+            return false;
+        }
+
+        $devices = [];
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            $devices[] = $row;
+        }
+
+        if (empty($devices)) {
+            return true;
+        }
+
+        if (!$db->exec('BEGIN IMMEDIATE TRANSACTION')) {
+            return false;
+        }
+
+        try {
+            foreach ($devices as $device) {
+                $mac = strtolower(trim((string)($device['mac'] ?? '')));
+                if ($mac === '') {
+                    continue;
+                }
+
+                $lifecycleId = $this->findActiveLifecycleId($db, $mac);
+
+                if ($lifecycleId <= 0) {
+                    $lifecycleId = $this->createLifecycle(
+                        $db,
+                        $device,
+                        $device['first_seen'] ?? null
+                    );
+                }
+
+                if ($lifecycleId <= 0) {
+                    throw new \RuntimeException(
+                        'Unable to create device lifecycle'
+                    );
+                }
+
+                if (!$this->updateLifecycleSnapshot(
+                    $db,
+                    $lifecycleId,
+                    $device
+                )) {
+                    throw new \RuntimeException(
+                        'Unable to update device lifecycle'
+                    );
+                }
+
+                $stmt = $db->prepare(
+                    'UPDATE devices SET lifecycle_id = :lifecycle_id, ' .
+                    'return_pending = 0 WHERE mac = :mac AND ' .
+                    '(lifecycle_id IS NULL OR lifecycle_id = 0)'
+                );
+
+                if ($stmt === false) {
+                    throw new \RuntimeException(
+                        'Unable to prepare lifecycle assignment'
+                    );
+                }
+
+                $stmt->bindValue(
+                    ':lifecycle_id',
+                    $lifecycleId,
+                    SQLITE3_INTEGER
+                );
+                $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+
+                if ($stmt->execute() === false) {
+                    throw new \RuntimeException(
+                        'Unable to assign device lifecycle'
+                    );
+                }
+
+                $legacyComment = trim(
+                    (string)($device['comments'] ?? '')
+                );
+
+                if ($legacyComment !== '') {
+                    $stmt = $db->prepare(
+                        'SELECT id FROM device_comments ' .
+                        'WHERE lifecycle_id = :lifecycle_id ' .
+                        'AND deleted_at IS NULL ' .
+                        'AND comment = :comment LIMIT 1'
+                    );
+
+                    if ($stmt === false) {
+                        throw new \RuntimeException(
+                            'Unable to check legacy comment'
+                        );
+                    }
+
+                    $stmt->bindValue(
+                        ':lifecycle_id',
+                        $lifecycleId,
+                        SQLITE3_INTEGER
+                    );
+                    $stmt->bindValue(
+                        ':comment',
+                        $legacyComment,
+                        SQLITE3_TEXT
+                    );
+
+                    $commentResult = $stmt->execute();
+                    $existingComment = $commentResult
+                        ? $commentResult->fetchArray(SQLITE3_ASSOC)
+                        : false;
+
+                    if (!$existingComment) {
+                        $stmt = $db->prepare(
+                            'INSERT INTO device_comments ' .
+                            '(lifecycle_id, comment) ' .
+                            'VALUES (:lifecycle_id, :comment)'
+                        );
+
+                        if ($stmt === false) {
+                            throw new \RuntimeException(
+                                'Unable to prepare legacy comment migration'
+                            );
+                        }
+
+                        $stmt->bindValue(
+                            ':lifecycle_id',
+                            $lifecycleId,
+                            SQLITE3_INTEGER
+                        );
+                        $stmt->bindValue(
+                            ':comment',
+                            $legacyComment,
+                            SQLITE3_TEXT
+                        );
+
+                        if ($stmt->execute() === false) {
+                            throw new \RuntimeException(
+                                'Unable to migrate legacy comment'
+                            );
+                        }
+                    }
+                }
+            }
+
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException(
+                    'Unable to commit lifecycle backfill'
+                );
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            $db->exec('ROLLBACK');
+            return false;
+        }
+    }
 
     private function initDatabase()
     {
         $file_mame = self::getPath('dbFile');
         $db = new \SQLite3($file_mame);
-        
+
         $db->exec('CREATE TABLE IF NOT EXISTS devices (
             mac TEXT PRIMARY KEY,
             ip TEXT,
@@ -217,12 +1153,13 @@ class DeviceMonitor
         @$db->exec('ALTER TABLE devices ADD COLUMN first_seen DATETIME DEFAULT CURRENT_TIMESTAMP');
         @$db->exec('ALTER TABLE devices ADD COLUMN custom_hostname TEXT DEFAULT NULL');
         @$db->exec("ALTER TABLE devices ADD COLUMN hostname_source TEXT DEFAULT ''");
+        @$db->exec('ALTER TABLE devices ADD COLUMN comments TEXT DEFAULT NULL');
         @$db->exec('ALTER TABLE devices ADD COLUMN nmap_scan_pending INTEGER DEFAULT 0');
         @$db->exec('ALTER TABLE devices ADD COLUMN nmap_scan_attempts INTEGER DEFAULT 0');
         @$db->exec('ALTER TABLE devices ADD COLUMN nmap_next_attempt DATETIME DEFAULT NULL');
         @$db->exec('ALTER TABLE devices ADD COLUMN nmap_last_error TEXT DEFAULT NULL');
 
-        
+
         $db->close();
         chmod($file_mame, 0644);
     }
@@ -230,7 +1167,7 @@ class DeviceMonitor
     // ========================================
     // DEVICES - CRUD OPERATIONS
     // ========================================
-    
+
     /**
      * Retrieve all devices from the database
      * @return array Device list adjusted according to configuration
@@ -239,11 +1176,11 @@ class DeviceMonitor
     {
         $devices = [];
         $file_mame = self::getPath('dbFile');
-        
+
         if (file_exists($file_mame)) {
             $db = $this->getDb();
             $result = $db->query('SELECT * FROM devices ORDER BY last_seen DESC');
-            
+
             // Load the current infrastructure-service inventory once so the
             // Devices API can expose compact service badges without one
             // database query per device.
@@ -287,30 +1224,24 @@ class DeviceMonitor
                 }
             }
             while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-                
+
                 // Determine status from the is_active column instead of time
                 $row['status'] = (isset($row['is_active']) && $row['is_active'] == 1) ? 'online' : 'offline';
-                
+
                 // Vendor may be NULL; normalise it
                 if (empty($row['vendor'])) {
                     $row['vendor'] = 'Unknown';
                 }
 
-                // Format dates as DD.MM.YYYY - HH:MM:SS
-                if (!empty($row['first_seen'])) {
-                    $timestamp = strtotime($row['first_seen']);
-                    if ($timestamp !== false) {
-                        $row['first_seen'] = date('d.m.Y - H:i:s', $timestamp);
-                    }
-                }
+                // Stored device timestamps are UTC; display them in the
+                // OPNsense local timezone, including daylight-saving changes.
+                $row['first_seen'] = self::formatUtcForDisplay(
+                    $row['first_seen'] ?? ''
+                );
+                $row['last_seen'] = self::formatUtcForDisplay(
+                    $row['last_seen'] ?? ''
+                );
 
-                if (!empty($row['last_seen'])) {
-                    $timestamp = strtotime($row['last_seen']);
-                    if ($timestamp !== false) {
-                        $row['last_seen'] = date('d.m.Y - H:i:s', $timestamp);
-                    }
-                }
-                
                 if (!empty($row['nmap_next_attempt'])) {
                     $timestamp = strtotime($row['nmap_next_attempt']);
                     if ($timestamp !== false) {
@@ -355,12 +1286,251 @@ class DeviceMonitor
 
                 $devices[] = $row;
             }
-            
+
             $db->close();
         }
-        
+
         return $devices;
     }
+
+    public function startNewLifecycle($mac)
+    {
+        $db = $this->getDb();
+        $mac = strtolower(trim((string)$mac));
+
+        if ($mac === '') {
+            $db->close();
+            return false;
+        }
+
+        if (!$db->exec('BEGIN IMMEDIATE TRANSACTION')) {
+            $db->close();
+            return false;
+        }
+
+        try {
+            $stmt = $db->prepare(
+                'SELECT * FROM devices WHERE mac = :mac'
+            );
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+            $result = $stmt->execute();
+            $device = $result
+                ? $result->fetchArray(SQLITE3_ASSOC)
+                : false;
+
+            if (
+                !$device ||
+                (int)($device['return_pending'] ?? 0) !== 1
+            ) {
+                throw new \RuntimeException(
+                    'Device is not awaiting lifecycle resolution'
+                );
+            }
+
+            if ($this->findActiveLifecycleId($db, $mac) > 0) {
+                throw new \RuntimeException(
+                    'Device already has an active lifecycle'
+                );
+            }
+
+            $lifecycleId = $this->createLifecycle(
+                $db,
+                $device,
+                $device['first_seen'] ?? null
+            );
+
+            if ($lifecycleId <= 0) {
+                throw new \RuntimeException(
+                    'Unable to create device lifecycle'
+                );
+            }
+
+            $stmt = $db->prepare(
+                'UPDATE devices ' .
+                'SET lifecycle_id = :lifecycle_id, return_pending = 0 ' .
+                'WHERE mac = :mac AND return_pending = 1'
+            );
+            $stmt->bindValue(
+                ':lifecycle_id',
+                $lifecycleId,
+                SQLITE3_INTEGER
+            );
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+
+            if ($stmt->execute() === false || $db->changes() !== 1) {
+                throw new \RuntimeException(
+                    'Unable to attach new device lifecycle'
+                );
+            }
+
+            $stmt = $db->prepare(
+                'DELETE FROM deleted_devices WHERE mac = :mac'
+            );
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+
+            if ($stmt->execute() === false) {
+                throw new \RuntimeException(
+                    'Unable to resolve deleted-device tombstone'
+                );
+            }
+
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException(
+                    'Unable to commit new lifecycle'
+                );
+            }
+
+            $db->close();
+            return $lifecycleId;
+        } catch (\Exception $e) {
+            $db->exec('ROLLBACK');
+            $db->close();
+            return false;
+        }
+    }
+
+
+    public function relinkLifecycle($mac, $lifecycleId)
+    {
+        $db = $this->getDb();
+        $mac = strtolower(trim((string)$mac));
+        $lifecycleId = (int)$lifecycleId;
+
+        if ($mac === '' || $lifecycleId <= 0) {
+            $db->close();
+            return false;
+        }
+
+        if (!$db->exec('BEGIN IMMEDIATE TRANSACTION')) {
+            $db->close();
+            return false;
+        }
+
+        try {
+            $stmt = $db->prepare(
+                'SELECT * FROM devices WHERE mac = :mac'
+            );
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+            $result = $stmt->execute();
+            $device = $result
+                ? $result->fetchArray(SQLITE3_ASSOC)
+                : false;
+
+            if (
+                !$device ||
+                (int)($device['return_pending'] ?? 0) !== 1
+            ) {
+                throw new \RuntimeException(
+                    'Device is not awaiting lifecycle resolution'
+                );
+            }
+
+            if ($this->findActiveLifecycleId($db, $mac) > 0) {
+                throw new \RuntimeException(
+                    'Device already has an active lifecycle'
+                );
+            }
+
+            $stmt = $db->prepare(
+                "SELECT id, custom_hostname FROM device_lifecycles " .
+                "WHERE id = :id AND mac = :mac AND status = 'archived'"
+            );
+            $stmt->bindValue(':id', $lifecycleId, SQLITE3_INTEGER);
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+            $result = $stmt->execute();
+            $lifecycle = $result
+                ? $result->fetchArray(SQLITE3_ASSOC)
+                : false;
+
+            if (!$lifecycle) {
+                throw new \RuntimeException(
+                    'Archived lifecycle not found for device'
+                );
+            }
+
+            if (
+                trim((string)($device['custom_hostname'] ?? '')) === '' &&
+                trim((string)($lifecycle['custom_hostname'] ?? '')) !== ''
+            ) {
+                $device['custom_hostname'] = $lifecycle['custom_hostname'];
+            }
+
+            $stmt = $db->prepare(
+                "UPDATE device_lifecycles " .
+                "SET status = 'active', archived_at = NULL " .
+                "WHERE id = :id AND mac = :mac AND status = 'archived'"
+            );
+            $stmt->bindValue(':id', $lifecycleId, SQLITE3_INTEGER);
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+
+            if ($stmt->execute() === false || $db->changes() !== 1) {
+                throw new \RuntimeException(
+                    'Unable to reactivate device lifecycle'
+                );
+            }
+
+            if (!$this->updateLifecycleSnapshot(
+                $db,
+                $lifecycleId,
+                $device
+            )) {
+                throw new \RuntimeException(
+                    'Unable to update reactivated lifecycle'
+                );
+            }
+
+            $stmt = $db->prepare(
+                'UPDATE devices ' .
+                'SET lifecycle_id = :lifecycle_id, return_pending = 0, ' .
+                'custom_hostname = :custom_hostname ' .
+                'WHERE mac = :mac AND return_pending = 1'
+            );
+            $stmt->bindValue(
+                ':lifecycle_id',
+                $lifecycleId,
+                SQLITE3_INTEGER
+            );
+            $stmt->bindValue(
+                ':custom_hostname',
+                $device['custom_hostname'] ?? null,
+                ($device['custom_hostname'] ?? null) === null
+                    ? SQLITE3_NULL
+                    : SQLITE3_TEXT
+            );
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+
+            if ($stmt->execute() === false || $db->changes() !== 1) {
+                throw new \RuntimeException(
+                    'Unable to attach reactivated lifecycle'
+                );
+            }
+
+            $stmt = $db->prepare(
+                'DELETE FROM deleted_devices WHERE mac = :mac'
+            );
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+
+            if ($stmt->execute() === false) {
+                throw new \RuntimeException(
+                    'Unable to resolve deleted-device tombstone'
+                );
+            }
+
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException(
+                    'Unable to commit lifecycle relink'
+                );
+            }
+
+            $db->close();
+            return true;
+        } catch (\Exception $e) {
+            $db->exec('ROLLBACK');
+            $db->close();
+            return false;
+        }
+    }
+
 
     public function deleteDevice($mac)
     {
@@ -369,7 +1539,9 @@ class DeviceMonitor
 
         $db->exec('BEGIN IMMEDIATE TRANSACTION');
         try {
-            $stmt = $db->prepare('SELECT last_seen FROM devices WHERE mac = :mac');
+            $stmt = $db->prepare(
+                'SELECT * FROM devices WHERE mac = :mac'
+            );
             $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
             $result = $stmt->execute();
             $row = $result ? $result->fetchArray(SQLITE3_ASSOC) : false;
@@ -380,19 +1552,67 @@ class DeviceMonitor
                 return false;
             }
 
-            // Remember the newest Hostwatch timestamp already represented by
-            // this row. The same historical record must not recreate it.
-            $stmt = $db->prepare('INSERT OR REPLACE INTO deleted_devices (mac, last_seen, deleted_at) VALUES (:mac, :last_seen, CURRENT_TIMESTAMP)');
-            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
-            $stmt->bindValue(':last_seen', $row['last_seen'] ?? '', SQLITE3_TEXT);
-            $stmt->execute();
+            $lifecycleId = (int)($row['lifecycle_id'] ?? 0);
 
-            $stmt = $db->prepare('DELETE FROM devices WHERE mac = :mac');
+            if ($lifecycleId <= 0) {
+                throw new \RuntimeException(
+                    'Device has no active lifecycle'
+                );
+            }
+
+            if (!$this->updateLifecycleSnapshot(
+                $db,
+                $lifecycleId,
+                $row
+            )) {
+                throw new \RuntimeException(
+                    'Unable to update device lifecycle'
+                );
+            }
+
+            if (!$this->archiveLifecycle($db, $lifecycleId)) {
+                throw new \RuntimeException(
+                    'Unable to archive device lifecycle'
+                );
+            }
+
+            $stmt = $db->prepare(
+                'INSERT OR REPLACE INTO deleted_devices ' .
+                '(mac, last_seen, deleted_at) ' .
+                'VALUES (:mac, :last_seen, CURRENT_TIMESTAMP)'
+            );
             $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
-            $stmt->execute();
+            $stmt->bindValue(
+                ':last_seen',
+                $row['last_seen'] ?? '',
+                SQLITE3_TEXT
+            );
+
+            if ($stmt->execute() === false) {
+                throw new \RuntimeException(
+                    'Unable to create deleted-device tombstone'
+                );
+            }
+
+            $stmt = $db->prepare(
+                'DELETE FROM devices WHERE mac = :mac'
+            );
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+
+            if ($stmt->execute() === false) {
+                throw new \RuntimeException(
+                    'Unable to delete device'
+                );
+            }
+
             $changes = $db->changes();
 
-            $db->exec('COMMIT');
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException(
+                    'Unable to commit device deletion'
+                );
+            }
+
             $db->close();
             return $changes > 0;
         } catch (\Exception $e) {
@@ -405,14 +1625,77 @@ class DeviceMonitor
     public function clearAll()
     {
         $db = $this->getDb();
-        $db->exec('BEGIN IMMEDIATE TRANSACTION');
+
+        if (!$db->exec('BEGIN IMMEDIATE TRANSACTION')) {
+            $db->close();
+            return false;
+        }
+
         try {
-            // Treat Clear All like repeated manual deletion: remember the
-            // current last_seen value for every device so old Hostwatch
-            // history does not immediately repopulate the table.
-            $db->exec('INSERT OR REPLACE INTO deleted_devices (mac, last_seen, deleted_at) SELECT mac, last_seen, CURRENT_TIMESTAMP FROM devices');
-            $db->exec('DELETE FROM devices');
-            $db->exec('COMMIT');
+            $result = $db->query('SELECT * FROM devices');
+
+            if ($result === false) {
+                throw new \RuntimeException(
+                    'Unable to read devices for lifecycle archive'
+                );
+            }
+
+            $devices = [];
+            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                $devices[] = $row;
+            }
+
+            foreach ($devices as $device) {
+                $lifecycleId = (int)($device['lifecycle_id'] ?? 0);
+
+                if ($lifecycleId <= 0) {
+                    throw new \RuntimeException(
+                        'Device has no active lifecycle'
+                    );
+                }
+
+                if (!$this->updateLifecycleSnapshot(
+                    $db,
+                    $lifecycleId,
+                    $device
+                )) {
+                    throw new \RuntimeException(
+                        'Unable to update device lifecycle'
+                    );
+                }
+
+                if (!$this->archiveLifecycle(
+                    $db,
+                    $lifecycleId
+                )) {
+                    throw new \RuntimeException(
+                        'Unable to archive device lifecycle'
+                    );
+                }
+            }
+
+            if (!$db->exec(
+                'INSERT OR REPLACE INTO deleted_devices ' .
+                '(mac, last_seen, deleted_at) ' .
+                'SELECT mac, last_seen, CURRENT_TIMESTAMP FROM devices'
+            )) {
+                throw new \RuntimeException(
+                    'Unable to create deleted-device tombstones'
+                );
+            }
+
+            if (!$db->exec('DELETE FROM devices')) {
+                throw new \RuntimeException(
+                    'Unable to clear devices'
+                );
+            }
+
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException(
+                    'Unable to commit clear-all operation'
+                );
+            }
+
             $db->close();
             return true;
         } catch (\Exception $e) {
@@ -421,4 +1704,5 @@ class DeviceMonitor
             return false;
         }
     }
+
 }

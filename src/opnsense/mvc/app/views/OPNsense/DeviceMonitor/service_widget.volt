@@ -1,3 +1,9 @@
+<style>
+#devicemonitor_widget .label {
+    font-size: 12px;
+}
+</style>
+
 <div id="devicemonitor_widget">
     <table class="table table-striped table-condensed">
         <tbody>

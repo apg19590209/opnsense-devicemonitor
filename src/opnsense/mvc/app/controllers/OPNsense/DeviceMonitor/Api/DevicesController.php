@@ -48,6 +48,264 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
+     * Update per-device comments
+     * POST /api/devicemonitor/devices/updatecomments
+     */
+    public function updatecommentsAction()
+    {
+        if ($this->request->isPost()) {
+            $mac = $this->request->getPost('mac');
+            $comments = $this->request->getPost('comments');
+
+            if (empty($mac)) {
+                return ['result' => 'failed', 'error' => 'MAC required'];
+            }
+
+            $model = new DeviceMonitor();
+            if ($model->updateComments($mac, $comments)) {
+                return ['result' => 'saved'];
+            }
+        }
+
+        return ['result' => 'failed'];
+    }
+
+    /**
+     * Start a new lifecycle for a returning device
+     * POST /api/devicemonitor/devices/startnewlifecycle
+     */
+    public function startnewlifecycleAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed'];
+        }
+
+        $mac = strtolower(trim(
+            (string)$this->request->getPost('mac')
+        ));
+
+        if ($mac === '') {
+            return [
+                'result' => 'failed',
+                'error' => 'MAC address required'
+            ];
+        }
+
+        $model = new DeviceMonitor();
+        $lifecycleId = $model->startNewLifecycle($mac);
+
+        if ($lifecycleId !== false && $lifecycleId > 0) {
+            return [
+                'result' => 'saved',
+                'lifecycle_id' => $lifecycleId
+            ];
+        }
+
+        return [
+            'result' => 'failed',
+            'error' => 'Unable to start new lifecycle'
+        ];
+    }
+
+
+    /**
+     * Relink a returning device to an archived lifecycle
+     * POST /api/devicemonitor/devices/relinklifecycle
+     */
+    public function relinklifecycleAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed'];
+        }
+
+        $mac = strtolower(trim(
+            (string)$this->request->getPost('mac')
+        ));
+        $lifecycleId = (int)$this->request->getPost('lifecycle_id');
+
+        if ($mac === '' || $lifecycleId <= 0) {
+            return [
+                'result' => 'failed',
+                'error' => 'MAC address and lifecycle ID required'
+            ];
+        }
+
+        $model = new DeviceMonitor();
+
+        if ($model->relinkLifecycle($mac, $lifecycleId)) {
+            return [
+                'result' => 'saved',
+                'lifecycle_id' => $lifecycleId
+            ];
+        }
+
+        return [
+            'result' => 'failed',
+            'error' => 'Unable to relink lifecycle'
+        ];
+    }
+
+    /**
+     * List lifecycle history for one MAC address
+     * GET /api/devicemonitor/devices/lifecycles
+     */
+    public function lifecyclesAction()
+    {
+        $mac = strtolower(trim(
+            (string)$this->request->get('mac')
+        ));
+
+        if ($mac === '') {
+            return [
+                'result' => 'failed',
+                'error' => 'MAC address required'
+            ];
+        }
+
+        $model = new DeviceMonitor();
+
+        return [
+            'result' => 'ok',
+            'lifecycles' => $model->getDeviceLifecycles($mac),
+            'device_state' => $model->getDeviceLifecycleState($mac)
+        ];
+    }
+
+    /**
+     * List comments for one device lifecycle
+     * GET /api/devicemonitor/devices/comments
+     */
+    public function commentsAction()
+    {
+        $lifecycleId = (int)$this->request->get('lifecycle_id');
+
+        if ($lifecycleId <= 0) {
+            return [
+                'result' => 'failed',
+                'error' => 'Lifecycle ID required'
+            ];
+        }
+
+        $model = new DeviceMonitor();
+
+        return [
+            'result' => 'ok',
+            'comments' => $model->getLifecycleComments($lifecycleId)
+        ];
+    }
+
+    /**
+     * Add a comment to an active device lifecycle
+     * POST /api/devicemonitor/devices/addcomment
+     */
+    public function addcommentAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed'];
+        }
+
+        $lifecycleId = (int)$this->request->getPost('lifecycle_id');
+        $comment = trim(
+            (string)$this->request->getPost('comment')
+        );
+
+        if ($lifecycleId <= 0 || $comment === '') {
+            return [
+                'result' => 'failed',
+                'error' => 'Lifecycle ID and comment required'
+            ];
+        }
+
+        $model = new DeviceMonitor();
+        $commentId = $model->addLifecycleComment(
+            $lifecycleId,
+            $comment
+        );
+
+        if ($commentId > 0) {
+            return [
+                'result' => 'saved',
+                'id' => $commentId
+            ];
+        }
+
+        return ['result' => 'failed'];
+    }
+
+    /**
+     * Edit an existing lifecycle comment
+     * POST /api/devicemonitor/devices/updatecomment
+     */
+    public function updatecommentAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed'];
+        }
+
+        $lifecycleId = (int)$this->request->getPost('lifecycle_id');
+        $commentId = (int)$this->request->getPost('id');
+        $comment = trim(
+            (string)$this->request->getPost('comment')
+        );
+
+        if (
+            $lifecycleId <= 0 ||
+            $commentId <= 0 ||
+            $comment === ''
+        ) {
+            return [
+                'result' => 'failed',
+                'error' => 'Lifecycle ID, comment ID and comment required'
+            ];
+        }
+
+        $model = new DeviceMonitor();
+
+        if ($model->updateLifecycleComment(
+            $lifecycleId,
+            $commentId,
+            $comment
+        )) {
+            return ['result' => 'saved'];
+        }
+
+        return ['result' => 'failed'];
+    }
+
+    /**
+     * Soft-delete an existing lifecycle comment
+     * POST /api/devicemonitor/devices/deletecomment
+     */
+    public function deletecommentAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed'];
+        }
+
+        $lifecycleId = (int)$this->request->getPost('lifecycle_id');
+        $commentId = (int)$this->request->getPost('id');
+
+        if ($lifecycleId <= 0 || $commentId <= 0) {
+            return [
+                'result' => 'failed',
+                'error' => 'Lifecycle ID and comment ID required'
+            ];
+        }
+
+        $model = new DeviceMonitor();
+
+        if ($model->deleteLifecycleComment(
+            $lifecycleId,
+            $commentId
+        )) {
+            return ['result' => 'deleted'];
+        }
+
+        return ['result' => 'failed'];
+    }
+
+
+    /**
      * Device search for the Bootgrid table
      * GET/POST /api/devicemonitor/devices/search
      */

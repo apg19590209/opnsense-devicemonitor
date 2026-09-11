@@ -268,3 +268,50 @@ can therefore miss them entirely.
 A bounded lightweight ICMP pass causes OPNsense to interact with the LAN hosts
 and allows Hostwatch to observe them, while avoiding broad Nmap discovery,
 direct database fabrication and unbounded network activity.
+
+## 14. Device identity history uses explicit lifecycle ownership
+
+### Decision
+
+Device history is organised around persistent lifecycle records rather than a
+single mutable device record.
+
+Device Monitor must:
+
+- preserve lifecycle records when a device is removed; lifecycles are archived,
+  not deleted
+- preserve the original lifecycle `first_seen` value
+- preserve the earliest-known MAC history independently of lifecycle changes
+- mark a previously known MAC that reappears after removal as `return_pending`
+- require an explicit user decision before assigning that returning MAC to a
+  lifecycle
+- allow the user either to start a new lifecycle or relink the device to one of
+  its previous archived lifecycles
+- never automatically create a new lifecycle solely because a known MAC returns
+- retain lifecycle notes as individual timestamped records
+- retain note edit history
+- archive notes rather than destructively deleting them from user-facing history
+- keep archived-lifecycle notes read-only
+- expose lifecycle history and notes through the Device Details page rather than
+  a separate comments popup
+- keep current device ONLINE/OFFLINE state separate from lifecycle
+  active/archived state
+
+The Devices page may identify a returning device and link directly to its
+lifecycle-resolution section, but lifecycle resolution remains an explicit user
+action.
+
+### Reason
+
+A MAC address can disappear and later return for several legitimate reasons.
+Automatically creating or overwriting lifecycle history would lose the
+distinction between a continuing device identity and a genuinely new period of
+ownership or use.
+
+Explicit lifecycle selection preserves historical evidence, user intent,
+timestamps and notes while preventing scanner observations from silently
+rewriting device history.
+
+Separating current ONLINE/OFFLINE state from lifecycle state also avoids
+treating an active historical lifecycle as proof that a device is currently
+reachable.

@@ -21,6 +21,13 @@ class IndexController extends \OPNsense\Base\IndexController
         $this->view->pick('OPNsense/DeviceMonitor/identityevents');
     }
 
+    public function devicehistoryAction()
+    {
+        $mac = strtolower(trim((string)$this->request->getQuery('mac')));
+        $this->view->deviceHistoryMac = $mac;
+        $this->view->pick('OPNsense/DeviceMonitor/devicehistory');
+    }
+
     public function scanhistoryAction()
     {
         $this->view->pick('OPNsense/DeviceMonitor/scanhistory');

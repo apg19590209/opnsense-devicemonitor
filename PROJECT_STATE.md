@@ -504,6 +504,42 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - No known unresolved Friendly Name / detected Hostname separation issue remains.
 - No known unresolved AdGuard DNS rewrite hostname-enrichment issue remains.
 
+## Device lifecycle history and notes
+
+- Added persistent device lifecycle history; lifecycle records are archived rather
+  than deleted.
+- A previously known MAC that returns after removal is marked `return_pending`.
+  The user must explicitly choose either Start New Lifecycle or Relink Previous
+  Lifecycle; returning devices are not automatically assigned a new lifecycle.
+- Original lifecycle `first_seen` values and earliest-known MAC history are
+  preserved.
+- Added Device Details page reached from the Devices page.
+- Device Details contains Device Summary, lifecycle-aware Notes, and Lifecycle
+  History.
+- Notes are individual timestamped lifecycle records with retained edit history.
+- User-facing note removal is Archive, not Delete; archived notes remain in
+  history and archived lifecycle notes are read-only.
+- Device Summary online/offline status uses the device `is_active` state and is
+  kept separate from lifecycle active/archived state.
+- Stored UTC timestamps are displayed in the configured OPNsense local timezone,
+  including daylight-saving changes.
+- Removed the obsolete Device Comments popup/editor and its dead JavaScript from
+  the Devices page.
+- Standardised ordinary Device Monitor status labels to 12px across relevant
+  views.
+- Device Details UI, note create/edit/archive history, ONLINE/OFFLINE display,
+  legacy-popup removal, and test-data cleanup were validated live.
+- Returning-device lifecycle behaviour is covered by regression tests; no live
+  `return_pending` device was available for a natural UI validation.
+- Python lifecycle-return regression and PHP lifecycle/comment-action regression
+  suites pass.
+- Final local validation: `git diff --check`, Python syntax, and lifecycle-return
+  regression all pass.
+- Final live validation: DeviceMonitor model, Devices API controller, and Index
+  controller PHP syntax all pass; lifecycle/comment-action regression passes in
+  full against the deployed model.
+
 ## Next step
 
-Implement and validate per-device comments with a compact list indicator and popup/editor.
+Stage and review the complete lifecycle/history change set, then commit it to
+`v2.8-development`.

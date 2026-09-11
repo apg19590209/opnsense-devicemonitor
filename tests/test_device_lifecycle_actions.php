@@ -1,0 +1,510 @@
+<?php
+
+$modelPath = getenv('DM_MODEL_PATH');
+$defaultsPath = getenv('DM_DEFAULTS_PATH');
+
+require_once $modelPath;
+
+function check($ok, $message)
+{
+    if (!$ok) {
+        throw new RuntimeException($message);
+    }
+}
+
+function fresh_model($dbFile, $defaultsPath)
+{
+    $data = json_decode(file_get_contents($defaultsPath), true);
+    $data['paths']['dbFile'] = $dbFile;
+
+    $tmpDefaults = sys_get_temp_dir() . '/dm-lifecycle-defaults.json';
+    file_put_contents($tmpDefaults, json_encode($data));
+
+    $r = new ReflectionClass(
+        \OPNsense\DeviceMonitor\DeviceMonitor::class
+    );
+
+    $p = $r->getProperty('defaultsFile');
+    $p->setAccessible(true);
+    $p->setValue(null, $tmpDefaults);
+
+    $p = $r->getProperty('data');
+    $p->setAccessible(true);
+    $p->setValue(null, null);
+
+    @unlink($dbFile);
+
+    $m = new \OPNsense\DeviceMonitor\DeviceMonitor();
+    $m->startNewLifecycle('00:00:00:00:00:00');
+
+    check(file_exists($dbFile), 'Test DB not created');
+    return $m;
+}
+
+$dbFile = sys_get_temp_dir() . '/dm-lifecycle-actions.db';
+
+/* Start New Lifecycle */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec(
+    "INSERT INTO device_lifecycles " .
+    "(mac,status,custom_hostname,first_seen,last_seen,archived_at) VALUES " .
+    "('aa:bb:cc:dd:ee:01','archived','Old Friendly'," .
+    "'2026-01-01 10:00:00','2026-06-01 10:00:00','2026-06-01 10:05:00')"
+);
+
+$db->exec(
+    "INSERT INTO device_comments (lifecycle_id,comment) " .
+    "VALUES (1,'Old lifecycle comment')"
+);
+
+$db->exec(
+    "INSERT INTO devices " .
+    "(mac,ip,hostname,first_seen,last_seen,is_active,lifecycle_id,return_pending) " .
+    "VALUES ('aa:bb:cc:dd:ee:01','192.0.2.20','return-host'," .
+    "'2026-09-11 08:00:00','2026-09-11 08:00:00',1,NULL,1)"
+);
+
+$db->exec(
+    "INSERT INTO deleted_devices (mac,last_seen) " .
+    "VALUES ('aa:bb:cc:dd:ee:01','2026-06-01 10:00:00')"
+);
+
+$db->close();
+
+$state = $model->getDeviceLifecycleState('aa:bb:cc:dd:ee:01');
+check(
+    is_array($state) &&
+    $state['lifecycle_id'] === null &&
+    $state['return_pending'] === 1,
+    'Pending lifecycle state is wrong'
+);
+
+$newId = $model->startNewLifecycle('aa:bb:cc:dd:ee:01');
+check($newId === 2, 'New lifecycle was not created as lifecycle 2');
+
+$db = new SQLite3($dbFile);
+
+check(
+    $db->querySingle(
+        "SELECT status FROM device_lifecycles WHERE id=1"
+    ) === 'archived',
+    'Old lifecycle was changed'
+);
+
+check(
+    $db->querySingle(
+        "SELECT first_seen FROM device_lifecycles WHERE id=2"
+    ) === '2026-09-11 08:00:00',
+    'New lifecycle first_seen is wrong'
+);
+
+check(
+    $db->querySingle(
+        "SELECT lifecycle_id || ':' || return_pending FROM devices " .
+        "WHERE mac='aa:bb:cc:dd:ee:01'"
+    ) === '2:0',
+    'Device not attached to new lifecycle'
+);
+
+check(
+    (int)$db->querySingle("SELECT COUNT(*) FROM deleted_devices") === 0,
+    'Tombstone not removed'
+);
+
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM device_comments WHERE lifecycle_id=1"
+    ) === 1,
+    'Old comment not preserved'
+);
+
+$db->close();
+
+$state = $model->getDeviceLifecycleState('aa:bb:cc:dd:ee:01');
+check(
+    is_array($state) &&
+    $state['lifecycle_id'] === 2 &&
+    $state['return_pending'] === 0,
+    'Resolved lifecycle state is wrong'
+);
+
+echo "DEVICE_START_NEW_LIFECYCLE=PASS\n";
+
+/* Relink Previous Lifecycle */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec(
+    "INSERT INTO device_lifecycles " .
+    "(mac,status,custom_hostname,first_seen,last_seen,archived_at) VALUES " .
+    "('aa:bb:cc:dd:ee:02','archived','Saved Friendly'," .
+    "'2026-02-01 09:00:00','2026-07-01 09:00:00','2026-07-01 09:05:00')"
+);
+
+$db->exec(
+    "INSERT INTO device_comments (lifecycle_id,comment) " .
+    "VALUES (1,'Preserved relink comment')"
+);
+
+$db->exec(
+    "INSERT INTO devices " .
+    "(mac,ip,hostname,custom_hostname,first_seen,last_seen,is_active," .
+    "lifecycle_id,return_pending) VALUES " .
+    "('aa:bb:cc:dd:ee:02','192.0.2.22','return-host',NULL," .
+    "'2026-09-11 08:30:00','2026-09-11 08:30:00',1,NULL,1)"
+);
+
+$db->exec(
+    "INSERT INTO deleted_devices (mac,last_seen) " .
+    "VALUES ('aa:bb:cc:dd:ee:02','2026-07-01 09:00:00')"
+);
+
+$db->close();
+
+check(
+    $model->relinkLifecycle('aa:bb:cc:dd:ee:02', 1) === true,
+    'Relink failed'
+);
+
+$db = new SQLite3($dbFile);
+
+check(
+    $db->querySingle(
+        "SELECT status FROM device_lifecycles WHERE id=1"
+    ) === 'active',
+    'Relink did not reactivate lifecycle'
+);
+
+check(
+    $db->querySingle(
+        "SELECT first_seen FROM device_lifecycles WHERE id=1"
+    ) === '2026-02-01 09:00:00',
+    'Relink changed original first_seen'
+);
+
+check(
+    $db->querySingle(
+        "SELECT last_seen FROM device_lifecycles WHERE id=1"
+    ) === '2026-09-11 08:30:00',
+    'Relink did not update last_seen'
+);
+
+check(
+    $db->querySingle(
+        "SELECT custom_hostname FROM devices " .
+        "WHERE mac='aa:bb:cc:dd:ee:02'"
+    ) === 'Saved Friendly',
+    'Relink did not restore Friendly Name'
+);
+
+check(
+    $db->querySingle(
+        "SELECT lifecycle_id || ':' || return_pending FROM devices " .
+        "WHERE mac='aa:bb:cc:dd:ee:02'"
+    ) === '1:0',
+    'Relink did not attach device correctly'
+);
+
+check(
+    (int)$db->querySingle("SELECT COUNT(*) FROM deleted_devices") === 0,
+    'Relink tombstone not removed'
+);
+
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM device_comments WHERE lifecycle_id=1"
+    ) === 1,
+    'Relink comment not preserved'
+);
+
+$db->close();
+echo "DEVICE_RELINK_LIFECYCLE=PASS\n";
+
+/* Wrong-MAC protection */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec(
+    "INSERT INTO device_lifecycles " .
+    "(mac,status,custom_hostname,first_seen,last_seen,archived_at) VALUES " .
+    "('aa:bb:cc:dd:ee:03','archived','Wrong Device'," .
+    "'2026-03-01 09:00:00','2026-07-01 09:00:00','2026-07-01 09:05:00')"
+);
+
+$db->exec(
+    "INSERT INTO devices " .
+    "(mac,first_seen,last_seen,lifecycle_id,return_pending) VALUES " .
+    "('aa:bb:cc:dd:ee:04','2026-09-11 08:40:00'," .
+    "'2026-09-11 08:40:00',NULL,1)"
+);
+
+$db->exec(
+    "INSERT INTO deleted_devices (mac,last_seen) " .
+    "VALUES ('aa:bb:cc:dd:ee:04','2026-07-01 09:00:00')"
+);
+
+$db->close();
+
+check(
+    $model->relinkLifecycle('aa:bb:cc:dd:ee:04', 1) === false,
+    'Wrong-MAC lifecycle relink was accepted'
+);
+
+$db = new SQLite3($dbFile);
+
+check(
+    $db->querySingle(
+        "SELECT status FROM device_lifecycles WHERE id=1"
+    ) === 'archived',
+    'Wrong-MAC failure changed archived lifecycle'
+);
+
+check(
+    $db->querySingle(
+        "SELECT return_pending FROM devices " .
+        "WHERE mac='aa:bb:cc:dd:ee:04'"
+    ) == 1,
+    'Wrong-MAC failure cleared pending state'
+);
+
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM deleted_devices " .
+        "WHERE mac='aa:bb:cc:dd:ee:04'"
+    ) === 1,
+    'Wrong-MAC failure removed tombstone'
+);
+
+$db->close();
+@unlink($dbFile);
+
+echo "DEVICE_RELINK_WRONG_MAC_REJECTED=PASS\n";
+
+/* Non-pending device protection */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec(
+    "INSERT INTO device_lifecycles " .
+    "(mac,status,first_seen,last_seen,archived_at) VALUES " .
+    "('aa:bb:cc:dd:ee:05','archived'," .
+    "'2026-04-01 09:00:00','2026-07-01 09:00:00','2026-07-01 09:05:00')"
+);
+
+$db->exec(
+    "INSERT INTO devices " .
+    "(mac,first_seen,last_seen,lifecycle_id,return_pending) VALUES " .
+    "('aa:bb:cc:dd:ee:05','2026-09-11 09:00:00'," .
+    "'2026-09-11 09:00:00',NULL,0)"
+);
+
+$db->close();
+
+check(
+    $model->startNewLifecycle('aa:bb:cc:dd:ee:05') === false,
+    'Start New accepted a non-pending device'
+);
+
+check(
+    $model->relinkLifecycle('aa:bb:cc:dd:ee:05', 1) === false,
+    'Relink accepted a non-pending device'
+);
+
+echo "DEVICE_NON_PENDING_ACTIONS_REJECTED=PASS\n";
+
+
+
+/* Existing active lifecycle protection */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec(
+    "INSERT INTO device_lifecycles " .
+    "(mac,status,first_seen,last_seen) VALUES " .
+    "('aa:bb:cc:dd:ee:06','active'," .
+    "'2026-05-01 09:00:00','2026-08-01 09:00:00')"
+);
+
+$db->exec(
+    "INSERT INTO device_lifecycles " .
+    "(mac,status,first_seen,last_seen,archived_at) VALUES " .
+    "('aa:bb:cc:dd:ee:06','archived'," .
+    "'2026-01-01 09:00:00','2026-04-01 09:00:00','2026-04-01 09:05:00')"
+);
+
+$db->exec(
+    "INSERT INTO devices " .
+    "(mac,first_seen,last_seen,lifecycle_id,return_pending) VALUES " .
+    "('aa:bb:cc:dd:ee:06','2026-09-11 09:10:00'," .
+    "'2026-09-11 09:10:00',NULL,1)"
+);
+
+$db->exec(
+    "INSERT INTO deleted_devices (mac,last_seen) " .
+    "VALUES ('aa:bb:cc:dd:ee:06','2026-08-01 09:00:00')"
+);
+
+$db->close();
+
+check(
+    $model->startNewLifecycle('aa:bb:cc:dd:ee:06') === false,
+    'Start New accepted an existing active lifecycle'
+);
+
+check(
+    $model->relinkLifecycle('aa:bb:cc:dd:ee:06', 2) === false,
+    'Relink accepted an existing active lifecycle'
+);
+
+echo "DEVICE_ACTIVE_LIFECYCLE_CONFLICT_REJECTED=PASS\n";
+
+
+/* Lifecycle comment safety */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec(
+    "INSERT INTO device_lifecycles " .
+    "(mac,status,first_seen,last_seen,archived_at) VALUES " .
+    "('aa:bb:cc:dd:ee:07','archived'," .
+    "'2026-01-01 09:00:00','2026-02-01 09:00:00','2026-02-01 09:05:00')"
+);
+
+$db->exec(
+    "INSERT INTO device_comments (lifecycle_id,comment) " .
+    "VALUES (1,'Archived comment')"
+);
+
+$db->close();
+
+$comments = $model->getLifecycleComments(1);
+check(
+    count($comments) === 1 &&
+    $comments[0]['comment'] === 'Archived comment',
+    'Archived lifecycle comments are not readable'
+);
+
+check(
+    $model->addLifecycleComment(1, 'Should fail') === 0,
+    'Added comment to archived lifecycle'
+);
+
+check(
+    $model->updateLifecycleComment(1, 1, 'Should fail') === false,
+    'Updated comment on archived lifecycle'
+);
+
+check(
+    $model->deleteLifecycleComment(1, 1) === false,
+    'Deleted comment from archived lifecycle'
+);
+
+echo "DEVICE_ARCHIVED_LIFECYCLE_COMMENTS_READ_ONLY=PASS\n";
+
+/* Active lifecycle comment history */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec(
+    "INSERT INTO device_lifecycles " .
+    "(mac,status,first_seen,last_seen) VALUES " .
+    "('aa:bb:cc:dd:ee:08','active'," .
+    "'2026-09-11 09:30:00','2026-09-11 09:30:00')"
+);
+
+$db->close();
+
+$firstId = $model->addLifecycleComment(1, 'First active comment');
+$secondId = $model->addLifecycleComment(1, 'Second active comment');
+
+check(
+    $firstId === 1 && $secondId === 2,
+    'Failed to add independent active lifecycle comments'
+);
+
+check(
+    $model->updateLifecycleComment(
+        1,
+        $firstId,
+        'First active comment - edited'
+    ) === true,
+    'Failed to edit first active lifecycle comment'
+);
+
+check(
+    $model->deleteLifecycleComment(1, $firstId) === true,
+    'Failed to delete first active lifecycle comment'
+);
+
+$comments = $model->getLifecycleComments(1);
+check(count($comments) === 2, 'Deleted comment disappeared from history');
+
+$lifecycles = $model->getDeviceLifecycles('aa:bb:cc:dd:ee:08');
+check(
+    count($lifecycles) === 1 &&
+    (int)$lifecycles[0]['comment_count'] === 2,
+    'Lifecycle history count omitted deleted comment'
+);
+
+$byId = [];
+foreach ($comments as $comment) {
+    $byId[(int)$comment['id']] = $comment;
+}
+
+check(
+    isset($byId[$firstId]) &&
+    $byId[$firstId]['comment'] === 'First active comment - edited' &&
+    !empty($byId[$firstId]['deleted_at']),
+    'Deleted comment current state was not retained'
+);
+
+check(
+    isset($byId[$secondId]) &&
+    $byId[$secondId]['comment'] === 'Second active comment' &&
+    empty($byId[$secondId]['deleted_at']),
+    'Independent live comment was changed by another comment delete'
+);
+
+$firstVersions = $byId[$firstId]['versions'] ?? [];
+check(
+    count($firstVersions) === 3 &&
+    $firstVersions[0]['action'] === 'created' &&
+    $firstVersions[0]['comment'] === 'First active comment' &&
+    $firstVersions[1]['action'] === 'edited' &&
+    $firstVersions[1]['comment'] === 'First active comment - edited' &&
+    $firstVersions[2]['action'] === 'deleted' &&
+    $firstVersions[2]['comment'] === 'First active comment - edited',
+    'First comment version history is incomplete'
+);
+
+$secondVersions = $byId[$secondId]['versions'] ?? [];
+check(
+    count($secondVersions) === 1 &&
+    $secondVersions[0]['action'] === 'created' &&
+    $secondVersions[0]['comment'] === 'Second active comment',
+    'Second live comment history is incorrect'
+);
+
+check(
+    $model->updateLifecycleComment(
+        1,
+        $secondId,
+        'Second active comment - edited'
+    ) === true,
+    'Independent live comment could not still be edited'
+);
+
+check(
+    $model->updateLifecycleComment(
+        1,
+        $firstId,
+        'Should fail'
+    ) === false,
+    'Deleted comment was editable'
+);
+
+echo "DEVICE_ACTIVE_LIFECYCLE_COMMENT_HISTORY=PASS\n";
+
+echo "DEVICE_LIFECYCLE_ACTIONS_REGRESSION=PASS\n";
