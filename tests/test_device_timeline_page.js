@@ -79,7 +79,10 @@ check(
     'NOTE_UPDATED',
     'NOTE_ARCHIVED',
     'LIFECYCLE_STARTED',
-    'LIFECYCLE_ARCHIVED'
+    'LIFECYCLE_ARCHIVED',
+    'LIFECYCLE_RELINKED',
+    'FRIENDLY_NAME_CHANGED',
+    'IDENTITY_REOPENED'
 ].forEach(function(type) {
     check(
         timeline.includes(type),

@@ -114,24 +114,375 @@ class DeviceMonitor
         return self::getPath('configFile');
     }
 
+    private function recordTimelineActivityEvent(
+        $db,
+        $mac,
+        $lifecycleId,
+        $eventType,
+        $oldValue = null,
+        $newValue = null,
+        $details = null,
+        $occurredAt = null
+    ) {
+        $stmt = $db->prepare(
+            'INSERT INTO device_activity_events ' .
+            '(mac, lifecycle_id, event_type, occurred_at, ' .
+            'old_value, new_value, details) ' .
+            'VALUES (:mac, :lifecycle_id, :event_type, ' .
+            'COALESCE(:occurred_at, CURRENT_TIMESTAMP), ' .
+            ':old_value, :new_value, :details)'
+        );
+
+        if ($stmt === false) {
+            return false;
+        }
+
+        $stmt->bindValue(
+            ':mac',
+            strtolower(trim((string)$mac)),
+            SQLITE3_TEXT
+        );
+
+        if ($lifecycleId === null || (int)$lifecycleId <= 0) {
+            $stmt->bindValue(':lifecycle_id', null, SQLITE3_NULL);
+        } else {
+            $stmt->bindValue(
+                ':lifecycle_id',
+                (int)$lifecycleId,
+                SQLITE3_INTEGER
+            );
+        }
+
+        $stmt->bindValue(
+            ':event_type',
+            trim((string)$eventType),
+            SQLITE3_TEXT
+        );
+
+        foreach (
+            [
+                ':old_value' => $oldValue,
+                ':new_value' => $newValue,
+                ':details' => $details,
+                ':occurred_at' => $occurredAt
+            ] as $name => $value
+        ) {
+            $stmt->bindValue(
+                $name,
+                $value,
+                $value === null ? SQLITE3_NULL : SQLITE3_TEXT
+            );
+        }
+
+        return $stmt->execute() !== false;
+    }
+
     public function updateHostname($mac, $hostname)
     {
         $db = $this->getDb();
-        $hostname = trim($hostname);
+        $mac = strtolower(trim((string)$mac));
+        $hostname = trim((string)$hostname);
 
-        if ($hostname === '') {
-            $stmt = $db->prepare('UPDATE devices SET custom_hostname = NULL WHERE mac = :mac');
-            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
-        } else {
-            $stmt = $db->prepare('UPDATE devices SET custom_hostname = :hn WHERE mac = :mac');
-            $stmt->bindValue(':hn', $hostname, SQLITE3_TEXT);
-            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        if ($mac === '') {
+            $db->close();
+            return false;
         }
 
-        $stmt->execute();
-        $changes = $db->changes();
-        $db->close();
-        return $changes > 0;
+        if (!$db->exec('BEGIN IMMEDIATE TRANSACTION')) {
+            $db->close();
+            return false;
+        }
+
+        try {
+            $stmt = $db->prepare(
+                'SELECT custom_hostname, lifecycle_id FROM devices ' .
+                'WHERE lower(trim(mac)) = :mac LIMIT 1'
+            );
+
+            if ($stmt === false) {
+                throw new \RuntimeException(
+                    'Unable to prepare friendly-name lookup'
+                );
+            }
+
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+            $result = $stmt->execute();
+            $device = $result
+                ? $result->fetchArray(SQLITE3_ASSOC)
+                : false;
+
+            if (!$device) {
+                throw new \RuntimeException('Device not found');
+            }
+
+            $oldHostname = trim(
+                (string)($device['custom_hostname'] ?? '')
+            );
+            $lifecycleId = isset($device['lifecycle_id'])
+                ? (int)$device['lifecycle_id']
+                : 0;
+
+            if ($oldHostname === $hostname) {
+                if (!$db->exec('COMMIT')) {
+                    throw new \RuntimeException(
+                        'Unable to commit unchanged friendly name'
+                    );
+                }
+
+                $db->close();
+                return true;
+            }
+
+            $stmt = $db->prepare(
+                'UPDATE devices SET custom_hostname = :hostname ' .
+                'WHERE lower(trim(mac)) = :mac'
+            );
+
+            if ($stmt === false) {
+                throw new \RuntimeException(
+                    'Unable to prepare friendly-name update'
+                );
+            }
+
+            $stmt->bindValue(
+                ':hostname',
+                $hostname === '' ? null : $hostname,
+                $hostname === '' ? SQLITE3_NULL : SQLITE3_TEXT
+            );
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+
+            if ($stmt->execute() === false || $db->changes() !== 1) {
+                throw new \RuntimeException(
+                    'Unable to update friendly name'
+                );
+            }
+
+            if ($lifecycleId > 0) {
+                $stmt = $db->prepare(
+                    'UPDATE device_lifecycles ' .
+                    'SET custom_hostname = :hostname ' .
+                    "WHERE id = :id AND status = 'active'"
+                );
+
+                if ($stmt === false) {
+                    throw new \RuntimeException(
+                        'Unable to prepare lifecycle friendly-name update'
+                    );
+                }
+
+                $stmt->bindValue(
+                    ':hostname',
+                    $hostname === '' ? null : $hostname,
+                    $hostname === '' ? SQLITE3_NULL : SQLITE3_TEXT
+                );
+                $stmt->bindValue(':id', $lifecycleId, SQLITE3_INTEGER);
+
+                if ($stmt->execute() === false) {
+                    throw new \RuntimeException(
+                        'Unable to update lifecycle friendly name'
+                    );
+                }
+            }
+
+            if (!$this->recordTimelineActivityEvent(
+                $db,
+                $mac,
+                $lifecycleId,
+                'FRIENDLY_NAME_CHANGED',
+                $oldHostname,
+                $hostname,
+                'User-updated friendly name'
+            )) {
+                throw new \RuntimeException(
+                    'Unable to record friendly-name history'
+                );
+            }
+
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException(
+                    'Unable to commit friendly-name update'
+                );
+            }
+
+            $db->close();
+            return true;
+        } catch (\Throwable $e) {
+            @$db->exec('ROLLBACK');
+            $db->close();
+            return false;
+        }
+    }
+
+    public function setIdentityEventResolved($id, $resolved)
+    {
+        $db = $this->getDb();
+        $id = (int)$id;
+        $resolved = (bool)$resolved;
+
+        if ($id <= 0) {
+            $db->close();
+            return false;
+        }
+
+        if (!$db->exec('BEGIN IMMEDIATE TRANSACTION')) {
+            $db->close();
+            return false;
+        }
+
+        try {
+            $tableExists = (int)$db->querySingle(
+                "SELECT COUNT(*) FROM sqlite_master " .
+                "WHERE type = 'table' " .
+                "AND name = 'device_identity_events'"
+            );
+
+            if ($tableExists !== 1) {
+                throw new \RuntimeException(
+                    'Identity-event table not found'
+                );
+            }
+
+            $columns = [];
+            $columnResult = $db->query(
+                'PRAGMA table_info(device_identity_events)'
+            );
+
+            while (
+                $columnResult &&
+                ($column = $columnResult->fetchArray(SQLITE3_ASSOC))
+            ) {
+                $columns[$column['name']] = true;
+            }
+
+            $lifecycleSelect =
+                isset($columns['lifecycle_id'])
+                    ? 'lifecycle_id'
+                    : 'NULL AS lifecycle_id';
+
+            $stmt = $db->prepare(
+                'SELECT id, mac, event_type, resolved_at, ' .
+                $lifecycleSelect . ' ' .
+                'FROM device_identity_events WHERE id = :id'
+            );
+
+            if ($stmt === false) {
+                throw new \RuntimeException(
+                    'Unable to prepare identity-event lookup'
+                );
+            }
+
+            $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+            $result = $stmt->execute();
+            $event = $result
+                ? $result->fetchArray(SQLITE3_ASSOC)
+                : false;
+
+            if (!$event) {
+                throw new \RuntimeException('Identity event not found');
+            }
+
+            $mac = strtolower(trim((string)($event['mac'] ?? '')));
+            $eventType = trim((string)($event['event_type'] ?? ''));
+            $resolvedAt = trim((string)($event['resolved_at'] ?? ''));
+            $lifecycleId = isset($event['lifecycle_id'])
+                ? (int)$event['lifecycle_id']
+                : 0;
+            $wasResolved = $resolvedAt !== '';
+
+            if ($resolved === $wasResolved) {
+                if (!$db->exec('COMMIT')) {
+                    throw new \RuntimeException(
+                        'Unable to commit unchanged identity status'
+                    );
+                }
+
+                $db->close();
+                return true;
+            }
+
+            if ($resolved) {
+                $stmt = $db->prepare(
+                    'UPDATE device_identity_events ' .
+                    'SET resolved_at = CURRENT_TIMESTAMP ' .
+                    'WHERE id = :id'
+                );
+
+                if ($stmt === false) {
+                    throw new \RuntimeException(
+                        'Unable to prepare identity resolution'
+                    );
+                }
+
+                $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+
+                if ($stmt->execute() === false || $db->changes() !== 1) {
+                    throw new \RuntimeException(
+                        'Unable to resolve identity event'
+                    );
+                }
+            } else {
+                if (!$this->recordTimelineActivityEvent(
+                    $db,
+                    $mac,
+                    $lifecycleId,
+                    'IDENTITY_RESOLVED',
+                    'unresolved',
+                    'resolved',
+                    $eventType,
+                    $resolvedAt
+                )) {
+                    throw new \RuntimeException(
+                        'Unable to preserve identity resolution history'
+                    );
+                }
+
+                if (!$this->recordTimelineActivityEvent(
+                    $db,
+                    $mac,
+                    $lifecycleId,
+                    'IDENTITY_REOPENED',
+                    'resolved',
+                    'unresolved',
+                    $eventType
+                )) {
+                    throw new \RuntimeException(
+                        'Unable to record identity reopen history'
+                    );
+                }
+
+                $stmt = $db->prepare(
+                    'UPDATE device_identity_events ' .
+                    'SET resolved_at = NULL WHERE id = :id'
+                );
+
+                if ($stmt === false) {
+                    throw new \RuntimeException(
+                        'Unable to prepare identity reopen'
+                    );
+                }
+
+                $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+
+                if ($stmt->execute() === false || $db->changes() !== 1) {
+                    throw new \RuntimeException(
+                        'Unable to reopen identity event'
+                    );
+                }
+            }
+
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException(
+                    'Unable to commit identity-event status'
+                );
+            }
+
+            $db->close();
+            return true;
+        } catch (\Throwable $e) {
+            @$db->exec('ROLLBACK');
+            $db->close();
+            return false;
+        }
     }
 
     public function updateComments($mac, $comments)
@@ -1932,7 +2283,8 @@ class DeviceMonitor
             }
 
             $stmt = $db->prepare(
-                "SELECT id, custom_hostname FROM device_lifecycles " .
+                "SELECT id, custom_hostname, archived_at " .
+                "FROM device_lifecycles " .
                 "WHERE id = :id AND mac = :mac AND status = 'archived'"
             );
             $stmt->bindValue(':id', $lifecycleId, SQLITE3_INTEGER);
@@ -1953,6 +2305,28 @@ class DeviceMonitor
                 trim((string)($lifecycle['custom_hostname'] ?? '')) !== ''
             ) {
                 $device['custom_hostname'] = $lifecycle['custom_hostname'];
+            }
+
+            $archivedAt = trim(
+                (string)($lifecycle['archived_at'] ?? '')
+            );
+
+            if (
+                $archivedAt !== '' &&
+                !$this->recordTimelineActivityEvent(
+                    $db,
+                    $mac,
+                    $lifecycleId,
+                    'LIFECYCLE_ARCHIVED',
+                    'active',
+                    'archived',
+                    'Preserved before lifecycle relink',
+                    $archivedAt
+                )
+            ) {
+                throw new \RuntimeException(
+                    'Unable to preserve lifecycle archive history'
+                );
             }
 
             $stmt = $db->prepare(
@@ -2002,6 +2376,20 @@ class DeviceMonitor
             if ($stmt->execute() === false || $db->changes() !== 1) {
                 throw new \RuntimeException(
                     'Unable to attach reactivated lifecycle'
+                );
+            }
+
+            if (!$this->recordTimelineActivityEvent(
+                $db,
+                $mac,
+                $lifecycleId,
+                'LIFECYCLE_RELINKED',
+                'archived',
+                'active',
+                'Returning device relinked to archived lifecycle'
+            )) {
+                throw new \RuntimeException(
+                    'Unable to record lifecycle relink history'
                 );
             }
 

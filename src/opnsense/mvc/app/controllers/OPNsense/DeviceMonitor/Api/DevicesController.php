@@ -891,7 +891,10 @@ class DevicesController extends ApiControllerBase
     public function identityeventstatusAction()
     {
         if (!$this->request->isPost()) {
-            return ['result' => 'failed', 'error' => 'POST required'];
+            return [
+                'result' => 'failed',
+                'error' => 'POST required'
+            ];
         }
 
         $id = (int)$this->request->getPost('id', 'int', 0);
@@ -902,65 +905,39 @@ class DevicesController extends ApiControllerBase
         );
 
         if ($id < 1 || !in_array($resolved, [0, 1], true)) {
-            return ['result' => 'failed', 'error' => 'Invalid request'];
-        }
-
-        try {
-            $paths = $this->getPaths();
-
-            if (!isset($paths['dbFile']) || !is_file($paths['dbFile'])) {
-                return ['result' => 'failed', 'error' => 'Database not found'];
-            }
-
-            $db = new \SQLite3(
-                $paths['dbFile'],
-                SQLITE3_OPEN_READWRITE
-            );
-            $db->busyTimeout(2000);
-
-            $tableExists = (int)$db->querySingle(
-                "SELECT COUNT(*) " .
-                "FROM sqlite_master " .
-                "WHERE type = 'table' " .
-                "AND name = 'device_identity_events'"
-            );
-
-            if ($tableExists !== 1) {
-                $db->close();
-                return ['result' => 'failed', 'error' => 'Table not found'];
-            }
-
-            $check = $db->prepare(
-                'SELECT id FROM device_identity_events WHERE id = :id'
-            );
-            $check->bindValue(':id', $id, SQLITE3_INTEGER);
-            $row = $check->execute()->fetchArray(SQLITE3_ASSOC);
-
-            if (!$row) {
-                $db->close();
-                return ['result' => 'failed', 'error' => 'Event not found'];
-            }
-
-            $sql = $resolved === 1
-                ? 'UPDATE device_identity_events ' .
-                  'SET resolved_at = CURRENT_TIMESTAMP WHERE id = :id'
-                : 'UPDATE device_identity_events ' .
-                  'SET resolved_at = NULL WHERE id = :id';
-
-            $stmt = $db->prepare($sql);
-            $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
-            $stmt->execute();
-            $db->close();
-
             return [
-                'result' => 'saved',
-                'id' => $id,
-                'resolved' => $resolved === 1
+                'result' => 'failed',
+                'error' => 'Invalid request'
             ];
-        } catch (\Throwable $e) {
-            return ['result' => 'failed', 'error' => $e->getMessage()];
         }
+
+        $paths = $this->getPaths();
+        if (!isset($paths['dbFile']) || !is_file($paths['dbFile'])) {
+            return [
+                'result' => 'failed',
+                'error' => 'Database not found'
+            ];
+        }
+
+        $model = new DeviceMonitor();
+
+        if (!$model->setIdentityEventResolved(
+            $id,
+            $resolved === 1
+        )) {
+            return [
+                'result' => 'failed',
+                'error' => 'Unable to update identity event'
+            ];
+        }
+
+        return [
+            'result' => 'saved',
+            'id' => $id,
+            'resolved' => $resolved === 1
+        ];
     }
+
     /**
      * Return recent device identity events
      * GET /api/devicemonitor/devices/identityevents

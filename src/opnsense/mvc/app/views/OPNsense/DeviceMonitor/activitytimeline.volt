@@ -84,6 +84,8 @@ $(document).ready(function() {
         var labels = {
             LIFECYCLE_STARTED: 'Lifecycle started',
             LIFECYCLE_ARCHIVED: 'Lifecycle archived',
+            LIFECYCLE_RELINKED: 'Lifecycle relinked',
+            FRIENDLY_NAME_CHANGED: 'Friendly name changed',
             NOTE_CREATED: 'Note created',
             NOTE_UPDATED: 'Note edited',
             NOTE_ARCHIVED: 'Note archived',
@@ -100,6 +102,7 @@ $(document).ready(function() {
             MAC_MULTI_IP: 'Device using multiple IPv4 addresses',
             MAC_MULTI_INTERFACE: 'Device seen on multiple interfaces',
             IDENTITY_RESOLVED: 'Identity issue resolved',
+            IDENTITY_REOPENED: 'Identity issue reopened',
             NMAP_SCAN_COMPLETED: 'Targeted scan completed',
             NMAP_SCAN_FAILED: 'Targeted scan failed'
         };
@@ -119,6 +122,7 @@ $(document).ready(function() {
     function activityClass(type) {
         if (
             type === 'LIFECYCLE_STARTED' ||
+            type === 'LIFECYCLE_RELINKED' ||
             type === 'SERVICE_AVAILABLE' ||
             type === 'IDENTITY_RESOLVED' ||
             type === 'NMAP_SCAN_COMPLETED'
@@ -129,6 +133,7 @@ $(document).ready(function() {
         if (
             type === 'SERVICE_UNAVAILABLE' ||
             type === 'LIFECYCLE_ARCHIVED' ||
+            type === 'IDENTITY_REOPENED' ||
             type === 'NOTE_ARCHIVED'
         ) {
             return 'label-warning';
