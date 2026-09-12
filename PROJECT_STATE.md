@@ -41,16 +41,19 @@ ownership, returning-device resolution and identity-conflict detection remain
 authoritative and are not merged or rewritten. Membership changes are auditable
 and reversible.
 
-**Implementation status:** The first two DM-BL-001 implementation units are
+**Implementation status:** The first three DM-BL-001 implementation units are
 complete, deployed and live-validated. The additive `physical_devices` and
 `physical_device_memberships` schema, active-membership uniqueness protection,
-read-only `getPhysicalDeviceForMac()` access, and explicit model operations to
+read-only `getPhysicalDeviceForMac()` access, explicit model operations to
 create a physical-device group, link a known identity and soft-remove a
-membership are now present. Removed memberships retain their history. No
-physical-device groups or memberships have been created on the production
-database and existing discovery, lifecycle, identity and UI behaviour remains
-unchanged. Read-model commit `4f866ba`; write-model commit `f6d547f`; GitHub
-Actions runs `34693021844` and `34693933012`: PASS.
+membership, and the corresponding explicit Devices API actions are now
+present. Removed memberships retain their history. No physical-device groups
+or memberships have been created on the production database and existing
+discovery, lifecycle, identity and UI behaviour remains unchanged. Read-model
+commit `4f866ba`; write-model commit `f6d547f`; API commit `752ee59`; GitHub
+Actions runs `34693021844`, `34693933012` and `34694963846`: PASS. The live API
+controller deployment was hash-verified and retained rollback backup
+`DevicesController.php.pre-dmbl001-api-20260912-225811`.
 
 `DM-BL-004` — OPNsense/Unbound hostname enrichment — remains deferred because
 Unbound is not currently used in this environment.
@@ -691,7 +694,8 @@ Guarded live rollback backups retained:
 
 ## Next step
 
-Inspect the existing Devices API routing, POST-action and regression-test
-patterns for the next DM-BL-001 unit, then expose the validated physical-device
-model operations through explicit API actions only. Do not add Device Details
-UI controls until the API layer is separately implemented and validated.
+Inspect the existing Device Details page, related JavaScript and UI regression
+patterns for the next DM-BL-001 unit: a `Physical Device / Related Identities`
+section using the validated API. Preserve explicit user confirmation for group
+creation, identity linking and membership removal. Make no UI implementation
+change until that inspection is complete.
