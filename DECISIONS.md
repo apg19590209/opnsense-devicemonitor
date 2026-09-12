@@ -362,3 +362,37 @@ duplicating authoritative records or flooding the timeline with scan noise.
 Preserving archive and resolution timestamps before relink/reopen operations also
 prevents user actions from erasing the chronology that the timeline is intended
 to explain.
+
+## 16. SSH service probes terminate cleanly after banner verification
+
+### Decision
+
+SSH infrastructure-service verification remains based on receiving a valid SSH
+server identification banner.
+
+After successfully receiving an SSH 2.0-compatible banner, Device Monitor must:
+
+- send its own SSH client identification string
+- send `SSH_MSG_DISCONNECT` with reason `SSH_DISCONNECT_BY_APPLICATION`
+- allow the peer a brief opportunity to process the disconnect before closing
+  the TCP socket
+- treat clean-disconnect transmission as best-effort; a send failure must not
+  invalidate service verification that already succeeded from the server banner
+- retain the existing `ssh_banner` detection method and service identity
+
+CrowdSec must not be globally weakened or the OPNsense address whitelisted merely
+to suppress legitimate Device Monitor SSH service probes.
+
+### Reason
+
+Abruptly closing an SSH connection immediately after reading the server banner
+causes OpenSSH to log `Connection closed ... [preauth]`.
+
+CrowdSec classifies that form as `ssh_failed-auth`; repeated scheduled Device
+Monitor probes can therefore accumulate into a false
+`crowdsecurity/ssh-time-based-bf` alert.
+
+A protocol-level SSH disconnect produces the normal `Received disconnect ...`
+log form instead, preventing the false authentication-failure evidence while
+preserving SSH discovery, CrowdSec protection, existing service identity and
+history semantics.

@@ -20,7 +20,7 @@ OPNsense 26.7.2_2
 
 Latest completed v2.9 implementation commit:
 
-`c00c41a` — `fix: include service metadata in transition alerts`
+`5d55be4` — `fix: cleanly disconnect SSH service probes`
 
 
 ## Current objective
@@ -33,6 +33,15 @@ after this closure update is committed.
 
 `DM-BL-004` — OPNsense/Unbound hostname enrichment — remains deferred because
 Unbound is not currently used in this environment.
+
+The CrowdSec false-positive SSH brute-force defect caused by Device Monitor
+service discovery is complete, deployed and validated live. After receiving a
+valid SSH banner, the probe now sends a standards-compliant
+`SSH_MSG_DISCONNECT` before closing. The existing `ssh_banner` service identity
+and CrowdSec configuration remain unchanged.
+
+Commit: `5d55be4` — `fix: cleanly disconnect SSH service probes`
+CI: run `34684029960` — PASS.
 
 ## Previously completed
 
@@ -134,6 +143,12 @@ Current validated work:
 - permanent Phase 3 regression validates lightweight worker bound of 12: PASS
 - permanent Phase 3 regression validates strong Nmap evidence handling: PASS
 - permanent Phase 3 regression validates Available -> Unavailable -> Available recovery: PASS
+- SSH clean-disconnect focused regression: PASS
+- SSH disconnect-send failure remains non-fatal after valid banner verification: PASS
+- live OPNsense SSH self-probe still identifies OpenSSH correctly: PASS
+- live sshd log now records `Received disconnect ... Device Monitor service probe complete [preauth]`: PASS
+- no new self-generated `Connection closed by 192.168.20.254 ... [preauth]` after deployment: PASS
+- GitHub Actions CI run `34684029960` for `5d55be4`: PASS
 
 ## Infrastructure service discovery — Phase 1
 
