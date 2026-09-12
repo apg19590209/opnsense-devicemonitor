@@ -1502,6 +1502,85 @@ class DeviceMonitor
     }
 
     /**
+     * Return the active user-confirmed physical-device group for one MAC.
+     *
+     * This is read-only and does not alter device, lifecycle or identity state.
+     */
+    public function getPhysicalDeviceForMac($mac)
+    {
+        $db = $this->getDb();
+        $mac = strtolower(trim((string)$mac));
+
+        if ($mac === '') {
+            $db->close();
+            return null;
+        }
+
+        $stmt = $db->prepare(
+            'SELECT p.id, p.name, p.created_at, p.updated_at, p.archived_at, ' .
+            'm.added_at AS membership_added_at ' .
+            'FROM physical_device_memberships m ' .
+            'JOIN physical_devices p ON p.id = m.physical_device_id ' .
+            'WHERE lower(trim(m.mac)) = :mac ' .
+            'AND m.removed_at IS NULL ' .
+            'AND p.archived_at IS NULL ' .
+            'ORDER BY m.id DESC LIMIT 1'
+        );
+
+        if ($stmt === false) {
+            $db->close();
+            return null;
+        }
+
+        $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        $result = $stmt->execute();
+        $group = $result
+            ? $result->fetchArray(SQLITE3_ASSOC)
+            : false;
+
+        if (!$group) {
+            $db->close();
+            return null;
+        }
+
+        $group['id'] = (int)$group['id'];
+        $group['members'] = [];
+
+        $memberStmt = $db->prepare(
+            'SELECT id, mac, added_at ' .
+            'FROM physical_device_memberships ' .
+            'WHERE physical_device_id = :physical_device_id ' .
+            'AND removed_at IS NULL ' .
+            'ORDER BY lower(trim(mac)), id'
+        );
+
+        if ($memberStmt === false) {
+            $db->close();
+            return null;
+        }
+
+        $memberStmt->bindValue(
+            ':physical_device_id',
+            $group['id'],
+            SQLITE3_INTEGER
+        );
+        $memberResult = $memberStmt->execute();
+
+        if ($memberResult !== false) {
+            while ($member = $memberResult->fetchArray(SQLITE3_ASSOC)) {
+                $member['id'] = (int)$member['id'];
+                $member['mac'] = strtolower(
+                    trim((string)($member['mac'] ?? ''))
+                );
+                $group['members'][] = $member;
+            }
+        }
+
+        $db->close();
+        return $group;
+    }
+
+    /**
      * Save configuration
      * @param array $data Data to save
      * @return bool True if saving succeeded
@@ -1590,6 +1669,31 @@ class DeviceMonitor
 
         $db->exec('CREATE INDEX IF NOT EXISTS idx_device_lifecycles_mac_status
             ON device_lifecycles(mac, status)');
+
+        // User-confirmed physical-device grouping. This is an additive layer
+        // above MAC identities; memberships are archived with removed_at.
+        $db->exec('CREATE TABLE IF NOT EXISTS physical_devices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT NULL,
+            archived_at DATETIME DEFAULT NULL
+        )');
+
+        $db->exec('CREATE TABLE IF NOT EXISTS physical_device_memberships (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            physical_device_id INTEGER NOT NULL,
+            mac TEXT NOT NULL,
+            added_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            removed_at DATETIME DEFAULT NULL
+        )');
+
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_physical_device_memberships_group
+            ON physical_device_memberships(physical_device_id, removed_at)');
+
+        $db->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_physical_device_memberships_active_mac
+            ON physical_device_memberships(lower(trim(mac)))
+            WHERE removed_at IS NULL');
 
         $db->exec('CREATE TABLE IF NOT EXISTS device_activity_events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

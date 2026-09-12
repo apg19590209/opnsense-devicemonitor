@@ -507,4 +507,115 @@ check(
 
 echo "DEVICE_ACTIVE_LIFECYCLE_COMMENT_HISTORY=PASS\n";
 
+/* DM-BL-001 physical-device grouping schema and read model */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM sqlite_master " .
+        "WHERE type='table' AND name='physical_devices'"
+    ) === 1,
+    'physical_devices table was not created'
+);
+
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM sqlite_master " .
+        "WHERE type='table' AND name='physical_device_memberships'"
+    ) === 1,
+    'physical_device_memberships table was not created'
+);
+
+$db->exec("INSERT INTO physical_devices (name) VALUES ('Test Laptop')");
+$groupId = (int)$db->lastInsertRowID();
+
+$db->exec(
+    "INSERT INTO physical_device_memberships (physical_device_id,mac) VALUES " .
+    "($groupId,'AA:BB:CC:DD:EE:10')," .
+    "($groupId,'aa:bb:cc:dd:ee:11')"
+);
+$db->close();
+
+$group = $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:10');
+
+check(
+    is_array($group) &&
+    $group['id'] === $groupId &&
+    $group['name'] === 'Test Laptop',
+    'Physical-device group lookup failed'
+);
+
+check(
+    count($group['members']) === 2 &&
+    $group['members'][0]['mac'] === 'aa:bb:cc:dd:ee:10' &&
+    $group['members'][1]['mac'] === 'aa:bb:cc:dd:ee:11',
+    'Physical-device active member list is wrong'
+);
+
+check(
+    $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:99') === null,
+    'Ungrouped MAC unexpectedly resolved to a physical-device group'
+);
+
+$db = new SQLite3($dbFile);
+$db->exec("INSERT INTO physical_devices (name) VALUES ('Other Device')");
+$otherGroupId = (int)$db->lastInsertRowID();
+
+$duplicateActive = @$db->exec(
+    "INSERT INTO physical_device_memberships (physical_device_id,mac) VALUES " .
+    "($otherGroupId,'aa:bb:cc:dd:ee:10')"
+);
+
+check(
+    $duplicateActive === false,
+    'Same MAC was allowed in two active physical-device groups'
+);
+
+$db->exec(
+    "UPDATE physical_device_memberships SET removed_at=CURRENT_TIMESTAMP " .
+    "WHERE physical_device_id=$groupId AND lower(trim(mac))='aa:bb:cc:dd:ee:10'"
+);
+
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM physical_device_memberships " .
+        "WHERE physical_device_id=$groupId " .
+        "AND lower(trim(mac))='aa:bb:cc:dd:ee:10' " .
+        "AND removed_at IS NOT NULL"
+    ) === 1,
+    'Archived physical-device membership history was not retained'
+);
+
+check(
+    $db->exec(
+        "INSERT INTO physical_device_memberships (physical_device_id,mac) VALUES " .
+        "($otherGroupId,'aa:bb:cc:dd:ee:10')"
+    ) === true,
+    'Archived membership prevented a later active membership'
+);
+
+$db->close();
+
+$oldGroup = $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:11');
+$newGroup = $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:10');
+
+check(
+    is_array($oldGroup) &&
+    $oldGroup['id'] === $groupId &&
+    count($oldGroup['members']) === 1 &&
+    $oldGroup['members'][0]['mac'] === 'aa:bb:cc:dd:ee:11',
+    'Archived membership remained in the old active member list'
+);
+
+check(
+    is_array($newGroup) &&
+    $newGroup['id'] === $otherGroupId &&
+    count($newGroup['members']) === 1 &&
+    $newGroup['members'][0]['mac'] === 'aa:bb:cc:dd:ee:10',
+    'Re-added MAC did not resolve to its new active group'
+);
+
+echo "DEVICE_PHYSICAL_GROUP_READ_MODEL=PASS\n";
+
 echo "DEVICE_LIFECYCLE_ACTIONS_REGRESSION=PASS\n";
