@@ -464,6 +464,32 @@ def init_db():
         VALUES (1, NULL)
         '''
     )
+
+    # Persistent high-water marks for infrastructure-service alerts.
+    #
+    # On upgrade, seed the cursors to the current maxima so enabling alerts
+    # later cannot replay the existing service inventory or historical
+    # activity events as new notifications. INSERT OR IGNORE preserves the
+    # cursors on every subsequent init_db() call.
+    c.execute('''CREATE TABLE IF NOT EXISTS service_alert_state (
+        id INTEGER PRIMARY KEY CHECK(id = 1),
+        last_service_id INTEGER NOT NULL DEFAULT 0,
+        last_activity_event_id INTEGER NOT NULL DEFAULT 0
+    )''')
+
+    c.execute(
+        '''
+        INSERT OR IGNORE INTO service_alert_state (
+            id,
+            last_service_id,
+            last_activity_event_id
+        )
+        SELECT
+            1,
+            COALESCE((SELECT MAX(id) FROM device_services), 0),
+            COALESCE((SELECT MAX(id) FROM device_activity_events), 0)
+        '''
+    )
     # Observational identity anomaly events. v2.7 Phase A records evidence
     # only; it does not automatically alert, block, merge, or delete devices.
     c.execute('''CREATE TABLE IF NOT EXISTS device_identity_events (
