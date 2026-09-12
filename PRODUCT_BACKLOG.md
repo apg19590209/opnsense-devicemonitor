@@ -40,6 +40,23 @@ Constraints:
 - preserve bounded scanning and existing single-host Nmap constraints
 
 
+### DM-BL-004 — OPNsense/Unbound hostname enrichment
+
+**Description:** Investigate and, where the data is sufficiently authoritative
+and unambiguous, add hostname enrichment from locally configured OPNsense Unbound
+host overrides and aliases. Define Unbound's precedence relative to AdGuard,
+Dnsmasq, Kea, ISC and Hostwatch before implementation. Preserve
+`custom_hostname` as the independent user-controlled Friendly Name and retain
+hostname-source provenance.
+
+**Benefit:** Reuses trusted names already maintained in OPNsense, particularly
+for static and infrastructure devices that may have poor or missing DHCP or
+Hostwatch names. It can improve recognition without duplicate manual naming,
+while retaining explicit source provenance.
+
+**Deferred:** Unbound is not currently used in this environment, so there is no
+immediate local benefit or real deployment data available for validation.
+
 ### DM-BL-005 — Generic hostname-provider framework
 
 When enough independent hostname sources justify it, introduce a small provider

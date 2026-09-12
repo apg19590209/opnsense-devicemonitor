@@ -25,12 +25,23 @@ Latest completed v2.9 feature commit:
 
 ## Current objective
 
-`DM-BL-004` — OPNsense/Unbound hostname enrichment — is the next active v2.9 task.
+`DM-BL-003` — Infrastructure-service change alerts — is the next active v2.9 task.
 
-`DM-BL-002` — Device activity and identity timeline — is complete, deployed and
-validated live. The timeline now provides a per-device chronological view across
-lifecycle history, notes, identity anomalies, targeted Nmap history, discovered
-services and persisted meaningful state transitions.
+**Description:** Add notifications for meaningful verified infrastructure-service
+changes, such as a newly verified service appearing, a previously verified
+service becoming unavailable, or a verified infrastructure role changing.
+Use the existing protocol-specific evidence rules and the service-transition
+history added by DM-BL-002. Preserve bounded scanning and the existing
+single-host Nmap constraints.
+
+**Benefit:** Surfaces operationally important service changes without requiring
+manual inspection of the Infrastructure Services page or generating noisy raw
+port-change alerts. This should make failures and unexpected service changes
+easier to notice while keeping notifications tied to evidence Device Monitor
+already trusts.
+
+`DM-BL-004` — OPNsense/Unbound hostname enrichment — is deferred for later
+because Unbound is not currently used in this environment.
 
 ## Previously completed
 
@@ -591,6 +602,7 @@ The guarded live deployment retained rollback backup:
 
 ## Next step
 
-Begin `DM-BL-004` — OPNsense/Unbound hostname enrichment. First inspect the
-existing OPNsense/Unbound configuration and current hostname-source precedence
-without changing runtime behaviour.
+Begin design and implementation of `DM-BL-003` — Infrastructure-service change
+alerts. First inspect the existing notification path and current
+`device_activity_events` service-transition records without changing runtime
+behaviour.
