@@ -618,4 +618,174 @@ check(
 
 echo "DEVICE_PHYSICAL_GROUP_READ_MODEL=PASS\n";
 
+/* DM-BL-001 physical-device grouping write model */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec(
+    "INSERT INTO devices " .
+    "(mac,ip,first_seen,last_seen,is_active,return_pending) VALUES " .
+    "('aa:bb:cc:dd:ee:20','192.0.2.20',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)," .
+    "('aa:bb:cc:dd:ee:21','192.0.2.21',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,1)"
+);
+
+$db->exec(
+    "INSERT INTO device_lifecycles " .
+    "(mac,status,first_seen,last_seen) VALUES " .
+    "('aa:bb:cc:dd:ee:22','archived','2026-01-01 10:00:00','2026-02-01 10:00:00')"
+);
+
+$db->close();
+
+$groupId = $model->createPhysicalDevice(
+    'Test Workstation',
+    'AA:BB:CC:DD:EE:20'
+);
+
+check($groupId > 0, 'Physical-device group was not created');
+
+$group = $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:20');
+check(
+    is_array($group) &&
+    $group['id'] === $groupId &&
+    $group['name'] === 'Test Workstation' &&
+    count($group['members']) === 1 &&
+    $group['members'][0]['mac'] === 'aa:bb:cc:dd:ee:20',
+    'Created physical-device group is incorrect'
+);
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $groupId,
+        'AA:BB:CC:DD:EE:21'
+    ) === true,
+    'Known current MAC could not be linked'
+);
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $groupId,
+        'aa:bb:cc:dd:ee:22'
+    ) === true,
+    'Known historical MAC could not be linked'
+);
+
+$group = $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:21');
+check(
+    is_array($group) &&
+    $group['id'] === $groupId &&
+    count($group['members']) === 3,
+    'Linked identities were not returned as one physical device'
+);
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $groupId,
+        'aa:bb:cc:dd:ee:21'
+    ) === false,
+    'Duplicate active physical-device membership was accepted'
+);
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $groupId,
+        'aa:bb:cc:dd:ee:99'
+    ) === false,
+    'Unknown MAC identity was accepted'
+);
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        9999,
+        'aa:bb:cc:dd:ee:21'
+    ) === false,
+    'Unknown physical-device group was accepted'
+);
+
+check(
+    $model->createPhysicalDevice(
+        'Duplicate Group',
+        'aa:bb:cc:dd:ee:21'
+    ) === 0,
+    'A second active group was created for an already-grouped MAC'
+);
+
+$db = new SQLite3($dbFile);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM physical_devices"
+    ) === 1,
+    'Failed group creation left an orphan physical-device row'
+);
+
+check(
+    $db->querySingle(
+        "SELECT return_pending FROM devices " .
+        "WHERE mac='aa:bb:cc:dd:ee:21'"
+    ) == 1,
+    'Grouping write changed lifecycle return_pending state'
+);
+$db->close();
+
+check(
+    $model->removePhysicalDeviceIdentity(
+        $groupId,
+        'aa:bb:cc:dd:ee:20'
+    ) === true,
+    'Active physical-device membership could not be removed'
+);
+
+check(
+    $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:20') === null,
+    'Removed MAC still resolved to its old active group'
+);
+
+$db = new SQLite3($dbFile);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM physical_device_memberships " .
+        "WHERE physical_device_id=$groupId " .
+        "AND lower(trim(mac))='aa:bb:cc:dd:ee:20' " .
+        "AND removed_at IS NOT NULL"
+    ) === 1,
+    'Removed physical-device membership history was not retained'
+);
+$db->close();
+
+$newGroupId = $model->createPhysicalDevice(
+    'Replacement Group',
+    'aa:bb:cc:dd:ee:20'
+);
+
+check(
+    $newGroupId > $groupId,
+    'Removed MAC could not be explicitly grouped again'
+);
+
+$newGroup = $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:20');
+check(
+    is_array($newGroup) &&
+    $newGroup['id'] === $newGroupId &&
+    count($newGroup['members']) === 1,
+    'Regrouped MAC did not resolve to its new active group'
+);
+
+$oldGroup = $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:21');
+check(
+    is_array($oldGroup) &&
+    $oldGroup['id'] === $groupId &&
+    count($oldGroup['members']) === 2,
+    'Removing one identity changed other active group memberships'
+);
+
+check(
+    $model->removePhysicalDeviceIdentity(
+        $groupId,
+        'aa:bb:cc:dd:ee:20'
+    ) === false,
+    'Already-removed membership was removed twice'
+);
+
+echo "DEVICE_PHYSICAL_GROUP_WRITE_MODEL=PASS\n";
+
 echo "DEVICE_LIFECYCLE_ACTIONS_REGRESSION=PASS\n";

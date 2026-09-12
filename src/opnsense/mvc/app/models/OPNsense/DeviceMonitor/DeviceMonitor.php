@@ -1581,6 +1581,315 @@ class DeviceMonitor
     }
 
     /**
+     * Create a physical-device group with one explicitly selected known MAC.
+     *
+     * Returns the new physical-device ID, or 0 on failure.
+     */
+    public function createPhysicalDevice($name, $mac)
+    {
+        $db = $this->getDb();
+        $name = trim((string)$name);
+        $mac = strtolower(trim((string)$mac));
+
+        if ($name === '' || $mac === '') {
+            $db->close();
+            return 0;
+        }
+
+        if (!$db->exec('BEGIN IMMEDIATE TRANSACTION')) {
+            $db->close();
+            return 0;
+        }
+
+        try {
+            $knownStmt = $db->prepare(
+                'SELECT 1 FROM devices WHERE lower(trim(mac)) = :mac ' .
+                'UNION ALL ' .
+                'SELECT 1 FROM device_lifecycles WHERE lower(trim(mac)) = :mac ' .
+                'UNION ALL ' .
+                'SELECT 1 FROM deleted_devices WHERE lower(trim(mac)) = :mac ' .
+                'LIMIT 1'
+            );
+            if ($knownStmt === false) {
+                throw new \RuntimeException('Unable to validate MAC identity');
+            }
+
+            $knownStmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+            $knownResult = $knownStmt->execute();
+            $known = $knownResult
+                ? $knownResult->fetchArray(SQLITE3_NUM)
+                : false;
+
+            if (!$known) {
+                $db->exec('ROLLBACK');
+                $db->close();
+                return 0;
+            }
+
+            $groupStmt = $db->prepare(
+                'INSERT INTO physical_devices (name) VALUES (:name)'
+            );
+            if ($groupStmt === false) {
+                throw new \RuntimeException('Unable to prepare physical device');
+            }
+
+            $groupStmt->bindValue(':name', $name, SQLITE3_TEXT);
+            if ($groupStmt->execute() === false) {
+                throw new \RuntimeException('Unable to create physical device');
+            }
+
+            $physicalDeviceId = (int)$db->lastInsertRowID();
+
+            $memberStmt = $db->prepare(
+                'INSERT INTO physical_device_memberships ' .
+                '(physical_device_id, mac) VALUES (:physical_device_id, :mac)'
+            );
+            if ($memberStmt === false) {
+                throw new \RuntimeException('Unable to prepare membership');
+            }
+
+            $memberStmt->bindValue(
+                ':physical_device_id',
+                $physicalDeviceId,
+                SQLITE3_INTEGER
+            );
+            $memberStmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+
+            if (@$memberStmt->execute() === false) {
+                throw new \RuntimeException('Unable to create membership');
+            }
+
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException('Unable to commit physical device');
+            }
+
+            $db->close();
+            return $physicalDeviceId;
+        } catch (\Exception $e) {
+            @$db->exec('ROLLBACK');
+            $db->close();
+            return 0;
+        }
+    }
+
+    /**
+     * Link one explicitly selected known MAC to an active physical-device group.
+     */
+    public function linkPhysicalDeviceIdentity($physicalDeviceId, $mac)
+    {
+        $db = $this->getDb();
+        $physicalDeviceId = (int)$physicalDeviceId;
+        $mac = strtolower(trim((string)$mac));
+
+        if ($physicalDeviceId <= 0 || $mac === '') {
+            $db->close();
+            return false;
+        }
+
+        if (!$db->exec('BEGIN IMMEDIATE TRANSACTION')) {
+            $db->close();
+            return false;
+        }
+
+        try {
+            $groupStmt = $db->prepare(
+                'SELECT id FROM physical_devices ' .
+                'WHERE id = :physical_device_id AND archived_at IS NULL LIMIT 1'
+            );
+            if ($groupStmt === false) {
+                throw new \RuntimeException('Unable to validate physical device');
+            }
+
+            $groupStmt->bindValue(
+                ':physical_device_id',
+                $physicalDeviceId,
+                SQLITE3_INTEGER
+            );
+            $groupResult = $groupStmt->execute();
+            $group = $groupResult
+                ? $groupResult->fetchArray(SQLITE3_NUM)
+                : false;
+
+            if (!$group) {
+                $db->exec('ROLLBACK');
+                $db->close();
+                return false;
+            }
+
+            $knownStmt = $db->prepare(
+                'SELECT 1 FROM devices WHERE lower(trim(mac)) = :mac ' .
+                'UNION ALL ' .
+                'SELECT 1 FROM device_lifecycles WHERE lower(trim(mac)) = :mac ' .
+                'UNION ALL ' .
+                'SELECT 1 FROM deleted_devices WHERE lower(trim(mac)) = :mac ' .
+                'LIMIT 1'
+            );
+            if ($knownStmt === false) {
+                throw new \RuntimeException('Unable to validate MAC identity');
+            }
+
+            $knownStmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+            $knownResult = $knownStmt->execute();
+            $known = $knownResult
+                ? $knownResult->fetchArray(SQLITE3_NUM)
+                : false;
+
+            if (!$known) {
+                $db->exec('ROLLBACK');
+                $db->close();
+                return false;
+            }
+
+            $memberStmt = $db->prepare(
+                'INSERT INTO physical_device_memberships ' .
+                '(physical_device_id, mac) VALUES (:physical_device_id, :mac)'
+            );
+            if ($memberStmt === false) {
+                throw new \RuntimeException('Unable to prepare membership');
+            }
+
+            $memberStmt->bindValue(
+                ':physical_device_id',
+                $physicalDeviceId,
+                SQLITE3_INTEGER
+            );
+            $memberStmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+
+            if (@$memberStmt->execute() === false) {
+                $db->exec('ROLLBACK');
+                $db->close();
+                return false;
+            }
+
+            $touchStmt = $db->prepare(
+                'UPDATE physical_devices SET updated_at = CURRENT_TIMESTAMP ' .
+                'WHERE id = :physical_device_id'
+            );
+            if ($touchStmt === false) {
+                throw new \RuntimeException('Unable to update physical device');
+            }
+
+            $touchStmt->bindValue(
+                ':physical_device_id',
+                $physicalDeviceId,
+                SQLITE3_INTEGER
+            );
+            if ($touchStmt->execute() === false) {
+                throw new \RuntimeException('Unable to update physical device');
+            }
+
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException('Unable to commit membership');
+            }
+
+            $db->close();
+            return true;
+        } catch (\Exception $e) {
+            @$db->exec('ROLLBACK');
+            $db->close();
+            return false;
+        }
+    }
+
+    /**
+     * Remove one active physical-device membership without deleting its history.
+     */
+    public function removePhysicalDeviceIdentity($physicalDeviceId, $mac)
+    {
+        $db = $this->getDb();
+        $physicalDeviceId = (int)$physicalDeviceId;
+        $mac = strtolower(trim((string)$mac));
+
+        if ($physicalDeviceId <= 0 || $mac === '') {
+            $db->close();
+            return false;
+        }
+
+        if (!$db->exec('BEGIN IMMEDIATE TRANSACTION')) {
+            $db->close();
+            return false;
+        }
+
+        try {
+            $groupStmt = $db->prepare(
+                'SELECT id FROM physical_devices ' .
+                'WHERE id = :physical_device_id AND archived_at IS NULL LIMIT 1'
+            );
+            if ($groupStmt === false) {
+                throw new \RuntimeException('Unable to validate physical device');
+            }
+
+            $groupStmt->bindValue(
+                ':physical_device_id',
+                $physicalDeviceId,
+                SQLITE3_INTEGER
+            );
+            $groupResult = $groupStmt->execute();
+            $group = $groupResult
+                ? $groupResult->fetchArray(SQLITE3_NUM)
+                : false;
+
+            if (!$group) {
+                $db->exec('ROLLBACK');
+                $db->close();
+                return false;
+            }
+
+            $memberStmt = $db->prepare(
+                'UPDATE physical_device_memberships ' .
+                'SET removed_at = CURRENT_TIMESTAMP ' .
+                'WHERE physical_device_id = :physical_device_id ' .
+                'AND lower(trim(mac)) = :mac ' .
+                'AND removed_at IS NULL'
+            );
+            if ($memberStmt === false) {
+                throw new \RuntimeException('Unable to prepare membership removal');
+            }
+
+            $memberStmt->bindValue(
+                ':physical_device_id',
+                $physicalDeviceId,
+                SQLITE3_INTEGER
+            );
+            $memberStmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+
+            if ($memberStmt->execute() === false || $db->changes() !== 1) {
+                $db->exec('ROLLBACK');
+                $db->close();
+                return false;
+            }
+
+            $touchStmt = $db->prepare(
+                'UPDATE physical_devices SET updated_at = CURRENT_TIMESTAMP ' .
+                'WHERE id = :physical_device_id'
+            );
+            if ($touchStmt === false) {
+                throw new \RuntimeException('Unable to update physical device');
+            }
+
+            $touchStmt->bindValue(
+                ':physical_device_id',
+                $physicalDeviceId,
+                SQLITE3_INTEGER
+            );
+            if ($touchStmt->execute() === false) {
+                throw new \RuntimeException('Unable to update physical device');
+            }
+
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException('Unable to commit membership removal');
+            }
+
+            $db->close();
+            return true;
+        } catch (\Exception $e) {
+            @$db->exec('ROLLBACK');
+            $db->close();
+            return false;
+        }
+    }
+
+    /**
      * Save configuration
      * @param array $data Data to save
      * @return bool True if saving succeeded
