@@ -575,10 +575,112 @@ def test_active_service_lifecycle():
         )
 
 
+
+def test_ssh_banner_probe_clean_disconnect():
+    module = load_module()
+
+    class FakeSocket:
+        def __init__(self, banner, fail_send=False):
+            self.banner = banner
+            self.fail_send = fail_send
+            self.recv_count = 0
+            self.sent = []
+            self.closed = False
+
+        def settimeout(self, timeout):
+            self.timeout = timeout
+
+        def recv(self, size):
+            self.recv_count += 1
+            if self.recv_count == 1:
+                return self.banner
+            return b""
+
+        def sendall(self, data):
+            if self.fail_send:
+                raise OSError("simulated send failure")
+            self.sent.append(bytes(data))
+
+        def close(self):
+            self.closed = True
+
+    fake = FakeSocket(
+        b"SSH-2.0-OpenSSH_10.4 FreeBSD-openssh-portable-10.4.p1,1\r\n"
+    )
+    module.socket.create_connection = (
+        lambda target, timeout=None: fake
+    )
+    module.time.sleep = lambda seconds: None
+
+    result = module._probe_ssh_service(
+        ("192.0.2.10", 22),
+        timeout=0.8
+    )
+
+    assert result == {
+        "product": "SSH",
+        "version": "OpenSSH_10.4 FreeBSD-openssh-portable-10.4.p1,1",
+    }
+    assert fake.closed is True
+    assert len(fake.sent) == 2
+    assert fake.sent[0] == b"SSH-2.0-OPNsense_DeviceMonitor\r\n"
+
+    packet = fake.sent[1]
+    packet_length = int.from_bytes(packet[:4], "big")
+    padding_len = packet[4]
+
+    assert packet_length == len(packet) - 4
+    assert len(packet) % 8 == 0
+    assert padding_len >= 4
+
+    payload = packet[5:len(packet) - padding_len]
+    assert payload[0] == 1
+    assert int.from_bytes(payload[1:5], "big") == 11
+
+    offset = 5
+    description_len = int.from_bytes(
+        payload[offset:offset + 4],
+        "big"
+    )
+    offset += 4
+    description = payload[offset:offset + description_len]
+    offset += description_len
+    language_len = int.from_bytes(
+        payload[offset:offset + 4],
+        "big"
+    )
+
+    assert description == b"Device Monitor service probe complete"
+    assert language_len == 0
+
+    failing = FakeSocket(
+        b"SSH-2.0-OpenSSH_9.9\r\n",
+        fail_send=True
+    )
+    module.socket.create_connection = (
+        lambda target, timeout=None: failing
+    )
+
+    result = module._probe_ssh_service(
+        ("192.0.2.11", 22),
+        timeout=0.8
+    )
+
+    assert result == {
+        "product": "SSH",
+        "version": "OpenSSH_9.9",
+    }
+    assert failing.closed is True
+
+    print("PHASE3_SSH_CLEAN_DISCONNECT=PASS")
+    print("PHASE3_SSH_DISCONNECT_FAILURE_NONFATAL=PASS")
+
+
 def main():
     test_no_automatic_nmap()
     test_nmap_single_host_and_strong_evidence()
     test_smb_single_host_nmap()
+    test_ssh_banner_probe_clean_disconnect()
     test_probe_pool_bounds_and_smb_serialization()
     test_active_service_lifecycle()
 

@@ -2420,6 +2420,48 @@ def discover_ntp_servers():
     return discovered
 
 
+def _send_ssh_probe_disconnect(sock, banner):
+    """
+    Best-effort SSH protocol disconnect after banner verification.
+
+    Detection has already succeeded from the server banner, so any failure
+    while sending the clean disconnect must not undo the verified result.
+    """
+    if not (
+        banner.startswith('SSH-2.0-')
+        or banner.startswith('SSH-1.99-')
+    ):
+        return
+
+    description = b'Device Monitor service probe complete'
+    payload = (
+        b'\x01'
+        + struct.pack('>I', 11)
+        + struct.pack('>I', len(description))
+        + description
+        + struct.pack('>I', 0)
+    )
+
+    padding_len = 4
+    while (4 + 1 + len(payload) + padding_len) % 8:
+        padding_len += 1
+
+    packet_length = 1 + len(payload) + padding_len
+    packet = (
+        struct.pack('>I', packet_length)
+        + bytes([padding_len])
+        + payload
+        + os.urandom(padding_len)
+    )
+
+    try:
+        sock.sendall(b'SSH-2.0-OPNsense_DeviceMonitor\r\n')
+        sock.sendall(packet)
+        time.sleep(0.25)
+    except OSError:
+        pass
+
+
 def _probe_ssh_service(target, timeout=0.8):
     """Verify SSH by receiving an SSH protocol identification banner."""
     ip, port = target
@@ -2461,6 +2503,8 @@ def _probe_ssh_service(target, timeout=0.8):
                         if len(parts) >= 3
                         else banner
                     )
+
+                    _send_ssh_probe_disconnect(sock, banner)
 
                     return {
                         'product': 'SSH',
