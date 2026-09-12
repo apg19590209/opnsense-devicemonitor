@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+
+# Remove Python bytecode/cache files before every commit.
+find . -path './.git' -prune -o -type d -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
+find . -path './.git' -prune -o -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
+
+exit 0
