@@ -88,6 +88,20 @@
             </span>
         </div>
 
+        <div class="panel panel-default infrastructure-recent-changes">
+            <div class="panel-heading">
+                <strong>{{ lang._('Recent Service Changes') }}</strong>
+                <span class="text-muted">
+                    {{ lang._('Latest verified or authoritative service changes') }}
+                </span>
+            </div>
+            <div id="infrastructure-recent-changes">
+                <div class="text-muted">
+                    {{ lang._('Loading recent service changes') }}...
+                </div>
+            </div>
+        </div>
+
         <div id="infrastructure-service-groups">
             <div class="text-muted">
                 {{ lang._('Loading infrastructure services') }}...
@@ -158,6 +172,67 @@
 
 .infrastructure-toolbar input {
     width: 230px;
+}
+
+.infrastructure-recent-changes {
+    margin: 0 4px 16px 4px;
+}
+
+.infrastructure-recent-changes .panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.infrastructure-recent-table {
+    width: 100%;
+    table-layout: fixed;
+    margin-bottom: 0;
+}
+
+.infrastructure-recent-table th,
+.infrastructure-recent-table td {
+    overflow-wrap: anywhere;
+    vertical-align: middle !important;
+}
+
+.infrastructure-recent-table th:nth-child(1),
+.infrastructure-recent-table td:nth-child(1) {
+    width: 17%;
+    white-space: nowrap;
+}
+
+.infrastructure-recent-table th:nth-child(2),
+.infrastructure-recent-table td:nth-child(2) {
+    width: 17%;
+}
+
+.infrastructure-recent-table th:nth-child(3),
+.infrastructure-recent-table td:nth-child(3) {
+    width: 13%;
+}
+
+.infrastructure-recent-table th:nth-child(4),
+.infrastructure-recent-table td:nth-child(4) {
+    width: 16%;
+}
+
+.infrastructure-recent-table th:nth-child(5),
+.infrastructure-recent-table td:nth-child(5) {
+    width: 15%;
+}
+
+.infrastructure-recent-table th:nth-child(6),
+.infrastructure-recent-table td:nth-child(6) {
+    width: 15%;
+}
+
+.infrastructure-recent-table th:nth-child(7),
+.infrastructure-recent-table td:nth-child(7) {
+    width: 7%;
+    text-align: center;
 }
 
 .infrastructure-service-group {
@@ -338,6 +413,164 @@ $(document).ready(function() {
         }
 
         return values.length ? values.join(' / ') : '\u2014';
+    }
+
+    function serviceChangeLabel(row) {
+        var type = String(row.event_type || '');
+
+        if (type === 'SERVICE_DISCOVERED') {
+            return 'New verified service';
+        }
+
+        if (type === 'SERVICE_UNAVAILABLE') {
+            return 'Service unavailable';
+        }
+
+        if (type === 'SERVICE_AVAILABLE') {
+            return 'Service recovered';
+        }
+
+        if (type === 'SERVICE_CHANGED') {
+            return 'Service changed';
+        }
+
+        return type || '\u2014';
+    }
+
+    function serviceChangeDetail(row) {
+        var oldValue = String(row.old_value || '');
+        var newValue = String(row.new_value || '');
+
+        if (oldValue && newValue && oldValue !== newValue) {
+            return oldValue + ' \u2192 ' + newValue;
+        }
+
+        return '';
+    }
+
+    function recentDeviceText(row) {
+        return row.custom_hostname ||
+            row.hostname ||
+            row.mac ||
+            '\u2014';
+    }
+
+    function recentEndpointText(row) {
+        var endpoint = String(row.ip || '');
+
+        if (row.port) {
+            endpoint += ':' + row.port;
+        }
+
+        if (row.protocol) {
+            endpoint += '/' + String(row.protocol).toUpperCase();
+        }
+
+        return endpoint || '\u2014';
+    }
+
+    function recentEvidenceText(row) {
+        var parts = [];
+
+        if (row.detection_method) {
+            parts.push(row.detection_method);
+        }
+
+        if (row.confidence) {
+            parts.push(row.confidence);
+        }
+
+        return parts.length ? parts.join(' / ') : '\u2014';
+    }
+
+    function renderRecentServiceChanges(rows) {
+        var $root = $('#infrastructure-recent-changes').empty();
+        var changes = Array.isArray(rows) ? rows : [];
+
+        if (!changes.length) {
+            $('<div>')
+                .addClass('text-muted')
+                .css('padding', '10px')
+                .text('No verified infrastructure service changes recorded yet.')
+                .appendTo($root);
+            return;
+        }
+
+        var $table = $('<table>')
+            .addClass(
+                'table table-condensed table-hover infrastructure-recent-table'
+            );
+
+        $('<thead>')
+            .append(
+                $('<tr>').append(
+                    $('<th>').text('Date / Time'),
+                    $('<th>').text('Change'),
+                    $('<th>').text('Service'),
+                    $('<th>').text('Device'),
+                    $('<th>').text('Endpoint'),
+                    $('<th>').text('Evidence'),
+                    $('<th>').text('History')
+                )
+            )
+            .appendTo($table);
+
+        var $body = $('<tbody>');
+
+        changes.forEach(function(row) {
+            var $change = $('<td>');
+            var detail = serviceChangeDetail(row);
+
+            $('<div>')
+                .text(serviceChangeLabel(row))
+                .appendTo($change);
+
+            if (detail) {
+                $('<small>')
+                    .addClass('text-muted')
+                    .css('display', 'block')
+                    .text(detail)
+                    .appendTo($change);
+            }
+
+            var $history = $('<td>');
+
+            if (row.mac) {
+                $('<a>')
+                    .addClass('btn btn-default btn-xs')
+                    .attr(
+                        'href',
+                        '/ui/devicemonitor/index/activitytimeline?mac=' +
+                            encodeURIComponent(row.mac)
+                    )
+                    .attr('title', 'Open device activity timeline')
+                    .append(
+                        $('<i>').addClass('fa fa-history')
+                    )
+                    .appendTo($history);
+            } else {
+                $history.text('\u2014');
+            }
+
+            $('<tr>')
+                .append(
+                    $('<td>').text(dash(row.occurred_at)),
+                    $change,
+                    $('<td>').text(
+                        groupTitle(
+                            String(row.service_type || 'OTHER').toUpperCase()
+                        )
+                    ),
+                    $('<td>').text(recentDeviceText(row)),
+                    $('<td>').text(recentEndpointText(row)),
+                    $('<td>').text(recentEvidenceText(row)),
+                    $history
+                )
+                .appendTo($body);
+        });
+
+        $body.appendTo($table);
+        $table.appendTo($root);
     }
 
     function searchText(row) {
@@ -777,10 +1010,26 @@ $(document).ready(function() {
                         : []
                 );
 
+                renderRecentServiceChanges(
+                    data && Array.isArray(data.recent_changes)
+                        ? data.recent_changes
+                        : []
+                );
+
                 renderServices();
             },
 
             error: function() {
+                $('#infrastructure-recent-changes')
+                    .empty()
+                    .append(
+                        $('<div>')
+                            .addClass('alert alert-danger')
+                            .text(
+                                'Unable to load recent service changes.'
+                            )
+                    );
+
                 $('#infrastructure-service-groups')
                     .empty()
                     .append(

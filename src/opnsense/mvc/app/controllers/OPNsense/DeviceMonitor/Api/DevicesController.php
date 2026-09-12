@@ -1100,7 +1100,8 @@ class DevicesController extends ApiControllerBase
             'total' => 0,
             'available' => 0,
             'unavailable' => 0,
-            'types' => []
+            'types' => [],
+            'recent_changes' => []
         ];
 
         try {
@@ -1162,6 +1163,8 @@ class DevicesController extends ApiControllerBase
             );
 
             $types = [];
+            $trustedServiceByKey = [];
+            $recentDiscoveryByKey = [];
 
             while (
                 $query &&
@@ -1214,6 +1217,96 @@ class DevicesController extends ApiControllerBase
                     $types[$type] = true;
                 }
 
+                $confidence = strtolower(
+                    trim((string)($row['confidence'] ?? ''))
+                );
+
+                if (
+                    $type !== '' &&
+                    in_array(
+                        $confidence,
+                        ['verified', 'authoritative'],
+                        true
+                    )
+                ) {
+                    $interface = trim(
+                        (string)($row['interface'] ?? '')
+                    );
+                    $protocol = strtolower(
+                        trim((string)($row['protocol'] ?? ''))
+                    );
+                    $method = trim(
+                        (string)($row['detection_method'] ?? '')
+                    );
+
+                    $serviceKey = implode('|', [
+                        $mac,
+                        $ip,
+                        $interface,
+                        $type,
+                        (string)$row['port'],
+                        $protocol,
+                        $method
+                    ]);
+
+                    $trustedServiceByKey[$serviceKey] = [
+                        'confidence' => $confidence,
+                        'product' => (string)($row['product'] ?? ''),
+                        'version' => (string)($row['version'] ?? '')
+                    ];
+
+                    $firstDetected = trim(
+                        (string)($row['first_detected'] ?? '')
+                    );
+
+                    if ($firstDetected !== '') {
+                        $logicalKey = implode('|', [
+                            $mac,
+                            $ip,
+                            $type,
+                            (string)$row['port'],
+                            $protocol
+                        ]);
+
+                        $change = [
+                            'source' => 'service',
+                            'record_id' => (int)$row['id'],
+                            'event_type' => 'SERVICE_DISCOVERED',
+                            'occurred_at' => $firstDetected,
+                            'mac' => $mac,
+                            'lifecycle_id' => null,
+                            'service_type' => $type,
+                            'ip' => $ip,
+                            'port' => (int)$row['port'],
+                            'protocol' => $protocol,
+                            'interface' => $interface,
+                            'detection_method' => $method,
+                            'confidence' => $confidence,
+                            'product' => (string)($row['product'] ?? ''),
+                            'version' => (string)($row['version'] ?? ''),
+                            'old_value' => '',
+                            'new_value' => '',
+                            'hostname' => (string)($row['hostname'] ?? ''),
+                            'custom_hostname' =>
+                                (string)($row['custom_hostname'] ?? ''),
+                            'vendor' => (string)($row['vendor'] ?? ''),
+                            'vlan' => (string)($row['vlan'] ?? '')
+                        ];
+
+                        if (
+                            !isset($recentDiscoveryByKey[$logicalKey]) ||
+                            strcmp(
+                                $change['occurred_at'],
+                                $recentDiscoveryByKey[
+                                    $logicalKey
+                                ]['occurred_at']
+                            ) < 0
+                        ) {
+                            $recentDiscoveryByKey[$logicalKey] = $change;
+                        }
+                    }
+                }
+
                 if (($row['status'] ?? '') === 'available') {
                     $result['available']++;
                 }
@@ -1224,6 +1317,185 @@ class DevicesController extends ApiControllerBase
 
                 $result['rows'][] = $row;
             }
+
+            $recentActivityByKey = [];
+
+            $activityExists = (int)$db->querySingle(
+                "SELECT COUNT(*) FROM sqlite_master " .
+                "WHERE type='table' AND name='device_activity_events'"
+            );
+
+            if ($activityExists === 1) {
+                $activityQuery = $db->query(
+                    "SELECT id, mac, lifecycle_id, event_type, " .
+                    "occurred_at, old_value, new_value, details " .
+                    "FROM device_activity_events " .
+                    "WHERE event_type IN (" .
+                    "'SERVICE_AVAILABLE'," .
+                    "'SERVICE_UNAVAILABLE'," .
+                    "'SERVICE_CHANGED'" .
+                    ") " .
+                    "ORDER BY occurred_at DESC, id DESC " .
+                    "LIMIT 200"
+                );
+
+                while (
+                    $activityQuery &&
+                    ($activity = $activityQuery->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $parts = explode(
+                        '|',
+                        (string)($activity['details'] ?? '')
+                    );
+
+                    $eventMac = strtolower(
+                        trim((string)($activity['mac'] ?? ''))
+                    );
+                    $eventType = trim(
+                        (string)($activity['event_type'] ?? '')
+                    );
+                    $serviceType = strtoupper(
+                        trim((string)($parts[0] ?? ''))
+                    );
+                    $eventIp = trim((string)($parts[1] ?? ''));
+                    $eventPort = (int)($parts[2] ?? 0);
+                    $eventProtocol = strtolower(
+                        trim((string)($parts[3] ?? ''))
+                    );
+                    $eventInterface = trim(
+                        (string)($parts[4] ?? '')
+                    );
+                    $eventMethod = trim(
+                        (string)($parts[5] ?? '')
+                    );
+
+                    $serviceKey = implode('|', [
+                        $eventMac,
+                        $eventIp,
+                        $eventInterface,
+                        $serviceType,
+                        (string)$eventPort,
+                        $eventProtocol,
+                        $eventMethod
+                    ]);
+
+                    if (!isset($trustedServiceByKey[$serviceKey])) {
+                        continue;
+                    }
+
+                    $eventDevice = null;
+
+                    if (
+                        $eventMac !== '' &&
+                        isset($deviceByMac[$eventMac])
+                    ) {
+                        $eventDevice = $deviceByMac[$eventMac];
+                    }
+
+                    if (
+                        $eventDevice === null &&
+                        $eventIp !== '' &&
+                        isset($deviceByIp[$eventIp])
+                    ) {
+                        $eventDevice = $deviceByIp[$eventIp];
+                    }
+
+                    $trusted = $trustedServiceByKey[$serviceKey];
+
+                    $change = [
+                        'source' => 'activity',
+                        'record_id' => (int)$activity['id'],
+                        'event_type' => $eventType,
+                        'occurred_at' =>
+                            (string)($activity['occurred_at'] ?? ''),
+                        'mac' => $eventMac,
+                        'lifecycle_id' =>
+                            isset($activity['lifecycle_id'])
+                                ? (int)$activity['lifecycle_id']
+                                : null,
+                        'service_type' => $serviceType,
+                        'ip' => $eventIp,
+                        'port' => $eventPort,
+                        'protocol' => $eventProtocol,
+                        'interface' => $eventInterface,
+                        'detection_method' => $eventMethod,
+                        'confidence' =>
+                            (string)($trusted['confidence'] ?? ''),
+                        'product' =>
+                            (string)($trusted['product'] ?? ''),
+                        'version' =>
+                            (string)($trusted['version'] ?? ''),
+                        'old_value' =>
+                            (string)($activity['old_value'] ?? ''),
+                        'new_value' =>
+                            (string)($activity['new_value'] ?? ''),
+                        'hostname' => $eventDevice !== null
+                            ? (string)($eventDevice['hostname'] ?? '')
+                            : '',
+                        'custom_hostname' => $eventDevice !== null
+                            ? (string)(
+                                $eventDevice['custom_hostname'] ?? ''
+                            )
+                            : '',
+                        'vendor' => $eventDevice !== null
+                            ? (string)($eventDevice['vendor'] ?? '')
+                            : '',
+                        'vlan' => $eventDevice !== null
+                            ? (string)($eventDevice['vlan'] ?? '')
+                            : ''
+                    ];
+
+                    if ($change['occurred_at'] === '') {
+                        continue;
+                    }
+
+                    $logicalEventKey = implode('|', [
+                        $eventType,
+                        $eventMac,
+                        $eventIp,
+                        $serviceType,
+                        (string)$eventPort,
+                        $eventProtocol,
+                        $change['occurred_at']
+                    ]);
+
+                    if (
+                        !isset(
+                            $recentActivityByKey[$logicalEventKey]
+                        )
+                    ) {
+                        $recentActivityByKey[$logicalEventKey] = $change;
+                    }
+                }
+            }
+
+            $recentChanges = array_merge(
+                array_values($recentDiscoveryByKey),
+                array_values($recentActivityByKey)
+            );
+
+            usort(
+                $recentChanges,
+                static function ($a, $b) {
+                    $timeCompare = strcmp(
+                        (string)($b['occurred_at'] ?? ''),
+                        (string)($a['occurred_at'] ?? '')
+                    );
+
+                    if ($timeCompare !== 0) {
+                        return $timeCompare;
+                    }
+
+                    return (int)($b['record_id'] ?? 0) <=>
+                        (int)($a['record_id'] ?? 0);
+                }
+            );
+
+            $result['recent_changes'] = array_slice(
+                $recentChanges,
+                0,
+                20
+            );
 
             $db->close();
 
