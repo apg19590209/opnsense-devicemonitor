@@ -4799,6 +4799,138 @@ def get_pending_service_alert_events(conn, limit_per_source=200):
 
     return events
 
+def select_service_alert_events(config, events):
+    """
+    Return trusted infrastructure-service events enabled for email delivery.
+
+    SERVICE_CHANGED remains history-only in v1 because the current event does
+    not by itself prove a material role change.
+    """
+    if not config_bool(config.get('service_email_enabled', '0')):
+        return []
+
+    enabled_types = {
+        'SERVICE_DISCOVERED': config_bool(
+            config.get('service_email_new', '1')
+        ),
+        'SERVICE_UNAVAILABLE': config_bool(
+            config.get('service_email_unavailable', '1')
+        ),
+        'SERVICE_AVAILABLE': config_bool(
+            config.get('service_email_recovered', '1')
+        ),
+    }
+
+    return [
+        event for event in events
+        if event.get('alert_eligible')
+        and enabled_types.get(event.get('event_type'), False)
+    ]
+
+
+def plan_service_alert_cursor_advance(
+    events,
+    selected_events,
+    delivery_succeeded=False
+):
+    """
+    Plan monotonic cursor advancement without skipping a selected alert.
+
+    When delivery has not succeeded, each source may advance only through rows
+    before its first selected event. If a source has no selected events, all
+    fetched rows from that source may advance. After successful delivery, all
+    fetched rows may advance.
+    """
+    known_sources = ('device_services', 'device_activity_events')
+    selected_ids = {
+        source: {
+            int(event.get('record_id') or 0)
+            for event in selected_events
+            if event.get('source') == source
+            and int(event.get('record_id') or 0) > 0
+        }
+        for source in known_sources
+    }
+
+    plan = {}
+
+    for source in known_sources:
+        record_ids = sorted({
+            int(event.get('record_id') or 0)
+            for event in events
+            if event.get('source') == source
+            and int(event.get('record_id') or 0) > 0
+        })
+
+        if not record_ids:
+            plan[source] = None
+            continue
+
+        if delivery_succeeded or not selected_ids[source]:
+            plan[source] = record_ids[-1]
+            continue
+
+        first_selected = min(selected_ids[source])
+        safe_ids = [
+            record_id for record_id in record_ids
+            if record_id < first_selected
+        ]
+        plan[source] = safe_ids[-1] if safe_ids else None
+
+    return plan
+
+
+def advance_service_alert_cursors(conn, plan):
+    """
+    Persist a monotonic service-alert cursor plan.
+
+    This helper commits its own small state update. It is intentionally not
+    wired into runtime processing until delivery orchestration is added.
+    """
+    state = conn.execute(
+        """
+        SELECT last_service_id, last_activity_event_id
+        FROM service_alert_state
+        WHERE id = 1
+        """
+    ).fetchone()
+
+    if state is None:
+        return False
+
+    current_service_id = int(state[0] or 0)
+    current_activity_id = int(state[1] or 0)
+
+    service_id = plan.get('device_services')
+    activity_id = plan.get('device_activity_events')
+
+    target_service_id = max(
+        current_service_id,
+        int(service_id or current_service_id)
+    )
+    target_activity_id = max(
+        current_activity_id,
+        int(activity_id or current_activity_id)
+    )
+
+    if (
+        target_service_id == current_service_id
+        and target_activity_id == current_activity_id
+    ):
+        return False
+
+    conn.execute(
+        """
+        UPDATE service_alert_state
+        SET last_service_id = ?,
+            last_activity_event_id = ?
+        WHERE id = 1
+        """,
+        (target_service_id, target_activity_id)
+    )
+    conn.commit()
+    return True
+
 def config_bool(value, default=False):
     """Convert configuration values such as 0/1 strings safely to bool."""
     if value is None:
