@@ -7,12 +7,14 @@ on:
       - v2.6-development
       - v2.7-development
       - v2.8-development
+      - v2.9-development
   pull_request:
     branches:
       - v2.5-development
       - v2.6-development
       - v2.7-development
       - v2.8-development
+      - v2.9-development
 
 jobs:
   validate:
