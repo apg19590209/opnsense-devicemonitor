@@ -242,8 +242,204 @@ def test_device_state_changes_are_historical_and_deduplicated():
     print("DEVICE_ACTIVITY_STATE_CHANGES=PASS")
 
 
+def test_service_status_transitions_are_historical_and_deduplicated():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.LOG_FILE = str(Path(tmp) / "devicemonitor.log")
+        module.init_db()
+
+        mac = "aa:bb:cc:dd:ee:ff"
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            lifecycle_id = conn.execute(
+                """
+                INSERT INTO device_lifecycles (
+                    mac,
+                    status,
+                    first_seen,
+                    last_seen
+                )
+                VALUES (
+                    ?,
+                    'active',
+                    '2026-09-12 08:00:00',
+                    '2026-09-12 08:00:00'
+                )
+                """,
+                (mac,),
+            ).lastrowid
+
+            conn.execute(
+                """
+                INSERT INTO devices (
+                    mac,
+                    ip,
+                    vlan,
+                    lifecycle_id,
+                    return_pending
+                )
+                VALUES (?, ?, ?, ?, 0)
+                """,
+                (
+                    mac,
+                    "192.168.20.10",
+                    "LAN",
+                    lifecycle_id,
+                ),
+            )
+
+            conn.execute(
+                """
+                INSERT INTO device_services (
+                    mac,
+                    ip,
+                    interface,
+                    service_type,
+                    port,
+                    protocol,
+                    status,
+                    detection_method,
+                    confidence
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    mac,
+                    "192.168.20.10",
+                    "LAN",
+                    "SSH",
+                    22,
+                    "tcp",
+                    "available",
+                    "ssh_banner",
+                    "verified",
+                ),
+            )
+
+            # First real transition: available -> unavailable.
+            conn.execute(
+                """
+                UPDATE device_services
+                SET status = 'unavailable'
+                WHERE mac = ?
+                  AND service_type = 'SSH'
+                  AND port = 22
+                """,
+                (mac,),
+            )
+
+            # Same status again must not create a duplicate event.
+            conn.execute(
+                """
+                UPDATE device_services
+                SET status = 'unavailable'
+                WHERE mac = ?
+                  AND service_type = 'SSH'
+                  AND port = 22
+                """,
+                (mac,),
+            )
+            conn.commit()
+
+            rows = conn.execute(
+                """
+                SELECT event_type,
+                       old_value,
+                       new_value,
+                       details,
+                       lifecycle_id
+                FROM device_activity_events
+                WHERE mac = ?
+                ORDER BY id
+                """,
+                (mac,),
+            ).fetchall()
+
+            assert rows == [
+                (
+                    "SERVICE_UNAVAILABLE",
+                    "available",
+                    "unavailable",
+                    "SSH|192.168.20.10|22|tcp|LAN|ssh_banner",
+                    lifecycle_id,
+                )
+            ]
+
+            # Exercise the real service upsert path for recovery.
+            assert module.upsert_device_service(
+                conn,
+                mac,
+                "192.168.20.10",
+                "LAN",
+                "SSH",
+                22,
+                "tcp",
+                "ssh_banner",
+                "verified",
+                "2026-09-12 09:00:00",
+                status="available",
+                product="OpenSSH",
+                version="9",
+            )
+
+            # Repeating the same available observation must not duplicate it.
+            assert module.upsert_device_service(
+                conn,
+                mac,
+                "192.168.20.10",
+                "LAN",
+                "SSH",
+                22,
+                "tcp",
+                "ssh_banner",
+                "verified",
+                "2026-09-12 09:05:00",
+                status="available",
+                product="OpenSSH",
+                version="9",
+            )
+
+            conn.commit()
+
+            rows = conn.execute(
+                """
+                SELECT event_type,
+                       old_value,
+                       new_value,
+                       details,
+                       lifecycle_id
+                FROM device_activity_events
+                WHERE mac = ?
+                ORDER BY id
+                """,
+                (mac,),
+            ).fetchall()
+
+        assert rows == [
+            (
+                "SERVICE_UNAVAILABLE",
+                "available",
+                "unavailable",
+                "SSH|192.168.20.10|22|tcp|LAN|ssh_banner",
+                lifecycle_id,
+            ),
+            (
+                "SERVICE_AVAILABLE",
+                "unavailable",
+                "available",
+                "SSH|192.168.20.10|22|tcp|LAN|ssh_banner",
+                lifecycle_id,
+            ),
+        ]
+
+    print("DEVICE_ACTIVITY_SERVICE_TRANSITIONS=PASS")
+
+
 def main():
     test_device_state_changes_are_historical_and_deduplicated()
+    test_service_status_transitions_are_historical_and_deduplicated()
     print("DEVICE_ACTIVITY_EVENTS_REGRESSION=PASS")
 
 

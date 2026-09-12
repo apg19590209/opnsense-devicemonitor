@@ -407,6 +407,52 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_device_services_type
         ON device_services(service_type)
     ''')
+
+    # Preserve meaningful service availability transitions without changing
+    # each protocol-specific discovery path. Repeated writes of the same
+    # status deliberately produce no history event.
+    c.execute('''
+        CREATE TRIGGER IF NOT EXISTS trg_device_services_status_activity
+        AFTER UPDATE OF status ON device_services
+        WHEN NEW.mac IS NOT NULL
+          AND TRIM(NEW.mac) <> ''
+          AND COALESCE(OLD.status, '') <> COALESCE(NEW.status, '')
+        BEGIN
+            INSERT INTO device_activity_events (
+                mac,
+                lifecycle_id,
+                event_type,
+                old_value,
+                new_value,
+                details
+            )
+            VALUES (
+                LOWER(TRIM(NEW.mac)),
+                (
+                    SELECT lifecycle_id
+                    FROM devices
+                    WHERE LOWER(mac) = LOWER(TRIM(NEW.mac))
+                    LIMIT 1
+                ),
+                CASE
+                    WHEN LOWER(COALESCE(NEW.status, '')) = 'available'
+                        THEN 'SERVICE_AVAILABLE'
+                    WHEN LOWER(COALESCE(NEW.status, '')) = 'unavailable'
+                        THEN 'SERVICE_UNAVAILABLE'
+                    ELSE 'SERVICE_CHANGED'
+                END,
+                COALESCE(OLD.status, ''),
+                COALESCE(NEW.status, ''),
+                COALESCE(NEW.service_type, '') || '|' ||
+                COALESCE(NEW.ip, '') || '|' ||
+                CAST(COALESCE(NEW.port, 0) AS TEXT) || '|' ||
+                COALESCE(NEW.protocol, '') || '|' ||
+                COALESCE(NEW.interface, '') || '|' ||
+                COALESCE(NEW.detection_method, '')
+            );
+        END
+    ''')
+
     c.execute('''CREATE TABLE IF NOT EXISTS service_discovery_state (
         id INTEGER PRIMARY KEY CHECK(id = 1),
         last_run DATETIME
