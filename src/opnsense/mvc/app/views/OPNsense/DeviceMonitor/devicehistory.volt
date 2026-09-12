@@ -14,6 +14,14 @@
                 <i class="fa fa-arrow-left"></i>
                 {{ lang._('Back to Devices') }}
             </a>
+
+            <a id="activity-timeline-link"
+               href="/ui/devicemonitor/index/activitytimeline"
+               class="btn btn-default btn-sm pull-right"
+               style="font-size:14px;font-weight:600;padding:6px 12px;margin-right:6px;">
+                <i class="fa fa-clock-o"></i>
+                {{ lang._('Activity Timeline') }}
+            </a>
             <h1 style="margin:0;font-size:20px;">
                 {{ lang._('Device Monitor') }}
                 <span style="color:#555;margin:0 8px;">&ndash;</span>
@@ -934,6 +942,12 @@ $(document).ready(function() {
     }
 
     $('#device-history-mac').text(mac || '\u2014');
+
+    $('#activity-timeline-link').attr(
+        'href',
+        '/ui/devicemonitor/index/activitytimeline?mac=' +
+            encodeURIComponent(mac)
+    );
 
     if (!mac) {
         showLoadError('MAC address required');

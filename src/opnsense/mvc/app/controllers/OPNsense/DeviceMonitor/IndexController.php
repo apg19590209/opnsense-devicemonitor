@@ -28,6 +28,13 @@ class IndexController extends \OPNsense\Base\IndexController
         $this->view->pick('OPNsense/DeviceMonitor/devicehistory');
     }
 
+    public function activitytimelineAction()
+    {
+        $mac = strtolower(trim((string)$this->request->getQuery('mac')));
+        $this->view->activityTimelineMac = $mac;
+        $this->view->pick('OPNsense/DeviceMonitor/activitytimeline');
+    }
+
     public function scanhistoryAction()
     {
         $this->view->pick('OPNsense/DeviceMonitor/scanhistory');
