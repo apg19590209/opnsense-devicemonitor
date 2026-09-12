@@ -4640,6 +4640,165 @@ def run_scheduled_service_discovery(interval_seconds=3600):
         )
         return False
 
+def get_pending_service_alert_events(conn, limit_per_source=200):
+    """
+    Return infrastructure-service alert candidates newer than the persisted
+    high-water marks without changing alert state.
+
+    New service rows come from device_services.first_detected. Subsequent
+    status transitions come from device_activity_events. Each row is marked
+    alert_eligible only when its backing service evidence is verified or
+    authoritative. Lower-confidence discovery remains visible to the caller so
+    its cursor can advance without replaying it later.
+
+    The caller is responsible for filtering configured alert types, delivery
+    and advancing the two persisted cursors.
+
+    The bound applies independently to each authoritative source. Returning all
+    rows fetched from both sources prevents a merged global limit from skipping
+    an unreturned lower record ID when callers advance the independent cursors.
+    """
+    try:
+        limit_per_source = int(limit_per_source)
+    except (TypeError, ValueError):
+        limit_per_source = 200
+
+    limit_per_source = max(1, min(limit_per_source, 500))
+
+    state = conn.execute(
+        """
+        SELECT last_service_id, last_activity_event_id
+        FROM service_alert_state
+        WHERE id = 1
+        """
+    ).fetchone()
+
+    if state is None:
+        return []
+
+    last_service_id = int(state[0] or 0)
+    last_activity_event_id = int(state[1] or 0)
+    events = []
+
+    trusted_rows = conn.execute(
+        """
+        SELECT mac, ip, interface, service_type, port, protocol, detection_method
+        FROM device_services
+        WHERE LOWER(COALESCE(confidence, '')) IN ('verified', 'authoritative')
+        """
+    ).fetchall()
+
+    trusted_service_keys = {
+        (
+            (row[0] or '').strip().lower(),
+            row[1] or '',
+            row[2] or '',
+            row[3] or '',
+            int(row[4] or 0),
+            row[5] or '',
+            row[6] or '',
+        )
+        for row in trusted_rows
+    }
+
+    service_rows = conn.execute(
+        """
+        SELECT id, mac, ip, interface, service_type, port, protocol,
+               status, detection_method, confidence, product, version,
+               first_detected
+        FROM device_services
+        WHERE id > ?
+        ORDER BY id ASC
+        LIMIT ?
+        """,
+        (last_service_id, limit_per_source)
+    ).fetchall()
+
+    for row in service_rows:
+        confidence = (row[9] or '').strip().lower()
+        events.append({
+            'source': 'device_services',
+            'record_id': int(row[0]),
+            'event_type': 'SERVICE_DISCOVERED',
+            'occurred_at': row[12] or '',
+            'mac': (row[1] or '').strip().lower(),
+            'service_type': row[4] or '',
+            'ip': row[2] or '',
+            'port': int(row[5] or 0),
+            'protocol': row[6] or '',
+            'interface': row[3] or '',
+            'detection_method': row[8] or '',
+            'old_value': '',
+            'new_value': row[7] or '',
+            'confidence': row[9] or '',
+            'product': row[10] or '',
+            'version': row[11] or '',
+            'alert_eligible': confidence in ('verified', 'authoritative'),
+        })
+
+    activity_rows = conn.execute(
+        """
+        SELECT id, mac, lifecycle_id, event_type, occurred_at,
+               old_value, new_value, details
+        FROM device_activity_events
+        WHERE id > ?
+          AND event_type IN (
+              'SERVICE_AVAILABLE',
+              'SERVICE_UNAVAILABLE',
+              'SERVICE_CHANGED'
+          )
+        ORDER BY id ASC
+        LIMIT ?
+        """,
+        (last_activity_event_id, limit_per_source)
+    ).fetchall()
+
+    for row in activity_rows:
+        details = str(row[7] or '').split('|', 5)
+        details += [''] * (6 - len(details))
+        service_type, ip, port, protocol, interface, detection_method = details
+
+        try:
+            port = int(port or 0)
+        except (TypeError, ValueError):
+            port = 0
+
+        service_key = (
+            (row[1] or '').strip().lower(),
+            ip,
+            interface,
+            service_type,
+            port,
+            protocol,
+            detection_method,
+        )
+
+        events.append({
+            'source': 'device_activity_events',
+            'record_id': int(row[0]),
+            'event_type': row[3] or '',
+            'occurred_at': row[4] or '',
+            'mac': (row[1] or '').strip().lower(),
+            'lifecycle_id': row[2],
+            'service_type': service_type,
+            'ip': ip,
+            'port': port,
+            'protocol': protocol,
+            'interface': interface,
+            'detection_method': detection_method,
+            'old_value': row[5] or '',
+            'new_value': row[6] or '',
+            'alert_eligible': service_key in trusted_service_keys,
+        })
+
+    events.sort(key=lambda event: (
+        event.get('occurred_at') or '',
+        event.get('source') or '',
+        int(event.get('record_id') or 0),
+    ))
+
+    return events
+
 def config_bool(value, default=False):
     """Convert configuration values such as 0/1 strings safely to bool."""
     if value is None:
