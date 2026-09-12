@@ -41,7 +41,7 @@
             <!-- TAB 3: Email -->
             <div role="tabpanel" class="tab-pane" id="tab-email">
                 <div class="alert alert-info">
-                    {{ lang._('Configure email notifications for new devices on the network') }}
+                    {{ lang._('Configure email notifications from Device Monitor') }}
                 </div>
                 <table class="table table-striped">
                     <tbody>
@@ -129,6 +129,34 @@
                                 </label>
                                 <br>
                                 <small class="text-muted">{{ lang._('Send an email when a new high-severity IPv4 or IPv6 address conflict is detected.') }}</small>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:top;padding-top:16px;">
+                                <strong>{{ lang._('Infrastructure Services') }}</strong>
+                            </td>
+                            <td style="padding-top:16px;">
+                                <label style="margin:0;">
+                                    <input type="checkbox" id="service_email_enabled" />
+                                    <strong>{{ lang._('Email infrastructure service alerts') }}</strong>
+                                </label>
+                                <br>
+                                <small class="text-muted">{{ lang._('Alert only on verified or authoritative infrastructure-service evidence.') }}</small>
+                                <div id="service_email_options" style="margin-top:10px;margin-left:20px;">
+                                    <label style="display:block;font-weight:normal;">
+                                        <input type="checkbox" id="service_email_new" />
+                                        {{ lang._('New verified service') }}
+                                    </label>
+                                    <label style="display:block;font-weight:normal;">
+                                        <input type="checkbox" id="service_email_unavailable" />
+                                        {{ lang._('Established service unavailable') }}
+                                    </label>
+                                    <label style="display:block;font-weight:normal;">
+                                        <input type="checkbox" id="service_email_recovered" />
+                                        {{ lang._('Unavailable service recovered') }}
+                                    </label>
+                                    <small class="text-muted">{{ lang._('Generic service-changed events remain history-only in this version.') }}</small>
+                                </div>
                             </td>
                         </tr>
                         <tr>
@@ -484,6 +512,10 @@ $().ready(function() {
             $('#nmap_max_per_cycle').val(d.nmap_max_per_cycle||2);
             $('#email_enabled').prop('checked', d.email_enabled==='1');
             $('#identity_email_enabled').prop('checked', d.identity_email_enabled==='1');
+            $('#service_email_enabled').prop('checked', d.service_email_enabled==='1');
+            $('#service_email_new').prop('checked', d.service_email_new===undefined ? true : d.service_email_new==='1');
+            $('#service_email_unavailable').prop('checked', d.service_email_unavailable===undefined ? true : d.service_email_unavailable==='1');
+            $('#service_email_recovered').prop('checked', d.service_email_recovered===undefined ? true : d.service_email_recovered==='1');
             $('#email_to').val(d.email_to||'');
             $('#email_from').val(d.email_from||'devicemonitor@opnsense.local');
             $('#email_method').val(d.email_method||'sendmail');
@@ -497,6 +529,7 @@ $().ready(function() {
             buildVlanCheckList('email-vlan-list',   d.email_vlans   || '');
             buildVlanCheckList('webhook-vlan-list', d.webhook_vlans || '');
             toggleEmailConfig();
+            toggleServiceEmailOptions();
             toggleEmailMethod();
             toggleWebhookConfig();
             toggleAdGuardConfig();
@@ -505,6 +538,9 @@ $().ready(function() {
 
     function toggleEmailConfig() {
         $('#email_enabled').prop('checked') ? $('#email_config').slideDown() : $('#email_config').slideUp();
+    }
+    function toggleServiceEmailOptions() {
+        $('#service_email_enabled').prop('checked') ? $('#service_email_options').slideDown() : $('#service_email_options').slideUp();
     }
     function toggleEmailMethod() {
         var method = $('#email_method').val() || 'sendmail';
@@ -523,6 +559,7 @@ $().ready(function() {
         $('#adguard_rewrite_enabled').prop('checked') ? $('#adguard_rewrite_config').slideDown() : $('#adguard_rewrite_config').slideUp();
     }
     $('#email_enabled').change(toggleEmailConfig);
+    $('#service_email_enabled').change(toggleServiceEmailOptions);
     $('#email_method').change(toggleEmailMethod);
     $('#webhook_enabled').change(toggleWebhookConfig);
     $('#adguard_rewrite_enabled').change(toggleAdGuardConfig);
@@ -536,6 +573,10 @@ $().ready(function() {
             adguard_password: $('#adguard_password').val(),
             email_enabled:    $('#email_enabled').is(':checked')?'1':'0',
             identity_email_enabled: $('#identity_email_enabled').is(':checked')?'1':'0',
+            service_email_enabled: $('#service_email_enabled').is(':checked')?'1':'0',
+            service_email_new: $('#service_email_new').is(':checked')?'1':'0',
+            service_email_unavailable: $('#service_email_unavailable').is(':checked')?'1':'0',
+            service_email_recovered: $('#service_email_recovered').is(':checked')?'1':'0',
             email_to:         $('#email_to').val(),
             email_from:       $('#email_from').val(),
             email_method:     $('#email_method').val(),

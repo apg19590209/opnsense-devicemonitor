@@ -59,6 +59,10 @@ class ConfigController extends ApiControllerBase
         $enabled = $this->request->getPost('enabled', 'string', '0');
         $email_enabled = $this->request->getPost('email_enabled', 'string', '0');
         $identity_email_enabled = $this->request->getPost('identity_email_enabled', 'string', '0');
+        $service_email_enabled = $this->request->getPost('service_email_enabled', 'string', '0');
+        $service_email_new = $this->request->getPost('service_email_new', 'string', '1');
+        $service_email_unavailable = $this->request->getPost('service_email_unavailable', 'string', '1');
+        $service_email_recovered = $this->request->getPost('service_email_recovered', 'string', '1');
         $email_to = trim($this->request->getPost('email_to', 'string', ''));
         $email_from = trim($this->request->getPost('email_from', 'string', 'devicemonitor@opnsense.local'));
         $email_method = strtolower(trim($this->request->getPost('email_method', 'string', 'sendmail')));
@@ -88,6 +92,17 @@ class ConfigController extends ApiControllerBase
 
         if (!in_array($identity_email_enabled, ['0', '1'], true)) {
             return ['result' => 'failed', 'message' => 'Invalid identity email enabled value'];
+        }
+
+        foreach ([
+            'service_email_enabled' => $service_email_enabled,
+            'service_email_new' => $service_email_new,
+            'service_email_unavailable' => $service_email_unavailable,
+            'service_email_recovered' => $service_email_recovered,
+        ] as $setting => $value) {
+            if (!in_array($value, ['0', '1'], true)) {
+                return ['result' => 'failed', 'message' => 'Invalid ' . $setting . ' value'];
+            }
         }
 
         if (!in_array($email_method, ['sendmail', 'smtp'], true)) {
@@ -197,6 +212,10 @@ class ConfigController extends ApiControllerBase
         $config['enabled'] = $enabled;
         $config['email_enabled'] = $email_enabled;
         $config['identity_email_enabled'] = $identity_email_enabled;
+        $config['service_email_enabled'] = $service_email_enabled;
+        $config['service_email_new'] = $service_email_new;
+        $config['service_email_unavailable'] = $service_email_unavailable;
+        $config['service_email_recovered'] = $service_email_recovered;
         $config['email_to'] = $email_to;
         $config['email_from'] = $email_from;
         $config['email_method'] = $email_method;
