@@ -771,6 +771,11 @@ jobs:
           python3 tests/test_phase3_infrastructure.py
           node tests/test_infrastructure_stale.js
 
+      - name: Validate infrastructure service alerts
+        run: |
+          set -eu
+          python3 tests/test_service_alert_processing.py
+
       - name: Validate AdGuard DNS rewrite integration
         run: |
           set -eu
