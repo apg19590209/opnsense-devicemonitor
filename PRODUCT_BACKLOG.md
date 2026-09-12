@@ -26,11 +26,6 @@ Constraints:
 - do not automatically merge device identities
 - preserve existing device and identity-event history
 
-### DM-BL-002 — Device activity and identity timeline
-
-Add a per-device chronological history of meaningful changes such as first/last
-seen, IP changes, hostname/source changes, VLAN/interface changes, discovered
-services, identity events and targeted security-scan results.
 
 ### DM-BL-003 — Infrastructure-service change alerts
 
@@ -44,13 +39,6 @@ Constraints:
 - avoid noisy raw port-change alerts
 - preserve bounded scanning and existing single-host Nmap constraints
 
-### DM-BL-004 — OPNsense/Unbound hostname enrichment
-
-Investigate high-confidence hostname enrichment from locally configured OPNsense
-Unbound host overrides and aliases.
-
-Before implementation, define its precedence relative to AdGuard, Dnsmasq, Kea,
-ISC and Hostwatch.
 
 ### DM-BL-005 — Generic hostname-provider framework
 

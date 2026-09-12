@@ -315,3 +315,50 @@ rewriting device history.
 Separating current ONLINE/OFFLINE state from lifecycle state also avoids
 treating an active historical lifecycle as proof that a device is currently
 reachable.
+
+## 15. Device activity timeline preserves authoritative history and only persists otherwise-lost meaningful transitions
+
+### Decision
+
+The per-device Activity Timeline is a read model assembled from authoritative
+historical sources plus a small append-only activity table.
+
+Existing authoritative history remains authoritative for:
+
+- device lifecycle start records and current archive state
+- lifecycle notes and note-version history
+- identity anomaly detection and resolution records
+- targeted Nmap scan history
+- initial infrastructure-service discovery through `first_detected`
+
+`device_activity_events` is used only for meaningful transitions that would
+otherwise be lost when mutable current-state rows are updated, including:
+
+- IP address changes
+- detected hostname changes
+- hostname-source changes
+- Interface/VLAN changes
+- infrastructure-service availability/status changes
+- Friendly Name changes
+- lifecycle relink actions and preservation of the prior archive timestamp
+- identity reopen actions and preservation of the prior resolution timestamp
+
+When an operation would clear or replace an authoritative historical timestamp,
+the prior transition must be persisted before that value is cleared, within the
+same transaction where practical.
+
+The timeline must not fabricate retroactive transitions from current snapshots.
+Routine polling noise such as every `last_seen` update is not activity history.
+ONLINE/OFFLINE transitions remain excluded unless a later explicitly designed
+feature establishes meaningful, non-noisy semantics for them.
+
+### Reason
+
+Device Monitor stores some information as durable history and other information
+as mutable current state. Aggregating the durable sources while recording only
+otherwise-lost meaningful transitions preserves operational evidence without
+duplicating authoritative records or flooding the timeline with scan noise.
+
+Preserving archive and resolution timestamps before relink/reopen operations also
+prevents user actions from erasing the chronology that the timeline is intended
+to explain.

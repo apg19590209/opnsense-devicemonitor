@@ -2,13 +2,13 @@
 
 ## Last updated
 
-9 September 2026
+12 September 2026
 
 ## Current version / branch / environment
 
 Development branch:
 
-`v2.8-development`
+`v2.9-development`
 
 Active Windows checkout:
 
@@ -18,25 +18,19 @@ Primary deployment target:
 
 OPNsense 26.7.2_2
 
-Latest confirmed completed identity-work commit:
+Latest completed v2.9 feature commit:
 
-`5188dcb` — `Fix friendly name and detected hostname separation`
+`d93ddfd` — `fix: preserve device timeline history`
 
 
 ## Current objective
 
-UI improvement — sort order on the Infrastructure Services page to numeric IPv4 order.
+`DM-BL-004` — OPNsense/Unbound hostname enrichment — is the next active v2.9 task.
 
-Latest completed UI commits:
-
-- `c67940d` — `fix: keep Device headers fixed while rows scroll`
-- `4d22a59` — `fix: sort Infrastructure Services by numeric IPv4`
-
-The Devices page now keeps the OPNsense page header, Device Monitor summary, filter/action toolbar and table column headers visible while device rows scroll beneath them. Sticky areas are opaque and scrolling settles on complete device rows.
-
-Remaining UI enhancement:
-
-1. Add per-device comments with a compact list indicator and popup/editor.
+`DM-BL-002` — Device activity and identity timeline — is complete, deployed and
+validated live. The timeline now provides a per-device chronological view across
+lifecycle history, notes, identity anomalies, targeted Nmap history, discovered
+services and persisted meaningful state transitions.
 
 ## Previously completed
 
@@ -441,16 +435,13 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 ## Product backlog
 
-- `PRODUCT_BACKLOG.md` created as the authoritative list of explicitly deferred
-  or approved future Device Monitor work.
-- One deferred backlog item is recorded: `DM-BL-001`, user-confirmed
-  physical-device identity grouping for legitimate multi-MAC devices without
-  automatic merging.
-- Backlog items must not duplicate the active task in `PROJECT_STATE.md`.
+- `PRODUCT_BACKLOG.md` remains the authoritative list of deferred Device Monitor work.
+- `DM-BL-002` is complete and has been removed from the open backlog.
+- `DM-BL-004` has moved from backlog to the active task in this file.
+- Open backlog items are now `DM-BL-001`, `DM-BL-003`, `DM-BL-005`,
+  `DM-BL-006` and `DM-BL-007`.
 - Architectural constraints remain in `DECISIONS.md`; environment facts remain
   in `SYSTEM_MAP.md`.
-- Files changed: `PRODUCT_BACKLOG.md`, `PROJECT_STATE.md`.
-- Validation: repository diff checks passed.
 
 ## Hostname Source provenance
 
@@ -546,24 +537,60 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - No known lifecycle/history implementation defect remains.
 - Natural GUI validation of a real `return_pending` device remains deferred until
   one occurs; regression coverage for that workflow passes.
-- `PRODUCT_BACKLOG.md` remains authoritative for deferred work and currently
-  contains `DM-BL-001` through `DM-BL-007`.
+- `PRODUCT_BACKLOG.md` remains authoritative for deferred work; open items are
+  `DM-BL-001`, `DM-BL-003`, `DM-BL-005`, `DM-BL-006` and `DM-BL-007`.
 
-## v2.9 development baseline
+## v2.9 development — DM-BL-002 complete
 
-- `v2.9-development` was created from completed commit `41346b9` and pushed to
-  `origin/v2.9-development`.
-- Local and remote `v2.9-development` branches are synchronized.
-- Final repository-to-live OPNsense audit passed for all audited deployable
-  files.
-- Obsolete Device Monitor deployment/test files were removed from `/tmp`.
-- `/root` rollback backups were intentionally retained.
-- No v2.9 feature implementation has started yet.
-- `PRODUCT_BACKLOG.md` remains authoritative for `DM-BL-001` through
-  `DM-BL-007`.
+`DM-BL-002` — Device activity and identity timeline — is implemented, deployed
+and validated live on OPNsense.
+
+Implemented:
+
+- append-only `device_activity_events` history for meaningful state changes that
+  would otherwise be lost from mutable current-state rows
+- historical IP, detected hostname, hostname-source and Interface/VLAN transitions
+- infrastructure-service availability/status transitions
+- standalone per-device Activity Timeline page linked from Device Details
+- read-only timeline API aggregating lifecycle, note/version, activity, identity,
+  targeted Nmap and service-discovery history
+- preserved lifecycle archive history when an archived lifecycle is relinked
+- preserved identity-resolution history when a resolved identity issue is reopened
+- historical Friendly Name changes with active-lifecycle synchronization
+- no duplicate activity rows for unchanged Friendly Name or repeated identity-reopen
+  operations
+- no retroactive fabrication of historical transitions that were never stored
+
+Validated:
+
+- Python device-activity and infrastructure-service regressions: PASS
+- PHP timeline aggregation regression: PASS
+- PHP history-preservation regression: PASS
+- timeline-page JavaScript regression and syntax validation: PASS
+- repository `git diff --check`: PASS
+- guarded live deployment with pre-deployment hash verification and rollback backup:
+  PASS
+- live PHP and Python syntax validation: PASS
+- live `device_activity_events` table and service-status trigger initialization: PASS
+- live GUI multi-source timeline rendering: PASS
+- live newest-first ordering: PASS
+- live Activity Timeline -> Device Details navigation: PASS
+
+Related v2.9 commits:
+
+- `ec36c6c` — `feat: record device activity state changes`
+- `f0a4f65` — `feat: record service availability transitions`
+- `dd4ce35` — `feat: add device activity timeline API`
+- `bcc4205` — `fix: map edited note history in timeline`
+- `0067a62` — `feat: add device activity timeline page`
+- `d93ddfd` — `fix: preserve device timeline history`
+
+The guarded live deployment retained rollback backup:
+
+`/root/dm-bl002-predeploy-20260912-122105-85254`
 
 ## Next step
 
-Begin design and implementation of `DM-BL-002` — Device activity and identity
-timeline — as the first v2.9 feature. Inspect existing lifecycle, identity-event,
-service-discovery and targeted-scan data sources before changing code.
+Begin `DM-BL-004` — OPNsense/Unbound hostname enrichment. First inspect the
+existing OPNsense/Unbound configuration and current hostname-source precedence
+without changing runtime behaviour.
