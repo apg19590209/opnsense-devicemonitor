@@ -27,19 +27,6 @@ Constraints:
 - preserve existing device and identity-event history
 
 
-### DM-BL-003 — Infrastructure-service change alerts
-
-Notify on meaningful verified infrastructure-service transitions, such as a new
-service appearing, a previously verified service disappearing, or an
-infrastructure role changing.
-
-Constraints:
-
-- use existing protocol-specific evidence rules
-- avoid noisy raw port-change alerts
-- preserve bounded scanning and existing single-host Nmap constraints
-
-
 ### DM-BL-004 — OPNsense/Unbound hostname enrichment
 
 **Description:** Investigate and, where the data is sufficiently authoritative

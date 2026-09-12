@@ -18,30 +18,21 @@ Primary deployment target:
 
 OPNsense 26.7.2_2
 
-Latest completed v2.9 feature commit:
+Latest completed v2.9 implementation commit:
 
-`d93ddfd` — `fix: preserve device timeline history`
+`c00c41a` — `fix: include service metadata in transition alerts`
 
 
 ## Current objective
 
-`DM-BL-003` — Infrastructure-service change alerts — is the next active v2.9 task.
+`DM-BL-003` — Infrastructure-service change alerts — is complete, deployed and
+validated live on OPNsense.
 
-**Description:** Add notifications for meaningful verified infrastructure-service
-changes, such as a newly verified service appearing, a previously verified
-service becoming unavailable, or a verified infrastructure role changing.
-Use the existing protocol-specific evidence rules and the service-transition
-history added by DM-BL-002. Preserve bounded scanning and the existing
-single-host Nmap constraints.
+No new v2.9 implementation task is active. Select the next backlog item only
+after this closure update is committed.
 
-**Benefit:** Surfaces operationally important service changes without requiring
-manual inspection of the Infrastructure Services page or generating noisy raw
-port-change alerts. This should make failures and unexpected service changes
-easier to notice while keeping notifications tied to evidence Device Monitor
-already trusts.
-
-`DM-BL-004` — OPNsense/Unbound hostname enrichment — is deferred for later
-because Unbound is not currently used in this environment.
+`DM-BL-004` — OPNsense/Unbound hostname enrichment — remains deferred because
+Unbound is not currently used in this environment.
 
 ## Previously completed
 
@@ -447,9 +438,9 @@ Release-facing metadata and documentation have been reviewed and corrected.
 ## Product backlog
 
 - `PRODUCT_BACKLOG.md` remains the authoritative list of deferred Device Monitor work.
-- `DM-BL-002` is complete and has been removed from the open backlog.
-- `DM-BL-004` has moved from backlog to the active task in this file.
-- Open backlog items are now `DM-BL-001`, `DM-BL-003`, `DM-BL-005`,
+- `DM-BL-002` and `DM-BL-003` are complete and have been removed from the open backlog.
+- `DM-BL-004` remains deferred because Unbound is not used in this environment.
+- Open backlog items are now `DM-BL-001`, `DM-BL-004`, `DM-BL-005`,
   `DM-BL-006` and `DM-BL-007`.
 - Architectural constraints remain in `DECISIONS.md`; environment facts remain
   in `SYSTEM_MAP.md`.
@@ -549,7 +540,7 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - Natural GUI validation of a real `return_pending` device remains deferred until
   one occurs; regression coverage for that workflow passes.
 - `PRODUCT_BACKLOG.md` remains authoritative for deferred work; open items are
-  `DM-BL-001`, `DM-BL-003`, `DM-BL-005`, `DM-BL-006` and `DM-BL-007`.
+  `DM-BL-001`, `DM-BL-004`, `DM-BL-005`, `DM-BL-006` and `DM-BL-007`.
 
 ## v2.9 development — DM-BL-002 complete
 
@@ -600,9 +591,69 @@ The guarded live deployment retained rollback backup:
 
 `/root/dm-bl002-predeploy-20260912-122105-85254`
 
+## v2.9 development — DM-BL-003 complete
+
+`DM-BL-003` — Infrastructure-service change alerts — is implemented, deployed
+and validated live on OPNsense.
+
+Implemented:
+
+- persistent independent high-water marks for `device_services` and
+  `device_activity_events`, seeded to current maxima on upgrade so historical
+  rows do not generate an alert flood
+- trusted alert candidates only from `verified` or `authoritative`
+  infrastructure-service evidence
+- configurable email controls for newly verified services, established services
+  becoming unavailable, and unavailable services recovering
+- generic `SERVICE_CHANGED` events retained as history-only in this version
+- batched infrastructure-service email helper using the existing Device Monitor
+  email transport
+- non-blocking `flock` serialization for service-alert processing
+- retry-safe cursor advancement that retains selected events after failed
+  delivery while allowing safe-prefix housekeeping
+- Recent Service Changes on the existing Infrastructure Services page
+- History links from Recent Service Changes to the per-device Activity Timeline
+- transition alert metadata now carries current trusted confidence, product and
+  version values into the email payload
+
+Validated:
+
+- focused service-alert regression suite: PASS
+- real Unix `flock` regression in GitHub Actions: PASS
+- GitHub Actions run `34675820735`: PASS
+- Recent Service Changes GitHub Actions run `34677469500`: PASS
+- metadata-fix GitHub Actions run `34679430429`: PASS
+- guarded initial live deployment: PASS
+- initial live `service_alert_state` cursor seeded to source maxima `3282,16`: PASS
+- live Infrastructure Services Recent Service Changes rendering: PASS
+- live Recent Service Changes -> Activity Timeline navigation: PASS
+- live Settings email controls and persisted configuration: PASS
+- direct service-alert helper delivery through configured sendmail transport: PASS
+- guarded live orchestration replay selected exactly one real
+  `SERVICE_AVAILABLE` event and returned the cursor to `3282,16`: PASS
+- post-fix recovery email displayed `Confidence: verified`, `Product: SMB` and
+  `Version: max 3.1.1`: PASS
+- no known DM-BL-003 implementation defect remains
+
+Related v2.9 commits:
+
+- `e74ce03` — `feat: add infrastructure service alert cursor state`
+- `2f5d889` — `feat: read pending infrastructure service alerts`
+- `c786ada` — `feat: add infrastructure service alert filtering`
+- `ae2ded5` — `feat: configure infrastructure service alerts`
+- `1fab4e8` — `feat: add infrastructure service alert email helper`
+- `44a681b` — `feat: process infrastructure service alerts`
+- `0f12c25` — `test: cover infrastructure service alert processing`
+- `63f2c6d` — `ci: enable v2.9 development validation`
+- `b0be04a` — `feat: show recent infrastructure service changes`
+- `c00c41a` — `fix: include service metadata in transition alerts`
+
+Guarded live rollback backups retained:
+
+- `/root/dm-bl003-predeploy-20260912-162016-14325`
+- `/root/dm-bl003-metadata-predeploy-20260912-170019-72771`
+
 ## Next step
 
-Begin design and implementation of `DM-BL-003` — Infrastructure-service change
-alerts. First inspect the existing notification path and current
-`device_activity_events` service-transition records without changing runtime
-behaviour.
+Select the next v2.9 backlog item before beginning implementation. `DM-BL-004`
+remains deferred because Unbound is not used in the current environment.
