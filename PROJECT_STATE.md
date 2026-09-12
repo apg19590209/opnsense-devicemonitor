@@ -25,11 +25,21 @@ Latest completed v2.9 implementation commit:
 
 ## Current objective
 
-`DM-BL-003` — Infrastructure-service change alerts — is complete, deployed and
-validated live on OPNsense.
+`DM-BL-001` — User-confirmed physical-device identity grouping — is the active
+v2.9 task.
 
-No new v2.9 implementation task is active. Select the next backlog item only
-after this closure update is committed.
+**Description:** Add an explicit user-controlled physical-device grouping layer
+above existing MAC identities so multiple legitimate MAC addresses can be
+identified as belonging to the same physical device.
+
+**Benefit:** Reduces false interpretation of legitimate multiple MAC identities
+while preserving the exact MAC, lifecycle, identity-event and activity history
+already recorded by Device Monitor.
+
+**Current design:** Grouping is additive only. Existing device rows, lifecycle
+ownership, returning-device resolution and identity-conflict detection remain
+authoritative and are not merged or rewritten. Membership changes are auditable
+and reversible.
 
 `DM-BL-004` — OPNsense/Unbound hostname enrichment — remains deferred because
 Unbound is not currently used in this environment.
@@ -455,8 +465,8 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - `PRODUCT_BACKLOG.md` remains the authoritative list of deferred Device Monitor work.
 - `DM-BL-002` and `DM-BL-003` are complete and have been removed from the open backlog.
 - `DM-BL-004` remains deferred because Unbound is not used in this environment.
-- Open backlog items are now `DM-BL-001`, `DM-BL-004`, `DM-BL-005`,
-  `DM-BL-006` and `DM-BL-007`.
+- `DM-BL-001` is now the active v2.9 task and has been removed from the open backlog.
+- Open backlog items are now `DM-BL-004`, `DM-BL-005`, `DM-BL-006` and `DM-BL-007`.
 - Architectural constraints remain in `DECISIONS.md`; environment facts remain
   in `SYSTEM_MAP.md`.
 
@@ -670,5 +680,6 @@ Guarded live rollback backups retained:
 
 ## Next step
 
-Select the next v2.9 backlog item before beginning implementation. `DM-BL-004`
-remains deferred because Unbound is not used in the current environment.
+Begin `DM-BL-001` with the smallest safe implementation unit: add the
+physical-device grouping schema and read-only model access without changing
+existing discovery, lifecycle, identity or UI behaviour.
