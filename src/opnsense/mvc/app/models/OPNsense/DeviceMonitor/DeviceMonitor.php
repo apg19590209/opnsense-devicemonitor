@@ -624,6 +624,486 @@ class DeviceMonitor
         return $lifecycles;
     }
 
+    /**
+     * Return a normalized chronological activity timeline for one device.
+     *
+     * Existing authoritative history tables remain authoritative. This method
+     * only aggregates and normalizes them; it does not duplicate history.
+     */
+    public function getDeviceTimeline($mac, $limit = 200)
+    {
+        $db = $this->getDb();
+        $mac = strtolower(trim((string)$mac));
+        $limit = max(1, min(500, (int)$limit));
+
+        if ($mac === '') {
+            $db->close();
+            return [];
+        }
+
+        $events = [];
+
+        $append = function (
+            $source,
+            $eventType,
+            $timestamp,
+            $lifecycleId,
+            $recordId,
+            array $data = []
+        ) use (&$events) {
+            $timestamp = trim((string)$timestamp);
+
+            if ($timestamp === '') {
+                return;
+            }
+
+            $events[] = [
+                'source' => (string)$source,
+                'event_type' => (string)$eventType,
+                'occurred_at_utc' => $timestamp,
+                'occurred_at' => self::formatUtcForDisplay($timestamp),
+                'lifecycle_id' =>
+                    $lifecycleId === null || $lifecycleId === ''
+                        ? null
+                        : (int)$lifecycleId,
+                'record_id' => (int)$recordId,
+                'data' => $data
+            ];
+        };
+
+        $tableExists = static function ($db, $table) {
+            $name = \SQLite3::escapeString((string)$table);
+
+            return (int)$db->querySingle(
+                "SELECT COUNT(*) FROM sqlite_master " .
+                "WHERE type='table' AND name='" . $name . "'"
+            ) === 1;
+        };
+
+        /*
+         * Lifecycle start/archive history.
+         *
+         * last_seen is intentionally not emitted as an activity event.
+         */
+        if ($tableExists($db, 'device_lifecycles')) {
+            $stmt = $db->prepare(
+                'SELECT id, first_seen, archived_at, created_at ' .
+                'FROM device_lifecycles ' .
+                'WHERE lower(trim(mac)) = :mac ' .
+                'ORDER BY MAX(' .
+                "COALESCE(archived_at, ''), " .
+                "COALESCE(first_seen, created_at, '')" .
+                ') DESC, id DESC LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $startedAt = trim(
+                        (string)($row['first_seen'] ?? '')
+                    );
+
+                    if ($startedAt === '') {
+                        $startedAt =
+                            (string)($row['created_at'] ?? '');
+                    }
+
+                    $append(
+                        'lifecycle',
+                        'LIFECYCLE_STARTED',
+                        $startedAt,
+                        $row['id'],
+                        $row['id']
+                    );
+
+                    if (
+                        trim(
+                            (string)($row['archived_at'] ?? '')
+                        ) !== ''
+                    ) {
+                        $append(
+                            'lifecycle',
+                            'LIFECYCLE_ARCHIVED',
+                            $row['archived_at'],
+                            $row['id'],
+                            $row['id']
+                        );
+                    }
+                }
+            }
+        }
+
+        /*
+         * Timestamped lifecycle note history.
+         *
+         * Backfilled "migrated" versions are intentionally hidden because
+         * they do not represent a user action at the migration timestamp.
+         */
+        if (
+            $tableExists($db, 'device_comment_versions') &&
+            $tableExists($db, 'device_lifecycles')
+        ) {
+            $stmt = $db->prepare(
+                'SELECT v.id, v.comment_id, v.lifecycle_id, v.comment, ' .
+                'v.action, v.created_at ' .
+                'FROM device_comment_versions v ' .
+                'JOIN device_lifecycles l ON l.id = v.lifecycle_id ' .
+                'WHERE lower(trim(l.mac)) = :mac ' .
+                "AND lower(trim(COALESCE(v.action, ''))) <> 'migrated' " .
+                'ORDER BY v.created_at DESC, v.id DESC LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $action = strtolower(trim(
+                        (string)($row['action'] ?? '')
+                    ));
+
+                    if ($action === 'created') {
+                        $eventType = 'NOTE_CREATED';
+                    } elseif ($action === 'updated') {
+                        $eventType = 'NOTE_UPDATED';
+                    } elseif (
+                        $action === 'deleted' ||
+                        $action === 'archived'
+                    ) {
+                        $eventType = 'NOTE_ARCHIVED';
+                    } else {
+                        $eventType = 'NOTE_CHANGED';
+                    }
+
+                    $append(
+                        'note',
+                        $eventType,
+                        $row['created_at'] ?? '',
+                        $row['lifecycle_id'] ?? null,
+                        $row['id'],
+                        [
+                            'comment_id' =>
+                                (int)$row['comment_id'],
+                            'action' =>
+                                (string)($row['action'] ?? ''),
+                            'comment' =>
+                                (string)($row['comment'] ?? '')
+                        ]
+                    );
+                }
+            }
+        }
+
+        /*
+         * Device state/service transitions persisted by the scanner.
+         */
+        if ($tableExists($db, 'device_activity_events')) {
+            $stmt = $db->prepare(
+                'SELECT id, lifecycle_id, event_type, occurred_at, ' .
+                'old_value, new_value, details ' .
+                'FROM device_activity_events ' .
+                'WHERE lower(trim(mac)) = :mac ' .
+                'ORDER BY occurred_at DESC, id DESC LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $append(
+                        'activity',
+                        $row['event_type'] ?? 'ACTIVITY_CHANGED',
+                        $row['occurred_at'] ?? '',
+                        $row['lifecycle_id'] ?? null,
+                        $row['id'],
+                        [
+                            'old_value' =>
+                                $row['old_value'] ?? null,
+                            'new_value' =>
+                                $row['new_value'] ?? null,
+                            'details' =>
+                                $row['details'] ?? null
+                        ]
+                    );
+                }
+            }
+        }
+
+        /*
+         * Identity anomaly detection and resolution.
+         */
+        if ($tableExists($db, 'device_identity_events')) {
+            $columns = [];
+            $columnResult = $db->query(
+                'PRAGMA table_info(device_identity_events)'
+            );
+
+            while (
+                $columnResult &&
+                ($column = $columnResult->fetchArray(SQLITE3_ASSOC))
+            ) {
+                $columns[$column['name']] = true;
+            }
+
+            $lifecycleSelect =
+                isset($columns['lifecycle_id'])
+                    ? 'lifecycle_id'
+                    : 'NULL AS lifecycle_id';
+
+            $stmt = $db->prepare(
+                'SELECT id, ' . $lifecycleSelect . ', ' .
+                'event_type, severity, detected_at, ip, other_ip, ' .
+                'other_mac, interface, other_interface, details, ' .
+                'resolved_at ' .
+                'FROM device_identity_events ' .
+                'WHERE lower(trim(mac)) = :mac ' .
+                'ORDER BY MAX(' .
+                "COALESCE(resolved_at, ''), " .
+                "COALESCE(detected_at, '')" .
+                ') DESC, id DESC LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $identityData = [
+                        'severity' =>
+                            (string)($row['severity'] ?? ''),
+                        'ip' => $row['ip'] ?? null,
+                        'other_ip' => $row['other_ip'] ?? null,
+                        'other_mac' => $row['other_mac'] ?? null,
+                        'interface' => $row['interface'] ?? null,
+                        'other_interface' =>
+                            $row['other_interface'] ?? null,
+                        'details' => $row['details'] ?? null
+                    ];
+
+                    $append(
+                        'identity',
+                        $row['event_type'] ?? 'IDENTITY_CHANGED',
+                        $row['detected_at'] ?? '',
+                        $row['lifecycle_id'] ?? null,
+                        $row['id'],
+                        $identityData
+                    );
+
+                    if (
+                        trim(
+                            (string)($row['resolved_at'] ?? '')
+                        ) !== ''
+                    ) {
+                        $resolvedData = $identityData;
+                        $resolvedData['identity_event_type'] =
+                            (string)($row['event_type'] ?? '');
+
+                        $append(
+                            'identity',
+                            'IDENTITY_RESOLVED',
+                            $row['resolved_at'],
+                            $row['lifecycle_id'] ?? null,
+                            $row['id'],
+                            $resolvedData
+                        );
+                    }
+                }
+            }
+        }
+
+        /*
+         * Targeted Nmap result history.
+         */
+        if ($tableExists($db, 'nmap_scan_history')) {
+            $columns = [];
+            $columnResult = $db->query(
+                'PRAGMA table_info(nmap_scan_history)'
+            );
+
+            while (
+                $columnResult &&
+                ($column = $columnResult->fetchArray(SQLITE3_ASSOC))
+            ) {
+                $columns[$column['name']] = true;
+            }
+
+            $lifecycleSelect =
+                isset($columns['lifecycle_id'])
+                    ? 'lifecycle_id'
+                    : 'NULL AS lifecycle_id';
+
+            $osSelect =
+                isset($columns['os_hint'])
+                    ? 'os_hint'
+                    : 'NULL AS os_hint';
+
+            $portCountSelect =
+                isset($columns['open_port_count'])
+                    ? 'open_port_count'
+                    : 'NULL AS open_port_count';
+
+            $stmt = $db->prepare(
+                'SELECT id, ' . $lifecycleSelect . ', ' .
+                'mac, ip, scan_type, started_at, finished_at, ' .
+                'success, error, ' .
+                $osSelect . ', ' .
+                $portCountSelect . ' ' .
+                'FROM nmap_scan_history ' .
+                'WHERE lower(trim(mac)) = :mac ' .
+                'ORDER BY COALESCE(finished_at, started_at) DESC, ' .
+                'id DESC LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $timestamp = trim(
+                        (string)($row['finished_at'] ?? '')
+                    );
+
+                    if ($timestamp === '') {
+                        $timestamp =
+                            (string)($row['started_at'] ?? '');
+                    }
+
+                    $success =
+                        $row['success'] === null
+                            ? null
+                            : (int)$row['success'];
+
+                    $eventType =
+                        $success === 0
+                            ? 'NMAP_SCAN_FAILED'
+                            : 'NMAP_SCAN_COMPLETED';
+
+                    $append(
+                        'scan',
+                        $eventType,
+                        $timestamp,
+                        $row['lifecycle_id'] ?? null,
+                        $row['id'],
+                        [
+                            'ip' => $row['ip'] ?? null,
+                            'scan_type' =>
+                                $row['scan_type'] ?? null,
+                            'success' => $success,
+                            'error' => $row['error'] ?? null,
+                            'os_hint' =>
+                                $row['os_hint'] ?? null,
+                            'open_port_count' =>
+                                $row['open_port_count'] === null
+                                    ? null
+                                    : (int)$row['open_port_count']
+                        ]
+                    );
+                }
+            }
+        }
+
+        /*
+         * Initial verified service discovery is already retained by
+         * device_services.first_detected. Only stable endpoint identity
+         * fields are emitted here because status/product/version are mutable
+         * current-state fields rather than historical snapshots.
+         */
+        if ($tableExists($db, 'device_services')) {
+            $stmt = $db->prepare(
+                'SELECT id, ip, interface, service_type, port, protocol, ' .
+                'detection_method, first_detected ' .
+                'FROM device_services ' .
+                'WHERE lower(trim(mac)) = :mac ' .
+                'ORDER BY first_detected DESC, id DESC LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $append(
+                        'service',
+                        'SERVICE_DISCOVERED',
+                        $row['first_detected'] ?? '',
+                        null,
+                        $row['id'],
+                        [
+                            'ip' => $row['ip'] ?? null,
+                            'interface' =>
+                                $row['interface'] ?? null,
+                            'service_type' =>
+                                $row['service_type'] ?? null,
+                            'port' =>
+                                isset($row['port'])
+                                    ? (int)$row['port']
+                                    : null,
+                            'protocol' =>
+                                $row['protocol'] ?? null,
+                            'detection_method' =>
+                                $row['detection_method'] ?? null
+                        ]
+                    );
+                }
+            }
+        }
+
+        $db->close();
+
+        usort($events, static function ($a, $b) {
+            $timeCompare = strcmp(
+                (string)$b['occurred_at_utc'],
+                (string)$a['occurred_at_utc']
+            );
+
+            if ($timeCompare !== 0) {
+                return $timeCompare;
+            }
+
+            $recordCompare =
+                (int)$b['record_id'] <=>
+                (int)$a['record_id'];
+
+            if ($recordCompare !== 0) {
+                return $recordCompare;
+            }
+
+            return strcmp(
+                (string)$a['source'],
+                (string)$b['source']
+            );
+        });
+
+        return array_slice($events, 0, $limit);
+    }
+
     public function getDeviceLifecycleState($mac)
     {
         $db = $this->getDb();

@@ -172,6 +172,46 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
+     * Return the chronological activity timeline for one device
+     * GET /api/devicemonitor/devices/timeline
+     */
+    public function timelineAction()
+    {
+        $mac = strtolower(trim(
+            (string)$this->request->get('mac', 'string', '')
+        ));
+
+        if (
+            !preg_match(
+                '/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/',
+                $mac
+            )
+        ) {
+            return [
+                'result' => 'failed',
+                'error' => 'Valid MAC address required'
+            ];
+        }
+
+        $limit = (int)$this->request->get(
+            'limit',
+            'int',
+            200
+        );
+        $limit = max(1, min(500, $limit));
+
+        $model = new DeviceMonitor();
+        $rows = $model->getDeviceTimeline($mac, $limit);
+
+        return [
+            'result' => 'ok',
+            'mac' => $mac,
+            'rows' => $rows,
+            'rowCount' => count($rows)
+        ];
+    }
+
+    /**
      * List comments for one device lifecycle
      * GET /api/devicemonitor/devices/comments
      */
