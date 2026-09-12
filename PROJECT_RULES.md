@@ -63,65 +63,48 @@ Consequential actions include, where relevant:
 
 Clearly label command blocks as either:
 
-- Windows PowerShell only
-- OPNsense `[sh]` shell only
+- Git Bash — local Windows repository work
+- OPNsense `[sh]` — direct OPNsense shell work
 
 Do not mix syntax between the two environments.
 
-## Command output capture
+Use Git Bash as the default local shell for this project. Use PowerShell only
+when a task specifically requires PowerShell.
 
-### OPNsense shell
+## Command output and file-transfer workflow
 
-For commands whose output needs to be returned for review, use this standard pattern:
+Minimise long terminal copy/paste operations.
 
-    LOG=/tmp/lastblock.txt
-    rm -f "$LOG"
+- For short output, return only the specific lines needed.
+- For long inspections, diffs, logs or audit output, write the complete result
+  to a local Windows file under `C:\Users\apg19\Downloads` and have the user
+  attach that file to ChatGPT.
+- Use `GIT-BASH_...` filenames for output produced from the local repository.
+- Use `OPNSENSE_...` filenames for information obtained from OPNsense, even when
+  the command is launched remotely from Git Bash.
+- Prefer gathering OPNsense information remotely from Git Bash over asking the
+  user to work directly in the OPNsense console.
+- Where practical, redirect remote SSH output directly into the local Windows
+  output file rather than creating an intermediate file on OPNsense.
+- Group safe read-only inspections when this reduces user interaction.
+- Minimise SSH authentication prompts by batching related remote work into one
+  SSH session wherever practical.
+- Avoid giant command blocks intended for terminal paste. For substantial edits
+  or deployment logic, provide a downloadable script instead.
+- Print only the output filename and a small summary or line count in the
+  terminal when the full result is intended to be attached.
+- Prefer file attachments as input to ChatGPT for large outputs rather than
+  asking the user to copy and paste hundreds of lines.
+- Do not repeat large inspections already captured and reviewed unless relevant
+  state has changed.
+- Keep direct interactive OPNsense-console work to the minimum needed.
 
-    {
-        # commands for this step
-    } >"$LOG" 2>&1
+For complex read-only OPNsense checks launched from Git Bash, prefer one SSH
+session using `/bin/sh -s` and redirect the result to a local `OPNSENSE_...`
+file.
 
-    cat "$LOG"
-
-This is the default OPNsense result-capture format.
-
-It ensures:
-
-- previous output is removed before each step
-- stdout and stderr are captured together
-- only the current result needs to be copied back
-- nano is not required for ordinary result capture
-
-Do not add unnecessary trailing `Done.` markers.
-
-### Windows PowerShell
-
-For commands whose output needs to be returned for review, use this standard pattern:
-
-    $Log = "$env:TEMP\lastblock.txt"
-    Remove-Item $Log -Force -ErrorAction SilentlyContinue
-
-    & {
-        # commands for this step
-    } *> $Log
-
-    if ((Test-Path $Log) -and (Get-Item $Log).Length -gt 0) {
-        notepad.exe $Log
-    } else {
-        Write-Host "No output captured."
-    }
-
-This is the default PowerShell result-capture format.
-
-It ensures:
-
-- previous output is removed before each step
-- stdout and stderr are captured together
-- the current result opens directly in Notepad
-- only the current result needs to be copied back
-
-Do not use `notepad.exe /newwindow`.
-Do not add unnecessary trailing `Done.` markers.
+When Bourne shell syntax is required remotely, explicitly invoke `/bin/sh`;
+do not rely on the OPNsense login shell, which is `csh`.
 
 ## Response discipline
 
@@ -159,6 +142,37 @@ For shell work, always provide the actual command block immediately after identi
 For Cline work, always provide the complete paste-ready Cline instruction immediately after recommending that Cline perform the task.
 
 Never tell the user merely what should be done next when you can instead provide the exact command or instruction to do it.
+
+## Feature design and implementation gate
+
+Before implementing a new feature or backlog item:
+
+1. State a concise Description of what the feature will do.
+2. State the Benefit — what practical problem it solves or improvement it
+   provides.
+3. For user-facing features, define where the information or actions belong in
+   the existing UI and how the user will interact with them before changing
+   code.
+4. Check whether the feature is relevant to the current environment and whether
+   it can be validated against real data or behaviour. If it cannot currently
+   provide useful local validation, consider deferring it rather than
+   implementing it speculatively.
+5. Inspect the existing source, configuration, database/history and live
+   behaviour read-only where practical before designing the change.
+6. Prefer extending an existing page, workflow, API or data source when that
+   produces a clearer design than creating another page or parallel mechanism.
+7. Identify which existing architecture and historical data can be reused and
+   what genuinely new state, API or UI is required.
+8. Present the proposed behaviour and UI placement for user agreement before
+   implementation when the feature materially changes the user experience.
+9. Implement only after the design is grounded in current evidence, then
+   proceed incrementally with the normal validation and deployment rules.
+
+For backlog and project-state entries, retain Description and Benefit so the
+original purpose of a feature remains clear when work is resumed later.
+
+Do not start coding merely because an item is next in the backlog; first
+establish that the feature is useful, appropriately placed and testable.
 
 ## Development safety
 
