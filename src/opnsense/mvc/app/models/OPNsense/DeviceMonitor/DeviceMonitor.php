@@ -774,7 +774,10 @@ class DeviceMonitor
 
                     if ($action === 'created') {
                         $eventType = 'NOTE_CREATED';
-                    } elseif ($action === 'updated') {
+                    } elseif (
+                        $action === 'edited' ||
+                        $action === 'updated'
+                    ) {
                         $eventType = 'NOTE_UPDATED';
                     } elseif (
                         $action === 'deleted' ||

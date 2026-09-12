@@ -221,7 +221,7 @@ check(
         "action, created_at) VALUES " .
         "(1, 1, 1, 'Initial note', 'created', " .
         "'2026-09-12 08:15:00'), " .
-        "(2, 1, 1, 'Updated note', 'updated', " .
+        "(2, 1, 1, 'Updated note', 'edited', " .
         "'2026-09-12 08:45:00'), " .
         "(3, 1, 1, 'Updated note', 'deleted', " .
         "'2026-09-12 08:50:00')"
