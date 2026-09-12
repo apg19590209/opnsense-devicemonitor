@@ -396,3 +396,37 @@ A protocol-level SSH disconnect produces the normal `Received disconnect ...`
 log form instead, preventing the false authentication-failure evidence while
 preserving SSH discovery, CrowdSec protection, existing service identity and
 history semantics.
+
+## 17. Physical-device grouping is an additive user-confirmed identity layer
+
+### Decision
+
+Physical-device grouping must exist as a separate layer above the existing
+MAC-based device and lifecycle model.
+
+Device Monitor must:
+
+- create grouping relationships only through an explicit user action
+- never automatically merge MAC identities
+- preserve each existing MAC identity, lifecycle, identity event and activity
+  history unchanged
+- allow a MAC to belong to at most one active physical-device group
+- retain previous membership records when a MAC is removed from a group rather
+  than destructively deleting that relationship
+- keep grouping reversible without rewriting historical device records
+- continue existing identity-conflict detection against the actual observed
+  MAC/IP evidence
+- continue requiring the existing `return_pending` lifecycle decision when a
+  previously known MAC returns
+- leave Hostwatch, scanning, Nmap and infrastructure-service discovery semantics
+  unchanged
+
+### Reason
+
+A single physical device may legitimately present multiple MAC addresses, such
+as separate wired and wireless interfaces or privacy-addressed interfaces.
+
+Representing that user-confirmed relationship is useful, but merging the
+underlying identities would destroy evidence and interfere with lifecycle and
+identity-conflict semantics. An additive, auditable grouping layer provides the
+association while preserving the existing authoritative history.
