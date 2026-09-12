@@ -41,6 +41,14 @@ ownership, returning-device resolution and identity-conflict detection remain
 authoritative and are not merged or rewritten. Membership changes are auditable
 and reversible.
 
+**Implementation status:** The first DM-BL-001 implementation unit is complete,
+deployed and live-validated. The additive `physical_devices` and
+`physical_device_memberships` schema, active-membership uniqueness protection
+and read-only `getPhysicalDeviceForMac()` model access are now present. No
+physical-device groups or memberships have been created and existing discovery,
+lifecycle, identity and UI behaviour remains unchanged. Implementation commit
+`4f866ba`; GitHub Actions run `34693021844`: PASS.
+
 `DM-BL-004` — OPNsense/Unbound hostname enrichment — remains deferred because
 Unbound is not currently used in this environment.
 
@@ -565,7 +573,7 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - Natural GUI validation of a real `return_pending` device remains deferred until
   one occurs; regression coverage for that workflow passes.
 - `PRODUCT_BACKLOG.md` remains authoritative for deferred work; open items are
-  `DM-BL-001`, `DM-BL-004`, `DM-BL-005`, `DM-BL-006` and `DM-BL-007`.
+  `DM-BL-004`, `DM-BL-005`, `DM-BL-006` and `DM-BL-007`.
 
 ## v2.9 development — DM-BL-002 complete
 
@@ -680,6 +688,8 @@ Guarded live rollback backups retained:
 
 ## Next step
 
-Begin `DM-BL-001` with the smallest safe implementation unit: add the
-physical-device grouping schema and read-only model access without changing
-existing discovery, lifecycle, identity or UI behaviour.
+Inspect the existing model/API write-action patterns for the next DM-BL-001
+unit: explicit user-confirmed physical-device creation, identity linking and
+membership removal. Preserve the additive model and existing lifecycle,
+identity, discovery and UI behaviour; make no write-path implementation change
+until that inspection is complete.
