@@ -258,6 +258,17 @@ def test_reader_filtering_and_global_gates():
             ("device_services", ids["trusted"])
         ]["alert_eligible"] is True
 
+        for activity_id in (
+            ids["changed"],
+            ids["unavailable"],
+            ids["recovered"],
+        ):
+            event = by_key[("device_activity_events", activity_id)]
+            assert event["alert_eligible"] is True
+            assert event["confidence"] == "verified"
+            assert event["product"] == "Test DNS"
+            assert event["version"] == "1.0"
+
         selected = module.select_service_alert_events(
             alert_config(),
             events,

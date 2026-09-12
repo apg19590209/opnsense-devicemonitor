@@ -4694,13 +4694,14 @@ def get_pending_service_alert_events(conn, limit_per_source=200):
 
     trusted_rows = conn.execute(
         """
-        SELECT mac, ip, interface, service_type, port, protocol, detection_method
+        SELECT mac, ip, interface, service_type, port, protocol,
+               detection_method, confidence, product, version
         FROM device_services
         WHERE LOWER(COALESCE(confidence, '')) IN ('verified', 'authoritative')
         """
     ).fetchall()
 
-    trusted_service_keys = {
+    trusted_service_metadata = {
         (
             (row[0] or '').strip().lower(),
             row[1] or '',
@@ -4709,7 +4710,11 @@ def get_pending_service_alert_events(conn, limit_per_source=200):
             int(row[4] or 0),
             row[5] or '',
             row[6] or '',
-        )
+        ): {
+            'confidence': row[7] or '',
+            'product': row[8] or '',
+            'version': row[9] or '',
+        }
         for row in trusted_rows
     }
 
@@ -4785,6 +4790,8 @@ def get_pending_service_alert_events(conn, limit_per_source=200):
             detection_method,
         )
 
+        service_metadata = trusted_service_metadata.get(service_key, {})
+
         events.append({
             'source': 'device_activity_events',
             'record_id': int(row[0]),
@@ -4800,7 +4807,10 @@ def get_pending_service_alert_events(conn, limit_per_source=200):
             'detection_method': detection_method,
             'old_value': row[5] or '',
             'new_value': row[6] or '',
-            'alert_eligible': service_key in trusted_service_keys,
+            'confidence': service_metadata.get('confidence', ''),
+            'product': service_metadata.get('product', ''),
+            'version': service_metadata.get('version', ''),
+            'alert_eligible': bool(service_metadata),
         })
 
     events.sort(key=lambda event: (
