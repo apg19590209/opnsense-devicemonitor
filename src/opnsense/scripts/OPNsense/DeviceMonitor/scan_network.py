@@ -4818,7 +4818,12 @@ def select_service_alert_events(config, events):
     SERVICE_CHANGED remains history-only in v1 because the current event does
     not by itself prove a material role change.
     """
-    if not config_bool(config.get('service_email_enabled', '0')):
+    if not (
+        config_bool(config.get('enabled', False))
+        and config_bool(config.get('email_enabled', False))
+        and config_bool(config.get('service_email_enabled', False))
+        and str(config.get('email_to') or '').strip()
+    ):
         return []
 
     enabled_types = {
@@ -4942,6 +4947,210 @@ def advance_service_alert_cursors(conn, plan):
     )
     conn.commit()
     return True
+
+def acquire_service_alert_lock():
+    """
+    Acquire the non-blocking process lock for service-alert delivery.
+
+    The lock file is persistent; flock ownership belongs to the open file
+    descriptor and is released automatically by the OS if the process exits.
+    """
+    lock_fd = None
+
+    try:
+        import errno
+        import fcntl
+        import os
+
+        lock_fd = os.open(
+            '/var/run/devicemonitor-service-alerts.lock',
+            os.O_CREAT | os.O_RDWR,
+            0o600,
+        )
+
+        try:
+            fcntl.flock(
+                lock_fd,
+                fcntl.LOCK_EX | fcntl.LOCK_NB,
+            )
+        except OSError as e:
+            if e.errno in (errno.EACCES, errno.EAGAIN):
+                os.close(lock_fd)
+                log(
+                    '[SERVICE-EMAIL] Alert processor already active; '
+                    'skipping this cycle'
+                )
+                return None
+            raise
+
+        return lock_fd
+
+    except Exception as e:
+        if lock_fd is not None:
+            try:
+                import os
+                os.close(lock_fd)
+            except Exception:
+                pass
+
+        log(f'[SERVICE-EMAIL] Unable to acquire alert lock: {e}')
+        return None
+
+
+def release_service_alert_lock(lock_fd):
+    """Release the service-alert process lock."""
+    if lock_fd is None:
+        return
+
+    try:
+        import fcntl
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+    except Exception as e:
+        log(f'[SERVICE-EMAIL] Unable to unlock alert processor: {e}')
+    finally:
+        try:
+            import os
+            os.close(lock_fd)
+        except Exception as e:
+            log(f'[SERVICE-EMAIL] Unable to close alert lock: {e}')
+
+
+def send_service_alert_email(events):
+    """Send one batched infrastructure-service alert without failing the scan."""
+    if not events:
+        return True
+
+    helper = (
+        '/usr/local/opnsense/scripts/OPNsense/'
+        'DeviceMonitor/notify_service_email.php'
+    )
+
+    try:
+        result = subprocess.run(
+            ['/usr/local/bin/php', helper],
+            input=json.dumps({'events': events}),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or '').strip()
+            log(
+                '[SERVICE-EMAIL] Failed: ' +
+                (detail[:500] if detail else f'exit {result.returncode}')
+            )
+            return False
+
+        try:
+            response = json.loads(result.stdout or '{}')
+        except (json.JSONDecodeError, TypeError):
+            log('[SERVICE-EMAIL] Failed: invalid helper response')
+            return False
+
+        status = response.get('result')
+        message = str(response.get('message') or '').strip()
+
+        if status == 'skipped':
+            log(
+                '[SERVICE-EMAIL] Skipped: ' +
+                (message if message else 'helper declined notification')
+            )
+            return False
+
+        if status != 'sent':
+            log(
+                '[SERVICE-EMAIL] Failed: unexpected helper result ' +
+                repr(status)
+            )
+            return False
+
+        log(
+            f'[SERVICE-EMAIL] Sent batched alert for '
+            f'{len(events)} infrastructure service event(s)'
+        )
+        return True
+
+    except subprocess.TimeoutExpired:
+        log('[SERVICE-EMAIL] Failed: email process timed out')
+        return False
+    except Exception as e:
+        log(f'[SERVICE-EMAIL] Failed: {e}')
+        return False
+
+
+def process_service_alerts(config):
+    """
+    Process pending infrastructure-service alerts without affecting scan success.
+
+    Cursor state is advanced over disabled or unselected rows so enabling alerts
+    later cannot replay old changes. Selected rows are retained for retry until
+    email delivery succeeds; only the safe prefix before the first selected row
+    may advance after a delivery failure.
+
+    A non-blocking process lock serialises this read/send/cursor sequence so
+    overlapping full scans cannot normally deliver the same pending alert.
+    """
+    lock_fd = acquire_service_alert_lock()
+
+    if lock_fd is None:
+        return True
+
+    try:
+        init_db()
+
+        conn = sqlite3.connect(DB_FILE)
+        try:
+            events = get_pending_service_alert_events(conn)
+        finally:
+            conn.close()
+
+        if not events:
+            return True
+
+        selected = select_service_alert_events(config, events)
+        delivery_succeeded = False
+
+        if selected:
+            delivery_succeeded = send_service_alert_email(selected)
+
+        plan = plan_service_alert_cursor_advance(
+            events,
+            selected,
+            delivery_succeeded=delivery_succeeded,
+        )
+
+        conn = sqlite3.connect(DB_FILE)
+        try:
+            advanced = advance_service_alert_cursors(conn, plan)
+        finally:
+            conn.close()
+
+        if selected and not delivery_succeeded:
+            log(
+                '[SERVICE-EMAIL] Delivery failed; selected events retained '
+                'for retry'
+            )
+            return False
+
+        if selected:
+            log(
+                f'[SERVICE-EMAIL] Processed {len(selected)} selected '
+                'infrastructure service event(s)'
+            )
+        elif advanced:
+            log(
+                '[SERVICE-EMAIL] No selected alerts; advanced cursor state'
+            )
+
+        return True
+
+    except Exception as e:
+        log(f'[SERVICE-EMAIL] Processing failed: {e}')
+        return False
+
+    finally:
+        release_service_alert_lock(lock_fd)
 
 def config_bool(value, default=False):
     """Convert configuration values such as 0/1 strings safely to bool."""
@@ -6257,6 +6466,10 @@ def full_scan():
     # Infrastructure-service discovery is intentionally rate-limited.
     # It must not add DHCP/DNS probes to every normal monitoring cycle.
     run_scheduled_service_discovery()
+
+    # Process pending service alerts every full scan. Discovery is hourly, but
+    # failed delivery retries and cursor housekeeping should not wait an hour.
+    process_service_alerts(config)
 
     # 4. Notifications filtered by VLAN
     log(f"New devices: {len(new_devices)}, Online: {online}/{total}")
