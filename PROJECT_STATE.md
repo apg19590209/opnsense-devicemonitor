@@ -41,13 +41,16 @@ ownership, returning-device resolution and identity-conflict detection remain
 authoritative and are not merged or rewritten. Membership changes are auditable
 and reversible.
 
-**Implementation status:** The first DM-BL-001 implementation unit is complete,
-deployed and live-validated. The additive `physical_devices` and
-`physical_device_memberships` schema, active-membership uniqueness protection
-and read-only `getPhysicalDeviceForMac()` model access are now present. No
-physical-device groups or memberships have been created and existing discovery,
-lifecycle, identity and UI behaviour remains unchanged. Implementation commit
-`4f866ba`; GitHub Actions run `34693021844`: PASS.
+**Implementation status:** The first two DM-BL-001 implementation units are
+complete, deployed and live-validated. The additive `physical_devices` and
+`physical_device_memberships` schema, active-membership uniqueness protection,
+read-only `getPhysicalDeviceForMac()` access, and explicit model operations to
+create a physical-device group, link a known identity and soft-remove a
+membership are now present. Removed memberships retain their history. No
+physical-device groups or memberships have been created on the production
+database and existing discovery, lifecycle, identity and UI behaviour remains
+unchanged. Read-model commit `4f866ba`; write-model commit `f6d547f`; GitHub
+Actions runs `34693021844` and `34693933012`: PASS.
 
 `DM-BL-004` — OPNsense/Unbound hostname enrichment — remains deferred because
 Unbound is not currently used in this environment.
@@ -688,8 +691,7 @@ Guarded live rollback backups retained:
 
 ## Next step
 
-Inspect the existing model/API write-action patterns for the next DM-BL-001
-unit: explicit user-confirmed physical-device creation, identity linking and
-membership removal. Preserve the additive model and existing lifecycle,
-identity, discovery and UI behaviour; make no write-path implementation change
-until that inspection is complete.
+Inspect the existing Devices API routing, POST-action and regression-test
+patterns for the next DM-BL-001 unit, then expose the validated physical-device
+model operations through explicit API actions only. Do not add Device Details
+UI controls until the API layer is separately implemented and validated.
