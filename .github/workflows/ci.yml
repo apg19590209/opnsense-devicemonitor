@@ -783,6 +783,11 @@ jobs:
           set -eu
           php tests/test_physical_device_api.php
 
+      - name: Validate physical-device UI
+        run: |
+          set -eu
+          node tests/test_physical_device_ui.js
+
       - name: Validate AdGuard DNS rewrite integration
         run: |
           set -eu
