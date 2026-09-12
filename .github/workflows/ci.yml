@@ -778,6 +778,11 @@ jobs:
           set -eu
           python3 tests/test_service_alert_processing.py
 
+      - name: Validate physical-device API
+        run: |
+          set -eu
+          php tests/test_physical_device_api.php
+
       - name: Validate AdGuard DNS rewrite integration
         run: |
           set -eu

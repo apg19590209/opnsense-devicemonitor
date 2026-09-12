@@ -212,6 +212,165 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
+     * Return the active physical-device grouping for one MAC address.
+     * GET /api/devicemonitor/devices/physicaldevice
+     */
+    public function physicaldeviceAction()
+    {
+        $mac = strtolower(trim(
+            (string)$this->request->get('mac', 'string', '')
+        ));
+
+        if (
+            !preg_match(
+                '/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/',
+                $mac
+            )
+        ) {
+            return [
+                'result' => 'failed',
+                'error' => 'Valid MAC address required'
+            ];
+        }
+
+        $model = new DeviceMonitor();
+
+        return [
+            'result' => 'ok',
+            'mac' => $mac,
+            'physical_device' => $model->getPhysicalDeviceForMac($mac)
+        ];
+    }
+
+    /**
+     * Create a physical-device group with one explicitly selected known MAC.
+     * POST /api/devicemonitor/devices/createphysicaldevice
+     */
+    public function createphysicaldeviceAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed'];
+        }
+
+        $name = trim((string)$this->request->getPost('name'));
+        $mac = strtolower(trim(
+            (string)$this->request->getPost('mac')
+        ));
+
+        if (
+            $name === '' ||
+            !preg_match(
+                '/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/',
+                $mac
+            )
+        ) {
+            return [
+                'result' => 'failed',
+                'error' => 'Physical device name and valid MAC address required'
+            ];
+        }
+
+        $model = new DeviceMonitor();
+        $physicalDeviceId = $model->createPhysicalDevice($name, $mac);
+
+        if ($physicalDeviceId > 0) {
+            return [
+                'result' => 'saved',
+                'physical_device_id' => $physicalDeviceId
+            ];
+        }
+
+        return [
+            'result' => 'failed',
+            'error' => 'Unable to create physical device'
+        ];
+    }
+
+    /**
+     * Link one explicitly selected known MAC to a physical-device group.
+     * POST /api/devicemonitor/devices/linkphysicaldeviceidentity
+     */
+    public function linkphysicaldeviceidentityAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed'];
+        }
+
+        $physicalDeviceId = (int)$this->request->getPost(
+            'physical_device_id'
+        );
+        $mac = strtolower(trim(
+            (string)$this->request->getPost('mac')
+        ));
+
+        if (
+            $physicalDeviceId <= 0 ||
+            !preg_match(
+                '/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/',
+                $mac
+            )
+        ) {
+            return [
+                'result' => 'failed',
+                'error' => 'Physical device ID and valid MAC address required'
+            ];
+        }
+
+        $model = new DeviceMonitor();
+
+        if ($model->linkPhysicalDeviceIdentity($physicalDeviceId, $mac)) {
+            return ['result' => 'saved'];
+        }
+
+        return [
+            'result' => 'failed',
+            'error' => 'Unable to link physical device identity'
+        ];
+    }
+
+    /**
+     * Soft-remove one active physical-device membership.
+     * POST /api/devicemonitor/devices/removephysicaldeviceidentity
+     */
+    public function removephysicaldeviceidentityAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed'];
+        }
+
+        $physicalDeviceId = (int)$this->request->getPost(
+            'physical_device_id'
+        );
+        $mac = strtolower(trim(
+            (string)$this->request->getPost('mac')
+        ));
+
+        if (
+            $physicalDeviceId <= 0 ||
+            !preg_match(
+                '/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/',
+                $mac
+            )
+        ) {
+            return [
+                'result' => 'failed',
+                'error' => 'Physical device ID and valid MAC address required'
+            ];
+        }
+
+        $model = new DeviceMonitor();
+
+        if ($model->removePhysicalDeviceIdentity($physicalDeviceId, $mac)) {
+            return ['result' => 'removed'];
+        }
+
+        return [
+            'result' => 'failed',
+            'error' => 'Unable to remove physical device identity'
+        ];
+    }
+
+    /**
      * List comments for one device lifecycle
      * GET /api/devicemonitor/devices/comments
      */
