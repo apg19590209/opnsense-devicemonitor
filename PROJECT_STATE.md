@@ -2,7 +2,7 @@
 
 ## Last updated
 
-12 September 2026
+13 September 2026
 
 ## Current version / branch / environment
 
@@ -20,7 +20,19 @@ OPNsense 26.7.2_2
 
 Latest completed v2.9 implementation commit:
 
-`5d55be4` — `fix: cleanly disconnect SSH service probes`
+`be9b686` — `feat: add physical device grouping UI`
+
+Latest repository commit:
+
+`0b6496a` — `chore: add Device Monitor Cline workflow rules`
+
+Workflow state:
+
+- repository-local Cline workflow rules (`.clinerules/00-project-control.md`,
+  `.clinerules/10-workflow-and-finalisation.md`) committed as `0b6496a`
+- unattended OPNsense SSH access is available through `ssh opnsense-dm`
+- branch `v2.9-development`; worktree clean and synced with
+  `origin/v2.9-development` before this documentation edit
 
 
 ## Current objective
@@ -41,19 +53,39 @@ ownership, returning-device resolution and identity-conflict detection remain
 authoritative and are not merged or rewritten. Membership changes are auditable
 and reversible.
 
-**Implementation status:** The first three DM-BL-001 implementation units are
-complete, deployed and live-validated. The additive `physical_devices` and
+**Implementation status:** All four DM-BL-001 implementation units are
+complete, committed, deployed and validated. The additive `physical_devices` and
 `physical_device_memberships` schema, active-membership uniqueness protection,
 read-only `getPhysicalDeviceForMac()` access, explicit model operations to
 create a physical-device group, link a known identity and soft-remove a
 membership, and the corresponding explicit Devices API actions are now
 present. Removed memberships retain their history. No physical-device groups
 or memberships have been created on the production database and existing
-discovery, lifecycle, identity and UI behaviour remains unchanged. Read-model
+discovery, lifecycle, identity and pre-existing UI behaviour remains unchanged. Read-model
 commit `4f866ba`; write-model commit `f6d547f`; API commit `752ee59`; GitHub
 Actions runs `34693021844`, `34693933012` and `34694963846`: PASS. The live API
 controller deployment was hash-verified and retained rollback backup
 `DevicesController.php.pre-dmbl001-api-20260912-225811`.
+
+Unit 4 — the `Physical Device / Related Identities` section on the Device
+Details page — is complete:
+
+- commit `be9b686` — `feat: add physical device grouping UI`
+- implemented in
+  `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devicehistory.volt`
+- permanent regression coverage in `tests/test_physical_device_ui.js`
+- CI step `Validate physical-device UI` added to `.github/workflows/ci.yml`
+- GitHub Actions run `34696074421` for `be9b686`: PASS
+- deployed `devicehistory.volt` SHA256
+  `39291eb3614a3241329ae5ddb279fd8de4fe9d078f1cd3ef1cb6d4c5e55b9d29`
+- deployed hash matches the repository file exactly
+- live GUI validation: Device Details displayed the new Physical Device /
+  Related Identities panel correctly for an ungrouped MAC
+- Create/Link/Remove write flows were deliberately **not** exercised against
+  production
+- no production physical-device group or membership was created
+- production database remains `physical_devices` = 0 and
+  `physical_device_memberships` = 0
 
 `DM-BL-004` — OPNsense/Unbound hostname enrichment — remains deferred because
 Unbound is not currently used in this environment.
@@ -94,9 +126,12 @@ CI: run `34684029960` — PASS.
 - Full Device Monitor scans completed successfully with deployed identity detection enabled.
 - No identity anomalies were recorded during the validated scans.
 
-## Current Settings-page work
+## Settings-page work (committed)
 
-The current local `settings.volt` diff includes Settings UI restructuring and About-page metadata changes, including:
+The Settings UI restructuring and About-page metadata changes described below
+are present in the committed tree. There is no current uncommitted
+`settings.volt` change: the worktree was verified clean at `0b6496a`. That work
+included:
 
 - Monitoring tab
 - Nmap Scanning tab
@@ -694,8 +729,10 @@ Guarded live rollback backups retained:
 
 ## Next step
 
-Inspect the existing Device Details page, related JavaScript and UI regression
-patterns for the next DM-BL-001 unit: a `Physical Device / Related Identities`
-section using the validated API. Preserve explicit user confirmation for group
-creation, identity linking and membership removal. Make no UI implementation
-change until that inspection is complete.
+Refine DM-BL-001 grouping eligibility so historical-only identities cannot be
+grouped. Creating a group must require a current, active, resolved device
+identity. Linking another identity must require a current, resolved device
+record; an inactive current identity may be linked only when the physical-device
+group has at least one active current identity. `return_pending` identities
+remain ineligible until lifecycle resolution. Preserve all historical lifecycle
+and identity records.
