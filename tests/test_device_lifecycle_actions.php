@@ -1288,4 +1288,120 @@ check(
 
 echo "DEVICE_PHYSICAL_GROUP_CLEARALL_CLEANUP=PASS\n";
 
+/* Devices page grouping metadata (getDevices read model) */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec(
+    "INSERT INTO devices " .
+    "(mac,ip,first_seen,last_seen,is_active,return_pending) VALUES " .
+    "('aa:bb:cc:dd:ee:40','192.0.2.40',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)," .
+    "('aa:bb:cc:dd:ee:41','192.0.2.41',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)," .
+    "('aa:bb:cc:dd:ee:42','192.0.2.42',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)," .
+    "('aa:bb:cc:dd:ee:43','192.0.2.43',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)," .
+    "('aa:bb:cc:dd:ee:44','192.0.2.44',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)"
+);
+
+$db->close();
+
+$devicesGroupId = $model->createPhysicalDevice(
+    'Devices Page Group',
+    'aa:bb:cc:dd:ee:40'
+);
+
+check($devicesGroupId > 0, 'Devices-page group was not created');
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $devicesGroupId,
+        'aa:bb:cc:dd:ee:41'
+    ) === true,
+    'Second member could not be linked for devices-page coverage'
+);
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $devicesGroupId,
+        'aa:bb:cc:dd:ee:43'
+    ) === true,
+    'Temporary member could not be linked for devices-page coverage'
+);
+
+check(
+    $model->removePhysicalDeviceIdentity(
+        $devicesGroupId,
+        'aa:bb:cc:dd:ee:43'
+    ) === true,
+    'Temporary member could not be removed for devices-page coverage'
+);
+
+$archivedDevicesGroupId = $model->createPhysicalDevice(
+    'Archived Devices Group',
+    'aa:bb:cc:dd:ee:42'
+);
+
+check($archivedDevicesGroupId > 0, 'Archived devices-page group was not created');
+
+check(
+    $model->removePhysicalDeviceIdentity(
+        $archivedDevicesGroupId,
+        'aa:bb:cc:dd:ee:42'
+    ) === true,
+    'Final membership of the archived devices-page group could not be removed'
+);
+
+$rows = $model->getDevices();
+$rowsByMac = [];
+
+foreach ($rows as $row) {
+    $rowsByMac[strtolower((string)($row['mac'] ?? ''))] = $row;
+}
+
+check(
+    isset($rowsByMac['aa:bb:cc:dd:ee:40']) &&
+    isset($rowsByMac['aa:bb:cc:dd:ee:41']) &&
+    isset($rowsByMac['aa:bb:cc:dd:ee:42']) &&
+    isset($rowsByMac['aa:bb:cc:dd:ee:43']) &&
+    isset($rowsByMac['aa:bb:cc:dd:ee:44']),
+    'Devices page rows are incomplete'
+);
+
+check(
+    (int)$rowsByMac['aa:bb:cc:dd:ee:40']['physical_device_id']
+        === $devicesGroupId &&
+    $rowsByMac['aa:bb:cc:dd:ee:40']['physical_device_name']
+        === 'Devices Page Group' &&
+    (int)$rowsByMac['aa:bb:cc:dd:ee:40']['physical_device_member_count']
+        === 2,
+    'Grouped device metadata for the Devices page is wrong'
+);
+
+check(
+    (int)$rowsByMac['aa:bb:cc:dd:ee:41']['physical_device_id']
+        === $devicesGroupId &&
+    (int)$rowsByMac['aa:bb:cc:dd:ee:41']['physical_device_member_count']
+        === 2,
+    'Devices in the same group received inconsistent grouping metadata'
+);
+
+check(
+    $rowsByMac['aa:bb:cc:dd:ee:43']['physical_device_id'] === null &&
+    (int)$rowsByMac['aa:bb:cc:dd:ee:43']['physical_device_member_count'] === 0,
+    'Removed membership still reported as grouped on the Devices page'
+);
+
+check(
+    $rowsByMac['aa:bb:cc:dd:ee:42']['physical_device_id'] === null,
+    'Archived group still reported as grouped on the Devices page'
+);
+
+check(
+    $rowsByMac['aa:bb:cc:dd:ee:44']['physical_device_id'] === null &&
+    (int)$rowsByMac['aa:bb:cc:dd:ee:44']['physical_device_member_count'] === 0 &&
+    $rowsByMac['aa:bb:cc:dd:ee:44']['physical_device_name'] === '',
+    'Ungrouped device received false grouping state on the Devices page'
+);
+
+echo "DEVICES_PAGE_GROUPING_METADATA=PASS\n";
+
 echo "DEVICE_LIFECYCLE_ACTIONS_REGRESSION=PASS\n";

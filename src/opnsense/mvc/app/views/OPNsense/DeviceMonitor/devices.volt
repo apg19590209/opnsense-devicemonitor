@@ -72,6 +72,7 @@
 
                     <th class="sortable devices-table-header" data-col="vlan">{{ lang._('VLAN') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable devices-table-header" data-col="status">{{ lang._('Status') }} <i class="fa fa-sort"></i></th>
+                    <th class="devices-table-header">{{ lang._('Physical Device') }}</th>
                     <th class="sortable devices-table-header" data-col="nmap_scan_status">{{ lang._('Scan Status') }} <i class="fa fa-sort"></i></th>
                     <th class="devices-table-header">{{ lang._('First Seen') }}</th>
                     <th class="sortable devices-table-header" data-col="last_seen">{{ lang._('Last Seen') }} <i class="fa fa-sort"></i></th>
@@ -149,6 +150,18 @@
 }
 .devices-table-header.sortable {
     cursor: pointer;
+}
+.devices-grouping-cell {
+    white-space: nowrap;
+    max-width: 220px;
+}
+.devices-grouping-badge {
+    display: inline-block;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+    white-space: nowrap;
 }
 .devices-toolbar-spacer {
     flex-grow: 1;
@@ -237,7 +250,10 @@ $(document).ready(function() {
         hostname_error: '{{ lang._('Error saving friendly name') }}',
         confirm_delete: '{{ lang._('Delete device') }}',
         confirm_clear:  '{{ lang._('Really delete all devices from database?') }}',
-        all_vlans:      '{{ lang._('All VLANs') }}'
+        all_vlans:      '{{ lang._('All VLANs') }}',
+        grouped:        '{{ lang._('Grouped') }}',
+        identity:       '{{ lang._('identity') }}',
+        identities:     '{{ lang._('identities') }}'
     };
 
     var allRows = [], activeVlans = [], activeStatus = '', vlanNames = {};
@@ -453,6 +469,35 @@ $(document).ready(function() {
         return $cell;
     }
 
+    function buildGroupingCell(row) {
+        var $cell = $('<td>').addClass('devices-grouping-cell');
+        var groupName = (row.physical_device_name || '').toString().trim();
+        var memberCount = parseInt(row.physical_device_member_count || 0, 10);
+        var groupId = row.physical_device_id;
+
+        if (!groupId || memberCount < 1) {
+            return $cell.append(
+                $('<span>').addClass('text-muted').text('\u2014')
+            );
+        }
+
+        var label = groupName !== '' ? groupName : translations.grouped;
+        label += ' \u00b7 ' + memberCount + ' ' +
+            (memberCount === 1 ? translations.identity : translations.identities);
+
+        return $cell.append(
+            $('<a>')
+                .addClass('label label-info devices-grouping-badge')
+                .attr({
+                    href: '/ui/devicemonitor/index/devicehistory?mac=' +
+                        encodeURIComponent(row.mac || '') +
+                        '#physical-device-grouping',
+                    title: label
+                })
+                .text(label)
+        );
+    }
+
     function buildServicesCell(row) {
         var $cell = $('<td>').css('white-space', 'nowrap');
         var services = Array.isArray(row.services) ? row.services : [];
@@ -616,6 +661,7 @@ $(document).ready(function() {
                 buildServicesCell(row),
                 $('<td>').text(vlanLabel),
                 $('<td>').html(statusHtml),
+                buildGroupingCell(row),
                 buildScanStatusCell(row),
                 $('<td>').text(row.first_seen||''),
                 $('<td>').text(row.last_seen||''),

@@ -2640,6 +2640,57 @@ class DeviceMonitor
                     }
                 }
             }
+
+            // Load the current physical-device grouping once so the Devices
+            // page can show a grouping indicator without one database query per
+            // device. Only active memberships of non-archived groups count.
+            $groupingByMac = [];
+
+            $groupingTableExists = (int)$db->querySingle(
+                "SELECT COUNT(*) FROM sqlite_master " .
+                "WHERE type = 'table' AND name = 'physical_devices'"
+            ) > 0;
+
+            if ($groupingTableExists) {
+                $groupingResult = $db->query(
+                    'SELECT lower(trim(m.mac)) AS mac, ' .
+                    'p.id AS physical_device_id, ' .
+                    'p.name AS physical_device_name, ' .
+                    '(SELECT COUNT(*) FROM physical_device_memberships c ' .
+                    'WHERE c.physical_device_id = p.id ' .
+                    'AND c.removed_at IS NULL) ' .
+                    'AS physical_device_member_count ' .
+                    'FROM physical_device_memberships m ' .
+                    'JOIN physical_devices p ' .
+                    'ON p.id = m.physical_device_id ' .
+                    'WHERE m.removed_at IS NULL ' .
+                    'AND p.archived_at IS NULL'
+                );
+
+                if ($groupingResult !== false) {
+                    while (
+                        $grouping = $groupingResult->fetchArray(SQLITE3_ASSOC)
+                    ) {
+                        $groupingMac = strtolower(
+                            trim((string)($grouping['mac'] ?? ''))
+                        );
+
+                        if ($groupingMac === '') {
+                            continue;
+                        }
+
+                        $groupingByMac[$groupingMac] = [
+                            'physical_device_id' =>
+                                (int)$grouping['physical_device_id'],
+                            'physical_device_name' =>
+                                (string)($grouping['physical_device_name'] ?? ''),
+                            'physical_device_member_count' =>
+                                (int)$grouping['physical_device_member_count']
+                        ];
+                    }
+                }
+            }
+
             while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
 
                 // Determine status from the is_active column instead of time
@@ -2699,6 +2750,23 @@ class DeviceMonitor
                     $row['services'] = $serviceMapByMac[$deviceMac];
                 } else {
                     $row['services'] = [];
+                }
+
+                // Read-only grouping indicator metadata for the Devices page.
+                if (
+                    $deviceMac !== '' &&
+                    isset($groupingByMac[$deviceMac])
+                ) {
+                    $row['physical_device_id'] =
+                        $groupingByMac[$deviceMac]['physical_device_id'];
+                    $row['physical_device_name'] =
+                        $groupingByMac[$deviceMac]['physical_device_name'];
+                    $row['physical_device_member_count'] =
+                        $groupingByMac[$deviceMac]['physical_device_member_count'];
+                } else {
+                    $row['physical_device_id'] = null;
+                    $row['physical_device_name'] = '';
+                    $row['physical_device_member_count'] = 0;
                 }
 
                 $devices[] = $row;

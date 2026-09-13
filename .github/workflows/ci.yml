@@ -788,6 +788,11 @@ jobs:
           set -eu
           node tests/test_physical_device_ui.js
 
+      - name: Validate devices page grouping indicator
+        run: |
+          set -eu
+          node tests/test_devices_page_grouping.js
+
       - name: Validate device lifecycle actions
         env:
           DM_MODEL_PATH: src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php
