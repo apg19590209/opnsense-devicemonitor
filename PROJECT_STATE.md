@@ -10,11 +10,16 @@ Development branch:
 
 `v2.9-development`
 
-Active Windows checkout:
+Authoritative development checkout (FreeBSD 15.1-RELEASE amd64):
+
+`/home/dmdev/src/opnsense-devicemonitor-upstream`
+
+Previous Windows checkout (retained as fallback/reference only; no longer
+authoritative):
 
 `C:\Users\apg19\Downloads\opnsense-devicemonitor-upstream`
 
-Primary deployment target:
+Primary deployment target (final runtime/deployment validation target):
 
 OPNsense 26.7.2_2
 
@@ -29,17 +34,43 @@ of the `7ca0fb9` Devices-page grouping-indicator unit)
 
 Workflow state:
 
+- FreeBSD migration complete: development is now performed on the FreeBSD
+  15.1-RELEASE amd64 development VM. VS Code Remote-SSH uses a
+  Linuxulator-hosted VS Code Server, while normal project commands run on the
+  native FreeBSD toolchain (`/bin/sh`, `/usr/local/bin/bash`,
+  `/usr/local/bin/git`, `/usr/local/bin/php`, `/usr/local/bin/python3`,
+  `/usr/local/bin/node`)
+- previous Windows checkout
+  `C:\Users\apg19\Downloads\opnsense-devicemonitor-upstream` is retained as
+  fallback/reference only and is no longer authoritative; Debian WSL remains
+  secondary/fallback only and is not an authoritative Device Monitor checkout
 - repository-local Cline workflow rules (`.clinerules/00-project-control.md`,
   `.clinerules/10-workflow-and-finalisation.md`) committed as `0b6496a`
-- unattended OPNsense SSH access is available through `ssh opnsense-dm`
+- workstation-local access rules (`.clinerules/90-local-remote-access.md`)
+  exist on the FreeBSD VM and are excluded through `.git/info/exclude`; they
+  must remain untracked and must never be added, committed or pushed
+- Git author identity is configured repository-locally
+- GitHub CLI (`gh`) is installed and authenticated as `apg19590209` with default
+  repository `apg19590209/opnsense-devicemonitor`; GitHub/CI operations are
+  available from this checkout
+- unattended OPNsense SSH access is available and validated through
+  `ssh opnsense-dm`; OPNsense remains the final runtime/deployment validation
+  target
 - branch `v2.9-development`; worktree clean and synced with
   `origin/v2.9-development` before this documentation edit
 
 
 ## Current objective
 
-`DM-BL-001` — User-confirmed physical-device identity grouping — is the active
-v2.9 task.
+`DM-BL-001` — User-confirmed physical-device identity grouping — is implemented
+and complete. The active objective is closure of its residual live GUI
+validation gap.
+
+Remaining validation scope: the live **Create / Link / Remove** physical-device
+grouping write flows on the OPNsense UI. These flows have not been executed or
+observed, and must not be recorded as PASS or complete until they actually are.
+This objective is a user-directed priority decision; it is not inferred from
+`PRODUCT_BACKLOG.md` ordering.
 
 **Description:** Add an explicit user-controlled physical-device grouping layer
 above existing MAC identities so multiple legitimate MAC addresses can be
@@ -897,6 +928,21 @@ Guarded live rollback backups retained:
 
 ## Next step
 
-MIGRATION CHECKPOINT — stop feature development and prepare the controlled
-migration of the Device Monitor development repository/environment to the
-FreeBSD VM.
+Execute the remaining `DM-BL-001` live GUI validation on OPNsense: create a
+physical-device group, link a known identity, then remove the membership, and
+record the observed result for each write flow. Do not record any of these flows
+as PASS or complete until they have actually been executed and observed.
+
+The migration checkpoint is complete and development runs from the FreeBSD
+authoritative checkout.
+
+`DM-BL-006` — Device change summary dashboard — is **not** the current objective.
+It remains an open `PRODUCT_BACKLOG.md` candidate, to be considered only after
+`DM-BL-001` validation is closed and its `PROJECT_RULES.md` feature-design gate
+(Description, Benefit, UI placement, real-data testability) is satisfied.
+
+`DM-BL-004`, `DM-BL-005` and `DM-BL-007` also remain open and deferred for their
+recorded reasons (`DM-BL-004`: Unbound is not used in this environment;
+`DM-BL-005`: implement only once enough independent hostname providers justify
+the abstraction; `DM-BL-007`: lower priority than hostname provenance and native
+OPNsense/Unbound enrichment).

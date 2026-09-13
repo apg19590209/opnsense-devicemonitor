@@ -63,29 +63,44 @@ Consequential actions include, where relevant:
 
 Clearly label command blocks as either:
 
-- Git Bash — local Windows repository work
+- FreeBSD — local repository work on the authoritative FreeBSD development host
 - OPNsense `[sh]` — direct OPNsense shell work
 
 Do not mix syntax between the two environments.
 
-Use Git Bash as the default local shell for this project. Use PowerShell only
-when a task specifically requires PowerShell.
+Use the native FreeBSD shell for local repository work: `/usr/local/bin/bash`
+for interactive/project commands, and `/bin/sh` when POSIX/Bourne shell
+behaviour is specifically required. Do not route normal project commands
+through Windows shells or `/compat/linux`.
+
+The authoritative development host, checkout paths and toolchain are recorded
+in `SYSTEM_MAP.md`. Workstation-local access details (host aliases, SSH keys and
+credentials) belong in the untracked workstation-local rules file and must not
+be recorded here or committed.
 
 ## Command output and file-transfer workflow
 
 Minimise long terminal copy/paste operations.
 
 - For short output, return only the specific lines needed.
-- For long inspections, diffs, logs or audit output, write the complete result
-  to a local Windows file under `C:\Users\apg19\Downloads` and have the user
-  attach that file to ChatGPT.
-- Use `GIT-BASH_...` filenames for output produced from the local repository.
-- Use `OPNSENSE_...` filenames for information obtained from OPNsense, even when
-  the command is launched remotely from Git Bash.
-- Prefer gathering OPNsense information remotely from Git Bash over asking the
-  user to work directly in the OPNsense console.
-- Where practical, redirect remote SSH output directly into the local Windows
-  output file rather than creating an intermediate file on OPNsense.
+- For long inspections, diffs, logs or audit output intended for ChatGPT,
+  prefer — where practical — invoking the FreeBSD command over the configured
+  SSH connection to the authoritative FreeBSD development host, launched from
+  Windows Git Bash, and redirecting stdout/stderr directly to
+  `C:\Users\apg19\Downloads` rather than creating an intermediate file on
+  FreeBSD and then copying it.
+- In that role Windows Git Bash is only an SSH/output-capture client. It is not
+  the authoritative repository execution environment, and normal repository and
+  project commands must still run natively on the FreeBSD host.
+- If direct Windows capture is impractical, a temporary FreeBSD output file may
+  be used as a fallback; report its path with a short summary instead of pasting
+  it in full.
+- Name captured output files clearly by subject; use the `OPNSENSE_...` prefix
+  for information obtained from OPNsense.
+- Prefer gathering OPNsense information remotely from the FreeBSD development
+  host over asking the user to work directly in the OPNsense console.
+- Where practical, redirect remote SSH output directly into the capture file
+  rather than creating an intermediate file on OPNsense.
 - Group safe read-only inspections when this reduces user interaction.
 - Minimise SSH authentication prompts by batching related remote work into one
   SSH session wherever practical.
@@ -99,9 +114,10 @@ Minimise long terminal copy/paste operations.
   state has changed.
 - Keep direct interactive OPNsense-console work to the minimum needed.
 
-For complex read-only OPNsense checks launched from Git Bash, prefer one SSH
-session using `/bin/sh -s` and redirect the result to a local `OPNSENSE_...`
-file.
+For complex read-only OPNsense checks launched from the FreeBSD development
+host, prefer one SSH session using `/bin/sh -s` and redirect the result to an
+`OPNSENSE_...` capture file (captured to `C:\Users\apg19\Downloads` from Windows
+Git Bash where practical).
 
 When Bourne shell syntax is required remotely, explicitly invoke `/bin/sh`;
 do not rely on the OPNsense login shell, which is `csh`.

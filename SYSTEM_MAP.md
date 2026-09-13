@@ -15,11 +15,47 @@ Primary deployment target:
 - OPNsense 26.7.2_2
 - primary OPNsense firewall
 
-Development has also been performed from a Windows checkout under:
+## Development environment topology
 
-`C:\Users\apg19\Downloads\opnsense-devicemonitor-*`
+    Windows VS Code UI
+        |
+        v
+    Remote SSH / Linuxulator-hosted VS Code Server
+        |
+        v
+    FreeBSD 15.1-RELEASE authoritative checkout + native development toolchain
+        |
+        v
+    SSH (`ssh opnsense-dm`)
+        |
+        v
+    OPNsense 26.7.2_2 runtime/deployment target
 
-The exact active checkout should be confirmed from the current repository when beginning work.
+Authoritative development checkout:
+
+`/home/dmdev/src/opnsense-devicemonitor-upstream`
+
+Native FreeBSD development toolchain:
+
+    /bin/sh
+    /usr/local/bin/bash
+    /usr/local/bin/git
+    /usr/local/bin/php
+    /usr/local/bin/python3
+    /usr/local/bin/node
+
+The VS Code Server runs through FreeBSD Linuxulator compatibility, which is its
+only intended use; normal project commands run on the native FreeBSD toolchain.
+
+Windows checkout (fallback/reference only, no longer authoritative):
+
+`C:\Users\apg19\Downloads\opnsense-devicemonitor-upstream`
+
+Debian WSL remains secondary/fallback only and is not an authoritative Device
+Monitor checkout.
+
+The authoritative checkout should be confirmed from the current repository and
+host when beginning work.
 
 ## Important production paths
 
