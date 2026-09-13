@@ -20,12 +20,12 @@ OPNsense 26.7.2_2
 
 Latest completed v2.9 implementation commit:
 
-`c28c14d` — `fix: enforce physical device grouping eligibility`
+`d0f82b8` — `fix: enforce physical device grouping lifecycle`
 
 Latest repository commit:
 
-`docs: record DM-BL-001 grouping lifecycle decisions` (recording of the approved
-grouping lifecycle decisions in `DECISIONS.md` §18)
+`docs: record DM-BL-001 grouping lifecycle implementation` (reconciliation of the
+`d0f82b8` grouping-lifecycle unit)
 
 Workflow state:
 
@@ -110,12 +110,9 @@ live-validated:
   step `Validate device lifecycle actions` (step 15), which executed and passed
 - removal behaviour remains admission-independent, as deliberately covered by
   the regression suite; no last-active-member removal guard was added
-- grouping lifecycle edge cases are now **user-approved** and recorded in
-  `DECISIONS.md` §18: no last-active-member removal guard; a group reaching zero
-  active memberships auto-archives and is never restored; deleting a grouped
-  device soft-closes that MAC's active memberships and then archives any
-  affected empty group, with the same rule for single-device deletion and
-  clear-all. That approved behaviour is **not yet implemented**
+- the grouping lifecycle behaviour approved in `DECISIONS.md` §18 is now
+  **implemented in the repository and CI-validated** (Unit 6 below); it is not
+  yet deployed, so live behaviour is unchanged
 - still unresolved and out of scope: per-member UI/API state
 - deployment status: **DEPLOYED to OPNsense on 13 September 2026** via the
   guarded procedure (staged hash + pre-state hash + backup hash + post-deploy
@@ -144,6 +141,41 @@ live-validated:
   no live groups exist and creating them would add production groupings without
   user intent, so those branches remain regression-validated only via
   `tests/test_device_lifecycle_actions.php`
+
+Unit 6 — the `DECISIONS.md` §18 grouping lifecycle behaviour — is implemented in
+the repository and CI-validated, but **NOT YET DEPLOYED**:
+
+- commit `d0f82b8e74513a6c09881b33f0095da3ccda6757` —
+  `fix: enforce physical device grouping lifecycle`
+- exactly two files changed (424 insertions, no deletions):
+  `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php` (+106)
+  and `tests/test_device_lifecycle_actions.php` (+318)
+- implemented behaviour: removing the final active membership remains allowed and
+  is never blocked; membership removal remains a soft-close that preserves
+  history; a group reaching zero active memberships now archives automatically
+  via `archived_at` with no unarchive path; `deleteDevice()` soft-closes the
+  deleted MAC's active memberships and then archives any affected empty group;
+  `clearAll()` applies equivalent set-based semantics; no group or membership row
+  is ever deleted
+- the grouping admission rules introduced by `c28c14d` are unchanged, and the
+  protected lifecycle/API/UI regressions still pass
+- local validation: 13 PASS markers in `tests/test_device_lifecycle_actions.php`,
+  including the new `DEVICE_PHYSICAL_GROUP_EMPTY_ARCHIVAL`,
+  `DEVICE_PHYSICAL_GROUP_DELETE_CLEANUP` and
+  `DEVICE_PHYSICAL_GROUP_CLEARALL_CLEANUP`; `tests/test_device_timeline.php`,
+  `tests/test_device_timeline_history_preservation.php`,
+  `tests/test_physical_device_api.php` and `tests/test_physical_device_ui.js`
+  all pass
+- GitHub Actions run `34738596652` for `d0f82b8`: PASS, including the
+  `Validate device lifecycle actions` step (step 15)
+- deployment status: **NOT YET DEPLOYED TO OPNsense**; the live installation
+  still runs the previously deployed `c28c14d` admission-only grouping model, so
+  live §18 lifecycle behaviour remains unchanged until deployment
+- observations retained without adding scope: the set-based
+  `archiveEmptyPhysicalDevices()` can archive any active group with zero open
+  memberships, not only groups touched by the current delete/clear operation;
+  legacy orphan memberships are not retroactively repaired by this unit; the
+  Devices-page grouping indicator remains separate future UI work
 
 `DM-BL-004` — OPNsense/Unbound hostname enrichment — remains deferred because
 Unbound is not currently used in this environment.
@@ -787,6 +819,6 @@ Guarded live rollback backups retained:
 
 ## Next step
 
-Implement the approved empty-group archival and deletion-membership cleanup
-behaviour recorded in `DECISIONS.md` §18, with regression coverage, without
-changing the already-deployed admission rules.
+Deploy commit `d0f82b8` to the OPNsense Device Monitor installation using the
+established guarded backup/hash-verification procedure, then perform focused
+live validation of §18 grouping lifecycle behaviour.
