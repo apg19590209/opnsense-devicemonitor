@@ -20,11 +20,12 @@ OPNsense 26.7.2_2
 
 Latest completed v2.9 implementation commit:
 
-`be9b686` — `feat: add physical device grouping UI`
+`c28c14d` — `fix: enforce physical device grouping eligibility`
 
 Latest repository commit:
 
-`0b6496a` — `chore: add Device Monitor Cline workflow rules`
+`docs: reconcile DM-BL-001 grouping eligibility` (documentation reconciliation
+of the `c28c14d` grouping-eligibility unit)
 
 Workflow state:
 
@@ -86,6 +87,34 @@ Details page — is complete:
 - no production physical-device group or membership was created
 - production database remains `physical_devices` = 0 and
   `physical_device_memberships` = 0
+
+Unit 5 — grouping-eligibility refinement — is complete in the repository but
+**not yet deployed**:
+
+- commit `c28c14d04d84465fc6d726d8ce038e7e4ef0b519` —
+  `fix: enforce physical device grouping eligibility`
+- exactly three implementation files changed:
+  `.github/workflows/ci.yml`,
+  `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php`,
+  `tests/test_device_lifecycle_actions.php`
+- admission rules now require a current, active, resolved device identity to
+  create a group, and a current, resolved device record to link an identity;
+  unresolved or non-current identities (historical-only, deleted-only,
+  lifecycle-only and `return_pending`) are rejected, and an inactive current
+  identity is accepted only when the group already has an active current
+  resolved member
+- local lint and regression validation passed: `php -l` for both changed PHP
+  files, the full `tests/test_device_lifecycle_actions.php` suite, plus
+  `tests/test_physical_device_api.php` and `tests/test_physical_device_ui.js`
+- GitHub Actions run `34734837042` for `c28c14d`: PASS, including the new CI
+  step `Validate device lifecycle actions` (step 15), which executed and passed
+- removal behaviour remains admission-independent, as deliberately covered by
+  the regression suite; no last-active-member removal guard was added
+- still unresolved and out of scope: last-active-member removal guard,
+  empty-active-group archival, deletion/orphan-membership handling, and
+  per-member UI/API state
+- deployment status: **NOT YET DEPLOYED TO OPNsense**, so production/live
+  grouping behaviour remains unchanged until deployment
 
 `DM-BL-004` — OPNsense/Unbound hostname enrichment — remains deferred because
 Unbound is not currently used in this environment.
@@ -729,10 +758,6 @@ Guarded live rollback backups retained:
 
 ## Next step
 
-Refine DM-BL-001 grouping eligibility so historical-only identities cannot be
-grouped. Creating a group must require a current, active, resolved device
-identity. Linking another identity must require a current, resolved device
-record; an inactive current identity may be linked only when the physical-device
-group has at least one active current identity. `return_pending` identities
-remain ineligible until lifecycle resolution. Preserve all historical lifecycle
-and identity records.
+Deploy commit `c28c14d` to the OPNsense Device Monitor installation using the
+established guarded hash-verification/deployment procedure, then perform focused
+live validation of the grouping-eligibility behaviour.
