@@ -20,12 +20,12 @@ OPNsense 26.7.2_2
 
 Latest completed v2.9 implementation commit:
 
-`d0f82b8` — `fix: enforce physical device grouping lifecycle`
+`7ca0fb9` — `feat: show physical device grouping on Devices page`
 
 Latest repository commit:
 
-`docs: record DM-BL-001 grouping lifecycle deployment` (deployment
-reconciliation of the `d0f82b8` grouping-lifecycle unit)
+`docs: record Devices grouping indicator deployment` (deployment reconciliation
+of the `7ca0fb9` Devices-page grouping-indicator unit)
 
 Workflow state:
 
@@ -199,7 +199,61 @@ deployed and live-validated where safe:
   `archiveEmptyPhysicalDevices()` can archive any active group with zero open
   memberships, not only groups touched by the current delete/clear operation;
   legacy orphan memberships are not retroactively repaired by this unit; the
-  Devices-page grouping indicator remains separate future UI work
+  Devices-page grouping indicator that was then future UI work is delivered by
+  Unit 7 below
+
+Unit 7 — Devices-page Physical Device grouping indicator — is implemented,
+deployed and live-validated:
+
+- commit `7ca0fb9f575525b848d395a9d9c9f9f4b02eadf1` —
+  `feat: show physical device grouping on Devices page`
+- five files changed (325 insertions, 1 deletion): `.github/workflows/ci.yml`,
+  `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php`,
+  `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt`,
+  `tests/test_device_lifecycle_actions.php` and the new
+  `tests/test_devices_page_grouping.js`; only the model and the view are
+  deployable
+- GitHub Actions run `34741415761` for `7ca0fb9`: PASS, including the new
+  `Validate devices page grouping indicator` step (step 15) and
+  `Validate device lifecycle actions` (step 16)
+- read path: `getDevices()` loads grouping metadata with a single bulk query
+  keyed by MAC (active memberships of non-archived groups) and merges it per row;
+  there is no per-row `getPhysicalDeviceForMac()` call
+- UI: a compact `Physical Device` column after `Status`; grouped rows show a
+  clickable badge `Name · N identity|identities` and ungrouped rows show a quiet
+  em-dash; the badge links to
+  `/ui/devicemonitor/index/devicehistory?mac=<mac>#physical-device-grouping`;
+  no grouping create/link/remove controls were added to the Devices table
+- deployment status: **DEPLOYED to OPNsense on 13 September 2026** via the
+  guarded procedure (staged hash + predecessor hash + backup hash + post-deploy
+  hash verified inside one success/failure guard chain); deployed SHA256
+  `ac5aa08d47eb8d165fd04d4732356f2b44c70f62bd5ed4e0ae53556818907110`
+  (`DeviceMonitor.php`) and
+  `a8ccde0833f0524bbfcba0b3a562be477cf4310c6c1463fb588a16d5f491f7ad`
+  (`devices.volt`) both match the repository source exactly; permissions remain
+  `644 root:wheel`
+- rollback backups retained:
+  `DeviceMonitor.php.pre-dmbl001-devices-ui-20260913-160832` (predecessor
+  `2d903bb0a886da88d351754ed8fec5228b25a33f6b21225903cc230b268592fc`) and
+  `devices.volt.pre-dmbl001-devices-ui-20260913-160832` (predecessor
+  `e14ccd0f3d3a9d3aa300c5dfcec12a34e8a24f154e08fee958084a83d4248091`, which
+  matched the repository version at every earlier commit checked — no live drift)
+- live validation: PHP lint PASS; class loads (`CLASS_OK`); the deployed view
+  contains the column, grouping helper, badge and `#physical-device-grouping`
+  fragment and no grouping-management controls; the Device History page still
+  carries the grouping anchor; API and UI routes return HTTP 302 (no PHP fatal);
+  no new PHP or Device Monitor errors; no service restart was required or
+  performed
+- live grouping data (read-only, unchanged by this deployment): one active group
+  (`Daikin Controller Entry`, id 1) with one open membership for
+  `b4:8c:9d:73:20:98`; the deployed read-path query returns
+  `b4:8c:9d:73:20:98 | 1 | Daikin Controller Entry | 1`, so that device presents
+  as grouped with one identity while sampled devices remain ungrouped
+- authenticated visual click-through of the live page was not performed by Cline
+  (no GUI/API credentials available); the items above are the executed live
+  evidence, and user confirmation of the rendered column and badge is advisable
+- grouping admission (`c28c14d`) and lifecycle (`d0f82b8`) write semantics are
+  unchanged, and no database write occurred during this deployment
 
 `DM-BL-004` — OPNsense/Unbound hostname enrichment — remains deferred because
 Unbound is not currently used in this environment.
@@ -843,7 +897,6 @@ Guarded live rollback backups retained:
 
 ## Next step
 
-Implement the Devices-page Physical Device grouping indicator as a separate UI
-unit, providing an immediately visible grouped/ungrouped state and direct
-navigation to the existing grouping details, without duplicating
-grouping-management controls on the Devices table.
+MIGRATION CHECKPOINT — stop feature development and prepare the controlled
+migration of the Device Monitor development repository/environment to the
+FreeBSD VM.
