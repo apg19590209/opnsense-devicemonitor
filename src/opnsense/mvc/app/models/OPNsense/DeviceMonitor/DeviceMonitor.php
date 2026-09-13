@@ -1502,6 +1502,68 @@ class DeviceMonitor
     }
 
     /**
+     * Derive physical-device grouping eligibility for one MAC address.
+     *
+     * A MAC is only eligible for grouping when it is a current device row that
+     * is resolved to its own active lifecycle. Historical-only evidence
+     * (archived lifecycles, deleted-device tombstones, known-MAC history) is
+     * deliberately not sufficient on its own.
+     *
+     * @return array current, is_active, return_pending and resolved flags.
+     */
+    private function getGroupingEligibility($db, $mac)
+    {
+        $mac = strtolower(trim((string)$mac));
+
+        $eligibility = [
+            'current' => false,
+            'is_active' => 0,
+            'return_pending' => 0,
+            'resolved' => false
+        ];
+
+        if ($mac === '') {
+            return $eligibility;
+        }
+
+        $stmt = $db->prepare(
+            'SELECT d.is_active AS is_active, ' .
+            'COALESCE(d.return_pending, 0) AS return_pending, ' .
+            'CASE WHEN l.id IS NOT NULL THEN 1 ELSE 0 END ' .
+            'AS has_active_lifecycle ' .
+            'FROM devices d ' .
+            'LEFT JOIN device_lifecycles l ' .
+            "ON l.id = d.lifecycle_id AND l.status = 'active' " .
+            'WHERE lower(trim(d.mac)) = :mac LIMIT 1'
+        );
+
+        if ($stmt === false) {
+            return $eligibility;
+        }
+
+        $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        $result = $stmt->execute();
+        $row = $result ? $result->fetchArray(SQLITE3_ASSOC) : false;
+
+        if (!$row) {
+            return $eligibility;
+        }
+
+        $returnPending = (int)$row['return_pending'];
+
+        $eligibility['current'] = true;
+        $eligibility['is_active'] = isset($row['is_active'])
+            ? (int)$row['is_active']
+            : 0;
+        $eligibility['return_pending'] = $returnPending;
+        $eligibility['resolved'] =
+            $returnPending === 0 &&
+            (int)$row['has_active_lifecycle'] === 1;
+
+        return $eligibility;
+    }
+
+    /**
      * Return the active user-confirmed physical-device group for one MAC.
      *
      * This is read-only and does not alter device, lifecycle or identity state.
@@ -1602,25 +1664,13 @@ class DeviceMonitor
         }
 
         try {
-            $knownStmt = $db->prepare(
-                'SELECT 1 FROM devices WHERE lower(trim(mac)) = :mac ' .
-                'UNION ALL ' .
-                'SELECT 1 FROM device_lifecycles WHERE lower(trim(mac)) = :mac ' .
-                'UNION ALL ' .
-                'SELECT 1 FROM deleted_devices WHERE lower(trim(mac)) = :mac ' .
-                'LIMIT 1'
-            );
-            if ($knownStmt === false) {
-                throw new \RuntimeException('Unable to validate MAC identity');
-            }
+            $eligibility = $this->getGroupingEligibility($db, $mac);
 
-            $knownStmt->bindValue(':mac', $mac, SQLITE3_TEXT);
-            $knownResult = $knownStmt->execute();
-            $known = $knownResult
-                ? $knownResult->fetchArray(SQLITE3_NUM)
-                : false;
-
-            if (!$known) {
+            if (
+                !$eligibility['current'] ||
+                $eligibility['is_active'] !== 1 ||
+                !$eligibility['resolved']
+            ) {
                 $db->exec('ROLLBACK');
                 $db->close();
                 return 0;
@@ -1716,28 +1766,49 @@ class DeviceMonitor
                 return false;
             }
 
-            $knownStmt = $db->prepare(
-                'SELECT 1 FROM devices WHERE lower(trim(mac)) = :mac ' .
-                'UNION ALL ' .
-                'SELECT 1 FROM device_lifecycles WHERE lower(trim(mac)) = :mac ' .
-                'UNION ALL ' .
-                'SELECT 1 FROM deleted_devices WHERE lower(trim(mac)) = :mac ' .
-                'LIMIT 1'
-            );
-            if ($knownStmt === false) {
-                throw new \RuntimeException('Unable to validate MAC identity');
-            }
+            $eligibility = $this->getGroupingEligibility($db, $mac);
 
-            $knownStmt->bindValue(':mac', $mac, SQLITE3_TEXT);
-            $knownResult = $knownStmt->execute();
-            $known = $knownResult
-                ? $knownResult->fetchArray(SQLITE3_NUM)
-                : false;
-
-            if (!$known) {
+            if (!$eligibility['current'] || !$eligibility['resolved']) {
                 $db->exec('ROLLBACK');
                 $db->close();
                 return false;
+            }
+
+            if ($eligibility['is_active'] !== 1) {
+                $activeMemberStmt = $db->prepare(
+                    'SELECT 1 FROM physical_device_memberships m ' .
+                    'JOIN devices d ' .
+                    'ON lower(trim(d.mac)) = lower(trim(m.mac)) ' .
+                    'JOIN device_lifecycles l ' .
+                    "ON l.id = d.lifecycle_id AND l.status = 'active' " .
+                    'WHERE m.physical_device_id = :physical_device_id ' .
+                    'AND m.removed_at IS NULL ' .
+                    'AND d.is_active = 1 ' .
+                    'AND COALESCE(d.return_pending, 0) = 0 ' .
+                    'LIMIT 1'
+                );
+
+                if ($activeMemberStmt === false) {
+                    throw new \RuntimeException(
+                        'Unable to validate physical device members'
+                    );
+                }
+
+                $activeMemberStmt->bindValue(
+                    ':physical_device_id',
+                    $physicalDeviceId,
+                    SQLITE3_INTEGER
+                );
+                $activeMemberResult = $activeMemberStmt->execute();
+                $hasActiveMember =
+                    $activeMemberResult !== false &&
+                    $activeMemberResult->fetchArray(SQLITE3_NUM) !== false;
+
+                if (!$hasActiveMember) {
+                    $db->exec('ROLLBACK');
+                    $db->close();
+                    return false;
+                }
             }
 
             $memberStmt = $db->prepare(

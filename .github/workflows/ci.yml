@@ -788,6 +788,14 @@ jobs:
           set -eu
           node tests/test_physical_device_ui.js
 
+      - name: Validate device lifecycle actions
+        env:
+          DM_MODEL_PATH: src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php
+          DM_DEFAULTS_PATH: src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
+        run: |
+          set -eu
+          php tests/test_device_lifecycle_actions.php
+
       - name: Validate AdGuard DNS rewrite integration
         run: |
           set -eu

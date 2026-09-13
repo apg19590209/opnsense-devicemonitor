@@ -626,17 +626,28 @@ $db->exec(
     "INSERT INTO devices " .
     "(mac,ip,first_seen,last_seen,is_active,return_pending) VALUES " .
     "('aa:bb:cc:dd:ee:20','192.0.2.20',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)," .
-    "('aa:bb:cc:dd:ee:21','192.0.2.21',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,1)"
+    "('aa:bb:cc:dd:ee:21','192.0.2.21',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,1)," .
+    "('aa:bb:cc:dd:ee:23','192.0.2.23',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0,0)," .
+    "('aa:bb:cc:dd:ee:24','192.0.2.24',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)," .
+    "('aa:bb:cc:dd:ee:25','192.0.2.25',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0,0)," .
+    "('aa:bb:cc:dd:ee:27','192.0.2.27',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)"
 );
 
 $db->exec(
     "INSERT INTO device_lifecycles " .
-    "(mac,status,first_seen,last_seen) VALUES " .
-    "('aa:bb:cc:dd:ee:22','archived','2026-01-01 10:00:00','2026-02-01 10:00:00')"
+    "(mac,status,first_seen,last_seen,archived_at) VALUES " .
+    "('aa:bb:cc:dd:ee:22','archived','2026-01-01 10:00:00'," .
+    "'2026-02-01 10:00:00','2026-02-01 10:05:00')"
+);
+
+$db->exec(
+    "INSERT INTO deleted_devices (mac,last_seen) VALUES " .
+    "('aa:bb:cc:dd:ee:26','2026-02-01 10:00:00')"
 );
 
 $db->close();
 
+/* Active, current, resolved identity can seed a group. */
 $groupId = $model->createPhysicalDevice(
     'Test Workstation',
     'AA:BB:CC:DD:EE:20'
@@ -654,23 +665,74 @@ check(
     'Created physical-device group is incorrect'
 );
 
+/* Inactive, pending and historical-only identities cannot seed a group. */
 check(
-    $model->linkPhysicalDeviceIdentity(
-        $groupId,
-        'AA:BB:CC:DD:EE:21'
-    ) === true,
-    'Known current MAC could not be linked'
+    $model->createPhysicalDevice(
+        'Inactive Identity',
+        'aa:bb:cc:dd:ee:23'
+    ) === 0,
+    'Inactive current identity was accepted as a group seed'
 );
 
 check(
-    $model->linkPhysicalDeviceIdentity(
-        $groupId,
+    $model->createPhysicalDevice(
+        'Pending Identity',
+        'aa:bb:cc:dd:ee:21'
+    ) === 0,
+    'return_pending identity was accepted as a group seed'
+);
+
+check(
+    $model->createPhysicalDevice(
+        'Lifecycle Only Identity',
         'aa:bb:cc:dd:ee:22'
-    ) === true,
-    'Known historical MAC could not be linked'
+    ) === 0,
+    'Lifecycle-only historical identity was accepted as a group seed'
 );
 
-$group = $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:21');
+check(
+    $model->createPhysicalDevice(
+        'Deleted Only Identity',
+        'aa:bb:cc:dd:ee:26'
+    ) === 0,
+    'Deleted-only historical identity was accepted as a group seed'
+);
+
+$db = new SQLite3($dbFile);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM physical_devices"
+    ) === 1,
+    'Rejected group creation left an unintended physical-device row'
+);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM physical_device_memberships"
+    ) === 1,
+    'Rejected group creation left an unintended membership row'
+);
+$db->close();
+
+/* Active, current, resolved identity can be linked. */
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $groupId,
+        'AA:BB:CC:DD:EE:24'
+    ) === true,
+    'Active current resolved MAC could not be linked'
+);
+
+/* Inactive current resolved identity can be linked while the group already
+   contains an active, current, resolved member. */
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $groupId,
+        'AA:BB:CC:DD:EE:23'
+    ) === true,
+    'Inactive current MAC could not be linked to a group with an active member'
+);
+
+$group = $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:23');
 check(
     is_array($group) &&
     $group['id'] === $groupId &&
@@ -678,12 +740,29 @@ check(
     'Linked identities were not returned as one physical device'
 );
 
+/* Pending and historical-only identities cannot be linked. */
 check(
     $model->linkPhysicalDeviceIdentity(
         $groupId,
-        'aa:bb:cc:dd:ee:21'
+        'AA:BB:CC:DD:EE:21'
     ) === false,
-    'Duplicate active physical-device membership was accepted'
+    'return_pending identity was linked'
+);
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $groupId,
+        'aa:bb:cc:dd:ee:22'
+    ) === false,
+    'Lifecycle-only historical identity was linked'
+);
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $groupId,
+        'aa:bb:cc:dd:ee:26'
+    ) === false,
+    'Deleted-only historical identity was linked'
 );
 
 check(
@@ -697,15 +776,39 @@ check(
 check(
     $model->linkPhysicalDeviceIdentity(
         9999,
-        'aa:bb:cc:dd:ee:21'
+        'aa:bb:cc:dd:ee:25'
     ) === false,
     'Unknown physical-device group was accepted'
 );
 
 check(
+    $model->linkPhysicalDeviceIdentity(
+        $groupId,
+        'aa:bb:cc:dd:ee:23'
+    ) === false,
+    'Duplicate active physical-device membership was accepted'
+);
+
+$db = new SQLite3($dbFile);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM physical_device_memberships " .
+        "WHERE physical_device_id=$groupId AND removed_at IS NULL"
+    ) === 3,
+    'Rejected link left an unintended active membership'
+);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM devices WHERE mac='aa:bb:cc:dd:ee:26'"
+    ) === 0,
+    'Rejected link created a current device record'
+);
+$db->close();
+
+check(
     $model->createPhysicalDevice(
         'Duplicate Group',
-        'aa:bb:cc:dd:ee:21'
+        'aa:bb:cc:dd:ee:20'
     ) === 0,
     'A second active group was created for an already-grouped MAC'
 );
@@ -715,7 +818,7 @@ check(
     (int)$db->querySingle(
         "SELECT COUNT(*) FROM physical_devices"
     ) === 1,
-    'Failed group creation left an orphan physical-device row'
+    'Rejected group creation left an orphan physical-device row'
 );
 
 check(
@@ -725,8 +828,61 @@ check(
     ) == 1,
     'Grouping write changed lifecycle return_pending state'
 );
+
+check(
+    $db->querySingle(
+        "SELECT lifecycle_id FROM devices " .
+        "WHERE mac='aa:bb:cc:dd:ee:21'"
+    ) === null,
+    'Grouping write resolved a pending lifecycle'
+);
+
+check(
+    $db->querySingle(
+        "SELECT status FROM device_lifecycles " .
+        "WHERE mac='aa:bb:cc:dd:ee:22'"
+    ) === 'archived',
+    'Grouping write altered historical lifecycle state'
+);
+
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM device_lifecycles " .
+        "WHERE mac='aa:bb:cc:dd:ee:26'"
+    ) === 0,
+    'Grouping write created lifecycle history for a deleted-only identity'
+);
 $db->close();
 
+/* Inactive current identity cannot be linked to a group whose members are not
+   active, current and resolved. */
+$otherGroupId = $model->createPhysicalDevice(
+    'Second Group',
+    'aa:bb:cc:dd:ee:27'
+);
+
+check(
+    $otherGroupId > $groupId,
+    'Second physical-device group was not created'
+);
+
+check(
+    $model->removePhysicalDeviceIdentity(
+        $otherGroupId,
+        'aa:bb:cc:dd:ee:27'
+    ) === true,
+    'Second group active membership could not be removed'
+);
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $otherGroupId,
+        'aa:bb:cc:dd:ee:25'
+    ) === false,
+    'Inactive identity was linked to a group with no active member'
+);
+
+/* Removal remains admission-independent: there is no last-active-member guard. */
 check(
     $model->removePhysicalDeviceIdentity(
         $groupId,
@@ -770,13 +926,39 @@ check(
     'Regrouped MAC did not resolve to its new active group'
 );
 
-$oldGroup = $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:21');
+$oldGroup = $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:23');
 check(
     is_array($oldGroup) &&
     $oldGroup['id'] === $groupId &&
     count($oldGroup['members']) === 2,
-    'Removing one identity changed other active group memberships'
+    'Removing the last active identity changed remaining memberships'
 );
+
+check(
+    $model->removePhysicalDeviceIdentity(
+        $groupId,
+        'aa:bb:cc:dd:ee:24'
+    ) === true,
+    'Second active membership of the original group could not be removed'
+);
+
+$inactiveOnlyGroup = $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:23');
+check(
+    is_array($inactiveOnlyGroup) &&
+    $inactiveOnlyGroup['id'] === $groupId &&
+    count($inactiveOnlyGroup['members']) === 1 &&
+    $inactiveOnlyGroup['members'][0]['mac'] === 'aa:bb:cc:dd:ee:23',
+    'Inactive membership was not preserved after active members were removed'
+);
+
+$db = new SQLite3($dbFile);
+check(
+    $db->querySingle(
+        "SELECT archived_at FROM physical_devices WHERE id=$groupId"
+    ) === null,
+    'A group without active members was archived by admission logic'
+);
+$db->close();
 
 check(
     $model->removePhysicalDeviceIdentity(
