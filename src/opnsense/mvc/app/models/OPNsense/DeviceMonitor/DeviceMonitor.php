@@ -1947,6 +1947,12 @@ class DeviceMonitor
                 throw new \RuntimeException('Unable to update physical device');
             }
 
+            if (!$this->archiveEmptyPhysicalDevices($db, $physicalDeviceId)) {
+                throw new \RuntimeException(
+                    'Unable to archive empty physical device'
+                );
+            }
+
             if (!$db->exec('COMMIT')) {
                 throw new \RuntimeException('Unable to commit membership removal');
             }
@@ -1958,6 +1964,82 @@ class DeviceMonitor
             $db->close();
             return false;
         }
+    }
+
+    /**
+     * Soft-close active physical-device memberships for one MAC, or for every
+     * device when no MAC is given. Membership rows are retained as history.
+     */
+    private function closePhysicalDeviceMemberships($db, $mac = null)
+    {
+        if ($mac === null) {
+            return $db->exec(
+                'UPDATE physical_device_memberships ' .
+                'SET removed_at = CURRENT_TIMESTAMP ' .
+                'WHERE removed_at IS NULL'
+            ) !== false;
+        }
+
+        $stmt = $db->prepare(
+            'UPDATE physical_device_memberships ' .
+            'SET removed_at = CURRENT_TIMESTAMP ' .
+            'WHERE lower(trim(mac)) = :mac AND removed_at IS NULL'
+        );
+
+        if ($stmt === false) {
+            return false;
+        }
+
+        $stmt->bindValue(
+            ':mac',
+            strtolower(trim((string)$mac)),
+            SQLITE3_TEXT
+        );
+
+        return $stmt->execute() !== false;
+    }
+
+    /**
+     * Archive physical-device groups that have no active memberships left.
+     *
+     * Without a group id every empty group is archived; with a group id only
+     * that group is considered. Archived groups stay historical and read-only.
+     */
+    private function archiveEmptyPhysicalDevices($db, $physicalDeviceId = null)
+    {
+        $emptyCondition =
+            'archived_at IS NULL AND NOT EXISTS (' .
+            'SELECT 1 FROM physical_device_memberships m ' .
+            'WHERE m.physical_device_id = physical_devices.id ' .
+            'AND m.removed_at IS NULL)';
+
+        if ($physicalDeviceId === null) {
+            return $db->exec(
+                'UPDATE physical_devices ' .
+                'SET archived_at = CURRENT_TIMESTAMP, ' .
+                'updated_at = CURRENT_TIMESTAMP ' .
+                'WHERE ' . $emptyCondition
+            ) !== false;
+        }
+
+        $stmt = $db->prepare(
+            'UPDATE physical_devices ' .
+            'SET archived_at = CURRENT_TIMESTAMP, ' .
+            'updated_at = CURRENT_TIMESTAMP ' .
+            'WHERE id = :physical_device_id AND ' . $emptyCondition
+        );
+
+        if ($stmt === false) {
+            return false;
+        }
+
+        $stmt->bindValue(
+            ':physical_device_id',
+            (int)$physicalDeviceId,
+            SQLITE3_INTEGER
+        );
+
+        return $stmt->execute() !== false;
     }
 
     /**
@@ -2948,6 +3030,18 @@ class DeviceMonitor
                 );
             }
 
+            if (!$this->closePhysicalDeviceMemberships($db, $mac)) {
+                throw new \RuntimeException(
+                    'Unable to close physical device memberships'
+                );
+            }
+
+            if (!$this->archiveEmptyPhysicalDevices($db)) {
+                throw new \RuntimeException(
+                    'Unable to archive empty physical devices'
+                );
+            }
+
             $stmt = $db->prepare(
                 'INSERT OR REPLACE INTO deleted_devices ' .
                 '(mac, last_seen, deleted_at) ' .
@@ -3044,6 +3138,18 @@ class DeviceMonitor
                         'Unable to archive device lifecycle'
                     );
                 }
+            }
+
+            if (!$this->closePhysicalDeviceMemberships($db)) {
+                throw new \RuntimeException(
+                    'Unable to close physical device memberships'
+                );
+            }
+
+            if (!$this->archiveEmptyPhysicalDevices($db)) {
+                throw new \RuntimeException(
+                    'Unable to archive empty physical devices'
+                );
             }
 
             if (!$db->exec(

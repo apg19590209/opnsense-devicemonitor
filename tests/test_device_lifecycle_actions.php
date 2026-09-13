@@ -970,4 +970,322 @@ check(
 
 echo "DEVICE_PHYSICAL_GROUP_WRITE_MODEL=PASS\n";
 
+/* DM-BL-001 grouping lifecycle: empty-group archival (DECISIONS.md §18) */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec(
+    "INSERT INTO devices " .
+    "(mac,ip,first_seen,last_seen,is_active,return_pending) VALUES " .
+    "('aa:bb:cc:dd:ee:30','192.0.2.30',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)," .
+    "('aa:bb:cc:dd:ee:31','192.0.2.31',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)," .
+    "('aa:bb:cc:dd:ee:32','192.0.2.32',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0,0)"
+);
+
+$db->close();
+
+$lifecycleGroupId = $model->createPhysicalDevice(
+    'Lifecycle Group',
+    'aa:bb:cc:dd:ee:30'
+);
+
+check($lifecycleGroupId > 0, 'Lifecycle group was not created');
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $lifecycleGroupId,
+        'aa:bb:cc:dd:ee:31'
+    ) === true,
+    'Active identity could not be linked in the lifecycle group'
+);
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $lifecycleGroupId,
+        'aa:bb:cc:dd:ee:32'
+    ) === true,
+    'Inactive identity could not be linked to a group with an active member'
+);
+
+check(
+    $model->removePhysicalDeviceIdentity(
+        $lifecycleGroupId,
+        'aa:bb:cc:dd:ee:31'
+    ) === true,
+    'Non-final active membership could not be removed'
+);
+
+$db = new SQLite3($dbFile);
+check(
+    $db->querySingle(
+        "SELECT archived_at FROM physical_devices WHERE id=$lifecycleGroupId"
+    ) === null,
+    'Group was archived while active memberships remained'
+);
+$db->close();
+
+check(
+    $model->removePhysicalDeviceIdentity(
+        $lifecycleGroupId,
+        'aa:bb:cc:dd:ee:32'
+    ) === true,
+    'Inactive membership could not be removed'
+);
+
+check(
+    $model->removePhysicalDeviceIdentity(
+        $lifecycleGroupId,
+        'aa:bb:cc:dd:ee:30'
+    ) === true,
+    'Final active membership could not be removed'
+);
+
+$db = new SQLite3($dbFile);
+check(
+    $db->querySingle(
+        "SELECT archived_at FROM physical_devices WHERE id=$lifecycleGroupId"
+    ) !== null,
+    'Group with zero active memberships was not archived'
+);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM physical_device_memberships " .
+        "WHERE physical_device_id=$lifecycleGroupId " .
+        "AND removed_at IS NOT NULL"
+    ) === 3,
+    'Removed physical-device membership history was not retained'
+);
+$db->close();
+
+check(
+    $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:30') === null,
+    'Archived group still resolved for a removed identity'
+);
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $lifecycleGroupId,
+        'aa:bb:cc:dd:ee:31'
+    ) === false,
+    'Archived group accepted a new active member'
+);
+
+check(
+    $model->removePhysicalDeviceIdentity(
+        $lifecycleGroupId,
+        'aa:bb:cc:dd:ee:30'
+    ) === false,
+    'Already-removed membership was removed twice in the lifecycle group'
+);
+
+echo "DEVICE_PHYSICAL_GROUP_EMPTY_ARCHIVAL=PASS\n";
+
+/* deleteDevice(): group keeps another active member */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec(
+    "INSERT INTO devices " .
+    "(mac,ip,first_seen,last_seen,is_active,return_pending) VALUES " .
+    "('aa:bb:cc:dd:ee:33','192.0.2.33',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)," .
+    "('aa:bb:cc:dd:ee:34','192.0.2.34',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)"
+);
+
+$db->close();
+
+$deleteGroupId = $model->createPhysicalDevice(
+    'Delete Group',
+    'aa:bb:cc:dd:ee:33'
+);
+
+check($deleteGroupId > 0, 'Delete-test group was not created');
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $deleteGroupId,
+        'aa:bb:cc:dd:ee:34'
+    ) === true,
+    'Active identity could not be linked in the delete test'
+);
+
+check(
+    $model->deleteDevice('aa:bb:cc:dd:ee:33') === true,
+    'Grouped device could not be deleted'
+);
+
+$db = new SQLite3($dbFile);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM physical_device_memberships " .
+        "WHERE physical_device_id=$deleteGroupId " .
+        "AND lower(trim(mac))='aa:bb:cc:dd:ee:33' " .
+        "AND removed_at IS NOT NULL"
+    ) === 1,
+    'Device deletion did not soft-close the active membership'
+);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM devices WHERE mac='aa:bb:cc:dd:ee:33'"
+    ) === 0,
+    'Deleted device row was not removed'
+);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM deleted_devices WHERE mac='aa:bb:cc:dd:ee:33'"
+    ) === 1,
+    'Deleted-device tombstone was not created'
+);
+check(
+    $db->querySingle(
+        "SELECT status FROM device_lifecycles WHERE mac='aa:bb:cc:dd:ee:33' " .
+        "ORDER BY id DESC LIMIT 1"
+    ) === 'archived',
+    'Deleted device lifecycle was not archived'
+);
+check(
+    $db->querySingle(
+        "SELECT archived_at FROM physical_devices WHERE id=$deleteGroupId"
+    ) === null,
+    'Group was archived while an active membership remained'
+);
+$db->close();
+
+$deleteGroup = $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:34');
+check(
+    is_array($deleteGroup) &&
+    $deleteGroup['id'] === $deleteGroupId &&
+    count($deleteGroup['members']) === 1,
+    'Remaining active member lost its group after device deletion'
+);
+
+check(
+    $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:33') === null,
+    'Deleted device still resolved through its group membership'
+);
+
+/* deleteDevice(): deleted device held the final active membership */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec(
+    "INSERT INTO devices " .
+    "(mac,ip,first_seen,last_seen,is_active,return_pending) VALUES " .
+    "('aa:bb:cc:dd:ee:35','192.0.2.35',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)"
+);
+
+$db->close();
+
+$finalGroupId = $model->createPhysicalDevice(
+    'Final Member Group',
+    'aa:bb:cc:dd:ee:35'
+);
+
+check($finalGroupId > 0, 'Final-member group was not created');
+
+check(
+    $model->deleteDevice('aa:bb:cc:dd:ee:35') === true,
+    'Final-member device could not be deleted'
+);
+
+$db = new SQLite3($dbFile);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM physical_device_memberships " .
+        "WHERE physical_device_id=$finalGroupId " .
+        "AND removed_at IS NOT NULL"
+    ) === 1,
+    'Final-member membership was not retained as history'
+);
+check(
+    $db->querySingle(
+        "SELECT archived_at FROM physical_devices WHERE id=$finalGroupId"
+    ) !== null,
+    'Group was not archived after its final active member was deleted'
+);
+$db->close();
+
+echo "DEVICE_PHYSICAL_GROUP_DELETE_CLEANUP=PASS\n";
+
+/* clearAll(): grouped devices cleared together */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec(
+    "INSERT INTO devices " .
+    "(mac,ip,first_seen,last_seen,is_active,return_pending) VALUES " .
+    "('aa:bb:cc:dd:ee:36','192.0.2.36',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)," .
+    "('aa:bb:cc:dd:ee:37','192.0.2.37',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)," .
+    "('aa:bb:cc:dd:ee:38','192.0.2.38',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,1,0)"
+);
+
+$db->close();
+
+$clearGroupA = $model->createPhysicalDevice(
+    'Clear Group A',
+    'aa:bb:cc:dd:ee:36'
+);
+
+check($clearGroupA > 0, 'Clear-all group A was not created');
+
+check(
+    $model->linkPhysicalDeviceIdentity(
+        $clearGroupA,
+        'aa:bb:cc:dd:ee:37'
+    ) === true,
+    'Second member could not be linked for clear-all coverage'
+);
+
+$clearGroupB = $model->createPhysicalDevice(
+    'Clear Group B',
+    'aa:bb:cc:dd:ee:38'
+);
+
+check($clearGroupB > $clearGroupA, 'Clear-all group B was not created');
+
+check($model->clearAll() === true, 'Clear-all failed');
+
+$db = new SQLite3($dbFile);
+check(
+    (int)$db->querySingle("SELECT COUNT(*) FROM devices") === 0,
+    'Clear-all left device rows behind'
+);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM physical_device_memberships " .
+        "WHERE removed_at IS NULL"
+    ) === 0,
+    'Clear-all left active memberships open'
+);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM physical_device_memberships"
+    ) === 3,
+    'Clear-all erased physical-device membership history'
+);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM physical_devices WHERE archived_at IS NOT NULL"
+    ) === 2,
+    'Clear-all did not archive the affected groups'
+);
+check(
+    (int)$db->querySingle("SELECT COUNT(*) FROM deleted_devices") === 3,
+    'Clear-all did not create device tombstones'
+);
+check(
+    (int)$db->querySingle(
+        "SELECT COUNT(*) FROM device_lifecycles WHERE status='active'"
+    ) === 0,
+    'Clear-all left active lifecycles behind'
+);
+$db->close();
+
+check(
+    $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:36') === null &&
+    $model->getPhysicalDeviceForMac('aa:bb:cc:dd:ee:38') === null,
+    'Archived groups resolved after clear-all'
+);
+
+echo "DEVICE_PHYSICAL_GROUP_CLEARALL_CLEANUP=PASS\n";
+
 echo "DEVICE_LIFECYCLE_ACTIONS_REGRESSION=PASS\n";
