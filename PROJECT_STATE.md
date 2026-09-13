@@ -24,8 +24,8 @@ Latest completed v2.9 implementation commit:
 
 Latest repository commit:
 
-`docs: reconcile DM-BL-001 grouping eligibility` (documentation reconciliation
-of the `c28c14d` grouping-eligibility unit)
+`docs: record DM-BL-001 grouping eligibility deployment` (deployment
+reconciliation of the `c28c14d` grouping-eligibility unit)
 
 Workflow state:
 
@@ -88,8 +88,8 @@ Details page — is complete:
 - production database remains `physical_devices` = 0 and
   `physical_device_memberships` = 0
 
-Unit 5 — grouping-eligibility refinement — is complete in the repository but
-**not yet deployed**:
+Unit 5 — grouping-eligibility refinement — is complete, deployed and
+live-validated:
 
 - commit `c28c14d04d84465fc6d726d8ce038e7e4ef0b519` —
   `fix: enforce physical device grouping eligibility`
@@ -113,8 +113,33 @@ Unit 5 — grouping-eligibility refinement — is complete in the repository but
 - still unresolved and out of scope: last-active-member removal guard,
   empty-active-group archival, deletion/orphan-membership handling, and
   per-member UI/API state
-- deployment status: **NOT YET DEPLOYED TO OPNsense**, so production/live
-  grouping behaviour remains unchanged until deployment
+- deployment status: **DEPLOYED to OPNsense on 13 September 2026** via the
+  guarded procedure (staged hash + pre-state hash + backup hash + post-deploy
+  hash verified inside a single success/failure guard chain); deployed
+  `DeviceMonitor.php` SHA256
+  `ac3c1b418ded15342bad12c37757ca681954144e2fd0952a345b80b05f305b74` matches the
+  repository source exactly and permissions remain `644 root:wheel`
+- rollback backup retained:
+  `/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php.pre-dmbl001-eligibility-20260913-134556`
+  (verified pre-deployment live SHA256
+  `938aedbaadccbdbf1d2d782c2e5e2d43a57d3425096959287164ab6b8f40688b`)
+- live validation: PHP syntax check PASS on the deployed file; class loads
+  (`CLASS_OK`); `getGroupingEligibility()` present; `service devicemonitor
+  status` running; Device Monitor API and UI paths return HTTP 302 (no PHP
+  fatal); no new Device Monitor or PHP errors (the only two log error lines
+  date from 8–9 September)
+- no service restart/reload was required or performed: the model is loaded per
+  web request and `opcache.validate_timestamps => On`, and the Python daemon
+  does not use PHP
+- live grouping data (read-only): 45 devices (32 active), `return_pending` 0,
+  `lifecycle_id` NULL 0, `physical_devices` 0, active memberships 0, lifecycles
+  45 active / 0 archived, `deleted_devices` 1; 32 identities are eligible group
+  seeds, 13 are inactive current resolved identities, 0 are lifecycle-only
+  historical and 1 is deleted-only historical
+- live create/link/remove **write** branches were deliberately not exercised:
+  no live groups exist and creating them would add production groupings without
+  user intent, so those branches remain regression-validated only via
+  `tests/test_device_lifecycle_actions.php`
 
 `DM-BL-004` — OPNsense/Unbound hostname enrichment — remains deferred because
 Unbound is not currently used in this environment.
@@ -758,6 +783,7 @@ Guarded live rollback backups retained:
 
 ## Next step
 
-Deploy commit `c28c14d` to the OPNsense Device Monitor installation using the
-established guarded hash-verification/deployment procedure, then perform focused
-live validation of the grouping-eligibility behaviour.
+Decide the remaining DM-BL-001 grouping edge-case behaviour with the user
+(last-active-member removal guard, empty-active-group archival, and
+deletion/orphan-membership handling) before any further grouping work; design
+and decision only, with no implementation until that decision is made.
