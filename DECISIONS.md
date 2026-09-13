@@ -430,3 +430,84 @@ Representing that user-confirmed relationship is useful, but merging the
 underlying identities would destroy evidence and interfere with lifecycle and
 identity-conflict semantics. An additive, auditable grouping layer provides the
 association while preserving the existing authoritative history.
+
+## 18. Physical-device grouping lifecycle: removal, empty groups and device deletion
+
+### Decision
+
+This decision extends Decision 17. It does not supersede it.
+
+Status: approved; **not yet implemented**. Until it is implemented, the rules
+below describe intended behaviour, not current behaviour.
+
+#### Membership removal
+
+- Removing a physical-device membership is always permitted, including removal
+  of the final active membership.
+- Removal soft-closes the membership by recording its removal time; membership
+  records are never erased.
+- No behavioural last-active-member removal guard is introduced.
+
+#### Empty-group lifecycle
+
+- An active physical-device group must have at least one active membership.
+- When a group reaches zero active memberships it is archived automatically by
+  recording an archive time.
+- Archived groups are historical and read-only: they are not returned as active
+  groupings and cannot accept members.
+- Archived groups are never restored or reactivated. If the same physical
+  relationship becomes relevant again, the user creates a new active group.
+- Archived group rows and their membership records are retained for audit and
+  history.
+
+#### Device deletion
+
+- Deleting a grouped device soft-closes that MAC's active physical-device
+  memberships within the same logical transaction as the deletion.
+- The same rule applies to single-device deletion and to clear-all or any
+  equivalent deletion flow.
+- After memberships are closed, any affected group with zero active memberships
+  is archived automatically.
+- Device deletion must not erase physical-device group or membership history.
+
+#### Liveness
+
+- Online/offline state must never create, close, remove, archive or restore
+  grouping membership or group state.
+- Grouping changes remain driven by explicit user or lifecycle operations only.
+
+#### Returning MAC
+
+- Existing `return_pending` lifecycle handling remains authoritative and
+  unchanged; a returning MAC is resolved through the existing lifecycle
+  workflow first.
+- After resolution it may be linked to an existing non-archived group or used to
+  create a new group, subject to the existing grouping eligibility rules.
+- An archived group is not reopened for the returning identity.
+
+#### User interface
+
+- Any later confirmation shown when the last active member is removed is
+  advisory only and must not prevent the removal.
+
+### Reason
+
+Grouping represents a user-confirmed physical relationship without merging
+identities or destroying evidence. Permitting removal preserves operator control
+and matches the existing membership model, in which removed memberships are
+retained rather than deleted.
+
+A group with no active memberships cannot be used or discovered as an active
+grouping, so archiving it makes that state explicit and auditable instead of
+leaving unreachable rows, and keeps one coherent rule: no active memberships
+means archived. Not restoring archived groups keeps the layer a record of
+user-confirmed relationships rather than mutable convenience state.
+
+Device deletion removes the current identity that an active membership depends
+on, so closing that membership at the same moment keeps memberships consistent
+with the current device set, avoids stale active memberships blocking a later
+returning MAC, and preserves all membership history. Applying one identical rule
+to every deletion path avoids contradictory semantics between deletion flows.
+
+Leaving `return_pending` resolution untouched preserves Decision 14's lifecycle
+ownership semantics.

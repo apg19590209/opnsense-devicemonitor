@@ -24,8 +24,8 @@ Latest completed v2.9 implementation commit:
 
 Latest repository commit:
 
-`docs: record DM-BL-001 grouping eligibility deployment` (deployment
-reconciliation of the `c28c14d` grouping-eligibility unit)
+`docs: record DM-BL-001 grouping lifecycle decisions` (recording of the approved
+grouping lifecycle decisions in `DECISIONS.md` §18)
 
 Workflow state:
 
@@ -110,9 +110,13 @@ live-validated:
   step `Validate device lifecycle actions` (step 15), which executed and passed
 - removal behaviour remains admission-independent, as deliberately covered by
   the regression suite; no last-active-member removal guard was added
-- still unresolved and out of scope: last-active-member removal guard,
-  empty-active-group archival, deletion/orphan-membership handling, and
-  per-member UI/API state
+- grouping lifecycle edge cases are now **user-approved** and recorded in
+  `DECISIONS.md` §18: no last-active-member removal guard; a group reaching zero
+  active memberships auto-archives and is never restored; deleting a grouped
+  device soft-closes that MAC's active memberships and then archives any
+  affected empty group, with the same rule for single-device deletion and
+  clear-all. That approved behaviour is **not yet implemented**
+- still unresolved and out of scope: per-member UI/API state
 - deployment status: **DEPLOYED to OPNsense on 13 September 2026** via the
   guarded procedure (staged hash + pre-state hash + backup hash + post-deploy
   hash verified inside a single success/failure guard chain); deployed
@@ -783,7 +787,6 @@ Guarded live rollback backups retained:
 
 ## Next step
 
-Decide the remaining DM-BL-001 grouping edge-case behaviour with the user
-(last-active-member removal guard, empty-active-group archival, and
-deletion/orphan-membership handling) before any further grouping work; design
-and decision only, with no implementation until that decision is made.
+Implement the approved empty-group archival and deletion-membership cleanup
+behaviour recorded in `DECISIONS.md` §18, with regression coverage, without
+changing the already-deployed admission rules.
