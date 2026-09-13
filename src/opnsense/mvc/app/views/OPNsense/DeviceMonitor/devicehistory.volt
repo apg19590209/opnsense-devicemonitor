@@ -1022,7 +1022,10 @@ $(document).ready(function() {
                 relatedMac +
                 ' to physical device "' +
                 physicalDeviceName +
-                '"?'
+                '"?\n\n' +
+                'Only continue if this MAC belongs to the same physical ' +
+                'hardware. Do not link separate devices merely because ' +
+                'they are the same type, model or vendor.'
             )
         ) {
             return;
@@ -1321,6 +1324,18 @@ $(document).ready(function() {
 
         $linkForm
             .append($macInput, $linkButton)
+            .appendTo($container);
+
+        $('<div>')
+            .addClass('text-muted')
+            .attr('id', 'physical-device-link-guidance')
+            .css('margin-top', '8px')
+            .text(
+                'Only link another MAC if it belongs to the same physical ' +
+                'device, such as another network interface or a ' +
+                'replacement/randomised MAC. Do not link separate devices ' +
+                'merely because they are the same type or vendor.'
+            )
             .appendTo($container);
 
         $('<div>')

@@ -31,6 +31,31 @@ function check(condition, message) {
     );
 });
 
+[
+    'physical-device-link-guidance',
+    'belongs to the same physical',
+    'such as another network interface',
+    'Do not link separate devices',
+    'merely because they are the same type or vendor.'
+].forEach(function(value) {
+    check(
+        history.includes(value),
+        'Device Details physical-device SAME-DEVICE link guidance ' +
+        'missing: ' + value
+    );
+});
+
+check(
+    history.includes(
+        'Only continue if this MAC belongs to the same physical'
+    ) &&
+    history.includes(
+        'hardware. Do not link separate devices merely because'
+    ) &&
+    history.includes('type, model or vendor.'),
+    'Link confirmation does not explicitly require SAME physical hardware'
+);
+
 check(
     !history.includes('members.length > 1'),
     'UI must allow explicit removal of the sole physical-device identity'
