@@ -14,7 +14,7 @@
   },
   "config": {
     "enabled": "0",
-    "email_enabled": "1",
+    "email_enabled": "0",
     "identity_email_enabled": "0",
     "service_email_enabled": "0",
     "service_email_new": "1",
