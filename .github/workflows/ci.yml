@@ -801,6 +801,11 @@ jobs:
           set -eu
           php tests/test_device_lifecycle_actions.php
 
+      - name: Validate fresh-install defaults
+        run: |
+          set -eu
+          python3 tests/test_fresh_install_defaults.py
+
       - name: Validate AdGuard DNS rewrite integration
         run: |
           set -eu
