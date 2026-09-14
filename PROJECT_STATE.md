@@ -25,12 +25,13 @@ OPNsense 26.7.2_2
 
 Latest completed v2.9 implementation commit:
 
-`7ca0fb9` — `feat: show physical device grouping on Devices page`
+`14ee00f` — `fix: clarify physical device identity linking` (DM-BL-001
+same-physical-device Link safety UX; deployed to OPNsense)
 
 Latest repository commit:
 
-`docs: record Devices grouping indicator deployment` (deployment reconciliation
-of the `7ca0fb9` Devices-page grouping-indicator unit)
+`docs: record DM-BL-001 link safety deployment` (deployment reconciliation of
+the `14ee00f` Link safety UX)
 
 Workflow state:
 
@@ -63,14 +64,22 @@ Workflow state:
 ## Current objective
 
 `DM-BL-001` — User-confirmed physical-device identity grouping — is implemented
-and complete. The active objective is closure of its residual live GUI
-validation gap.
+and complete. Its **Create** write flow has been manually live-validated through
+the GUI, and the resulting temporary test group was intentionally purged; the
+live grouping baseline is `physical_devices` = 0 and
+`physical_device_memberships` = 0. Its same-physical-device Link safety UX
+(commit `14ee00f`) is deployed and live-confirmed.
 
-Remaining validation scope: the live **Create / Link / Remove** physical-device
-grouping write flows on the OPNsense UI. These flows have not been executed or
-observed, and must not be recorded as PASS or complete until they actually are.
-This objective is a user-directed priority decision; it is not inferred from
-`PRODUCT_BACKLOG.md` ordering.
+Remaining validation scope is limited to the live **Link** and **Remove**
+physical-device grouping write flows, which are **deferred/pending**. They must
+not be recorded as PASS or complete until actually executed and observed, and
+they must not be simulated by fabricating grouping data. They remain pending
+only because no legitimate pair of MAC identities currently known to belong to
+the same physical hardware is available; production history will not be
+contaminated to satisfy a test. The next environment-level objective is to
+establish an isolated OPNsense testbed for Device Monitor validation before
+further consequential live-production experimentation; no new product-backlog
+feature is designated as the next implementation task.
 
 **Description:** Add an explicit user-controlled physical-device grouping layer
 above existing MAC identities so multiple legitimate MAC addresses can be
@@ -91,9 +100,11 @@ complete, committed, deployed and validated. The additive `physical_devices` and
 read-only `getPhysicalDeviceForMac()` access, explicit model operations to
 create a physical-device group, link a known identity and soft-remove a
 membership, and the corresponding explicit Devices API actions are now
-present. Removed memberships retain their history. No physical-device groups
-or memberships have been created on the production database and existing
-discovery, lifecycle, identity and pre-existing UI behaviour remains unchanged. Read-model
+present. Removed memberships retain their history. The production grouping
+baseline was left at zero: a temporary GUI test group was created during Create
+validation and later intentionally purged (see "DM-BL-001 live validation, purge
+and link-safety UX" below). Existing discovery, lifecycle, identity and
+pre-existing UI behaviour remains unchanged. Read-model
 commit `4f866ba`; write-model commit `f6d547f`; API commit `752ee59`; GitHub
 Actions runs `34693021844`, `34693933012` and `34694963846`: PASS. The live API
 controller deployment was hash-verified and retained rollback backup
@@ -113,11 +124,11 @@ Details page — is complete:
 - deployed hash matches the repository file exactly
 - live GUI validation: Device Details displayed the new Physical Device /
   Related Identities panel correctly for an ungrouped MAC
-- Create/Link/Remove write flows were deliberately **not** exercised against
-  production
-- no production physical-device group or membership was created
-- production database remains `physical_devices` = 0 and
-  `physical_device_memberships` = 0
+- at the time of Unit 4, Create/Link/Remove write flows were deliberately
+  **not** exercised against production; the later Create validation and the
+  intentional purge of its temporary test group are recorded below
+- current production baseline (after that purge) remains `physical_devices` = 0
+  and `physical_device_memberships` = 0
 
 Unit 5 — grouping-eligibility refinement — is complete, deployed and
 live-validated:
@@ -275,16 +286,79 @@ deployed and live-validated:
   carries the grouping anchor; API and UI routes return HTTP 302 (no PHP fatal);
   no new PHP or Device Monitor errors; no service restart was required or
   performed
-- live grouping data (read-only, unchanged by this deployment): one active group
-  (`Daikin Controller Entry`, id 1) with one open membership for
-  `b4:8c:9d:73:20:98`; the deployed read-path query returns
-  `b4:8c:9d:73:20:98 | 1 | Daikin Controller Entry | 1`, so that device presents
-  as grouped with one identity while sampled devices remain ungrouped
+- live grouping data at the time of this deployment (read-only, unchanged by
+  this deployment): one active group (`Daikin Controller Entry`, id 1) with one
+  open membership for `b4:8c:9d:73:20:98`; the deployed read-path query returned
+  `b4:8c:9d:73:20:98 | 1 | Daikin Controller Entry | 1`, so that device presented
+  as grouped with one identity while sampled devices remained ungrouped. That
+  group was subsequently intentionally purged (see "DM-BL-001 live validation,
+  purge and link-safety UX" below); the current live baseline is 0/0
 - authenticated visual click-through of the live page was not performed by Cline
   (no GUI/API credentials available); the items above are the executed live
   evidence, and user confirmation of the rendered column and badge is advisable
 - grouping admission (`c28c14d`) and lifecycle (`d0f82b8`) write semantics are
   unchanged, and no database write occurred during this deployment
+
+## DM-BL-001 live validation, purge and link-safety UX
+
+DM-BL-001 is complete, committed and deployed. Its remaining live GUI
+validation is recorded as follows.
+
+### Create flow — live-validated
+
+- **Create Physical Device** was manually validated through the OPNsense GUI.
+- The resulting temporary test group (`Daikin Controller Entry`) existed only to
+  validate the Create write flow and was later **intentionally TRUE-DELETED** as
+  an authorised direct DB maintenance action, after: exact-state verification, a
+  SQLite online backup, backup `PRAGMA integrity_check`, a guarded
+  `BEGIN IMMEDIATE` transactional deletion (1 row from
+  `physical_device_memberships`, 1 row from `physical_devices`, each guarded),
+  and a post-delete `PRAGMA integrity_check`.
+- Purge backup retained:
+  `/var/backups/devicemonitor/devices.db.pre-test-group-purge-20260913-133147`
+  (SHA256 `64b237651a5a14a8aeb90ac451e9a214689d64d845a6f71d6cf2d6871c60ed80`).
+- The test group no longer exists and production retains no grouping rows.
+
+### Link / Remove flows — deferred validation (pending)
+
+- The live **Link** and **Remove** GUI write flows remain **PENDING/unvalidated**.
+- Reason: no legitimate pair of MAC identities known to belong to the same
+  physical hardware is currently available in the environment.
+- Production history will **not** be contaminated by fabricating a grouping to
+  satisfy a test. These flows remain regression-validated only (via
+  `tests/test_device_lifecycle_actions.php` and
+  `tests/test_physical_device_api.php`) until a legitimate same-physical-device
+  pair becomes available.
+- They should be completed only when such a pair exists, preferably in the
+  forthcoming isolated OPNsense testbed.
+
+### Link-safety UX — deployed
+
+- commit `14ee00f` — `fix: clarify physical device identity linking`
+- changes: persistent helper warning adjacent to the Link Identity controls
+  (`#physical-device-link-guidance`) and a strengthened SAME-physical-hardware
+  `confirm()`; assertions added to `tests/test_physical_device_ui.js`
+- no backend, schema, API or grouping-eligibility semantics changed; Create and
+  Remove semantics are unchanged
+- GitHub Actions run `34760874169` for `14ee00f`: PASS
+- deployed `devicehistory.volt` SHA256
+  `1d2498a353313c731d01fa2cb7f3ce75680512e16911868ce97175fba3f4d641` matches the
+  repository source exactly; permissions remain `644 root:wheel`
+- rollback backup retained:
+  `devicehistory.volt.pre-dmbl001-linksafety-20260913-135353` (verified
+  pre-deployment live SHA256
+  `39291eb3614a3241329ae5ddb279fd8de4fe9d078f1cd3ef1cb6d4c5e55b9d29`, which
+  equalled the predecessor commit `d83cd194` version — no live drift)
+- no service restart was required or performed (the Volt view is loaded per
+  request and the Python daemon does not use PHP)
+- live baseline at this point: `physical_devices` = 0 and
+  `physical_device_memberships` = 0; live `PRAGMA integrity_check` = ok
+
+### Next environment objective
+
+Establish an isolated OPNsense testbed for Device Monitor validation before
+further consequential live-production experimentation. No new product-backlog
+feature is designated as the next implementation task.
 
 `DM-BL-004` — OPNsense/Unbound hostname enrichment — remains deferred because
 Unbound is not currently used in this environment.
@@ -713,7 +787,10 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - `PRODUCT_BACKLOG.md` remains the authoritative list of deferred Device Monitor work.
 - `DM-BL-002` and `DM-BL-003` are complete and have been removed from the open backlog.
 - `DM-BL-004` remains deferred because Unbound is not used in this environment.
-- `DM-BL-001` is now the active v2.9 task and has been removed from the open backlog.
+- `DM-BL-001` is implemented and is no longer an open backlog feature; its Link
+  and Remove live GUI validation remains deferred until a legitimate
+  same-physical-device MAC pair is available (see the DM-BL-001 live-validation
+  section above).
 - Open backlog items are now `DM-BL-004`, `DM-BL-005`, `DM-BL-006` and `DM-BL-007`.
 - Architectural constraints remain in `DECISIONS.md`; environment facts remain
   in `SYSTEM_MAP.md`.
@@ -928,10 +1005,16 @@ Guarded live rollback backups retained:
 
 ## Next step
 
-Execute the remaining `DM-BL-001` live GUI validation on OPNsense: create a
-physical-device group, link a known identity, then remove the membership, and
-record the observed result for each write flow. Do not record any of these flows
-as PASS or complete until they have actually been executed and observed.
+`DM-BL-001` is complete: its **Create** flow was live-validated and its
+temporary test group was intentionally purged. The **Link** and **Remove** live
+GUI write flows remain **deferred validation items** — they must not be recorded
+as PASS or complete until actually executed, and must not be simulated by
+fabricating grouping data. Complete them only when a legitimate
+same-physical-device MAC pair becomes available.
+
+The next environment-level objective is to establish an isolated OPNsense
+testbed for Device Monitor validation before further consequential
+live-production experimentation.
 
 The migration checkpoint is complete and development runs from the FreeBSD
 authoritative checkout.
