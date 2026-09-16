@@ -59,42 +59,22 @@ host when beginning work.
 
 ## TESTBED environment
 
-Isolated OPNsense instance used for Device Monitor validation outside production.
+Current Device Monitor testbed/development host:
 
-Access and management:
-
-- host alias `opnsense-testbed`
-- management path is the LAN interface `vtnet1`, `192.168.56.2/24`, used for both
-  GUI and SSH access
-- workstation-local access configuration (keys, host aliases and credentials)
-  remains in the untracked local rules file
-
-Interfaces and uplink:
-
-- OPNsense `26.7.3_11`
-- LAN `vtnet1` `192.168.56.2/24`
-- WAN `vtnet0` on VirtualBox NAT, address `10.0.2.15/24`, default gateway
-  `10.0.2.2` — the default route and the path towards production and the Internet
-- Device Monitor and Hostwatch are installed and running on the testbed;
-  Hostwatch is bound to `vtnet1`
-- DNS: the WAN DHCP DNS override is disabled, `/etc/resolv.conf` uses the local
-  resolver `127.0.0.1`, and Unbound provides recursive resolution
-
-Production isolation boundary:
-
-- one persistent pf rule blocks outbound IPv4 traffic from the testbed to the
-  production LAN `192.168.20.0/24`:
-  `block drop out log quick on vtnet0 inet from any to 192.168.20.0/24`
-  (rule UUID `527f4f3b-f82c-4ee8-b4ee-3a5e63df2c14`)
-- the rule matches on the WAN out path (`vtnet0`), which is the testbed's only
-  route towards `192.168.20.0/24`
-- public Internet access, DNS resolution and management access over
-  `192.168.56.2` are retained; isolation was verified before and after a testbed
-  reboot
-- limitation: only `192.168.20.0/24` is blocked; other
-  host/production-reachable prefixes through the VirtualBox NAT uplink remain
-  reachable
-
+- host `192.168.20.23`
+- OPNsense `26.7.4`
+- LAN interface `re0`, `192.168.20.23/24`
+- repository `/root/src/opnsense-devicemonitor-upstream`
+- production OPNsense remains `192.168.20.254`
+- Device Monitor automatic monitoring is disabled because the current testbed
+  interface is on the live `192.168.20.0/24` LAN
+- destructive/testbed Device Monitor state is intentionally separate from
+  production state
+- runtime state paths:
+  `/var/db/devicemonitor/config.json`
+  `/var/db/devicemonitor/devices.db`
+- former VirtualBox testbed `192.168.56.2` and both FreeBSD development VMs
+  were retired and deleted after migration validation
 ## Important production paths
 
 ### Device Monitor database

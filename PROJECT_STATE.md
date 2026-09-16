@@ -299,37 +299,30 @@ deployed and live-validated:
 - grouping admission (`c28c14d`) and lifecycle (`d0f82b8`) write semantics are
   unchanged, and no database write occurred during this deployment
 
-## TESTBED environment and production isolation
+## TESTBED environment and migration state
 
-The isolated OPNsense testbed intended for Device Monitor validation is
-established and validated. Topology, interfaces, management path and the
-isolation boundary are documented in `SYSTEM_MAP.md`.
+The Device Monitor testbed/development environment has been migrated to the
+physical OPNsense host `192.168.20.23`.
 
-- host alias `opnsense-testbed`; OPNsense `26.7.3_11`
-- LAN `vtnet1` `192.168.56.2/24` (management GUI and SSH); WAN `vtnet0` on
-  VirtualBox NAT, address `10.0.2.15/24`, default gateway `10.0.2.2`
-- Device Monitor and Hostwatch are installed and running on the testbed;
-  Hostwatch is bound to `vtnet1`
-- DNS: the WAN DHCP DNS override is disabled, `/etc/resolv.conf` uses the local
-  resolver `127.0.0.1`, and Unbound provides recursive resolution. Production DNS
-  `192.168.20.1/.2` is no longer used. The DHCP-created `/32` routes to `.1/.2`
-  still exist but are harmless because the isolation rule blocks that traffic
-- isolation: one persistent OPNsense pf rule blocks outbound IPv4 traffic to
-  `192.168.20.0/24`
-  - rule UUID `527f4f3b-f82c-4ee8-b4ee-3a5e63df2c14`
-  - live semantics
-    `block drop out log quick on vtnet0 inet from any to 192.168.20.0/24`
-  - validated before and after a TESTBED reboot: `192.168.20.254`, `.1` and `.2`
-    are unreachable, route lookup still points via `10.0.2.2`/`vtnet0` with pf
-    blocking the traffic, public Internet and public DNS remain functional, and
-    management over `192.168.56.2` remains functional
-  - Device Monitor and Hostwatch recover automatically after a TESTBED reboot
-- rollback: pre-isolation backup `/conf/backup/config-1789513363.3591.xml`;
-  offline copy `/root/dm-testbed-pre-isolation-1789513363.3591.xml`
-- residual limitation: isolation covers only `192.168.20.0/24`; other
-  host/production-reachable prefixes through VirtualBox NAT are not covered by
-  this rule
-
+- OPNsense `26.7.4`
+- management and current LAN interface: `re0` `192.168.20.23/24`
+- repository: `/root/src/opnsense-devicemonitor-upstream`
+- branch: `v2.9-development`
+- repository and GitHub origin verified synchronized at migration completion
+- deployed Device Monitor files verified identical to the authoritative checkout
+- testbed runtime state migrated from the former `192.168.56.2` VM:
+  8 devices and 8 lifecycles
+- automatic Device Monitor monitoring is deliberately disabled because `re0`
+  is attached to the live `192.168.20.0/24` LAN; it must not be enabled until
+  an intentionally isolated test interface/network is provided
+- production OPNsense `192.168.20.254` was not modified by this migration
+- retired and deleted VirtualBox VMs:
+  `FreeBSD-15.1-DeviceMonitor`,
+  `FreeBSD-15.1-DeviceMonitor-30G`, and
+  `OPNsense-Testbed` (`192.168.56.2`)
+- migration-critical runtime state is stored outside Git in:
+  `/var/db/devicemonitor/config.json` and
+  `/var/db/devicemonitor/devices.db`
 ## DM-BL-001 live validation, purge and link-safety UX
 
 DM-BL-001 is complete, committed and deployed. Its remaining live GUI
@@ -1043,7 +1036,7 @@ as PASS or complete until actually executed, and must not be simulated by
 fabricating grouping data. Complete them only when a legitimate
 same-physical-device MAC pair becomes available.
 
-The isolated OPNsense testbed is established and production-isolated (see
+The Device Monitor testbed has been migrated to `192.168.20.23` (see
 "TESTBED environment and production isolation" above), so the deferred DM-BL-001
 Link and Remove live GUI write-flow validation can be attempted on the testbed
 instead of in production.
