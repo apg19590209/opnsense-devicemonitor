@@ -57,6 +57,44 @@ Monitor checkout.
 The authoritative checkout should be confirmed from the current repository and
 host when beginning work.
 
+## TESTBED environment
+
+Isolated OPNsense instance used for Device Monitor validation outside production.
+
+Access and management:
+
+- host alias `opnsense-testbed`
+- management path is the LAN interface `vtnet1`, `192.168.56.2/24`, used for both
+  GUI and SSH access
+- workstation-local access configuration (keys, host aliases and credentials)
+  remains in the untracked local rules file
+
+Interfaces and uplink:
+
+- OPNsense `26.7.3_11`
+- LAN `vtnet1` `192.168.56.2/24`
+- WAN `vtnet0` on VirtualBox NAT, address `10.0.2.15/24`, default gateway
+  `10.0.2.2` — the default route and the path towards production and the Internet
+- Device Monitor and Hostwatch are installed and running on the testbed;
+  Hostwatch is bound to `vtnet1`
+- DNS: the WAN DHCP DNS override is disabled, `/etc/resolv.conf` uses the local
+  resolver `127.0.0.1`, and Unbound provides recursive resolution
+
+Production isolation boundary:
+
+- one persistent pf rule blocks outbound IPv4 traffic from the testbed to the
+  production LAN `192.168.20.0/24`:
+  `block drop out log quick on vtnet0 inet from any to 192.168.20.0/24`
+  (rule UUID `527f4f3b-f82c-4ee8-b4ee-3a5e63df2c14`)
+- the rule matches on the WAN out path (`vtnet0`), which is the testbed's only
+  route towards `192.168.20.0/24`
+- public Internet access, DNS resolution and management access over
+  `192.168.56.2` are retained; isolation was verified before and after a testbed
+  reboot
+- limitation: only `192.168.20.0/24` is blocked; other
+  host/production-reachable prefixes through the VirtualBox NAT uplink remain
+  reachable
+
 ## Important production paths
 
 ### Device Monitor database

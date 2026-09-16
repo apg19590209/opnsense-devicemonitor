@@ -2,7 +2,7 @@
 
 ## Last updated
 
-13 September 2026
+16 September 2026
 
 ## Current version / branch / environment
 
@@ -76,10 +76,10 @@ not be recorded as PASS or complete until actually executed and observed, and
 they must not be simulated by fabricating grouping data. They remain pending
 only because no legitimate pair of MAC identities currently known to belong to
 the same physical hardware is available; production history will not be
-contaminated to satisfy a test. The next environment-level objective is to
-establish an isolated OPNsense testbed for Device Monitor validation before
-further consequential live-production experimentation; no new product-backlog
-feature is designated as the next implementation task.
+contaminated to satisfy a test. The isolated OPNsense testbed for Device Monitor
+validation is now established and production-isolated (see "TESTBED environment
+and production isolation" below); no new product-backlog feature is designated as
+the next implementation task.
 
 **Description:** Add an explicit user-controlled physical-device grouping layer
 above existing MAC identities so multiple legitimate MAC addresses can be
@@ -298,6 +298,37 @@ deployed and live-validated:
   evidence, and user confirmation of the rendered column and badge is advisable
 - grouping admission (`c28c14d`) and lifecycle (`d0f82b8`) write semantics are
   unchanged, and no database write occurred during this deployment
+
+## TESTBED environment and production isolation
+
+The isolated OPNsense testbed intended for Device Monitor validation is
+established and validated. Topology, interfaces, management path and the
+isolation boundary are documented in `SYSTEM_MAP.md`.
+
+- host alias `opnsense-testbed`; OPNsense `26.7.3_11`
+- LAN `vtnet1` `192.168.56.2/24` (management GUI and SSH); WAN `vtnet0` on
+  VirtualBox NAT, address `10.0.2.15/24`, default gateway `10.0.2.2`
+- Device Monitor and Hostwatch are installed and running on the testbed;
+  Hostwatch is bound to `vtnet1`
+- DNS: the WAN DHCP DNS override is disabled, `/etc/resolv.conf` uses the local
+  resolver `127.0.0.1`, and Unbound provides recursive resolution. Production DNS
+  `192.168.20.1/.2` is no longer used. The DHCP-created `/32` routes to `.1/.2`
+  still exist but are harmless because the isolation rule blocks that traffic
+- isolation: one persistent OPNsense pf rule blocks outbound IPv4 traffic to
+  `192.168.20.0/24`
+  - rule UUID `527f4f3b-f82c-4ee8-b4ee-3a5e63df2c14`
+  - live semantics
+    `block drop out log quick on vtnet0 inet from any to 192.168.20.0/24`
+  - validated before and after a TESTBED reboot: `192.168.20.254`, `.1` and `.2`
+    are unreachable, route lookup still points via `10.0.2.2`/`vtnet0` with pf
+    blocking the traffic, public Internet and public DNS remain functional, and
+    management over `192.168.56.2` remains functional
+  - Device Monitor and Hostwatch recover automatically after a TESTBED reboot
+- rollback: pre-isolation backup `/conf/backup/config-1789513363.3591.xml`;
+  offline copy `/root/dm-testbed-pre-isolation-1789513363.3591.xml`
+- residual limitation: isolation covers only `192.168.20.0/24`; other
+  host/production-reachable prefixes through VirtualBox NAT are not covered by
+  this rule
 
 ## DM-BL-001 live validation, purge and link-safety UX
 
@@ -1012,9 +1043,10 @@ as PASS or complete until actually executed, and must not be simulated by
 fabricating grouping data. Complete them only when a legitimate
 same-physical-device MAC pair becomes available.
 
-The next environment-level objective is to establish an isolated OPNsense
-testbed for Device Monitor validation before further consequential
-live-production experimentation.
+The isolated OPNsense testbed is established and production-isolated (see
+"TESTBED environment and production isolation" above), so the deferred DM-BL-001
+Link and Remove live GUI write-flow validation can be attempted on the testbed
+instead of in production.
 
 The migration checkpoint is complete and development runs from the FreeBSD
 authoritative checkout.
