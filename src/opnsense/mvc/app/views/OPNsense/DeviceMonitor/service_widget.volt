@@ -1,6 +1,12 @@
 <style>
 #devicemonitor_widget .label {
-    font-size: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 1px 5px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    vertical-align: middle;
+    display: inline-block;
 }
 </style>
 

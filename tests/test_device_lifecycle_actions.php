@@ -618,6 +618,74 @@ check(
 
 echo "DEVICE_PHYSICAL_GROUP_READ_MODEL=PASS\n";
 
+/* DM-BL-001 physical-device active group listing */
+$model = fresh_model($dbFile, $defaultsPath);
+$db = new SQLite3($dbFile);
+
+$db->exec("INSERT INTO physical_devices (name) VALUES ('Sony TV')");
+$sonyId = (int)$db->lastInsertRowID();
+$db->exec("INSERT INTO physical_devices (name) VALUES ('Laptop')");
+$laptopId = (int)$db->lastInsertRowID();
+$db->exec("INSERT INTO physical_devices (name) VALUES ('Archived Device')");
+$archivedId = (int)$db->lastInsertRowID();
+
+$db->exec(
+    "INSERT INTO physical_device_memberships (physical_device_id,mac) VALUES " .
+    "($sonyId,'aa:bb:cc:dd:ee:40')," .
+    "($sonyId,'aa:bb:cc:dd:ee:41')," .
+    "($laptopId,'aa:bb:cc:dd:ee:42')"
+);
+
+$db->exec(
+    "UPDATE physical_devices SET archived_at=CURRENT_TIMESTAMP " .
+    "WHERE id=$archivedId"
+);
+$db->close();
+
+$activeGroups = $model->getActivePhysicalDevices();
+
+$byName = [];
+foreach ($activeGroups as $activeGroup) {
+    $byName[$activeGroup['name']] = $activeGroup;
+}
+
+check(
+    is_array($activeGroups) &&
+    count($activeGroups) === 2,
+    'Active physical-device group list is wrong'
+);
+
+check(
+    isset($byName['Sony TV']) &&
+    $byName['Sony TV']['id'] === $sonyId &&
+    $byName['Sony TV']['member_count'] === 2 &&
+    isset($byName['Laptop']) &&
+    $byName['Laptop']['id'] === $laptopId &&
+    $byName['Laptop']['member_count'] === 1,
+    'Active physical-device member counts are wrong'
+);
+
+check(
+    !isset($byName['Archived Device']),
+    'Archived physical-device group was listed as active'
+);
+
+$excludedGroups = $model->getActivePhysicalDevices('aa:bb:cc:dd:ee:40');
+
+$excludedByName = [];
+foreach ($excludedGroups as $excludedGroup) {
+    $excludedByName[$excludedGroup['name']] = $excludedGroup;
+}
+
+check(
+    count($excludedGroups) === 1 &&
+    isset($excludedByName['Laptop']) &&
+    !isset($excludedByName['Sony TV']),
+    'Group already containing the MAC was not excluded'
+);
+
+echo "DEVICE_PHYSICAL_GROUP_ACTIVE_LIST=PASS\n";
+
 /* DM-BL-001 physical-device grouping write model */
 $model = fresh_model($dbFile, $defaultsPath);
 $db = new SQLite3($dbFile);

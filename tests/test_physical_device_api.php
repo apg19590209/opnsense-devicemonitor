@@ -15,6 +15,7 @@ namespace OPNsense\DeviceMonitor {
         public static $createResult = 0;
         public static $linkResult = false;
         public static $removeResult = false;
+        public static $activeDevices = [];
 
         public static function reset()
         {
@@ -23,6 +24,7 @@ namespace OPNsense\DeviceMonitor {
             self::$createResult = 0;
             self::$linkResult = false;
             self::$removeResult = false;
+            self::$activeDevices = [];
         }
 
         public function getPhysicalDeviceForMac($mac)
@@ -47,6 +49,12 @@ namespace OPNsense\DeviceMonitor {
         {
             self::$calls[] = ['remove', $physicalDeviceId, $mac];
             return self::$removeResult;
+        }
+
+        public function getActivePhysicalDevices($excludeMac = null)
+        {
+            self::$calls[] = ['list', $excludeMac];
+            return self::$activeDevices;
         }
     }
 }
@@ -148,6 +156,50 @@ namespace {
             ['get', 'aa:bb:cc:dd:ee:01']
         ],
         'Physical-device read action did not normalize/delegate correctly'
+    );
+
+    DeviceMonitor::reset();
+
+    $response = controller_with(
+        new FakeRequest(false, [], ['mac' => 'not-a-mac'])
+    )->listphysicaldevicesAction();
+
+    check(
+        $response['result'] === 'failed' &&
+        DeviceMonitor::$calls === [],
+        'Physical-device list accepted an invalid MAC'
+    );
+
+    DeviceMonitor::$activeDevices = [
+        ['id' => 3, 'name' => 'Sony TV', 'member_count' => 2],
+        ['id' => 5, 'name' => 'Laptop', 'member_count' => 1]
+    ];
+
+    $response = controller_with(
+        new FakeRequest(false, [], ['mac' => ' AA:BB:CC:DD:EE:01 '])
+    )->listphysicaldevicesAction();
+
+    check(
+        $response['result'] === 'ok' &&
+        $response['groups'] === DeviceMonitor::$activeDevices &&
+        DeviceMonitor::$calls === [
+            ['list', 'aa:bb:cc:dd:ee:01']
+        ],
+        'Physical-device list action did not normalize/delegate correctly'
+    );
+
+    DeviceMonitor::reset();
+
+    $response = controller_with(
+        new FakeRequest(false, [], [])
+    )->listphysicaldevicesAction();
+
+    check(
+        $response['result'] === 'ok' &&
+        DeviceMonitor::$calls === [
+            ['list', null]
+        ],
+        'Physical-device list action did not delegate an empty MAC correctly'
     );
 
     DeviceMonitor::reset();

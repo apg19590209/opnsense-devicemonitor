@@ -50,7 +50,9 @@
 
             <select
                 id="services-type-filter"
-                class="form-control input-sm"
+                class="selectpicker"
+                data-style="btn-default btn-sm"
+                data-width="180px"
             >
                 <option value="">
                     {{ lang._('All Services') }}
@@ -59,7 +61,9 @@
 
             <select
                 id="services-status-filter"
-                class="form-control input-sm"
+                class="selectpicker"
+                data-style="btn-default btn-sm"
+                data-width="180px"
             >
                 <option value="">
                     {{ lang._('All Statuses') }}
@@ -113,7 +117,13 @@
 
 <style>
 .content-box .label {
-    font-size: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 1px 5px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    vertical-align: middle;
+    display: inline-block;
 }
 
 .infrastructure-header {
@@ -159,15 +169,6 @@
     gap: 8px;
     align-items: center;
     flex-wrap: wrap;
-}
-
-.infrastructure-toolbar select.form-control {
-    width: 180px;
-    height: 30px;
-    min-width: 180px;
-    padding: 4px 8px;
-    line-height: 20px;
-    vertical-align: middle;
 }
 
 .infrastructure-toolbar input {
@@ -962,6 +963,10 @@ $(document).ready(function() {
 
         if (current) {
             $select.val(current);
+        }
+
+        if ($select.hasClass('selectpicker')) {
+            $select.selectpicker('refresh');
         }
     }
 

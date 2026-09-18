@@ -42,7 +42,9 @@
                     </label>
 
                     <select id="identity-events-status"
-                            class="form-control input-sm">
+                            class="selectpicker"
+                            data-style="btn-default btn-xs"
+                            data-width="115px">
                         <option value="all"{% if identityEventsStatus == 'all' %} selected{% endif %}>{{ lang._('All') }}</option>
                         <option value="unresolved"{% if identityEventsStatus == 'unresolved' %} selected{% endif %}>{{ lang._('Unresolved') }}</option>
                         <option value="resolved"{% if identityEventsStatus == 'resolved' %} selected{% endif %}>{{ lang._('Resolved') }}</option>
@@ -54,7 +56,9 @@
                     </label>
 
                     <select id="identity-events-limit"
-                            class="form-control input-sm">
+                            class="selectpicker"
+                            data-style="btn-default btn-xs"
+                            data-width="70px">
                         <option value="10" selected>10</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
@@ -103,7 +107,13 @@
 
 <style>
 .content-box .label {
-    font-size: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 1px 5px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    vertical-align: middle;
+    display: inline-block;
 }
 
 .identity-events-heading {
@@ -129,12 +139,9 @@
 }
 
 .identity-events-controls > label {
-    height: 28px;
-    line-height: 28px;
     display: inline-flex;
     align-items: center;
     margin: 0;
-    transform: translateY(4px);
 }
 
 .identity-events-summary-link {
@@ -145,20 +152,6 @@
 .identity-events-summary-link:hover,
 .identity-events-summary-link:focus {
     text-decoration: underline;
-}
-
-#identity-events-status {
-    width: 115px;
-    height: 28px;
-    padding: 0 24px 0 8px;
-    margin: 0;
-}
-
-#identity-events-limit {
-    width: 70px;
-    height: 28px;
-    padding: 0 24px 0 8px;
-    margin: 0;
 }
 
 #btn-identity-refresh {

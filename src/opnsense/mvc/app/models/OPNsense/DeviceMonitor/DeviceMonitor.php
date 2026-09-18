@@ -1643,6 +1643,80 @@ class DeviceMonitor
     }
 
     /**
+     * List active (non-archived) physical-device groups with their active
+     * identity counts.
+     *
+     * This is read-only and does not alter device, lifecycle or identity state.
+     *
+     * @param string|null $excludeMac When provided, groups that already have
+     *                                this MAC as an active member are omitted.
+     * @return array List of groups with id, name and member_count.
+     */
+    public function getActivePhysicalDevices($excludeMac = null)
+    {
+        $db = $this->getDb();
+        $groups = [];
+
+        $excludeMac = $excludeMac === null
+            ? ''
+            : strtolower(trim((string)$excludeMac));
+
+        if ($excludeMac === '') {
+            $stmt = $db->prepare(
+                'SELECT p.id, p.name, ' .
+                'COUNT(m.id) AS member_count ' .
+                'FROM physical_devices p ' .
+                'LEFT JOIN physical_device_memberships m ' .
+                'ON m.physical_device_id = p.id AND m.removed_at IS NULL ' .
+                'WHERE p.archived_at IS NULL ' .
+                'GROUP BY p.id, p.name ' .
+                'ORDER BY lower(p.name), p.id'
+            );
+        } else {
+            $stmt = $db->prepare(
+                'SELECT p.id, p.name, ' .
+                'COUNT(m.id) AS member_count ' .
+                'FROM physical_devices p ' .
+                'LEFT JOIN physical_device_memberships m ' .
+                'ON m.physical_device_id = p.id AND m.removed_at IS NULL ' .
+                'WHERE p.archived_at IS NULL ' .
+                'AND NOT EXISTS (' .
+                'SELECT 1 FROM physical_device_memberships mx ' .
+                'WHERE mx.physical_device_id = p.id ' .
+                'AND lower(trim(mx.mac)) = :exclude_mac ' .
+                'AND mx.removed_at IS NULL' .
+                ') ' .
+                'GROUP BY p.id, p.name ' .
+                'ORDER BY lower(p.name), p.id'
+            );
+        }
+
+        if ($stmt === false) {
+            $db->close();
+            return $groups;
+        }
+
+        if ($excludeMac !== '') {
+            $stmt->bindValue(':exclude_mac', $excludeMac, SQLITE3_TEXT);
+        }
+
+        $result = $stmt->execute();
+
+        if ($result !== false) {
+            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                $groups[] = [
+                    'id' => (int)$row['id'],
+                    'name' => (string)$row['name'],
+                    'member_count' => (int)$row['member_count']
+                ];
+            }
+        }
+
+        $db->close();
+        return $groups;
+    }
+
+    /**
      * Create a physical-device group with one explicitly selected known MAC.
      *
      * Returns the new physical-device ID, or 0 on failure.

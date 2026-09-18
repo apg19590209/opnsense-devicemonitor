@@ -2,7 +2,7 @@
 
 ## Last updated
 
-16 September 2026
+18 September 2026
 
 ## Current version / branch / environment
 
@@ -64,22 +64,23 @@ Workflow state:
 ## Current objective
 
 `DM-BL-001` — User-confirmed physical-device identity grouping — is implemented
-and complete. Its **Create** write flow has been manually live-validated through
-the GUI, and the resulting temporary test group was intentionally purged; the
-live grouping baseline is `physical_devices` = 0 and
-`physical_device_memberships` = 0. Its same-physical-device Link safety UX
-(commit `14ee00f`) is deployed and live-confirmed.
+and complete. Its **Create**, **list existing groups**, **Link** and **Remove**
+flows, plus member-count display, have all been live-validated on the physical
+OPNsense testbed `192.168.20.23` (see "DM-BL-001 live validation, purge and
+link-safety UX" below). Inactive identities are intentionally rejected as
+physical-device group seeds; this is confirmed, expected behaviour and not a
+defect. Its same-physical-device Link safety UX (commit `14ee00f`) is deployed
+and live-confirmed.
 
-Remaining validation scope is limited to the live **Link** and **Remove**
-physical-device grouping write flows, which are **deferred/pending**. They must
-not be recorded as PASS or complete until actually executed and observed, and
-they must not be simulated by fabricating grouping data. They remain pending
-only because no legitimate pair of MAC identities currently known to belong to
-the same physical hardware is available; production history will not be
-contaminated to satisfy a test. The isolated OPNsense testbed for Device Monitor
-validation is now established and production-isolated (see "TESTBED environment
-and production isolation" below); no new product-backlog feature is designated as
-the next implementation task.
+The associated Device Monitor UI consistency work is complete and live-validated
+on `192.168.20.23`: app-wide compact status/action sizing was visually
+normalized, the compact Device Monitor selects were converted to OPNsense's
+`bootstrap-select`/`selectpicker` pattern, and the dynamic Physical Device
+`#physical-device-select` now uses selectpicker with AJAX refresh and preserved
+option ordering. Live Firefox visual validation passed on `192.168.20.23`.
+
+No new product-backlog feature is designated as the next implementation task;
+`PRODUCT_BACKLOG.md` remains authoritative for deferred work.
 
 **Description:** Add an explicit user-controlled physical-device grouping layer
 above existing MAC identities so multiple legitimate MAC addresses can be
@@ -325,8 +326,8 @@ physical OPNsense host `192.168.20.23`.
   `/var/db/devicemonitor/devices.db`
 ## DM-BL-001 live validation, purge and link-safety UX
 
-DM-BL-001 is complete, committed and deployed. Its remaining live GUI
-validation is recorded as follows.
+DM-BL-001 is complete, committed and deployed. Its live GUI validation —
+completed on the testbed `192.168.20.23` — is recorded as follows.
 
 ### Create flow — live-validated
 
@@ -343,18 +344,19 @@ validation is recorded as follows.
   (SHA256 `64b237651a5a14a8aeb90ac451e9a214689d64d845a6f71d6cf2d6871c60ed80`).
 - The test group no longer exists and production retains no grouping rows.
 
-### Link / Remove flows — deferred validation (pending)
+### Full write-flow validation — live-validated on testbed
 
-- The live **Link** and **Remove** GUI write flows remain **PENDING/unvalidated**.
-- Reason: no legitimate pair of MAC identities known to belong to the same
-  physical hardware is currently available in the environment.
-- Production history will **not** be contaminated by fabricating a grouping to
-  satisfy a test. These flows remain regression-validated only (via
-  `tests/test_device_lifecycle_actions.php` and
-  `tests/test_physical_device_api.php`) until a legitimate same-physical-device
-  pair becomes available.
-- They should be completed only when such a pair exists, preferably in the
-  forthcoming isolated OPNsense testbed.
+The complete DM-BL-001 grouping workflow was live-validated on the physical
+OPNsense testbed `192.168.20.23`:
+
+- **Create Physical Device**: PASS
+- **Existing-group list** (dropdown): PASS
+- **Member count** display: PASS
+- **Link identity**: PASS
+- **Remove identity**: PASS
+- **Inactive identity rejection**: PASS — inactive identities intentionally
+  cannot seed a physical-device group; this is confirmed, expected behaviour
+  and not a defect
 
 ### Link-safety UX — deployed
 
@@ -395,6 +397,40 @@ and CrowdSec configuration remain unchanged.
 
 Commit: `5d55be4` — `fix: cleanly disconnect SSH service probes`
 CI: run `34684029960` — PASS.
+
+## UI consistency and selectpicker conversion
+
+App-wide compact status/action visual normalization and the conversion of
+compact Device Monitor selects to OPNsense's `bootstrap-select`/`selectpicker`
+pattern are complete and live-validated on the testbed `192.168.20.23`.
+
+- App-wide compact status/action sizing was visually normalized; the approved
+  compact status scale is 13px font / line-height 1.5 / padding 1px 5px /
+  3px radius / 1px transparent border.
+- Static compact selects converted to selectpicker:
+  - `devices.volt` `#filter-status` (`btn-default btn-sm`)
+  - `infrastructureservices.volt` `#services-type-filter`,
+    `#services-status-filter` (`btn-default btn-sm`); `#services-type-filter`
+    is AJAX-populated and now refreshes the selectpicker after appending types
+  - `identityevents.volt` `#identity-events-status`, `#identity-events-limit`
+    (`btn-default btn-xs`)
+  - `scanhistory.volt` `#scan-history-limit` (`btn-default btn-xs`)
+- Dynamic Physical Device `#physical-device-select` (`devicehistory.volt`)
+  converted to selectpicker (`btn-default btn-xs`), initialized after DOM
+  insertion and refreshed after the AJAX group list loads; option ordering
+  (placeholder, existing groups, `+ Create new physical device...` last) is
+  preserved.
+- Live Firefox visual validation on `192.168.20.23`: PASS (Devices, Infrastructure
+  Services, Identity Events, Nmap Scan History, and Device Details).
+- Obsolete native-select vertical-metric CSS (heights, paddings, line-heights,
+  and the `form-control input-sm` select styling) removed across the affected
+  views.
+- New regression coverage: `tests/test_selectpicker_static.js`; extended
+  `tests/test_physical_device_ui.js`; CI step added in
+  `.github/workflows/ci.yml`.
+- The five affected views were deployed to the testbed with SHA256 verification
+  and a rollback backup retained at
+  `/root/dm-selectpicker-backup-20260918-123459`.
 
 ## Previously completed
 
@@ -811,10 +847,9 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - `PRODUCT_BACKLOG.md` remains the authoritative list of deferred Device Monitor work.
 - `DM-BL-002` and `DM-BL-003` are complete and have been removed from the open backlog.
 - `DM-BL-004` remains deferred because Unbound is not used in this environment.
-- `DM-BL-001` is implemented and is no longer an open backlog feature; its Link
-  and Remove live GUI validation remains deferred until a legitimate
-  same-physical-device MAC pair is available (see the DM-BL-001 live-validation
-  section above).
+- `DM-BL-001` is implemented, fully live-validated on the testbed
+  `192.168.20.23`, and is no longer an open backlog feature (see the DM-BL-001
+  live-validation section above).
 - Open backlog items are now `DM-BL-004`, `DM-BL-005`, `DM-BL-006` and `DM-BL-007`.
 - Architectural constraints remain in `DECISIONS.md`; environment facts remain
   in `SYSTEM_MAP.md`.
@@ -892,8 +927,9 @@ Release-facing metadata and documentation have been reviewed and corrected.
   including daylight-saving changes.
 - Removed the obsolete Device Comments popup/editor and its dead JavaScript from
   the Devices page.
-- Standardised ordinary Device Monitor status labels to 12px across relevant
-  views.
+- Standardised ordinary Device Monitor status labels to the approved compact
+  scale — 13px font, line-height 1.5, padding 1px 5px, 3px radius, 1px
+  transparent border — across relevant views.
 - Device Details UI, note create/edit/archive history, ONLINE/OFFLINE display,
   legacy-popup removal, and test-data cleanup were validated live.
 - Returning-device lifecycle behaviour is covered by regression tests; no live
@@ -1029,25 +1065,23 @@ Guarded live rollback backups retained:
 
 ## Next step
 
-`DM-BL-001` is complete: its **Create** flow was live-validated and its
-temporary test group was intentionally purged. The **Link** and **Remove** live
-GUI write flows remain **deferred validation items** — they must not be recorded
-as PASS or complete until actually executed, and must not be simulated by
-fabricating grouping data. Complete them only when a legitimate
-same-physical-device MAC pair becomes available.
+`DM-BL-001` is complete and fully live-validated on the testbed `192.168.20.23`
+(Create, existing-group list, member count, Link, Remove; inactive-identity
+rejection confirmed intentional). The associated UI consistency and selectpicker
+conversion work is also complete and live-validated. The remaining step is to
+commit the accumulated uncommitted changes after the documented pre-commit
+validation.
 
-The Device Monitor testbed has been migrated to `192.168.20.23` (see
-"TESTBED environment and production isolation" above), so the deferred DM-BL-001
-Link and Remove live GUI write-flow validation can be attempted on the testbed
-instead of in production.
+The Device Monitor testbed remains `192.168.20.23`; production `192.168.20.254`
+was not modified.
 
 The migration checkpoint is complete and development runs from the FreeBSD
 authoritative checkout.
 
 `DM-BL-006` — Device change summary dashboard — is **not** the current objective.
 It remains an open `PRODUCT_BACKLOG.md` candidate, to be considered only after
-`DM-BL-001` validation is closed and its `PROJECT_RULES.md` feature-design gate
-(Description, Benefit, UI placement, real-data testability) is satisfied.
+its `PROJECT_RULES.md` feature-design gate (Description, Benefit, UI placement,
+real-data testability) is satisfied.
 
 `DM-BL-004`, `DM-BL-005` and `DM-BL-007` also remain open and deferred for their
 recorded reasons (`DM-BL-004`: Unbound is not used in this environment;

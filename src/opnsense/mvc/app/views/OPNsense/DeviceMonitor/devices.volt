@@ -35,7 +35,10 @@
             </div>
 
             <!-- Status filtr -->
-            <select id="filter-status" class="form-control input-sm">
+            <select id="filter-status"
+                    class="selectpicker"
+                    data-style="btn-default btn-sm"
+                    data-width="130px">
                 <option value="">{{ lang._('All statuses') }}</option>
                 <option value="online">🟢 Online</option>
                 <option value="offline">⚫ Offline</option>
@@ -88,7 +91,13 @@
 
 <style>
 .content-box .label {
-    font-size: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 1px 5px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    vertical-align: middle;
+    display: inline-block;
 }
 
 .devices-header {
@@ -165,10 +174,6 @@
 }
 .devices-toolbar-spacer {
     flex-grow: 1;
-}
-.devices-toolbar .form-control {
-    width: auto;
-    min-width: 130px;
 }
 #vlan-dropdown-toggle {
     min-width: 160px;

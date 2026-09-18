@@ -243,6 +243,39 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
+     * List active (non-archived) physical-device groups.
+     * GET /api/devicemonitor/devices/listphysicaldevices
+     */
+    public function listphysicaldevicesAction()
+    {
+        $mac = strtolower(trim(
+            (string)$this->request->get('mac', 'string', '')
+        ));
+
+        if (
+            $mac !== '' &&
+            !preg_match(
+                '/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/',
+                $mac
+            )
+        ) {
+            return [
+                'result' => 'failed',
+                'error' => 'Valid MAC address required'
+            ];
+        }
+
+        $model = new DeviceMonitor();
+
+        return [
+            'result' => 'ok',
+            'groups' => $model->getActivePhysicalDevices(
+                $mac === '' ? null : $mac
+            )
+        ];
+    }
+
+    /**
      * Create a physical-device group with one explicitly selected known MAC.
      * POST /api/devicemonitor/devices/createphysicaldevice
      */

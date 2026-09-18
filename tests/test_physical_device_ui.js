@@ -66,6 +66,40 @@ check(
     'Physical-device grouping is not loaded on Device Details'
 );
 
+[
+    "'physical-device-select'",
+    '-- Select existing physical device --',
+    '+ Create new physical device...',
+    "'physical-device-controls'",
+    '/api/devicemonitor/devices/listphysicaldevices',
+    'Link this identity',
+    "'btn-link-current-identity'",
+    'renderPhysicalDeviceLinkForm',
+    'linkCurrentIdentityToPhysicalDevice',
+    "' identity'",
+    "' identities'",
+    "'data-name'"
+].forEach(function(value) {
+    check(
+        history.includes(value),
+        'Device Details physical-device dropdown missing: ' + value
+    );
+});
+
+[
+    ".addClass('selectpicker')",
+    ".selectpicker();",
+    ".selectpicker('refresh');",
+    "'data-style': 'btn-default btn-xs'",
+    "'data-width': '340px'",
+    "find('option[value=\"__create__\"]')"
+].forEach(function(value) {
+    check(
+        history.includes(value),
+        'Device Details physical-device selectpicker lifecycle missing: ' + value
+    );
+});
+
 const scripts = history.match(/<script>([\s\S]*?)<\/script>/g);
 
 check(

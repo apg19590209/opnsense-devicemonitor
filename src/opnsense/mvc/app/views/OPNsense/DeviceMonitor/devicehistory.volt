@@ -1,6 +1,20 @@
 <style>
 .content-box .label {
-    font-size: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 1px 5px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    vertical-align: middle;
+    display: inline-block;
+}
+
+#grid-related-identities .btn-group .label {
+    float: left;
+    padding: 1px 5px;
+    font-size: 13px;
+    line-height: 1.5;
+    border-radius: 3px;
 }
 </style>
 
@@ -107,7 +121,7 @@
                               placeholder="{{ lang._('Enter a new note...') }}"></textarea>
                     <button id="btn-add-note"
                             type="button"
-                            class="btn btn-sm btn-primary"
+                            class="btn btn-xs btn-primary"
                             style="margin-top:8px;">
                         <i class="fa fa-plus"></i>
                         {{ lang._('Add Note') }}
@@ -1117,20 +1131,111 @@ $(document).ready(function() {
         });
     }
 
-    function renderPhysicalDevice(physicalDevice) {
+    function renderPhysicalDeviceLinkForm() {
         var $container = $('#physical-device-content')
             .removeClass('text-danger')
             .empty();
 
-        if (!physicalDevice) {
-            $('<p>')
-                .addClass('text-muted')
-                .text(
-                    'This MAC address is not linked to a user-confirmed ' +
-                    'physical device.'
-                )
-                .appendTo($container);
+        $('<p>')
+            .addClass('text-muted')
+            .text(
+                'This MAC address is not linked to a user-confirmed ' +
+                'physical device.'
+            )
+            .appendTo($container);
 
+        var $select = $('<select>')
+            .attr({
+                id: 'physical-device-select',
+                'data-style': 'btn-default btn-xs',
+                'data-width': '340px'
+            })
+            .addClass('selectpicker');
+
+        $('<option>')
+            .attr('value', '')
+            .text('-- Select existing physical device --')
+            .appendTo($select);
+
+        $('<option>')
+            .attr('value', '__create__')
+            .text('+ Create new physical device...')
+            .appendTo($select);
+
+        $select
+            .on('change', function() {
+                renderPhysicalDeviceControls($select.val());
+            })
+            .appendTo($container)
+            .selectpicker();
+
+        var $controls = $('<div>')
+            .attr('id', 'physical-device-controls')
+            .css('margin-top', '8px')
+            .appendTo($container);
+
+        $('<div>')
+            .addClass('text-muted')
+            .css('margin-top', '8px')
+            .text(
+                'Grouping is explicit and does not merge or rewrite ' +
+                'device, lifecycle or identity history.'
+            )
+            .appendTo($container);
+
+        renderPhysicalDeviceControls($select.val());
+
+        $.ajax({
+            url: '/api/devicemonitor/devices/listphysicaldevices',
+            type: 'GET',
+            data: {mac: mac},
+            success: function(result) {
+                if (!result || result.result !== 'ok') {
+                    return;
+                }
+
+                var groups = Array.isArray(result.groups)
+                    ? result.groups
+                    : [];
+
+                groups.forEach(function(group) {
+                    var memberCount = parseInt(group.member_count, 10);
+                    var label = group.name;
+
+                    if (!isNaN(memberCount)) {
+                        label +=
+                            ' (' +
+                            memberCount +
+                            (memberCount === 1 ? ' identity' : ' identities') +
+                            ')';
+                    }
+
+                    $('<option>')
+                        .attr({
+                            value: group.id,
+                            'data-name': group.name
+                        })
+                        .text(label)
+                        .appendTo($select);
+                });
+
+                // Keep the create-new option last, after any existing groups.
+                $select
+                    .find('option[value="__create__"]')
+                    .appendTo($select);
+
+                $select.selectpicker('refresh');
+            },
+            error: function() {
+                // The create-new flow remains available without the list.
+            }
+        });
+    }
+
+    function renderPhysicalDeviceControls(selectedValue) {
+        var $controls = $('#physical-device-controls').empty();
+
+        if (selectedValue === '__create__') {
             var $createForm = $('<div>')
                 .addClass('form-inline');
 
@@ -1151,7 +1256,7 @@ $(document).ready(function() {
                     id: 'btn-create-physical-device',
                     type: 'button'
                 })
-                .addClass('btn btn-sm btn-primary')
+                .addClass('btn btn-xs btn-primary')
                 .html(
                     '<i class="fa fa-plus-circle"></i> Create Physical Device'
                 )
@@ -1161,17 +1266,106 @@ $(document).ready(function() {
 
             $createForm
                 .append($name, $createButton)
-                .appendTo($container);
+                .appendTo($controls);
+            return;
+        }
 
-            $('<div>')
-                .addClass('text-muted')
-                .css('margin-top', '8px')
-                .text(
-                    'Grouping is explicit and does not merge or rewrite ' +
-                    'device, lifecycle or identity history.'
-                )
-                .appendTo($container);
+        if (selectedValue) {
+            var physicalDeviceId = parseInt(selectedValue, 10);
+            var $selectedOption =
+                $('#physical-device-select option:selected');
+            var physicalDeviceName = $selectedOption.attr('data-name') ||
+                $selectedOption.text();
 
+            var $linkButton = $('<button>')
+                .attr({
+                    id: 'btn-link-current-identity',
+                    type: 'button'
+                })
+                .addClass('btn btn-xs btn-primary')
+                .html('<i class="fa fa-link"></i> Link this identity')
+                .on('click', function() {
+                    linkCurrentIdentityToPhysicalDevice(
+                        physicalDeviceId,
+                        physicalDeviceName,
+                        $(this)
+                    );
+                });
+
+            $linkButton.appendTo($controls);
+            return;
+        }
+
+        $('<div>')
+            .addClass('text-muted')
+            .text(
+                'Select an existing physical device to link this identity, ' +
+                'or create a new one.'
+            )
+            .appendTo($controls);
+    }
+
+    function linkCurrentIdentityToPhysicalDevice(
+        physicalDeviceId,
+        physicalDeviceName,
+        button
+    ) {
+        if (
+            !confirm(
+                'Link ' +
+                mac +
+                ' to physical device "' +
+                physicalDeviceName +
+                '"?\n\n' +
+                'Only continue if this MAC belongs to the same physical ' +
+                'hardware. Do not link separate devices merely because ' +
+                'they are the same type, model or vendor.'
+            )
+        ) {
+            return;
+        }
+
+        button.prop('disabled', true);
+
+        $.ajax({
+            url: '/api/devicemonitor/devices/linkphysicaldeviceidentity',
+            type: 'POST',
+            data: {
+                physical_device_id: physicalDeviceId,
+                mac: mac
+            },
+            success: function(result) {
+                if (result && result.result === 'saved') {
+                    showToast('Identity linked', 'success');
+                    loadPhysicalDevice();
+                    return;
+                }
+
+                button.prop('disabled', false);
+                showError(
+                    result && result.error
+                        ? result.error
+                        : 'Unable to link identity'
+                );
+            },
+            error: function(xhr) {
+                button.prop('disabled', false);
+                showError(
+                    xhr.responseJSON && xhr.responseJSON.error
+                        ? xhr.responseJSON.error
+                        : 'Unable to link identity'
+                );
+            }
+        });
+    }
+
+    function renderPhysicalDevice(physicalDevice) {
+        var $container = $('#physical-device-content')
+            .removeClass('text-danger')
+            .empty();
+
+        if (!physicalDevice) {
+            renderPhysicalDeviceLinkForm();
             return;
         }
 
@@ -1238,7 +1432,7 @@ $(document).ready(function() {
         members.forEach(function(member) {
             var memberMac = (member.mac || '').trim().toLowerCase();
             var isCurrent = memberMac === mac;
-            var $actions = $('<div>').addClass('btn-group btn-group-xs');
+            var $actions = $('<div>').addClass('btn-group');
 
             if (isCurrent) {
                 $('<span>')
@@ -1253,7 +1447,7 @@ $(document).ready(function() {
                             encodeURIComponent(memberMac),
                         title: 'Open Device Details'
                     })
-                    .addClass('btn btn-default')
+                    .addClass('btn btn-xs btn-default')
                     .html('<i class="fa fa-external-link"></i> View')
                     .appendTo($actions);
             }
@@ -1263,7 +1457,7 @@ $(document).ready(function() {
                     type: 'button',
                     title: 'Remove this identity from the physical device'
                 })
-                .addClass('btn btn-danger')
+                .addClass('btn btn-xs btn-danger')
                 .html('<i class="fa fa-unlink"></i> Remove')
                 .on('click', function() {
                     removePhysicalDeviceIdentity(
@@ -1311,7 +1505,7 @@ $(document).ready(function() {
                 id: 'btn-link-physical-identity',
                 type: 'button'
             })
-            .addClass('btn btn-sm btn-primary')
+            .addClass('btn btn-xs btn-primary')
             .html('<i class="fa fa-link"></i> Link Identity')
             .on('click', function() {
                 linkPhysicalDeviceIdentity(
