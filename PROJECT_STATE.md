@@ -25,13 +25,13 @@ OPNsense 26.7.2_2
 
 Latest completed v2.9 implementation commit:
 
-`14ee00f` — `fix: clarify physical device identity linking` (DM-BL-001
-same-physical-device Link safety UX; deployed to OPNsense)
+`18524878c6abbcbbbb32504e7aa89eeaf4dfeed7` — `fix: support Pi-hole CA with
+Python 3.13 TLS`
 
-Latest repository commit:
+Latest repository commit (HEAD):
 
-`docs: record DM-BL-001 link safety deployment` (deployment reconciliation of
-the `14ee00f` Link safety UX)
+`28fc0fb67c35a495fd075e8c845de17110c8ec70` — `docs: record Pi-hole Python 3.13
+TLS fix and live validation`
 
 Workflow state:
 
@@ -382,12 +382,12 @@ OPNsense testbed `192.168.20.23`:
 
 ### Next environment objective
 
-Establish an isolated OPNsense testbed for Device Monitor validation before
-further consequential live-production experimentation. No new product-backlog
-feature is designated as the next implementation task.
-
-`DM-BL-004` — OPNsense/Unbound hostname enrichment — remains deferred because
-Unbound is not currently used in this environment.
+`192.168.20.23` is the physical Device Monitor testbed, but it is not isolated:
+its `re0` interface sits on the live `192.168.20.0/24` LAN, so Device Monitor
+automatic monitoring remains deliberately disabled. A genuinely isolated
+interface/network remains the next environment objective before further
+consequential live experimentation. No new product-backlog feature is designated
+as the next implementation task.
 
 The CrowdSec false-positive SSH brute-force defect caused by Device Monitor
 service discovery is complete, deployed and validated live. After receiving a
@@ -1258,7 +1258,9 @@ Validated:
   precedence): PASS
 - production `192.168.20.254` untouched
 
-REAL_UNBOUND_VALIDATION = NOT PERFORMED (testbed does not use Unbound).
+REAL_UNBOUND_VALIDATION = NOT PERFORMED (the implemented provider reads local
+OPNsense `/conf/config.xml`, and the current testbed has no suitable real
+Unbound source data).
 
 ## Next step
 
