@@ -1197,7 +1197,35 @@ Validated:
   fixture lookup): PASS
 - production `192.168.20.254` untouched
 
-REAL_PIHOLE_VALIDATION = NOT PERFORMED (no authorised live Pi-hole service).
+REAL_PIHOLE_VALIDATION = PASS (corrective TLS fix; see below).
+
+## v2.9 development — DM-BL-007 Python 3.13 TLS corrective fix
+
+The DM-BL-007 Pi-hole provider failed on Python 3.13 because the stock Pi-hole v6
+local CA (`/etc/pihole/tls_ca.crt`) is `CA:TRUE` but lacks the X.509 Key Usage
+extension that Python 3.13 strict verification requires, producing
+`CERTIFICATE_VERIFY_FAILED`.
+
+Corrective fix (Pi-hole provider only):
+
+- in `get_pihole_hostnames()`, immediately after
+  `context = ssl.create_default_context()`, clear only the
+  `ssl.VERIFY_X509_STRICT` flag when available
+- normal CA-chain validation (`ssl.CERT_REQUIRED`) and hostname verification
+  (`check_hostname = True`) remain enabled
+- no other TLS context or provider changed; no `CERT_NONE` or unverified context
+
+Validated:
+
+- Pi-hole provider regression suite (13 checks, incl. a strict-flag-clearing
+  regression test): PASS
+- hostname-provider framework / hostname provenance / AdGuard / Unbound
+  regressions: PASS
+- `python3 -m py_compile` and `git diff --check`: PASS
+- real Pi-hole v6 validation PASS (one MAC hostname mapping returned); TLS chain
+  and hostname verification remained enabled
+- guarded deployment of `scan_network.py` with SHA256 match and syntax check: PASS
+- production `192.168.20.254` untouched
 
 ## v2.9 development — DM-BL-004 complete
 
