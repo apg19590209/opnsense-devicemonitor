@@ -35,6 +35,18 @@ STOP and report the discrepancy before making changes.
 - STOP and report when clarification is required.
 - Do not automatically advance to another phase after completing the current phase.
 
+### Shell scripting safety
+
+When writing bash or shell scripts that involve multi-line text blocks, always
+use quoted heredocs (`<<'EOF'`) by default to prevent unintended variable
+expansion. If you must use indentation inside a script block, use tabs with
+`<<-EOF` or prefer writing the content directly to a temporary file via a
+standard editor tool rather than nesting massive heredocs.
+
+For multi-line literal content, prefer `<<'EOF'`. Do not use an unquoted heredoc
+delimiter where variable/command/backslash expansion is not explicitly required.
+Avoid deeply nested or massive heredocs.
+
 ## 3. Consequential actions
 
 Before any consequential action, clearly identify it.
