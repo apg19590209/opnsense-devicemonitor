@@ -835,6 +835,7 @@ jobs:
           python3 tests/test_adguard_rewrites.py
           python3 tests/test_hostname_provenance.py
           python3 tests/test_hostname_provider_framework.py
+          python3 tests/test_pihole_provider.py
           python3 tests/test_hostwatch_lan_visibility.py
           python3 tests/test_liveness_fallback.py
 

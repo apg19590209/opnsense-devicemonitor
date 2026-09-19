@@ -77,6 +77,10 @@ class ConfigController extends ApiControllerBase
         $adguard_username = trim($this->request->getPost('adguard_username', 'string', ''));
         $adguard_password = $this->request->getPost('adguard_password', 'string', '');
 
+        $pihole_enabled = $this->request->getPost('pihole_enabled', 'string', '0');
+        $pihole_url = trim($this->request->getPost('pihole_url', 'string', ''));
+        $pihole_password = $this->request->getPost('pihole_password', 'string', '');
+
         $webhook_enabled = $this->request->getPost('webhook_enabled', 'string', '0');
         $webhook_url = $this->request->getPost('webhook_url', 'string', '');
         $scan_interval = $this->request->getPost('scan_interval', 'int', 300);
@@ -149,6 +153,41 @@ class ConfigController extends ApiControllerBase
 
             if ($adguard_password === '') {
                 return ['result' => 'failed', 'message' => 'AdGuard password must not be empty'];
+            }
+        }
+
+        if (!in_array($pihole_enabled, ['0', '1'], true)) {
+            return ['result' => 'failed', 'message' => 'Invalid Pi-hole enabled value'];
+        }
+
+        if ($pihole_enabled === '1') {
+            if ($pihole_url === '' || !filter_var($pihole_url, FILTER_VALIDATE_URL)) {
+                return ['result' => 'failed', 'message' => 'Invalid Pi-hole URL'];
+            }
+
+            $pihole_url_parts = parse_url($pihole_url);
+
+            if (
+                !is_array($pihole_url_parts)
+                || strtolower((string)($pihole_url_parts['scheme'] ?? '')) !== 'https'
+            ) {
+                return ['result' => 'failed', 'message' => 'Pi-hole URL must use HTTPS'];
+            }
+
+            if (
+                isset($pihole_url_parts['user'])
+                || isset($pihole_url_parts['pass'])
+                || isset($pihole_url_parts['query'])
+                || isset($pihole_url_parts['fragment'])
+            ) {
+                return [
+                    'result' => 'failed',
+                    'message' => 'Pi-hole URL must not contain credentials, query or fragment'
+                ];
+            }
+
+            if ($pihole_password === '') {
+                return ['result' => 'failed', 'message' => 'Pi-hole app password must not be empty'];
             }
         }
 
@@ -228,6 +267,9 @@ class ConfigController extends ApiControllerBase
         $config['adguard_url'] = $adguard_url;
         $config['adguard_username'] = $adguard_username;
         $config['adguard_password'] = $adguard_password;
+        $config['pihole_enabled'] = $pihole_enabled;
+        $config['pihole_url'] = $pihole_url;
+        $config['pihole_password'] = $pihole_password;
         $config['webhook_enabled'] = $webhook_enabled;
         $config['webhook_url'] = $webhook_url;
         $config['scan_interval'] = (int)$scan_interval;

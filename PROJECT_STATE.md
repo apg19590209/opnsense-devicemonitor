@@ -1165,11 +1165,45 @@ Validated:
 `DM-BL-007` (Pi-hole) can now implement the same `name` + `lookup` interface and
 register in the provider list without modifying core selection logic.
 
+## v2.9 development — DM-BL-007 complete
+
+`DM-BL-007` — optional Pi-hole hostname enrichment — is implemented, deployed and
+offline-validated on the physical OPNsense testbed `192.168.20.23`.
+
+Implemented:
+
+- Pi-hole provider (`get_pihole_hostnames`) using the generic DM-BL-005
+  `HostnameProvider` framework (no Pi-hole logic inside `resolve_hostname`)
+- Pi-hole v6 REST API, DHCP leases endpoint (`GET /api/dhcp/leases`) with
+  session auth (`POST /api/auth` + `X-FTL-SID` header)
+- disabled by default; settings `pihole_enabled`, `pihole_url`,
+  `pihole_password` (app password) added to defaults.json, ConfigController
+  validation/save, and the Settings UI
+- HTTPS-only, TLS verification enabled, bounded timeout, no credential logging
+- deterministic precedence: AdGuard > Dnsmasq > Kea > ISC > Pi-hole > Hostwatch
+- normalization and provenance reuse the existing framework (`source=pihole`)
+- provider failure / empty result never erases a retained hostname
+- no schema changes
+
+Validated:
+
+- new Pi-hole provider regression suite (12 checks): PASS
+- existing hostname-provider framework / hostname provenance / AdGuard /
+  Hostwatch / device-activity / lifecycle / liveness regressions: PASS
+- full Python/PHP/JS test suites: PASS
+- guarded live deployment of `scan_network.py`, `ConfigController.php`,
+  `defaults.json` and `settings.volt` with hash verification: PASS
+- live syntax checks + import-based Pi-hole smoke test (disabled/missing-config/
+  fixture lookup): PASS
+- production `192.168.20.254` untouched
+
+REAL_PIHOLE_VALIDATION = NOT PERFORMED (no authorised live Pi-hole service).
+
 ## Next step
 
-`DM-BL-005` is implemented and validated on the testbed. The next step is
-`DM-BL-007` (optional Pi-hole hostname enrichment) using the new provider
-framework, pending user demand or a deployment available for real validation.
+`DM-BL-004` — OPNsense/Unbound hostname enrichment — remains the only open
+hostname-enrichment backlog item, deferred because Unbound is not currently used
+in this environment.
 
 The Device Monitor testbed remains `192.168.20.23`; production `192.168.20.254`
 was not modified.

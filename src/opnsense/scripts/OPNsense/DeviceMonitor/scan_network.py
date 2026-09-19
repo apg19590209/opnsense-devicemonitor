@@ -1113,6 +1113,115 @@ def get_adguard_rewrite_hostnames(config):
     )
     return mappings
 
+
+def get_pihole_hostnames(config):
+    """Return MAC -> hostname mappings from Pi-hole DHCP leases (v6 REST API).
+
+    Pi-hole enrichment is optional and disabled by default. Uses session-based
+    auth (POST /api/auth with the app password, then the X-FTL-SID header) and
+    the DHCP leases endpoint (GET /api/dhcp/leases). Failures are isolated and
+    logged without exposing credentials; an empty result is not an error.
+    """
+    if not config.get('pihole_enabled'):
+        return {}
+
+    base_url = str(config.get('pihole_url') or '').strip().rstrip('/')
+    password = str(config.get('pihole_password') or '')
+
+    if not base_url or not password:
+        log('Pi-hole hostname provider: configuration incomplete')
+        return {}
+
+    try:
+        parsed_url = urllib.parse.urlsplit(base_url)
+        if (
+            parsed_url.scheme.lower() != 'https'
+            or not parsed_url.hostname
+            or parsed_url.username is not None
+            or parsed_url.password is not None
+            or parsed_url.query
+            or parsed_url.fragment
+        ):
+            log('Pi-hole hostname provider: invalid HTTPS URL')
+            return {}
+    except Exception:
+        return {}
+
+    try:
+        context = ssl.create_default_context()
+
+        auth_request = urllib.request.Request(
+            f'{base_url}/api/auth',
+            data=json.dumps({'password': password}).encode('utf-8'),
+            headers={
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            method='POST'
+        )
+
+        with urllib.request.urlopen(
+            auth_request, timeout=4, context=context
+        ) as response:
+            auth_payload = json.loads(response.read(1048576).decode('utf-8'))
+
+        session_id = None
+        if isinstance(auth_payload, dict):
+            session = auth_payload.get('session')
+            if isinstance(session, dict):
+                session_id = session.get('sid')
+            if not session_id:
+                session_id = auth_payload.get('sid')
+
+        if not session_id:
+            log('Pi-hole hostname provider: no session in auth response')
+            return {}
+
+        leases_request = urllib.request.Request(
+            f'{base_url}/api/dhcp/leases',
+            headers={
+                'Accept': 'application/json',
+                'X-FTL-SID': session_id
+            },
+            method='GET'
+        )
+
+        with urllib.request.urlopen(
+            leases_request, timeout=4, context=context
+        ) as response:
+            payload = json.loads(response.read(1048576).decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        log(f'Pi-hole hostname provider: HTTP {e.code}')
+        return {}
+    except Exception as e:
+        log(f'Pi-hole hostname provider: request failed ({type(e).__name__})')
+        return {}
+
+    if not isinstance(payload, dict):
+        return {}
+
+    leases = payload.get('leases')
+    if not isinstance(leases, list):
+        return {}
+
+    mappings = {}
+
+    for lease in leases:
+        if not isinstance(lease, dict):
+            continue
+
+        mac = str(lease.get('hwaddr') or '').strip().lower()
+        hostname = normalize_hostname(lease.get('name'))
+
+        if not mac or not hostname:
+            continue
+
+        mappings[mac] = hostname
+
+    log(f'Pi-hole hostname provider: {len(mappings)} MAC hostname mappings')
+    return mappings
+
+
 KEA_READ_ONLY_COMMANDS = {
     'list-commands',
     'lease4-get-all',
@@ -6219,19 +6328,26 @@ class MappingHostnameProvider(HostnameProvider):
         return self.mapping.get(lookup_value)
 
 
-def build_hostname_providers(isc, kea, dnsmasq, adguard):
+def build_hostname_providers(isc, kea, dnsmasq, adguard, pihole=None):
     """Return enrichment hostname providers in precedence order.
 
     Precedence is strongest-first and follows the established rule:
-    AdGuard > Dnsmasq > Kea > ISC. Hostwatch is the observational base value
-    handled separately by ``resolve_hostname``.
+    AdGuard > Dnsmasq > Kea > ISC > Pi-hole. Hostwatch is the observational
+    base value handled separately by ``resolve_hostname``.
     """
-    return [
+    providers = [
         MappingHostnameProvider('adguard', adguard, key='ip'),
         MappingHostnameProvider('dnsmasq', dnsmasq, key='mac', lower=True),
         MappingHostnameProvider('kea', kea, key='mac', lower=True),
         MappingHostnameProvider('isc', isc, key='mac', lower=True),
     ]
+
+    if pihole:
+        providers.append(
+            MappingHostnameProvider('pihole', pihole, key='mac', lower=True)
+        )
+
+    return providers
 
 
 def resolve_hostname(device, providers):
@@ -6265,14 +6381,16 @@ def apply_hostname_provenance(
     isc_descriptions,
     kea_descriptions,
     dnsmasq_descriptions,
-    adguard_rewrite_hostnames
+    adguard_rewrite_hostnames,
+    pihole_hostnames=None
 ):
     """Apply hostname precedence and record the source of the winning hostname."""
     providers = build_hostname_providers(
         isc_descriptions,
         kea_descriptions,
         dnsmasq_descriptions,
-        adguard_rewrite_hostnames
+        adguard_rewrite_hostnames,
+        pihole_hostnames
     )
 
     device['hostname'], device['hostname_source'] = resolve_hostname(
@@ -6372,7 +6490,7 @@ def full_scan():
         return 1
 
     # 2. Hostname sources. Precedence is applied explicitly below:
-    # AdGuard > Dnsmasq > Kea > ISC > Hostwatch.
+    # AdGuard > Dnsmasq > Kea > ISC > Pi-hole > Hostwatch.
     isc_descriptions = get_dhcp_descriptions()
 
     kea_descriptions = {
@@ -6383,6 +6501,7 @@ def full_scan():
 
     dnsmasq_descriptions = get_dnsmasq_descriptions()
     adguard_rewrite_hostnames = get_adguard_rewrite_hostnames(config)
+    pihole_hostnames = get_pihole_hostnames(config)
 
     # 3. Update local database
     new_devices = []
@@ -6401,7 +6520,8 @@ def full_scan():
             isc_descriptions,
             kea_descriptions,
             dnsmasq_descriptions,
-            adguard_rewrite_hostnames
+            adguard_rewrite_hostnames,
+            pihole_hostnames
         )
 
         is_active = 1 if is_device_active(device.get('last_seen', ''), device.get('ip', ''), mac in previously_active) else 0

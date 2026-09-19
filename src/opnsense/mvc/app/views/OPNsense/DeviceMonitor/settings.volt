@@ -282,6 +282,33 @@
                             </td>
                         </tr>
 
+                        <tr>
+                            <td style="vertical-align:top;">
+                                <strong>{{ lang._('Pi-hole Hostnames') }}</strong>
+                            </td>
+                            <td>
+                                <label style="margin:0;">
+                                    <input type="checkbox" id="pihole_enabled" />
+                                    <strong>{{ lang._('Enable Pi-hole hostname enrichment') }}</strong>
+                                </label>
+                                <br>
+                                <small class="text-muted">
+                                    {{ lang._('Uses Pi-hole DHCP leases as a hostname source. Enable this only if you use Pi-hole as your DHCP server.') }}
+                                </small>
+
+                                <div id="pihole_config" style="margin-top:14px;max-width:600px;display:none;">
+                                    <label>{{ lang._('Pi-hole URL') }}:</label>
+                                    <input type="text" id="pihole_url" class="form-control" placeholder="https://192.168.1.3" style="max-width:400px;" />
+                                    <small class="text-muted">{{ lang._('HTTPS base URL of your Pi-hole server') }}</small>
+                                    <br><br>
+
+                                    <label>{{ lang._('App password') }}:</label>
+                                    <input type="password" id="pihole_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
+                                    <small class="text-muted">{{ lang._('Pi-hole app password generated in the Pi-hole web interface') }}</small>
+                                </div>
+                            </td>
+                        </tr>
+
                     </tbody>
                 </table>
 
@@ -483,6 +510,9 @@ $().ready(function() {
             $('#adguard_url').val(d.adguard_url||'');
             $('#adguard_username').val(d.adguard_username||'');
             $('#adguard_password').val(d.adguard_password||'');
+            $('#pihole_enabled').prop('checked', d.pihole_enabled==='1');
+            $('#pihole_url').val(d.pihole_url||'');
+            $('#pihole_password').val(d.pihole_password||'');
             $('#targeted_nmap_enabled').prop(
                 'checked',
                 String(
@@ -533,6 +563,7 @@ $().ready(function() {
             toggleEmailMethod();
             toggleWebhookConfig();
             toggleAdGuardConfig();
+            togglePiHoleConfig();
         }});
     }
 
@@ -558,11 +589,15 @@ $().ready(function() {
     function toggleAdGuardConfig() {
         $('#adguard_rewrite_enabled').prop('checked') ? $('#adguard_rewrite_config').slideDown() : $('#adguard_rewrite_config').slideUp();
     }
+    function togglePiHoleConfig() {
+        $('#pihole_enabled').prop('checked') ? $('#pihole_config').slideDown() : $('#pihole_config').slideUp();
+    }
     $('#email_enabled').change(toggleEmailConfig);
     $('#service_email_enabled').change(toggleServiceEmailOptions);
     $('#email_method').change(toggleEmailMethod);
     $('#webhook_enabled').change(toggleWebhookConfig);
     $('#adguard_rewrite_enabled').change(toggleAdGuardConfig);
+    $('#pihole_enabled').change(togglePiHoleConfig);
 
     function collectConfigData() {
         return {
@@ -571,6 +606,9 @@ $().ready(function() {
             adguard_url:      $('#adguard_url').val(),
             adguard_username: $('#adguard_username').val(),
             adguard_password: $('#adguard_password').val(),
+            pihole_enabled:  $('#pihole_enabled').is(':checked')?'1':'0',
+            pihole_url:      $('#pihole_url').val(),
+            pihole_password: $('#pihole_password').val(),
             email_enabled:    $('#email_enabled').is(':checked')?'1':'0',
             identity_email_enabled: $('#identity_email_enabled').is(':checked')?'1':'0',
             service_email_enabled: $('#service_email_enabled').is(':checked')?'1':'0',

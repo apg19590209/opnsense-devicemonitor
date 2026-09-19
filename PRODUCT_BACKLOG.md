@@ -31,15 +31,3 @@ while retaining explicit source provenance.
 
 **Deferred:** Unbound is not currently used in this environment, so there is no
 immediate local benefit or real deployment data available for validation.
-
-### DM-BL-007 — Optional Pi-hole hostname enrichment
-
-Consider Pi-hole as an optional hostname source if there is user demand or a
-deployment available for real validation.
-
-The generic hostname-provider framework (DM-BL-005) is now available, so Pi-hole
-integration can implement the same provider interface and register in the
-provider list without core changes.
-
-Keep it lower priority than hostname provenance and native OPNsense/Unbound
-enrichment.

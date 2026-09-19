@@ -592,3 +592,28 @@ Device Monitor already has multiple independent hostname sources, so a common
 abstraction avoids scattering provider-specific logic across the codebase and
 gives future integrations a stable, tested extension point, while keeping
 precedence, normalization and failure behaviour deterministic and auditable.
+
+## 23. Pi-hole hostname enrichment is optional and uses the generic provider framework
+
+### Decision
+
+Pi-hole hostname enrichment is implemented as a provider on top of the generic
+DM-BL-005 framework and is disabled by default.
+
+- Data source: the Pi-hole v6 REST API `GET /api/dhcp/leases` (session auth via
+  `POST /api/auth` with an app password, then the `X-FTL-SID` header), mapping
+  DHCP-lease MAC (`hwaddr`) to hostname (`name`).
+- Precedence is AdGuard > Dnsmasq > Kea > ISC > Pi-hole > Hostwatch: Pi-hole is
+  weaker than the native OPNsense DHCP sources but stronger than the Hostwatch
+  observational base (consistent with the DM-BL-007 backlog wording "lower
+  priority than hostname provenance and native OPNsense/Unbound enrichment").
+- Access is HTTPS-only with TLS verification enabled, a bounded timeout, and no
+  credential values in logs or error messages.
+- Provider failure or an empty result never erases an already-resolved hostname.
+
+### Reason
+
+Pi-hole is an external, optional DNS/DHCP source, so it must not be enabled by
+default or outrank the authoritative native OPNsense sources. Reusing the generic
+provider framework keeps Pi-hole-specific parsing and networking isolated from
+core selection logic, matching the DM-BL-005 design.
