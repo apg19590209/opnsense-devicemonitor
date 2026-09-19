@@ -1472,7 +1472,7 @@ class DeviceMonitor
             return $date
                 ->setTimezone(new \DateTimeZone('UTC'))
                 ->format('Y-m-d H:i:s');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return null;
         }
     }
