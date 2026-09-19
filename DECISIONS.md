@@ -563,3 +563,32 @@ UTC is the only unambiguous internal representation for sorting and filtering.
 Presenting values in the viewing administrator's local timezone (with automatic
 DST handling by the browser) makes the read-only summary intuitive without
 changing the authoritative stored values.
+
+## 22. Hostname enrichment uses a generic provider abstraction
+
+### Decision
+
+Device Monitor hostname enrichment is centralized behind a small generic
+provider abstraction. Each provider exposes a stable `name` (the recorded
+`hostname_source`) and a `lookup(device)` that returns a candidate or no result.
+
+- Precedence is centralized and deterministic, strongest-first:
+  AdGuard > Dnsmasq > Kea > ISC, with Hostwatch as the observational base value.
+- Provider failures are isolated: a failing provider is logged and skipped and
+  cannot break the device scan.
+- An empty provider result is not an error and never erases an already-resolved
+  hostname.
+- Provider candidates pass through one shared normalization path (strip
+  surrounding whitespace and a trailing dot).
+- The user-controlled `custom_hostname` (Friendly Name) remains independent of
+  provider enrichment (see Decision 11).
+- Future providers (for example Pi-hole) integrate by exposing the same
+  `name` + `lookup` interface and being placed in the ordered provider list,
+  without modifying core selection logic.
+
+### Reason
+
+Device Monitor already has multiple independent hostname sources, so a common
+abstraction avoids scattering provider-specific logic across the codebase and
+gives future integrations a stable, tested extension point, while keeping
+precedence, normalization and failure behaviour deterministic and auditable.

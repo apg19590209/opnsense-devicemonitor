@@ -6171,6 +6171,95 @@ def update_status_only():
     return 0
 
 
+def normalize_hostname(value):
+    """Return a normalized hostname candidate, or '' when empty/invalid.
+
+    Normalization is intentionally minimal and matches existing provider
+    handling: strip surrounding whitespace and any trailing dot. It does not
+    lower-case or otherwise rewrite the hostname.
+    """
+    if not isinstance(value, str):
+        return ''
+    return value.strip().rstrip('.')
+
+
+class HostnameProvider:
+    """Base class for a source of hostname candidates.
+
+    A provider exposes a stable ``name`` (the recorded hostname source) and
+    implements ``lookup(device)`` returning a candidate or ``None``/''.
+    """
+
+    name = ''
+
+    def lookup(self, device):
+        """Return a raw hostname candidate for a device, or None/'' if none."""
+        raise NotImplementedError
+
+
+class MappingHostnameProvider(HostnameProvider):
+    """Provider backed by a precomputed mapping (device field -> hostname).
+
+    ``key`` selects the device field used for lookup (for example 'mac' or
+    'ip'); ``lower`` lower-cases the lookup key (used for MAC addresses).
+    """
+
+    def __init__(self, name, mapping, key='mac', lower=False):
+        self.name = name
+        self.mapping = mapping or {}
+        self.key = key
+        self.lower = lower
+
+    def lookup(self, device):
+        lookup_value = str(device.get(self.key) or '').strip()
+        if self.lower:
+            lookup_value = lookup_value.lower()
+        if not lookup_value:
+            return None
+        return self.mapping.get(lookup_value)
+
+
+def build_hostname_providers(isc, kea, dnsmasq, adguard):
+    """Return enrichment hostname providers in precedence order.
+
+    Precedence is strongest-first and follows the established rule:
+    AdGuard > Dnsmasq > Kea > ISC. Hostwatch is the observational base value
+    handled separately by ``resolve_hostname``.
+    """
+    return [
+        MappingHostnameProvider('adguard', adguard, key='ip'),
+        MappingHostnameProvider('dnsmasq', dnsmasq, key='mac', lower=True),
+        MappingHostnameProvider('kea', kea, key='mac', lower=True),
+        MappingHostnameProvider('isc', isc, key='mac', lower=True),
+    ]
+
+
+def resolve_hostname(device, providers):
+    """Select a device hostname from ordered providers.
+
+    Providers are consulted strongest-first; the first provider returning a
+    normalized non-empty candidate wins and its name becomes the source.
+    Provider failures are isolated and logged, and an empty result is not an
+    error. When no provider yields a candidate, the device's observational
+    Hostwatch hostname is returned unchanged.
+
+    Returns ``(hostname, source)``.
+    """
+    for provider in providers:
+        try:
+            candidate = provider.lookup(device)
+        except Exception as e:
+            log(f'Hostname provider "{provider.name}" failed: {e}')
+            continue
+
+        normalized = normalize_hostname(candidate)
+        if normalized:
+            return normalized, provider.name
+
+    hostname = device.get('hostname') or ''
+    return hostname, ('hostwatch' if hostname else '')
+
+
 def apply_hostname_provenance(
     device,
     isc_descriptions,
@@ -6179,28 +6268,17 @@ def apply_hostname_provenance(
     adguard_rewrite_hostnames
 ):
     """Apply hostname precedence and record the source of the winning hostname."""
-    device['hostname_source'] = (
-        'hostwatch' if device.get('hostname') else ''
+    providers = build_hostname_providers(
+        isc_descriptions,
+        kea_descriptions,
+        dnsmasq_descriptions,
+        adguard_rewrite_hostnames
     )
 
-    mac = str(device.get('mac') or '').lower().strip()
-
-    if mac in isc_descriptions:
-        device['hostname'] = isc_descriptions[mac]
-        device['hostname_source'] = 'isc'
-
-    if mac in kea_descriptions:
-        device['hostname'] = kea_descriptions[mac]
-        device['hostname_source'] = 'kea'
-
-    if mac in dnsmasq_descriptions:
-        device['hostname'] = dnsmasq_descriptions[mac]
-        device['hostname_source'] = 'dnsmasq'
-
-    device_ip = str(device.get('ip') or '').strip()
-    if device_ip in adguard_rewrite_hostnames:
-        device['hostname'] = adguard_rewrite_hostnames[device_ip]
-        device['hostname_source'] = 'adguard'
+    device['hostname'], device['hostname_source'] = resolve_hostname(
+        device,
+        providers
+    )
 
     return device
 

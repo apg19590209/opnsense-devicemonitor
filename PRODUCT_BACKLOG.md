@@ -32,18 +32,14 @@ while retaining explicit source provenance.
 **Deferred:** Unbound is not currently used in this environment, so there is no
 immediate local benefit or real deployment data available for validation.
 
-### DM-BL-005 — Generic hostname-provider framework
-
-When enough independent hostname sources justify it, introduce a small provider
-abstraction carrying hostname, source and confidence/provenance information.
-
-Do not refactor solely for architectural neatness; implement only when additional
-providers make the abstraction worthwhile.
-
 ### DM-BL-007 — Optional Pi-hole hostname enrichment
 
 Consider Pi-hole as an optional hostname source if there is user demand or a
 deployment available for real validation.
+
+The generic hostname-provider framework (DM-BL-005) is now available, so Pi-hole
+integration can implement the same provider interface and register in the
+provider list without core changes.
 
 Keep it lower priority than hostname provenance and native OPNsense/Unbound
 enrichment.

@@ -1129,23 +1129,47 @@ Validated:
 - query timings: 24h ~10 ms, 7d ~11 ms, 30d ~10 ms
 - production `192.168.20.254` untouched
 
+## v2.9 development — DM-BL-005 complete
+
+`DM-BL-005` — generic hostname-provider framework — is implemented, deployed and
+validated on the physical OPNsense testbed `192.168.20.23`.
+
+Implemented:
+
+- centralized hostname enrichment behind a small Python provider abstraction
+  (`HostnameProvider` with `name` + `lookup(device)`; plus
+  `MappingHostnameProvider` for dict-backed sources)
+- deterministic, centralized precedence via `build_hostname_providers` /
+  `resolve_hostname` (strongest-first): AdGuard > Dnsmasq > Kea > ISC, with
+  Hostwatch as the observational base value
+- shared normalization (`normalize_hostname`): strip surrounding whitespace and
+  a trailing dot
+- provider failure isolation (a failing provider is logged and skipped; it
+  cannot break the device scan)
+- empty provider result is not an error and does not erase an already-resolved
+  hostname
+- `custom_hostname` (Friendly Name) remains independent of provider enrichment
+- existing `apply_hostname_provenance` retained as a compatibility wrapper
+- no schema changes
+
+Validated:
+
+- new hostname-provider framework regression suite: PASS
+- existing hostname provenance / AdGuard / Hostwatch / device-activity /
+  lifecycle-return / liveness regressions: PASS
+- full Python test suite: PASS
+- guarded live deployment of `scan_network.py` with hash verification: PASS
+- live Python syntax check and import-based framework smoke test: PASS
+- production `192.168.20.254` untouched
+
+`DM-BL-007` (Pi-hole) can now implement the same `name` + `lookup` interface and
+register in the provider list without modifying core selection logic.
+
 ## Next step
 
-`DM-BL-006` is complete, committed and pushed; CI is green. The next step is to
-review the remaining open backlog items (DM-BL-004 Unbound hostname enrichment,
-DM-BL-005 generic hostname-provider framework, DM-BL-007 Pi-hole enrichment) and
-select the next approved item.
+`DM-BL-005` is implemented and validated on the testbed. The next step is
+`DM-BL-007` (optional Pi-hole hostname enrichment) using the new provider
+framework, pending user demand or a deployment available for real validation.
 
 The Device Monitor testbed remains `192.168.20.23`; production `192.168.20.254`
 was not modified.
-
-`DM-BL-006` — Device change summary dashboard — is **not** the current objective.
-It remains an open `PRODUCT_BACKLOG.md` candidate, to be considered only after
-its `PROJECT_RULES.md` feature-design gate (Description, Benefit, UI placement,
-real-data testability) is satisfied.
-
-`DM-BL-004`, `DM-BL-005` and `DM-BL-007` also remain open and deferred for their
-recorded reasons (`DM-BL-004`: Unbound is not used in this environment;
-`DM-BL-005`: implement only once enough independent hostname providers justify
-the abstraction; `DM-BL-007`: lower priority than hostname provenance and native
-OPNsense/Unbound enrichment).
