@@ -3,6 +3,7 @@ import inspect
 import io
 import json
 import socket
+import ssl
 import urllib.error
 from pathlib import Path
 
@@ -266,6 +267,48 @@ def test_credentials_not_logged():
     print("PIHOLE_CREDENTIALS_NOT_LOGGED=PASS")
 
 
+def test_pihole_tls_strict_verification_cleared():
+    module = load_module()
+
+    # Obtain a real default SSLContext and remember everything except the
+    # strict-verification bit so we can prove the provider only clears that.
+    context = ssl.create_default_context()
+    non_strict_flags = context.verify_flags & ~getattr(
+        ssl, "VERIFY_X509_STRICT", 0
+    )
+
+    # Simulate Python 3.13's strict X.509 verification being enabled.
+    if hasattr(ssl, "VERIFY_X509_STRICT"):
+        context.verify_flags |= ssl.VERIFY_X509_STRICT
+
+    original_create_default_context = ssl.create_default_context
+    ssl.create_default_context = lambda: context
+    try:
+        patch_urlopen(module)
+        mapping = module.get_pihole_hostnames(enabled_config())
+    finally:
+        ssl.create_default_context = original_create_default_context
+
+    # The strict flag is the only verification setting the provider clears.
+    if hasattr(ssl, "VERIFY_X509_STRICT"):
+        assert context.verify_flags & ssl.VERIFY_X509_STRICT == 0
+
+    # Normal CA-chain and hostname verification must remain fully enabled.
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    assert context.check_hostname is True
+    assert context.verify_flags & ~getattr(
+        ssl, "VERIFY_X509_STRICT", 0
+    ) == non_strict_flags
+
+    # Normal Pi-hole hostname mapping still succeeds.
+    assert mapping == {
+        MAC_LOWER: "printer.local",
+        "bb:cc:dd:ee:ff:00": "other-host",
+    }
+
+    print("PIHOLE_TLS_STRICT_CLEARED=PASS")
+
+
 def test_resolve_hostname_has_no_pihole_branch():
     module = load_module()
     source = inspect.getsource(module.resolve_hostname).lower()
@@ -304,6 +347,7 @@ def main():
     test_friendly_name_untouched()
     test_duplicate_idempotent()
     test_credentials_not_logged()
+    test_pihole_tls_strict_verification_cleared()
     test_resolve_hostname_has_no_pihole_branch()
     test_apply_wrapper_accepts_pihole()
 

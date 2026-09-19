@@ -1223,6 +1223,12 @@ def get_pihole_hostnames(config):
 
     try:
         context = ssl.create_default_context()
+        # Pi-hole v6 supplies a locally generated CA (tls_ca.crt) that is
+        # CA:TRUE but lacks the X.509 Key Usage extension Python 3.13 strict
+        # verification requires. Clear only the strict-verification flag so
+        # normal CA-chain validation and hostname verification stay enabled.
+        if hasattr(ssl, 'VERIFY_X509_STRICT'):
+            context.verify_flags &= ~ssl.VERIFY_X509_STRICT
 
         auth_request = urllib.request.Request(
             f'{base_url}/api/auth',
