@@ -40,6 +40,11 @@ class IndexController extends \OPNsense\Base\IndexController
         $this->view->pick('OPNsense/DeviceMonitor/scanhistory');
     }
 
+    public function changesummaryAction()
+    {
+        $this->view->pick('OPNsense/DeviceMonitor/changesummary');
+    }
+
     public function settingsAction()
     {
         $this->view->pick('OPNsense/DeviceMonitor/settings');

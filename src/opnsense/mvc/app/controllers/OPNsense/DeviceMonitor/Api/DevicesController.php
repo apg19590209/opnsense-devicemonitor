@@ -212,6 +212,124 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
+     * Read-only aggregated change summary over a bounded time window.
+     * GET /api/devicemonitor/devices/changesummary
+     */
+    public function changesummaryAction()
+    {
+        $model = new DeviceMonitor();
+
+        $knownCategories = [
+            'all',
+            'device',
+            'lifecycle',
+            'identity',
+            'physical_device',
+            'user_history',
+            'infrastructure'
+        ];
+
+        $knownWindows = [
+            'since_last_review',
+            '24h',
+            '7d',
+            '30d',
+            'custom'
+        ];
+
+        $window = strtolower(trim(
+            (string)$this->request->get('window', 'string', '24h')
+        ));
+
+        if (!in_array($window, $knownWindows, true)) {
+            $window = '24h';
+        }
+
+        $category = strtolower(trim(
+            (string)$this->request->get('category', 'string', 'all')
+        ));
+
+        if (!in_array($category, $knownCategories, true)) {
+            return [
+                'result' => 'failed',
+                'error' => 'Unknown category'
+            ];
+        }
+
+        $limit = (int)$this->request->get('limit', 'int', 50);
+        $limit = max(1, min(200, $limit));
+
+        $offset = (int)$this->request->get('offset', 'int', 0);
+        $offset = max(0, min(100000, $offset));
+
+        $startRaw = trim(
+            (string)$this->request->get('start', 'string', '')
+        );
+        $endRaw = trim(
+            (string)$this->request->get('end', 'string', '')
+        );
+
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $start = null;
+        $end = null;
+        $fallback = false;
+
+        if ($startRaw !== '' && $endRaw !== '') {
+            $start = $startRaw;
+            $end = $endRaw;
+        } elseif ($window === 'since_last_review' && $startRaw !== '') {
+            $start = $startRaw;
+            $end = $now->format('Y-m-d H:i:s');
+        } else {
+            $fallback = ($window === 'since_last_review');
+
+            switch ($window) {
+                case '7d':
+                    $start = $now->sub(new \DateInterval('P7D'));
+                    break;
+
+                case '30d':
+                    $start = $now->sub(new \DateInterval('P30D'));
+                    break;
+
+                case 'since_last_review':
+                case 'custom':
+                case '24h':
+                default:
+                    $start = $now->sub(new \DateInterval('PT24H'));
+                    break;
+            }
+
+            $start = $start->format('Y-m-d H:i:s');
+            $end = $now->format('Y-m-d H:i:s');
+        }
+
+        try {
+            $summary = $model->getChangeSummary(
+                $start,
+                $end,
+                $category,
+                $limit,
+                $offset
+            );
+        } catch (\InvalidArgumentException $e) {
+            return [
+                'result' => 'failed',
+                'error' => $e->getMessage()
+            ];
+        }
+
+        return array_merge(
+            [
+                'result' => 'ok',
+                'window' => $window,
+                'fallback' => $fallback
+            ],
+            $summary
+        );
+    }
+
+    /**
      * Return the active physical-device grouping for one MAC address.
      * GET /api/devicemonitor/devices/physicaldevice
      */

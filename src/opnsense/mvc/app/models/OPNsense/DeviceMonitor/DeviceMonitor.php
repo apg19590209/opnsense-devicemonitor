@@ -1458,6 +1458,971 @@ class DeviceMonitor
         return array_slice($events, 0, $limit);
     }
 
+    private static function normalizeUtcTimestamp($value)
+    {
+        $value = trim((string)$value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        try {
+            $date = new \DateTimeImmutable($value, new \DateTimeZone('UTC'));
+
+            return $date
+                ->setTimezone(new \DateTimeZone('UTC'))
+                ->format('Y-m-d H:i:s');
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    private static function changeSummarySeverity($eventType)
+    {
+        switch ($eventType) {
+            case 'DEVICE_DISCOVERED':
+            case 'LIFECYCLE_STARTED':
+            case 'LIFECYCLE_RELINKED':
+            case 'SERVICE_AVAILABLE':
+            case 'SERVICE_DISCOVERED':
+            case 'IDENTITY_RESOLVED':
+            case 'NOTE_CREATED':
+            case 'PHYSICAL_DEVICE_CREATED':
+            case 'PHYSICAL_DEVICE_IDENTITY_LINKED':
+                return 'success';
+
+            case 'SERVICE_UNAVAILABLE':
+            case 'SERVICE_CHANGED':
+            case 'LIFECYCLE_ARCHIVED':
+            case 'IDENTITY_REOPENED':
+            case 'NOTE_ARCHIVED':
+            case 'PHYSICAL_DEVICE_ARCHIVED':
+            case 'PHYSICAL_DEVICE_IDENTITY_REMOVED':
+                return 'warning';
+
+            case 'IP_IDENTITY_CHANGED':
+            case 'IPV6_IDENTITY_CHANGED':
+            case 'MAC_MULTI_IP':
+            case 'MAC_MULTI_INTERFACE':
+                return 'danger';
+
+            default:
+                return 'info';
+        }
+    }
+
+    private static function changeSummaryActivityCategory($eventType)
+    {
+        switch ($eventType) {
+            case 'IP_CHANGED':
+            case 'HOSTNAME_CHANGED':
+            case 'HOSTNAME_SOURCE_CHANGED':
+            case 'INTERFACE_CHANGED':
+            case 'FRIENDLY_NAME_CHANGED':
+            case 'IDENTITY_RESOLVED':
+            case 'IDENTITY_REOPENED':
+                return 'identity';
+
+            case 'SERVICE_AVAILABLE':
+            case 'SERVICE_UNAVAILABLE':
+            case 'SERVICE_CHANGED':
+                return 'infrastructure';
+
+            case 'LIFECYCLE_RELINKED':
+            case 'LIFECYCLE_ARCHIVED':
+                return 'lifecycle';
+
+            default:
+                return 'device';
+        }
+    }
+
+    private static function changeSummaryAction($source, $category, $mac)
+    {
+        if ($category === 'infrastructure') {
+            return [
+                'type' => 'infrastructure',
+                'target' =>
+                    '/ui/devicemonitor/index/infrastructureservices'
+            ];
+        }
+
+        if ($category === 'identity' && $source === 'identity') {
+            return [
+                'type' => 'identity',
+                'target' => '/ui/devicemonitor/index/identityevents'
+            ];
+        }
+
+        if ($mac !== '') {
+            return [
+                'type' => 'device',
+                'target' =>
+                    '/ui/devicemonitor/index/devicehistory?mac=' .
+                    rawurlencode($mac)
+            ];
+        }
+
+        return null;
+    }
+
+
+    /**
+     * Aggregate existing authoritative Device Monitor history into a
+     * read-only, global change summary over a bounded time window.
+     *
+     * Existing history tables remain authoritative. This method only reads
+     * and normalizes them; it does not duplicate history, mutate runtime
+     * data or create a parallel event store. The database is opened
+     * read-only.
+     *
+     * @param string $start    Start of the window (UTC parseable date/time).
+     * @param string $end      End of the window (UTC parseable date/time).
+     * @param string $category Category filter: 'all' or a known category key.
+     * @param int    $limit    Page size (clamped to 1..200).
+     * @param int    $offset   Page offset (clamped to 0..100000).
+     * @return array Normalized, merged, sorted and paginated change summary.
+     * @throws \InvalidArgumentException on invalid input.
+     */
+    public function getChangeSummary($start, $end, $category = 'all', $limit = 50, $offset = 0)
+    {
+        $startUtc = self::normalizeUtcTimestamp($start);
+        $endUtc = self::normalizeUtcTimestamp($end);
+
+        if ($startUtc === null) {
+            throw new \InvalidArgumentException('Invalid start date/time');
+        }
+
+        if ($endUtc === null) {
+            throw new \InvalidArgumentException('Invalid end date/time');
+        }
+
+        if (strcmp($startUtc, $endUtc) > 0) {
+            throw new \InvalidArgumentException('Start must not be after end');
+        }
+
+        $startTs = strtotime($startUtc . ' UTC');
+        $endTs = strtotime($endUtc . ' UTC');
+
+        if ($startTs === false || $endTs === false) {
+            throw new \InvalidArgumentException('Invalid date/time range');
+        }
+
+        if (($endTs - $startTs) > (90 * 86400)) {
+            throw new \InvalidArgumentException(
+                'Date range must not exceed 90 days'
+            );
+        }
+
+        $knownCategories = [
+            'device',
+            'lifecycle',
+            'identity',
+            'physical_device',
+            'user_history',
+            'infrastructure'
+        ];
+
+        $category = strtolower(trim((string)$category));
+
+        if ($category === '' || $category === 'all') {
+            $category = 'all';
+        } elseif (!in_array($category, $knownCategories, true)) {
+            throw new \InvalidArgumentException('Unknown category');
+        }
+
+        $limit = max(1, min(200, (int)$limit));
+        $offset = max(0, min(100000, (int)$offset));
+
+        $emptySummary = [
+            'total' => 0,
+            'new_devices' => 0,
+            'returned_devices' => 0,
+            'lifecycle' => 0,
+            'identity' => 0,
+            'physical_device' => 0,
+            'user_history' => 0,
+            'infrastructure' => 0
+        ];
+
+        $dbFile = self::getPath('dbFile');
+
+        if ($dbFile === null || !is_file($dbFile)) {
+            return [
+                'start' => $startUtc,
+                'end' => $endUtc,
+                'category' => $category,
+                'limit' => $limit,
+                'offset' => $offset,
+                'total' => 0,
+                'summary' => $emptySummary,
+                'events' => []
+            ];
+        }
+
+        $db = new \SQLite3($dbFile, SQLITE3_OPEN_READONLY);
+        $db->busyTimeout(5000);
+
+        $events = [];
+        $sourceLimit = 10000;
+
+        $tableExists = static function ($db, $table) {
+            $name = \SQLite3::escapeString((string)$table);
+
+            return (int)$db->querySingle(
+                "SELECT COUNT(*) FROM sqlite_master " .
+                "WHERE type='table' AND name='" . $name . "'"
+            ) === 1;
+        };
+
+        $deviceSubjects = [];
+        $deviceQuery = $db->query(
+            'SELECT mac, custom_hostname, hostname, ip FROM devices'
+        );
+
+        while (
+            $deviceQuery &&
+            ($device = $deviceQuery->fetchArray(SQLITE3_ASSOC))
+        ) {
+            $mac = strtolower(trim((string)($device['mac'] ?? '')));
+
+            if ($mac === '') {
+                continue;
+            }
+
+            $custom = trim((string)($device['custom_hostname'] ?? ''));
+            $hostname = trim((string)($device['hostname'] ?? ''));
+
+            $deviceSubjects[$mac] = [
+                'subject' =>
+                    $custom !== ''
+                        ? $custom
+                        : ($hostname !== '' ? $hostname : $mac),
+                'ip' => trim((string)($device['ip'] ?? ''))
+            ];
+        }
+
+        $append = function (
+            $source,
+            $category,
+            $eventType,
+            $timestamp,
+            $mac,
+            $lifecycleId,
+            $recordId,
+            $severity,
+            $previous,
+            $current,
+            $detail,
+            $action,
+            $subjectOverride = null
+        ) use (&$events, $deviceSubjects) {
+            $timestamp = trim((string)$timestamp);
+
+            if ($timestamp === '') {
+                return;
+            }
+
+            $mac = strtolower(trim((string)$mac));
+
+            $subject = $mac;
+
+            if (
+                $subjectOverride !== null &&
+                trim((string)$subjectOverride) !== ''
+            ) {
+                $subject = trim((string)$subjectOverride);
+            } elseif ($mac !== '' && isset($deviceSubjects[$mac])) {
+                $subject = $deviceSubjects[$mac]['subject'];
+            }
+
+            $events[] = [
+                'id' => implode(':', [
+                    (string)$source,
+                    (string)$recordId,
+                    (string)$eventType,
+                    $mac
+                ]),
+                'source' => (string)$source,
+                'category' => (string)$category,
+                'event_type' => (string)$eventType,
+                'occurred_at_utc' => $timestamp,
+                'occurred_at' => self::formatUtcForDisplay($timestamp),
+                'severity' => (string)$severity,
+                'subject' => (string)$subject,
+                'mac' => $mac,
+                'lifecycle_id' =>
+                    $lifecycleId === null ||
+                    $lifecycleId === '' ||
+                    (int)$lifecycleId <= 0
+                        ? null
+                        : (int)$lifecycleId,
+                'record_id' => (int)$recordId,
+                'previous' => $previous,
+                'current' => $current,
+                'detail' => (string)$detail,
+                'action' => $action
+            ];
+        };
+
+        /*
+         * New device discovery. first_seen is the authoritative discovery
+         * timestamp; last_seen is intentionally not surfaced.
+         */
+        if ($tableExists($db, 'devices')) {
+            $stmt = $db->prepare(
+                'SELECT mac, ip, first_seen FROM devices ' .
+                'WHERE first_seen IS NOT NULL AND first_seen <> \'\' ' .
+                'AND first_seen >= :start AND first_seen <= :end ' .
+                'ORDER BY first_seen DESC LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':start', $startUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':end', $endUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $sourceLimit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $mac = strtolower(trim((string)($row['mac'] ?? '')));
+                    $append(
+                        'device',
+                        'device',
+                        'DEVICE_DISCOVERED',
+                        $row['first_seen'] ?? '',
+                        $mac,
+                        null,
+                        0,
+                        self::changeSummarySeverity('DEVICE_DISCOVERED'),
+                        null,
+                        trim((string)($row['ip'] ?? '')),
+                        'New device discovered',
+                        self::changeSummaryAction('device', 'device', $mac)
+                    );
+                }
+            }
+        }
+
+        /*
+         * Lifecycle start/archive history. first_seen (or created_at) is the
+         * authoritative lifecycle start timestamp; archived_at records the
+         * archive transition.
+         */
+        if ($tableExists($db, 'device_lifecycles')) {
+            $stmt = $db->prepare(
+                'SELECT id, mac, first_seen, created_at, archived_at ' .
+                'FROM device_lifecycles ' .
+                'WHERE (first_seen >= :start AND first_seen <= :end) ' .
+                'OR (archived_at >= :start AND archived_at <= :end) ' .
+                'ORDER BY COALESCE(archived_at, first_seen, created_at) ' .
+                'DESC LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':start', $startUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':end', $endUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $sourceLimit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $mac = strtolower(trim((string)($row['mac'] ?? '')));
+                    $startedAt = trim((string)($row['first_seen'] ?? ''));
+
+                    if ($startedAt === '') {
+                        $startedAt = (string)($row['created_at'] ?? '');
+                    }
+
+                    if ($startedAt >= $startUtc && $startedAt <= $endUtc) {
+                        $append(
+                            'lifecycle',
+                            'lifecycle',
+                            'LIFECYCLE_STARTED',
+                            $startedAt,
+                            $mac,
+                            $row['id'],
+                            $row['id'],
+                            self::changeSummarySeverity('LIFECYCLE_STARTED'),
+                            null,
+                            'active',
+                            'Device lifecycle started',
+                            self::changeSummaryAction(
+                                'lifecycle',
+                                'lifecycle',
+                                $mac
+                            )
+                        );
+                    }
+
+                    $archivedAt = trim((string)($row['archived_at'] ?? ''));
+
+                    if (
+                        $archivedAt !== '' &&
+                        $archivedAt >= $startUtc &&
+                        $archivedAt <= $endUtc
+                    ) {
+                        $append(
+                            'lifecycle',
+                            'lifecycle',
+                            'LIFECYCLE_ARCHIVED',
+                            $archivedAt,
+                            $mac,
+                            $row['id'],
+                            $row['id'],
+                            self::changeSummarySeverity('LIFECYCLE_ARCHIVED'),
+                            'active',
+                            'archived',
+                            'Device lifecycle archived',
+                            self::changeSummaryAction(
+                                'lifecycle',
+                                'lifecycle',
+                                $mac
+                            )
+                        );
+                    }
+                }
+            }
+        }
+
+        /*
+         * Device state/service transitions persisted by the scanner. These
+         * rows already carry authoritative previous/current values.
+         */
+        if ($tableExists($db, 'device_activity_events')) {
+            $stmt = $db->prepare(
+                'SELECT id, mac, lifecycle_id, event_type, occurred_at, ' .
+                'old_value, new_value, details ' .
+                'FROM device_activity_events ' .
+                'WHERE occurred_at >= :start AND occurred_at <= :end ' .
+                'ORDER BY occurred_at DESC, id DESC LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':start', $startUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':end', $endUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $sourceLimit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $mac = strtolower(trim((string)($row['mac'] ?? '')));
+                    $eventType = trim(
+                        (string)($row['event_type'] ?? 'ACTIVITY_CHANGED')
+                    );
+
+                    if ($eventType === '') {
+                        $eventType = 'ACTIVITY_CHANGED';
+                    }
+
+                    $eventCategory = self::changeSummaryActivityCategory(
+                        $eventType
+                    );
+
+                    $append(
+                        'activity',
+                        $eventCategory,
+                        $eventType,
+                        $row['occurred_at'] ?? '',
+                        $mac,
+                        $row['lifecycle_id'] ?? null,
+                        $row['id'],
+                        self::changeSummarySeverity($eventType),
+                        $row['old_value'] ?? null,
+                        $row['new_value'] ?? null,
+                        $row['details'] ?? null,
+                        self::changeSummaryAction(
+                            'activity',
+                            $eventCategory,
+                            $mac
+                        )
+                    );
+                }
+            }
+        }
+
+        /*
+         * Identity anomaly detection and resolution.
+         */
+        if ($tableExists($db, 'device_identity_events')) {
+            $columns = [];
+            $columnResult = $db->query(
+                'PRAGMA table_info(device_identity_events)'
+            );
+
+            while (
+                $columnResult &&
+                ($column = $columnResult->fetchArray(SQLITE3_ASSOC))
+            ) {
+                $columns[$column['name']] = true;
+            }
+
+            $lifecycleSelect =
+                isset($columns['lifecycle_id'])
+                    ? 'lifecycle_id'
+                    : 'NULL AS lifecycle_id';
+
+            $stmt = $db->prepare(
+                'SELECT id, ' . $lifecycleSelect . ', mac, event_type, ' .
+                'severity, detected_at, ip, other_ip, other_mac, ' .
+                'interface, other_interface, details, resolved_at ' .
+                'FROM device_identity_events ' .
+                'WHERE (detected_at >= :start AND detected_at <= :end) ' .
+                'OR (resolved_at >= :start AND resolved_at <= :end) ' .
+                'ORDER BY COALESCE(resolved_at, detected_at) DESC ' .
+                'LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':start', $startUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':end', $endUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $sourceLimit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $mac = strtolower(trim((string)($row['mac'] ?? '')));
+                    $eventType = trim(
+                        (string)($row['event_type'] ?? 'IDENTITY_CHANGED')
+                    );
+
+                    if ($eventType === '') {
+                        $eventType = 'IDENTITY_CHANGED';
+                    }
+
+                    $detectedAt = trim((string)($row['detected_at'] ?? ''));
+
+                    if (
+                        $detectedAt >= $startUtc &&
+                        $detectedAt <= $endUtc
+                    ) {
+                        $append(
+                            'identity',
+                            'identity',
+                            $eventType,
+                            $detectedAt,
+                            $mac,
+                            $row['lifecycle_id'] ?? null,
+                            $row['id'],
+                            self::changeSummarySeverity($eventType),
+                            null,
+                            $row['ip'] ?? null,
+                            $row['details'] ?? null,
+                            self::changeSummaryAction(
+                                'identity',
+                                'identity',
+                                $mac
+                            )
+                        );
+                    }
+
+                    $resolvedAt = trim((string)($row['resolved_at'] ?? ''));
+
+                    if (
+                        $resolvedAt !== '' &&
+                        $resolvedAt >= $startUtc &&
+                        $resolvedAt <= $endUtc
+                    ) {
+                        $append(
+                            'identity',
+                            'identity',
+                            'IDENTITY_RESOLVED',
+                            $resolvedAt,
+                            $mac,
+                            $row['lifecycle_id'] ?? null,
+                            $row['id'],
+                            self::changeSummarySeverity('IDENTITY_RESOLVED'),
+                            'unresolved',
+                            'resolved',
+                            'Identity issue resolved',
+                            self::changeSummaryAction(
+                                'identity',
+                                'identity',
+                                $mac
+                            )
+                        );
+                    }
+                }
+            }
+        }
+
+        /*
+         * Timestamped lifecycle note history. Backfilled "migrated" versions
+         * are hidden because they do not represent a user action.
+         */
+        if (
+            $tableExists($db, 'device_comment_versions') &&
+            $tableExists($db, 'device_lifecycles')
+        ) {
+            $stmt = $db->prepare(
+                'SELECT v.id, v.comment_id, v.lifecycle_id, v.comment, ' .
+                'v.action, v.created_at, l.mac ' .
+                'FROM device_comment_versions v ' .
+                'JOIN device_lifecycles l ON l.id = v.lifecycle_id ' .
+                'WHERE v.created_at >= :start AND v.created_at <= :end ' .
+                "AND lower(trim(COALESCE(v.action, ''))) <> 'migrated' " .
+                'ORDER BY v.created_at DESC, v.id DESC LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':start', $startUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':end', $endUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $sourceLimit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $mac = strtolower(trim((string)($row['mac'] ?? '')));
+                    $action = strtolower(trim(
+                        (string)($row['action'] ?? '')
+                    ));
+
+                    if ($action === 'created') {
+                        $eventType = 'NOTE_CREATED';
+                    } elseif ($action === 'edited' || $action === 'updated') {
+                        $eventType = 'NOTE_UPDATED';
+                    } elseif ($action === 'deleted' || $action === 'archived') {
+                        $eventType = 'NOTE_ARCHIVED';
+                    } else {
+                        $eventType = 'NOTE_CHANGED';
+                    }
+
+                    $append(
+                        'note',
+                        'user_history',
+                        $eventType,
+                        $row['created_at'] ?? '',
+                        $mac,
+                        $row['lifecycle_id'] ?? null,
+                        $row['id'],
+                        self::changeSummarySeverity($eventType),
+                        null,
+                        (string)($row['comment'] ?? ''),
+                        'Device note ' . $action,
+                        self::changeSummaryAction(
+                            'note',
+                            'user_history',
+                            $mac
+                        )
+                    );
+                }
+            }
+        }
+
+        /*
+         * User-confirmed physical-device grouping history.
+         */
+        $physicalDeviceNames = [];
+
+        if ($tableExists($db, 'physical_devices')) {
+            // Full name map so membership events always resolve a name even
+            // when the group itself was created outside the query window.
+            $nameQuery = $db->query('SELECT id, name FROM physical_devices');
+
+            while (
+                $nameQuery &&
+                ($nameRow = $nameQuery->fetchArray(SQLITE3_ASSOC))
+            ) {
+                $physicalDeviceNames[(int)$nameRow['id']] =
+                    trim((string)($nameRow['name'] ?? ''));
+            }
+
+            $stmt = $db->prepare(
+                'SELECT id, name, created_at, archived_at ' .
+                'FROM physical_devices ' .
+                'WHERE (created_at >= :start AND created_at <= :end) ' .
+                'OR (archived_at >= :start AND archived_at <= :end) ' .
+                'ORDER BY COALESCE(archived_at, created_at) DESC ' .
+                'LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':start', $startUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':end', $endUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $sourceLimit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $name = trim((string)($row['name'] ?? ''));
+
+                    $createdAt = trim((string)($row['created_at'] ?? ''));
+
+                    if ($createdAt >= $startUtc && $createdAt <= $endUtc) {
+                        $append(
+                            'physical_device',
+                            'physical_device',
+                            'PHYSICAL_DEVICE_CREATED',
+                            $createdAt,
+                            '',
+                            null,
+                            $row['id'],
+                            self::changeSummarySeverity(
+                                'PHYSICAL_DEVICE_CREATED'
+                            ),
+                            null,
+                            $name,
+                            'Physical device group created',
+                            null,
+                            $name
+                        );
+                    }
+
+                    $archivedAt = trim((string)($row['archived_at'] ?? ''));
+
+                    if (
+                        $archivedAt !== '' &&
+                        $archivedAt >= $startUtc &&
+                        $archivedAt <= $endUtc
+                    ) {
+                        $append(
+                            'physical_device',
+                            'physical_device',
+                            'PHYSICAL_DEVICE_ARCHIVED',
+                            $archivedAt,
+                            '',
+                            null,
+                            $row['id'],
+                            self::changeSummarySeverity(
+                                'PHYSICAL_DEVICE_ARCHIVED'
+                            ),
+                            $name,
+                            null,
+                            'Physical device group archived',
+                            null,
+                            $name
+                        );
+                    }
+                }
+            }
+        }
+
+        if ($tableExists($db, 'physical_device_memberships')) {
+            $stmt = $db->prepare(
+                'SELECT id, physical_device_id, mac, added_at, removed_at ' .
+                'FROM physical_device_memberships ' .
+                'WHERE (added_at >= :start AND added_at <= :end) ' .
+                'OR (removed_at >= :start AND removed_at <= :end) ' .
+                'ORDER BY COALESCE(removed_at, added_at) DESC ' .
+                'LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':start', $startUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':end', $endUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $sourceLimit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $mac = strtolower(trim((string)($row['mac'] ?? '')));
+                    $physicalDeviceId = (int)$row['physical_device_id'];
+                    $name = isset($physicalDeviceNames[$physicalDeviceId])
+                        ? $physicalDeviceNames[$physicalDeviceId]
+                        : 'Physical device #' . $physicalDeviceId;
+
+                    $addedAt = trim((string)($row['added_at'] ?? ''));
+
+                    if ($addedAt >= $startUtc && $addedAt <= $endUtc) {
+                        $append(
+                            'physical_device',
+                            'physical_device',
+                            'PHYSICAL_DEVICE_IDENTITY_LINKED',
+                            $addedAt,
+                            $mac,
+                            null,
+                            $row['id'],
+                            self::changeSummarySeverity(
+                                'PHYSICAL_DEVICE_IDENTITY_LINKED'
+                            ),
+                            null,
+                            $name,
+                            'Identity linked to physical device',
+                            self::changeSummaryAction(
+                                'physical_device',
+                                'physical_device',
+                                $mac
+                            )
+                        );
+                    }
+
+                    $removedAt = trim((string)($row['removed_at'] ?? ''));
+
+                    if (
+                        $removedAt !== '' &&
+                        $removedAt >= $startUtc &&
+                        $removedAt <= $endUtc
+                    ) {
+                        $append(
+                            'physical_device',
+                            'physical_device',
+                            'PHYSICAL_DEVICE_IDENTITY_REMOVED',
+                            $removedAt,
+                            $mac,
+                            null,
+                            $row['id'],
+                            self::changeSummarySeverity(
+                                'PHYSICAL_DEVICE_IDENTITY_REMOVED'
+                            ),
+                            $name,
+                            null,
+                            'Identity removed from physical device',
+                            self::changeSummaryAction(
+                                'physical_device',
+                                'physical_device',
+                                $mac
+                            )
+                        );
+                    }
+                }
+            }
+        }
+
+        /*
+         * Initial verified service discovery is retained by
+         * device_services.first_detected.
+         */
+        if ($tableExists($db, 'device_services')) {
+            $stmt = $db->prepare(
+                'SELECT id, mac, ip, service_type, port, protocol, ' .
+                'first_detected ' .
+                'FROM device_services ' .
+                'WHERE first_detected >= :start AND first_detected <= :end ' .
+                'ORDER BY first_detected DESC, id DESC LIMIT :limit'
+            );
+
+            if ($stmt !== false) {
+                $stmt->bindValue(':start', $startUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':end', $endUtc, SQLITE3_TEXT);
+                $stmt->bindValue(':limit', $sourceLimit, SQLITE3_INTEGER);
+                $result = $stmt->execute();
+
+                while (
+                    $result &&
+                    ($row = $result->fetchArray(SQLITE3_ASSOC))
+                ) {
+                    $mac = strtolower(trim((string)($row['mac'] ?? '')));
+                    $endpoint = trim((string)($row['ip'] ?? ''));
+
+                    if (isset($row['port']) && (int)$row['port'] > 0) {
+                        $endpoint .= ':' . (int)$row['port'];
+                    }
+
+                    if (trim((string)($row['protocol'] ?? '')) !== '') {
+                        $endpoint .= '/' . trim(
+                            (string)($row['protocol'] ?? '')
+                        );
+                    }
+
+                    $append(
+                        'service',
+                        'infrastructure',
+                        'SERVICE_DISCOVERED',
+                        $row['first_detected'] ?? '',
+                        $mac,
+                        null,
+                        $row['id'],
+                        self::changeSummarySeverity('SERVICE_DISCOVERED'),
+                        null,
+                        $endpoint,
+                        trim((string)($row['service_type'] ?? '')),
+                        self::changeSummaryAction(
+                            'service',
+                            'infrastructure',
+                            $mac
+                        )
+                    );
+                }
+            }
+        }
+
+        $db->close();
+
+        usort($events, static function ($a, $b) {
+            $timeCompare = strcmp(
+                (string)$b['occurred_at_utc'],
+                (string)$a['occurred_at_utc']
+            );
+
+            if ($timeCompare !== 0) {
+                return $timeCompare;
+            }
+
+            $recordCompare =
+                (int)$b['record_id'] <=> (int)$a['record_id'];
+
+            if ($recordCompare !== 0) {
+                return $recordCompare;
+            }
+
+            return strcmp((string)$a['id'], (string)$b['id']);
+        });
+
+        $summary = [
+            'total' => 0,
+            'new_devices' => 0,
+            'returned_devices' => 0,
+            'lifecycle' => 0,
+            'identity' => 0,
+            'physical_device' => 0,
+            'user_history' => 0,
+            'infrastructure' => 0
+        ];
+
+        foreach ($events as $event) {
+            $summary['total']++;
+
+            if ($event['event_type'] === 'DEVICE_DISCOVERED') {
+                $summary['new_devices']++;
+            }
+
+            if ($event['event_type'] === 'LIFECYCLE_RELINKED') {
+                $summary['returned_devices']++;
+            }
+
+            if (isset($summary[$event['category']])) {
+                $summary[$event['category']]++;
+            }
+        }
+
+        if ($category !== 'all') {
+            $events = array_values(array_filter(
+                $events,
+                static function ($event) use ($category) {
+                    return $event['category'] === $category;
+                }
+            ));
+        }
+
+        $total = count($events);
+        $page = array_slice($events, $offset, $limit);
+
+        return [
+            'start' => $startUtc,
+            'end' => $endUtc,
+            'category' => $category,
+            'limit' => $limit,
+            'offset' => $offset,
+            'total' => $total,
+            'summary' => $summary,
+            'events' => $page
+        ];
+    }
+
     public function getDeviceLifecycleState($mac)
     {
         $db = $this->getDb();

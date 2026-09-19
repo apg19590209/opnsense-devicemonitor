@@ -806,6 +806,24 @@ jobs:
           set -eu
           php tests/test_device_lifecycle_actions.php
 
+      - name: Validate change summary model
+        env:
+          DM_MODEL_PATH: src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php
+          DM_DEFAULTS_PATH: src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
+        run: |
+          set -eu
+          php tests/test_change_summary_model.php
+
+      - name: Validate change summary API
+        run: |
+          set -eu
+          php tests/test_change_summary_api.php
+
+      - name: Validate change summary UI
+        run: |
+          set -eu
+          node tests/test_change_summary_ui.js
+
       - name: Validate fresh-install defaults
         run: |
           set -eu

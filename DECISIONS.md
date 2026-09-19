@@ -511,3 +511,55 @@ to every deletion path avoids contradictory semantics between deletion flows.
 
 Leaving `return_pending` resolution untouched preserves Decision 14's lifecycle
 ownership semantics.
+
+## 19. Change Summary aggregates existing authoritative history
+
+### Decision
+
+The Device Change Summary dashboard is a read-only aggregation of existing
+authoritative Device Monitor history. It does not introduce a parallel
+event-summary or event-store table, and it does not persist new rows.
+
+The Change Summary API is read-only (GET) and returns merged, sorted, paginated
+events derived from existing sources; it performs no database writes.
+
+### Reason
+
+Device Monitor already records authoritative history in dedicated tables. A
+separate parallel event store would duplicate that history, risk divergence and
+require additional write paths and schema surface for no added benefit.
+
+## 20. "Since last review" is explicit browser-local state
+
+### Decision
+
+The Change Summary "Since last review" time window is resolved from an explicit
+browser-local marker stored under the localStorage key
+`devicemonitor.changeSummary.lastReviewed`. It does not write to the server or
+the Device Monitor database.
+
+Marking reviewed updates only that browser-local marker; it never creates,
+updates or deletes server-side state.
+
+### Reason
+
+A per-administrator "since I last looked" reference is inherently
+browser/session-local and must not be persisted as shared server state, which
+would be wrong for multiple administrators and would introduce a write path
+into an otherwise read-only feature.
+
+## 21. Change Summary renders time in the user's browser-local timezone
+
+### Decision
+
+Timestamps are stored and sorted in UTC (`occurred_at_utc`) and remain UTC
+internally for storage, filtering and sorting. The Change Summary UI converts
+event time for display in the user's browser-local timezone and DST rules using
+native browser Date/Intl formatting; no timezone or abbreviation is hardcoded.
+
+### Reason
+
+UTC is the only unambiguous internal representation for sorting and filtering.
+Presenting values in the viewing administrator's local timezone (with automatic
+DST handling by the browser) makes the read-only summary intuitive without
+changing the authoritative stored values.

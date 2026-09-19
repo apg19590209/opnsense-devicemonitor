@@ -558,3 +558,103 @@ msgstr "First Seen"
 #: devices.volt - toast after clearing friendly name
 msgid "Friendly name cleared"
 msgstr "Friendly name cleared"
+
+#: changesummary.volt - menu entry and page title
+msgid "Change Summary"
+msgstr "Change Summary"
+
+msgid "Period"
+msgstr "Period"
+
+msgid "Since last review"
+msgstr "Since last review"
+
+msgid "Last 24 hours"
+msgstr "Last 24 hours"
+
+msgid "Last 7 days"
+msgstr "Last 7 days"
+
+msgid "Last 30 days"
+msgstr "Last 30 days"
+
+msgid "Custom range"
+msgstr "Custom range"
+
+msgid "Category"
+msgstr "Category"
+
+msgid "All categories"
+msgstr "All categories"
+
+msgid "Device"
+msgstr "Device"
+
+msgid "Lifecycle"
+msgstr "Lifecycle"
+
+msgid "Identity"
+msgstr "Identity"
+
+msgid "Physical Device"
+msgstr "Physical Device"
+
+msgid "Notes / History"
+msgstr "Notes / History"
+
+msgid "Infrastructure"
+msgstr "Infrastructure"
+
+msgid "Mark reviewed now"
+msgstr "Mark reviewed now"
+
+msgid "Start"
+msgstr "Start"
+
+msgid "End"
+msgstr "End"
+
+msgid "No previous review marker; showing the last 24 hours."
+msgstr "No previous review marker; showing the last 24 hours."
+
+msgid "Total Changes"
+msgstr "Total Changes"
+
+msgid "New Devices"
+msgstr "New Devices"
+
+msgid "Returned Devices"
+msgstr "Returned Devices"
+
+msgid "Identity Changes"
+msgstr "Identity Changes"
+
+msgid "Infrastructure Changes"
+msgstr "Infrastructure Changes"
+
+msgid "Lifecycle Changes"
+msgstr "Lifecycle Changes"
+
+msgid "Time"
+msgstr "Time"
+
+msgid "Device / Subject"
+msgstr "Device / Subject"
+
+msgid "Change"
+msgstr "Change"
+
+msgid "Previous"
+msgstr "Previous"
+
+msgid "Current"
+msgstr "Current"
+
+msgid "Action"
+msgstr "Action"
+
+msgid "Loading changes..."
+msgstr "Loading changes..."
+
+msgid "Next"
+msgstr "Next"

@@ -559,3 +559,103 @@ msgstr "Poprvé zaznamenáno"
 #: devices.volt - toast after clearing friendly name
 msgid "Friendly name cleared"
 msgstr "Vlastní název odstraněn"
+
+#: changesummary.volt - menu entry and page title
+msgid "Change Summary"
+msgstr "Přehled změn"
+
+msgid "Period"
+msgstr "Období"
+
+msgid "Since last review"
+msgstr "Od poslední kontroly"
+
+msgid "Last 24 hours"
+msgstr "Posledních 24 hodin"
+
+msgid "Last 7 days"
+msgstr "Posledních 7 dní"
+
+msgid "Last 30 days"
+msgstr "Posledních 30 dní"
+
+msgid "Custom range"
+msgstr "Vlastní rozsah"
+
+msgid "Category"
+msgstr "Kategorie"
+
+msgid "All categories"
+msgstr "Všechny kategorie"
+
+msgid "Device"
+msgstr "Zařízení"
+
+msgid "Lifecycle"
+msgstr "Životní cyklus"
+
+msgid "Identity"
+msgstr "Identita"
+
+msgid "Physical Device"
+msgstr "Fyzické zařízení"
+
+msgid "Notes / History"
+msgstr "Poznámky / Historie"
+
+msgid "Infrastructure"
+msgstr "Infrastruktura"
+
+msgid "Mark reviewed now"
+msgstr "Označit jako zkontrolované"
+
+msgid "Start"
+msgstr "Začátek"
+
+msgid "End"
+msgstr "Konec"
+
+msgid "No previous review marker; showing the last 24 hours."
+msgstr "Žádná předchozí kontrola; zobrazuji posledních 24 hodin."
+
+msgid "Total Changes"
+msgstr "Celkem změn"
+
+msgid "New Devices"
+msgstr "Nová zařízení"
+
+msgid "Returned Devices"
+msgstr "Navrácená zařízení"
+
+msgid "Identity Changes"
+msgstr "Změny identity"
+
+msgid "Infrastructure Changes"
+msgstr "Změny infrastruktury"
+
+msgid "Lifecycle Changes"
+msgstr "Změny životního cyklu"
+
+msgid "Time"
+msgstr "Čas"
+
+msgid "Device / Subject"
+msgstr "Zařízení / Předmět"
+
+msgid "Change"
+msgstr "Změna"
+
+msgid "Previous"
+msgstr "Předchozí"
+
+msgid "Current"
+msgstr "Aktuální"
+
+msgid "Action"
+msgstr "Akce"
+
+msgid "Loading changes..."
+msgstr "Načítání změn..."
+
+msgid "Next"
+msgstr "Další"

@@ -40,12 +40,6 @@ abstraction carrying hostname, source and confidence/provenance information.
 Do not refactor solely for architectural neatness; implement only when additional
 providers make the abstraction worthwhile.
 
-### DM-BL-006 — Device change summary dashboard
-
-Add a concise dashboard summary of meaningful recent changes, such as new
-devices, IP changes, newly verified infrastructure services, identity events and
-devices not seen for a configured period.
-
 ### DM-BL-007 — Optional Pi-hole hostname enrichment
 
 Consider Pi-hole as an optional hostname source if there is user demand or a

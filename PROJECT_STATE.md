@@ -2,7 +2,7 @@
 
 ## Last updated
 
-18 September 2026
+19 September 2026
 
 ## Current version / branch / environment
 
@@ -1063,20 +1063,81 @@ Guarded live rollback backups retained:
 - `/root/dm-bl003-predeploy-20260912-162016-14325`
 - `/root/dm-bl003-metadata-predeploy-20260912-170019-72771`
 
+## v2.9 development — DM-BL-006 complete
+
+`DM-BL-006` — Device Change Summary dashboard — is implemented, deployed and
+live-validated on the physical OPNsense testbed `192.168.20.23` (Firefox GUI
+validation PASS).
+
+Implemented:
+
+- read-only aggregation of existing authoritative Device Monitor history
+- no parallel event-summary/event-store table
+- no database schema or index changes
+- no runtime database writes introduced by Change Summary
+- read-only Change Summary API (GET, no state changes)
+- supported time windows:
+  - Since last review
+  - Last 24 hours
+  - Last 7 days
+  - Last 30 days
+  - Custom range up to 90 days
+- category filtering
+- pagination
+- summary counters
+- explicit browser-local last-reviewed marker
+- localStorage key: `devicemonitor.changeSummary.lastReviewed`
+- browser-local presentation of `occurred_at_utc` (UTC remains authoritative
+  internally for sorting/filtering; the browser handles timezone/DST)
+- stable display row numbering (newest = total; earliest filtered event = #1)
+- full sticky Change Summary UI stack with sticky-gap opacity fixes
+
+Authoritative sources used:
+
+- device: `devices.first_seen`
+- lifecycle: `device_lifecycles.first_seen` / `created_at`,
+  `device_lifecycles.archived_at`, relevant `device_activity_events`
+- identity: `device_identity_events.detected_at`,
+  `device_identity_events.resolved_at`, relevant `device_activity_events`
+- physical_device: `physical_devices.created_at`,
+  `physical_devices.archived_at`, `physical_device_memberships.added_at`,
+  `physical_device_memberships.removed_at`
+- user_history: `device_comment_versions.action`
+- infrastructure: `device_services.first_detected`, relevant
+  `device_activity_events`
+
+Intentionally unsupported / not fabricated:
+
+- vendor-change history
+- timestamped generic "device became inactive" transition where no
+  authoritative event exists
+- ordinary Nmap executions
+- raw heartbeats
+- repeated online observations
+- `last_seen` refresh traffic
+
+Validated:
+
+- Change Summary menu/page: PASS
+- read-only change aggregation: PASS
+- full sticky Change Summary stack and opaque sticky-gap handling: PASS
+- no row bleed / no vertical sticky jump: PASS
+- Period/category filtering, counters, pagination: PASS
+- browser-local timezone display (AEST observed in browser): PASS
+- row numbering (newest-first; earliest filtered event = #1): PASS
+- no heartbeat/raw-scan noise: PASS
+- query timings: 24h ~10 ms, 7d ~11 ms, 30d ~10 ms
+- production `192.168.20.254` untouched
+
 ## Next step
 
-`DM-BL-001` is complete and fully live-validated on the testbed `192.168.20.23`
-(Create, existing-group list, member count, Link, Remove; inactive-identity
-rejection confirmed intentional). The associated UI consistency and selectpicker
-conversion work is also complete and live-validated. The remaining step is to
-commit the accumulated uncommitted changes after the documented pre-commit
-validation.
+`DM-BL-006` is complete, committed and pushed; CI is green. The next step is to
+review the remaining open backlog items (DM-BL-004 Unbound hostname enrichment,
+DM-BL-005 generic hostname-provider framework, DM-BL-007 Pi-hole enrichment) and
+select the next approved item.
 
 The Device Monitor testbed remains `192.168.20.23`; production `192.168.20.254`
 was not modified.
-
-The migration checkpoint is complete and development runs from the FreeBSD
-authoritative checkout.
 
 `DM-BL-006` — Device change summary dashboard — is **not** the current objective.
 It remains an open `PRODUCT_BACKLOG.md` candidate, to be considered only after
