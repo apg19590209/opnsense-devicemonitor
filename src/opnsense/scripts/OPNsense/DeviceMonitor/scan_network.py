@@ -995,6 +995,80 @@ def get_dnsmasq_descriptions():
         log(f"Error reading Dnsmasq config.xml: {e}")
     return descriptions
 
+
+def get_unbound_hostnames():
+    """Return IPv4 -> hostname mappings from OPNsense Unbound configuration.
+
+    Reads local OPNsense host overrides (A records) and host aliases from
+    /conf/config.xml with no network access and no per-device DNS query. This is
+    a native OPNsense source, so it is always available when the local
+    configuration contains host data; malformed or disabled entries are skipped
+    and an empty result is not an error.
+    """
+    try:
+        tree = ET.parse('/conf/config.xml')
+        root = tree.getroot()
+    except Exception as e:
+        log(f'Unbound hostname provider: config read failed ({type(e).__name__})')
+        return {}
+
+    unbound = root.find('OPNsense/Unbound')
+    if unbound is None:
+        unbound = root.find('unbound')
+    if unbound is None:
+        return {}
+
+    mappings = {}
+    uuid_to_ip = {}
+
+    hosts = unbound.find('hosts')
+    if hosts is not None:
+        for host in hosts.findall('host'):
+            if (host.findtext('enabled') or '1').strip() == '0':
+                continue
+
+            rr = (host.findtext('rr') or 'A').strip().upper()
+            if rr != 'A':
+                continue
+
+            ip = (host.findtext('server') or '').strip()
+            try:
+                if ipaddress.ip_address(ip).version != 4:
+                    continue
+            except ValueError:
+                continue
+
+            uuid = host.get('uuid') or (host.findtext('uuid') or '').strip()
+            if uuid:
+                uuid_to_ip[uuid] = ip
+
+            hostname = normalize_hostname(host.findtext('hostname'))
+            if not hostname or hostname == '*':
+                continue
+
+            mappings[ip] = hostname
+
+    aliases = unbound.find('aliases')
+    if aliases is not None:
+        for alias in aliases.findall('alias'):
+            if (alias.findtext('enabled') or '1').strip() == '0':
+                continue
+
+            alias_hostname = normalize_hostname(alias.findtext('hostname'))
+            target_uuid = (alias.findtext('host') or '').strip()
+            ip = uuid_to_ip.get(target_uuid)
+
+            if not alias_hostname or not ip:
+                continue
+
+            # Secondary name: never overwrite a primary override name.
+            if ip not in mappings:
+                mappings[ip] = alias_hostname
+
+    log(f'Unbound hostname provider: {len(mappings)} IPv4 hostname mappings')
+    return mappings
+
+
 def get_adguard_rewrite_hostnames(config):
     """Return unambiguous IPv4 -> hostname mappings from AdGuard Home DNS rewrites."""
     if not config.get('adguard_rewrite_enabled'):
@@ -6328,12 +6402,12 @@ class MappingHostnameProvider(HostnameProvider):
         return self.mapping.get(lookup_value)
 
 
-def build_hostname_providers(isc, kea, dnsmasq, adguard, pihole=None):
+def build_hostname_providers(isc, kea, dnsmasq, adguard, pihole=None, unbound=None):
     """Return enrichment hostname providers in precedence order.
 
     Precedence is strongest-first and follows the established rule:
-    AdGuard > Dnsmasq > Kea > ISC > Pi-hole. Hostwatch is the observational
-    base value handled separately by ``resolve_hostname``.
+    AdGuard > Dnsmasq > Kea > ISC > Unbound > Pi-hole. Hostwatch is the
+    observational base value handled separately by ``resolve_hostname``.
     """
     providers = [
         MappingHostnameProvider('adguard', adguard, key='ip'),
@@ -6341,6 +6415,9 @@ def build_hostname_providers(isc, kea, dnsmasq, adguard, pihole=None):
         MappingHostnameProvider('kea', kea, key='mac', lower=True),
         MappingHostnameProvider('isc', isc, key='mac', lower=True),
     ]
+
+    if unbound:
+        providers.append(MappingHostnameProvider('unbound', unbound, key='ip'))
 
     if pihole:
         providers.append(
@@ -6382,7 +6459,8 @@ def apply_hostname_provenance(
     kea_descriptions,
     dnsmasq_descriptions,
     adguard_rewrite_hostnames,
-    pihole_hostnames=None
+    pihole_hostnames=None,
+    unbound_hostnames=None
 ):
     """Apply hostname precedence and record the source of the winning hostname."""
     providers = build_hostname_providers(
@@ -6390,7 +6468,8 @@ def apply_hostname_provenance(
         kea_descriptions,
         dnsmasq_descriptions,
         adguard_rewrite_hostnames,
-        pihole_hostnames
+        pihole_hostnames,
+        unbound_hostnames
     )
 
     device['hostname'], device['hostname_source'] = resolve_hostname(
@@ -6490,7 +6569,7 @@ def full_scan():
         return 1
 
     # 2. Hostname sources. Precedence is applied explicitly below:
-    # AdGuard > Dnsmasq > Kea > ISC > Pi-hole > Hostwatch.
+    # AdGuard > Dnsmasq > Kea > ISC > Unbound > Pi-hole > Hostwatch.
     isc_descriptions = get_dhcp_descriptions()
 
     kea_descriptions = {
@@ -6500,6 +6579,7 @@ def full_scan():
     }
 
     dnsmasq_descriptions = get_dnsmasq_descriptions()
+    unbound_hostnames = get_unbound_hostnames()
     adguard_rewrite_hostnames = get_adguard_rewrite_hostnames(config)
     pihole_hostnames = get_pihole_hostnames(config)
 
@@ -6521,7 +6601,8 @@ def full_scan():
             kea_descriptions,
             dnsmasq_descriptions,
             adguard_rewrite_hostnames,
-            pihole_hostnames
+            pihole_hostnames,
+            unbound_hostnames
         )
 
         is_active = 1 if is_device_active(device.get('last_seen', ''), device.get('ip', ''), mac in previously_active) else 0

@@ -1199,11 +1199,43 @@ Validated:
 
 REAL_PIHOLE_VALIDATION = NOT PERFORMED (no authorised live Pi-hole service).
 
+## v2.9 development — DM-BL-004 complete
+
+`DM-BL-004` — OPNsense/Unbound hostname enrichment — is implemented, deployed and
+offline-validated on the physical OPNsense testbed `192.168.20.23`.
+
+Implemented:
+
+- Unbound provider (`get_unbound_hostnames`) using the generic DM-BL-005
+  `HostnameProvider` framework (no Unbound logic inside `resolve_hostname`)
+- authoritative local source: OPNsense Unbound host overrides (A records) and
+  host aliases read from `/conf/config.xml` (no network access, no per-device
+  DNS query)
+- native, always-on (no enable/disable setting; no provider configuration)
+- deterministic precedence: AdGuard > Dnsmasq > Kea > ISC > Unbound > Pi-hole >
+  Hostwatch
+- normalization and provenance reuse the existing framework (`source=unbound`)
+- wildcard overrides supply no name; aliases resolve to their host override
+- provider failure / empty result never erases a retained hostname
+- no schema changes
+
+Validated:
+
+- new Unbound provider regression suite (13 checks): PASS
+- existing hostname-provider framework / hostname provenance / Pi-hole / AdGuard
+  / Hostwatch / device-activity / lifecycle / liveness regressions: PASS
+- full Python test suite: PASS
+- guarded live deployment of `scan_network.py` with hash verification: PASS
+- live Python syntax check + import-based Unbound smoke test (no-source/fixture/
+  precedence): PASS
+- production `192.168.20.254` untouched
+
+REAL_UNBOUND_VALIDATION = NOT PERFORMED (testbed does not use Unbound).
+
 ## Next step
 
-`DM-BL-004` — OPNsense/Unbound hostname enrichment — remains the only open
-hostname-enrichment backlog item, deferred because Unbound is not currently used
-in this environment.
+All hostname-enrichment backlog items (DM-BL-004, DM-BL-005, DM-BL-007) are
+complete. There are no open hostname-enrichment backlog items remaining.
 
 The Device Monitor testbed remains `192.168.20.23`; production `192.168.20.254`
 was not modified.

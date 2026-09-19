@@ -617,3 +617,25 @@ Pi-hole is an external, optional DNS/DHCP source, so it must not be enabled by
 default or outrank the authoritative native OPNsense sources. Reusing the generic
 provider framework keeps Pi-hole-specific parsing and networking isolated from
 core selection logic, matching the DM-BL-005 design.
+
+## 24. Unbound hostname enrichment is native and uses the generic provider framework
+
+### Decision
+
+OPNsense/Unbound hostname enrichment reads local OPNsense configuration
+(`/conf/config.xml` host overrides A records and host aliases) with no network
+access and no per-device DNS query.
+
+- Precedence: AdGuard > Dnsmasq > Kea > ISC > Unbound > Pi-hole > Hostwatch
+  (Unbound is a native OPNsense source, stronger than external Pi-hole and
+  weaker than the native DHCP lease sources).
+- It requires no enable/disable setting and no provider-specific configuration;
+  it is always available when the local Unbound host configuration exists.
+- Provider failure or an empty result never erases an already-resolved hostname.
+
+### Reason
+
+Unbound host overrides are user-authored static DNS mappings already maintained
+locally in OPNsense, so they are a trustworthy native source. Reading them
+directly avoids network queries and keeps enrichment deterministic, while the
+generic provider framework isolates parsing from core selection logic.
