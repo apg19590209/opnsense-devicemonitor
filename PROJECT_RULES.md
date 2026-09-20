@@ -68,10 +68,13 @@ Clearly label command blocks as either:
 
 Do not mix syntax between the two environments.
 
-Use the native FreeBSD shell for local repository work: `/usr/local/bin/bash`
-for interactive/project commands, and `/bin/sh` when POSIX/Bourne shell
-behaviour is specifically required. Do not route normal project commands
-through Windows shells or `/compat/linux`.
+Use the native FreeBSD toolchain for local repository work. `/bin/sh` is the
+base POSIX shell; `/usr/local/bin/bash` is available when Bash-specific
+behaviour is required. (`bash` on `PATH` may resolve to a `/bin/sh` wrapper, so
+use the full path when Bash is needed.) The interactive OPNsense login shell is
+csh-like; when Bourne/POSIX syntax is required remotely, invoke `/bin/sh`
+explicitly. Do not route normal project commands through Windows shells or
+`/compat/linux`.
 
 The authoritative development host, checkout paths and toolchain are recorded
 in `SYSTEM_MAP.md`. Workstation-local access details (host aliases, SSH keys and
@@ -83,22 +86,18 @@ be recorded here or committed.
 Minimise long terminal copy/paste operations.
 
 - For short output, return only the specific lines needed.
-- For long inspections, diffs, logs or audit output intended for ChatGPT,
-  prefer — where practical — invoking the FreeBSD command over the configured
-  SSH connection to the authoritative FreeBSD development host, launched from
-  Windows Git Bash, and redirecting stdout/stderr directly to
-  `C:\Users\apg19\Downloads` rather than creating an intermediate file on
-  FreeBSD and then copying it.
-- In that role Windows Git Bash is only an SSH/output-capture client. It is not
-  the authoritative repository execution environment, and normal repository and
-  project commands must still run natively on the FreeBSD host.
-- If direct Windows capture is impractical, a temporary FreeBSD output file may
-  be used as a fallback; report its path with a short summary instead of pasting
-  it in full.
+- For long inspections, diffs, logs or audit output, run the command natively on
+  the FreeBSD/OPNsense host and redirect stdout/stderr to a clearly named text
+  file, then report the path with a short summary or line count instead of
+  pasting it in full.
+- Windows Git Bash, if used at all, is only an SSH/output-transfer client. It is
+  never the execution environment for repository or project commands.
+- Never instruct Cline running on the FreeBSD host to write directly to a
+  Windows path such as `C:\Users\apg19\Downloads`.
 - Name captured output files clearly by subject; use the `OPNSENSE_...` prefix
   for information obtained from OPNsense.
-- Prefer gathering OPNsense information remotely from the FreeBSD development
-  host over asking the user to work directly in the OPNsense console.
+- Prefer gathering OPNsense information remotely from the FreeBSD/OPNsense host
+  over asking the user to work directly in the OPNsense console.
 - Where practical, redirect remote SSH output directly into the capture file
   rather than creating an intermediate file on OPNsense.
 - Group safe read-only inspections when this reduces user interaction.
@@ -114,10 +113,9 @@ Minimise long terminal copy/paste operations.
   state has changed.
 - Keep direct interactive OPNsense-console work to the minimum needed.
 
-For complex read-only OPNsense checks launched from the FreeBSD development
-host, prefer one SSH session using `/bin/sh -s` and redirect the result to an
-`OPNSENSE_...` capture file (captured to `C:\Users\apg19\Downloads` from Windows
-Git Bash where practical).
+For complex read-only OPNsense checks launched from the FreeBSD/OPNsense host,
+prefer one SSH session using `/bin/sh -s` and redirect the result to an
+`OPNSENSE_...` capture file on that host.
 
 When Bourne shell syntax is required remotely, explicitly invoke `/bin/sh`;
 do not rely on the OPNsense login shell, which is `csh`.
@@ -217,6 +215,33 @@ Do not modify the live Device Monitor database merely to test read-only logic wh
 
 Prefer temporary files under `/tmp` for syntax and isolated validation where appropriate.
 
+### Production and testbed targets
+
+Default all deployment and runtime validation to the Device Monitor testbed
+`192.168.20.23`. Production is `192.168.20.254` (alias `opnsense-dm`).
+
+Never deploy to, modify, scan, probe, SSH to, make HTTP/API calls to, or
+otherwise contact production unless the current user instruction explicitly
+authorises that production target. If a proposed command would contact
+production without that authorisation, STOP and report before running it.
+
+### Deployment guard
+
+When replacing a live OPNsense file or otherwise deploying, follow this guarded
+procedure:
+
+1. Calculate the SHA256 of the staged candidate file.
+2. Record the pre-deployment SHA256 of the live file (pre-state hash).
+3. Create a timestamped rollback backup of the live file, preserving its mode
+   (e.g. `cp -p`).
+4. Where applicable, verify the expected predecessor/pre-state hash before
+   replacing.
+5. Deploy only inside a guard that cannot continue after a hash mismatch.
+6. Preserve the target file mode (e.g. `cp -p` or `install -m <mode>`).
+7. Verify the post-deployment SHA256 equals the candidate SHA256.
+8. Abort and report on any hash mismatch.
+9. Retain the rollback backup until validation has succeeded.
+
 ## Validation expectations
 
 Syntax validation alone is not sufficient evidence that behaviour is correct.
@@ -301,6 +326,15 @@ Do not automatically move to another development phase after the current task su
 
 Do not accept a Cline claim as proof when the supplied diff, test output or behaviour does not support it.
 
+## Git and CI workflow
+
+Before committing, inspect `git --no-pager diff` and run `git diff --check`,
+fixing any whitespace errors before committing.
+
+For committed or pushed changes, when CI is configured, check the CI run
+corresponding to the new commit and require it to SUCCEED before treating the
+change as final; report the run ID and result.
+
 ## State management
 
 At the beginning of a new development session:
@@ -327,6 +361,13 @@ Keep `PROJECT_STATE.md` concise.
 If information is no longer current project state but remains important for future work, move it to `DECISIONS.md` or `SYSTEM_MAP.md` rather than retaining it indefinitely in `PROJECT_STATE.md`.
 
 Do not substantially rewrite `PROJECT_RULES.md`, `DECISIONS.md` or `SYSTEM_MAP.md` merely to improve wording or formatting. Change them only when project requirements, architecture, environment or established working practices have actually changed.
+
+### User-facing documentation
+
+Any change that alters user-visible functionality, controls, settings, status
+values, workflows, terminology, navigation, page content, warnings, or other
+documented behaviour must review `docs/USER_MANUAL.md` and update it in the
+same task when applicable.
 
 Do not mark a task complete until its required validation has passed.
 

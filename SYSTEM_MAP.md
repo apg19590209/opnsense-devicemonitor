@@ -17,23 +17,18 @@ Primary deployment target:
 
 ## Development environment topology
 
-    Windows VS Code UI
-        |
-        v
-    Remote SSH / Linuxulator-hosted VS Code Server
-        |
-        v
-    FreeBSD 15.1-RELEASE authoritative checkout + native development toolchain
+    Device Monitor testbed/development host (authoritative checkout)
+    OPNsense `192.168.20.23` · FreeBSD 15.1-RELEASE amd64
         |
         v
     SSH (`ssh opnsense-dm`)
         |
         v
-    OPNsense 26.7.2_2 runtime/deployment target
+    Production OPNsense `192.168.20.254` (26.7.2_2)
 
 Authoritative development checkout:
 
-`/home/dmdev/src/opnsense-devicemonitor-upstream`
+`/root/src/opnsense-devicemonitor-upstream`
 
 Native FreeBSD development toolchain:
 
@@ -42,10 +37,8 @@ Native FreeBSD development toolchain:
     /usr/local/bin/git
     /usr/local/bin/php
     /usr/local/bin/python3
-    /usr/local/bin/node
 
-The VS Code Server runs through FreeBSD Linuxulator compatibility, which is its
-only intended use; normal project commands run on the native FreeBSD toolchain.
+Normal project commands run on the native FreeBSD toolchain.
 
 Windows checkout (fallback/reference only, no longer authoritative):
 

@@ -24,17 +24,20 @@ STOP and report the discrepancy before making changes.
 
 ## 2. Working method
 
-- Work incrementally.
-- Make one logical change at a time.
-- Inspect before editing.
-- Prefer the smallest safe change.
-- Do not perform unrelated cleanup or refactoring.
-- Preserve existing working behaviour unless the task explicitly requires a change.
-- Distinguish confirmed facts from assumptions.
-- Do not guess when behaviour, scope, schema, architecture, or deployment state is unclear.
+Follow the working-method rules in PROJECT_RULES.md: one logical change at a
+time, the smallest safe change, inspect before editing, distinguish confirmed
+facts from assumptions, preserve existing working behaviour, and no unrelated
+cleanup or refactoring.
+
+Cline-specific additions:
+
+- Do not guess when behaviour, scope, schema, architecture, or deployment state
+  is unclear.
 - STOP and report when clarification is required.
-- Do not automatically advance to another phase after completing the current phase.
-- Keep `docs/USER_MANUAL.md` in sync: any change that alters user-visible functionality, controls, settings, status values, workflows, terminology, navigation, page content, warnings, or other documented behaviour must review `docs/USER_MANUAL.md` and update it in the same task when applicable.
+- Do not automatically advance to another phase after completing the current
+  phase.
+- Keep `docs/USER_MANUAL.md` in sync with user-visible changes (see the
+  user-facing documentation rule in PROJECT_RULES.md).
 
 ### Shell scripting safety
 
@@ -50,19 +53,9 @@ Avoid deeply nested or massive heredocs.
 
 ## 3. Consequential actions
 
-Before any consequential action, clearly identify it.
-
-Examples include:
-- database writes or migrations
-- deployments
-- service restarts
-- production changes
-- destructive operations
-- commits
-- pushes
-- tag/release operations
-
-Do not perform a consequential action unless it is within the authorised task scope.
+The consequential-action list is defined in PROJECT_RULES.md. Before any
+consequential action, clearly identify it, and do not perform it unless it is
+within the authorised task scope.
 
 ## 4. Validation
 
@@ -96,7 +89,13 @@ cannot determine from the current task/session evidence.
 ## 6. Final completion / stop report
 
 At the end of every task or authorised phase, provide one consolidated report
-containing:
+scaled to the task's size and risk.
+
+For a trivial or small change, a concise report of the objective, files changed,
+validation performed and its results, current Git state, and exactly one
+recommended next step is sufficient.
+
+For consequential or multi-part work, use the full report:
 
 1. Task objective
 2. Starting state

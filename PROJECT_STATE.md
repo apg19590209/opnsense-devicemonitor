@@ -12,7 +12,7 @@ Development branch:
 
 Authoritative development checkout (FreeBSD 15.1-RELEASE amd64):
 
-`/home/dmdev/src/opnsense-devicemonitor-upstream`
+`/root/src/opnsense-devicemonitor-upstream`
 
 Previous Windows checkout (retained as fallback/reference only; no longer
 authoritative):
@@ -35,12 +35,10 @@ TLS fix and live validation`
 
 Workflow state:
 
-- FreeBSD migration complete: development is now performed on the FreeBSD
-  15.1-RELEASE amd64 development VM. VS Code Remote-SSH uses a
-  Linuxulator-hosted VS Code Server, while normal project commands run on the
-  native FreeBSD toolchain (`/bin/sh`, `/usr/local/bin/bash`,
-  `/usr/local/bin/git`, `/usr/local/bin/php`, `/usr/local/bin/python3`,
-  `/usr/local/bin/node`)
+- FreeBSD migration complete: development is now performed on the physical
+  OPNsense testbed `192.168.20.23` (FreeBSD 15.1-RELEASE amd64). Normal project
+  commands run on the native FreeBSD toolchain (`/bin/sh`, `/usr/local/bin/bash`,
+  `/usr/local/bin/git`, `/usr/local/bin/php`, `/usr/local/bin/python3`)
 - previous Windows checkout
   `C:\Users\apg19\Downloads\opnsense-devicemonitor-upstream` is retained as
   fallback/reference only and is no longer authoritative; Debian WSL remains
@@ -48,7 +46,7 @@ Workflow state:
 - repository-local Cline workflow rules (`.clinerules/00-project-control.md`,
   `.clinerules/10-workflow-and-finalisation.md`) committed as `0b6496a`
 - workstation-local access rules (`.clinerules/90-local-remote-access.md`)
-  exist on the FreeBSD VM and are excluded through `.git/info/exclude`; they
+  exist on this host and are excluded through `.git/info/exclude`; they
   must remain untracked and must never be added, committed or pushed
 - Git author identity is configured repository-locally
 - GitHub CLI (`gh`) is installed and authenticated as `apg19590209` with default
