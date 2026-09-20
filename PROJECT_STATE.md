@@ -1292,7 +1292,9 @@ Validated:
 - guarded live deployment of `infrastructureservices.volt` with hash
   verification: PASS (rollback backup retained at
   `/root/devicemonitor_backup/infrastructureservices.volt.pre-infratabs-20260920-043318`)
-- LIVE_VISUAL_VALIDATION = NOT PERFORMED (no browser available)
+- LIVE_VISUAL_VALIDATION = PASS (visual QA on the `.23` testbed: tab layout,
+  tab switching, and sticky controls/table headers correct; no bleed-through
+  or vertical jumping; no defects observed)
 - production `192.168.20.254` untouched
 
 ## Next step
