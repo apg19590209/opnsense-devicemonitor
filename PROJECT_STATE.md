@@ -1489,7 +1489,27 @@ Release-candidate freeze is COMPLETE.
 - GitHub Actions CI for `d0fe7af`: PASS (run `35510393264`).
 - Pi-hole: COMPLETE. Unbound: FUNCTIONALLY COMPLETE / VALIDATION DEFERRED
   (non-blocking).
-- Production `192.168.20.254` has remained untouched.
+- Production `192.168.20.254` remained untouched until the explicit v2.9
+  promotion authorisation (recorded below).
 
-Next step: promote the frozen RC candidate to production only on explicit user
-authorisation; no production access until then.
+## v2.9 production promotion
+
+Production promotion is COMPLETE.
+
+- Frozen RC `d0fe7afa587a28bf5418f75eb499f58a847b7ca6` promoted to production
+  `192.168.20.254` (OPNsense 26.7.4).
+- Deployment: guarded install of 19 runtime files (17 changed + 2 new views
+  `changesummary.volt`, `physicaldevices.volt`); candidate SHA256 == installed
+  SHA256 for all; root:wheel, 644 (755 for `scan_network.py`).
+- DB backup: `/var/db/devicemonitor/devices.db.pre-v29promo-20260921-002343`;
+  17 runtime rollback backups `<file>.pre-v29promo-20260921-002343`.
+- Menu cache cleared (Menu.xml changed); no service restart (daemon
+  `monitor_daemon.py` unchanged); no stale Volt cache to clear.
+- DB safety: pre/post counts identical (52 devices, 52 lifecycles, 607 activity
+  events, 0 physical devices/comments/memberships); integrity ok.
+- Technical validation: PASS. Production GUI smoke validation: PASS (human).
+  Full Physical Device write workflow: PASS on testbed `192.168.20.23`;
+  production write workflow not repeated (avoids modifying live data).
+  Production data preservation: PASS.
+
+Next step: none required — v2.9 is promoted to production and validated.
