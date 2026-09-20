@@ -663,3 +663,46 @@ msgstr "Loading changes..."
 
 msgid "Next"
 msgstr "Next"
+
+# [physicaldevices.volt] Physical Devices page
+msgid "Physical Devices"
+msgstr "Physical Devices"
+
+msgid "Total Groups"
+msgstr "Total Groups"
+
+msgid "Active Groups"
+msgstr "Active Groups"
+
+msgid "Archived Groups"
+msgstr "Archived Groups"
+
+msgid "Create Physical Device"
+msgstr "Create Physical Device"
+
+msgid "All Groups"
+msgstr "All Groups"
+
+msgid "Active Only"
+msgstr "Active Only"
+
+msgid "Archived Only"
+msgstr "Archived Only"
+
+msgid "Search by name or MAC"
+msgstr "Search by name or MAC"
+
+msgid "Showing"
+msgstr "Showing"
+
+msgid "Physical-device name"
+msgstr "Physical-device name"
+
+msgid "Create"
+msgstr "Create"
+
+msgid "Loading physical devices..."
+msgstr "Loading physical devices..."
+
+msgid "The seed MAC must belong to a current, active device. Grouping is explicit and does not merge or rewrite device, lifecycle or identity history."
+msgstr "The seed MAC must belong to a current, active device. Grouping is explicit and does not merge or rewrite device, lifecycle or identity history."

@@ -67,6 +67,7 @@ list. You can also trigger discovery manually from the Devices page (see [Sectio
 | Menu item | Purpose |
 |-----------|---------|
 | **Devices** | Main device inventory and per-device actions. |
+| **Physical Devices** | Manage physical-device groups and their related identities. |
 | **Change Summary** | Chronological review of device, lifecycle, identity and service changes. |
 | **Infrastructure Services** | Network services discovered on your devices (DHCP, DNS, SSH, …). |
 | **IP and MAC Conflicts** | Detected identity anomalies (an IP/MAC seen with conflicting devices). |
@@ -275,7 +276,7 @@ and identity changes (IP/hostname/source changes). **Read-only.**
 
 ## 7. Physical Devices / identity grouping
 
-**Path:** Device Details → **Physical Device / Related Identities** panel
+**Path:** Services → Device Monitor → **Physical Devices**
 
 ### 7.1 Purpose
 
@@ -286,19 +287,26 @@ history.
 
 ### 7.2 What you can do
 
-- If the device is not linked: choose **-- Select existing physical device --** to link to
-  an existing group, or **+ Create new physical device...** to create a new group and link
-  this device to it.
-- **Create new physical device** — enter a group name; a new group is created and this MAC
-  becomes its first member. **Changes state.**
-- **Link** — add this MAC to an existing physical device group. **Changes state.**
-- **Remove related identity** — remove a specific linked MAC from the group. **Changes state.**
+On the **Physical Devices** page:
+
+- **Create Physical Device** — enter a group name and a seed MAC; a new group is created and
+  that MAC becomes its first member. The seed MAC must be a current, active device.
+  **Changes state.**
+- Expand a group to see its member identities, then use **Link Identity** to add another MAC,
+  or **Remove** to unlink an active identity. **Changes state.**
+- Filter the list with **All Groups / Active Only / Archived Only** and search by name or MAC.
+  **Read-only.**
+- **View** a member to open its **Device Details** page. **Read-only.**
+
+The same grouping is also shown, and can still be edited, on a device's **Device Details**
+page in the **Physical Device / Related Identities** panel.
 
 ### 7.3 What is displayed
 
-The panel shows the linked physical device's name and the list of its member identities
-(related MACs). The Devices page **Physical Device** column shows the group name plus the
-member count.
+The page lists every physical-device group (active and archived) with its active/total
+identity counts, and each group expands to show its active and historical identities.
+Archived groups are read-only; removed identities are retained as history. The Devices page
+**Physical Device** column shows the group name plus the member count.
 
 > Grouping is purely organisational. It does not change how devices are scanned, monitored
 > or notified, and it does not alter device or lifecycle history.
@@ -696,10 +704,9 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 
 ### 16.4 Group interfaces of one machine into a physical device
 
-1. Open the device's **Device Details**.
-2. In **Physical Device / Related Identities**, choose **+ Create new physical device...**
-   or select an existing group, then confirm.
-3. Open other MACs and link them to the same group.
+1. Open **Services → Device Monitor → Physical Devices**.
+2. Click **Create Physical Device**, enter a name and the machine's seed MAC, then confirm.
+3. Expand the new group and use **Link Identity** to add the machine's other MACs.
 
 ### 16.5 Review what changed recently
 
@@ -795,6 +802,7 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 | Navigation menu | `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/Menu/Menu.xml` |
 | ACL / permissions | `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/ACL/ACL.xml` |
 | Devices page (list, filters, CSV, actions) | `views/.../devices.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
+| Physical Devices (grouping management) | `views/.../physicaldevices.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | Device Details (summary, notes, lifecycle, physical device) | `views/.../devicehistory.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | Device Activity | `views/.../activitytimeline.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | IP and MAC Conflicts | `views/.../identityevents.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |

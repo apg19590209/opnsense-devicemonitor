@@ -791,6 +791,11 @@ jobs:
           set -eu
           php tests/test_physical_devices_overview.php
 
+      - name: Validate physical devices page
+        run: |
+          set -eu
+          node tests/test_physical_devices_page.js
+
       - name: Validate physical-device UI
         run: |
           set -eu

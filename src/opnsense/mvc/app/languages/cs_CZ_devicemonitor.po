@@ -664,3 +664,46 @@ msgstr "Načítání změn..."
 
 msgid "Next"
 msgstr "Další"
+
+# [physicaldevices.volt] Physical Devices page
+msgid "Physical Devices"
+msgstr "Fyzická zařízení"
+
+msgid "Total Groups"
+msgstr "Skupin celkem"
+
+msgid "Active Groups"
+msgstr "Aktivní skupiny"
+
+msgid "Archived Groups"
+msgstr "Archivované skupiny"
+
+msgid "Create Physical Device"
+msgstr "Vytvořit fyzické zařízení"
+
+msgid "All Groups"
+msgstr "Všechny skupiny"
+
+msgid "Active Only"
+msgstr "Pouze aktivní"
+
+msgid "Archived Only"
+msgstr "Pouze archivované"
+
+msgid "Search by name or MAC"
+msgstr "Hledat podle názvu nebo MAC"
+
+msgid "Showing"
+msgstr "Zobrazeno"
+
+msgid "Physical-device name"
+msgstr "Název fyzického zařízení"
+
+msgid "Create"
+msgstr "Vytvořit"
+
+msgid "Loading physical devices..."
+msgstr "Načítání fyzických zařízení..."
+
+msgid "The seed MAC must belong to a current, active device. Grouping is explicit and does not merge or rewrite device, lifecycle or identity history."
+msgstr "Seed MAC musí patřit k aktuálnímu aktivnímu zařízení. Seskupování je explicitní a neslučuje ani nepřepisuje historii zařízení, životních cyklů nebo identit."

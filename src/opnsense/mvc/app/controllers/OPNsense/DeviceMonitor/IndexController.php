@@ -8,6 +8,11 @@ class IndexController extends \OPNsense\Base\IndexController
     {
         $this->view->pick('OPNsense/DeviceMonitor/devices');
     }
+
+    public function physicaldevicesAction()
+    {
+        $this->view->pick('OPNsense/DeviceMonitor/physicaldevices');
+    }
     
     public function identityeventsAction()
     {
