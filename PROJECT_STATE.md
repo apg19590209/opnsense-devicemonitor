@@ -30,8 +30,8 @@ Python 3.13 TLS`
 
 Latest repository commit (HEAD):
 
-`219aaafd3271fec5af0cf2ce02374d3aedb31539` — `docs: consolidate project workflow
-and safety rules`
+`bb0cbeeedd903f533a02aceba6b6648576250fd6` — `feat: simplify physical device
+details summary`
 
 Workflow state:
 
@@ -79,6 +79,20 @@ option ordering. Live Firefox visual validation passed on `192.168.20.23`.
 
 No new product-backlog feature is designated as the next implementation task;
 `PRODUCT_BACKLOG.md` remains authoritative for deferred work.
+
+Stage 2 — dedicated Physical Devices page redesign — is in progress:
+
+- Unit 1 (read path): `247d30c` — `getPhysicalDevicesOverview()` + `GET
+  /api/devicemonitor/devices/physicaldevices` (active + archived groups with
+  full membership history). CI `35496385491`: PASS.
+- Unit 2 (page): `92fb429` — dedicated **Physical Devices** page
+  (`physicaldevices.volt`, menu entry, route `/ui/devicemonitor/index/physicaldevices`).
+  CI `35497551473`: PASS.
+- Unit 3 (Device Details summary): `bb0cbee` — Device Details grouping is now a
+  compact read-only **Physical Device** summary linking to the dedicated page;
+  create/link/remove management removed from Device Details. CI `35498323464`: PASS.
+- Remaining: Unit 4 — repoint the Devices-page **Physical Device** badge to the
+  dedicated page.
 
 **Description:** Add an explicit user-controlled physical-device grouping layer
 above existing MAC identities so multiple legitimate MAC addresses can be
