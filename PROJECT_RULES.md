@@ -400,6 +400,23 @@ Do not repeat a full preflight for a report continuation.
 
 Prefer zero commands for a report-only continuation.
 
+### Concise output
+
+Keep responses concise and operational.
+
+- Do not narrate routine reasoning or describe every command before running it.
+- Do not repeat information already established in the current task.
+- During execution, report only meaningful progress, warnings, failures, or decisions.
+- Prefer short status lines over paragraphs.
+- Final reports should contain only requested fields and material exceptions.
+- Do not reproduce command output unless it is needed to support a result.
+- Do not restate the task or requirements in the final report.
+- For successful routine checks, prefer compact forms such as:
+  `PHP lint: PASS`
+  `CI: PASS`
+  `Worktree: clean`
+- Expand detail only for failures, unexpected state, ambiguity, or when explicitly requested.
+
 ### User-facing documentation
 
 Any change that alters user-visible functionality, controls, settings, status

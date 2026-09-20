@@ -123,6 +123,16 @@ was performed.
   explicitly required validation data.
 - Do not repeat preflight for a report-only continuation.
 
+### Concise output
+
+- Keep execution commentary minimal.
+- Do not narrate routine reasoning.
+- Do not repeat established facts.
+- Use short PASS/FAIL status lines for routine checks.
+- Final reports contain only requested fields and material exceptions.
+- Include raw command output only when necessary.
+- Expand detail only for failures, unexpected state, ambiguity, or explicit request.
+
 After producing the final report:
 
 STOP.
