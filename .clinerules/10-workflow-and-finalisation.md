@@ -114,6 +114,15 @@ Clearly state whether the completed work is safe to proceed from.
 If the task was review/design-only, state explicitly that no implementation
 was performed.
 
+### No redundant verification
+
+- Reuse verified results from the current task/session.
+- Do not rerun validation merely to restate a final report.
+- Report-only continuations should normally execute zero commands.
+- Run a fresh command only for genuinely missing, materially stale, or
+  explicitly required validation data.
+- Do not repeat preflight for a report-only continuation.
+
 After producing the final report:
 
 STOP.

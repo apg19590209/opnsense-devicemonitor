@@ -378,6 +378,28 @@ If information is no longer current project state but remains important for futu
 
 Do not substantially rewrite `PROJECT_RULES.md`, `DECISIONS.md` or `SYSTEM_MAP.md` merely to improve wording or formatting. Change them only when project requirements, architecture, environment or established working practices have actually changed.
 
+### No redundant verification
+
+Do not rerun commands, tests, Git checks, CI queries, hash checks, source
+inspection, deployment checks, or database queries merely to produce or
+continue a final report when those results were already verified in the
+immediately preceding work.
+
+Reuse verified results already present in the current task/session.
+
+Run a command only when:
+
+- a required fact was not previously established;
+- state may have materially changed since it was established; or
+- an explicit validation gate requires a fresh check.
+
+For report-only or continuation requests, output the report immediately when
+all required facts are already available.
+
+Do not repeat a full preflight for a report continuation.
+
+Prefer zero commands for a report-only continuation.
+
 ### User-facing documentation
 
 Any change that alters user-visible functionality, controls, settings, status
