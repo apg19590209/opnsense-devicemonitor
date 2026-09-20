@@ -31,7 +31,7 @@ documentation `97abb98`)
 
 Latest repository commit (HEAD):
 
-`97abb98` — `docs: document physical device identity model`
+`d0fe7af` — `docs: prevent redundant finalisation checks`
 
 Workflow state:
 
@@ -1471,8 +1471,25 @@ was not invalidated; no service restart. Read-only DB safety counts unchanged
 `device_lifecycles=8`). Unauthenticated route smoke check: HTTP 301→302, no
 PHP fatal.
 
-## Next step
+Authenticated GUI acceptance on `192.168.20.23`: PASS (human GUI checklist
+completed against the redesigned Physical Devices page and Device Details
+summary).
 
-Authenticated visual GUI validation of the redesigned Physical Devices page and
-Device Details summary on `192.168.20.23` (human GUI checklist in the final
-report). No further code change is requested.
+## v2.9 RC freeze
+
+Release-candidate freeze is COMPLETE.
+
+- RC candidate: `d0fe7afa587a28bf5418f75eb499f58a847b7ca6` (`v2.9-development`,
+  `docs: prevent redundant finalisation checks`; final rules/documentation
+  commit over the complete v2.9 implementation).
+- Physical Devices GUI acceptance on `192.168.20.23`: PASS.
+- Whole-plugin regression (local): PASS — Python compile, PHP lint, shell
+  syntax, gettext (`msgfmt -c`), `git diff --check`, 8 PHP tests, 8 Node (UI)
+  tests, 12 Python tests; 0 failures.
+- GitHub Actions CI for `d0fe7af`: PASS (run `35510393264`).
+- Pi-hole: COMPLETE. Unbound: FUNCTIONALLY COMPLETE / VALIDATION DEFERRED
+  (non-blocking).
+- Production `192.168.20.254` has remained untouched.
+
+Next step: promote the frozen RC candidate to production only on explicit user
+authorisation; no production access until then.
