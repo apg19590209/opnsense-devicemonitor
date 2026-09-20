@@ -2,7 +2,7 @@
 
 ## Last updated
 
-19 September 2026
+20 September 2026
 
 ## Current version / branch / environment
 
@@ -30,8 +30,8 @@ Python 3.13 TLS`
 
 Latest repository commit (HEAD):
 
-`28fc0fb67c35a495fd075e8c845de17110c8ec70` — `docs: record Pi-hole Python 3.13
-TLS fix and live validation`
+`219aaafd3271fec5af0cf2ce02374d3aedb31539` — `docs: consolidate project workflow
+and safety rules`
 
 Workflow state:
 
