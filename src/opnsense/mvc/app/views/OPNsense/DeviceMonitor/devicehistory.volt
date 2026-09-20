@@ -34,7 +34,7 @@
                class="btn btn-default btn-sm pull-right"
                style="font-size:14px;font-weight:600;padding:6px 12px;margin-right:6px;">
                 <i class="fa fa-clock-o"></i>
-                {{ lang._('Activity Timeline') }}
+                {{ lang._('Device Activity') }}
             </a>
             <h1 style="margin:0;font-size:20px;">
                 {{ lang._('Device Details') }}

@@ -600,7 +600,7 @@ $(document).ready(function() {
                         '/ui/devicemonitor/index/activitytimeline?mac=' +
                             encodeURIComponent(row.mac)
                     )
-                    .attr('title', 'Open device activity timeline')
+                    .attr('title', 'Open device activity')
                     .append(
                         $('<i>').addClass('fa fa-history')
                     )

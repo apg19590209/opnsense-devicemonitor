@@ -23,7 +23,7 @@
             </a>
 
             <h1 style="margin:0;font-size:20px;">
-                {{ lang._('Device Activity History') }}
+                {{ lang._('Device Activity') }}
             </h1>
         </div>
 
@@ -31,7 +31,7 @@
             <div class="panel-heading">
                 <strong>
                     <i class="fa fa-clock-o"></i>
-                    {{ lang._('Device Activity History') }}
+                    {{ lang._('Device Activity') }}
                 </strong>
                 <span class="text-muted" style="margin-left:10px;">
                     {{ lang._('MAC address') }}:

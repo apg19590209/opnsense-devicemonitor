@@ -1317,9 +1317,9 @@ presentation/layout only).
   Settings → About.
 - Device Details now uses a single `Device Details` heading (redundant
   `Device Monitor –` prefix removed).
-- The per-device activity page heading was standardised to
-  `Device Activity History` (page and section headings); the Device Details
-  `Activity Timeline` navigation button label was left unchanged.
+- The per-device activity page and its Device Details navigation button now
+  use the visible label `Device Activity` (page heading, section heading and
+  button label; internal identifiers remain `activitytimeline`).
 - Device Details device-summary field order now leads with `IP Address`,
   followed by `Hostname`, `MAC Address`, `Vendor`, `Status`, `First Seen`,
   `Last Seen`, then the remaining fields (Friendly Name, VLAN, Current
@@ -1340,12 +1340,10 @@ Validation:
 - `git diff --check`: PASS
 - guarded testbed deployment of the eight changed `.volt` files (candidate/
   pre/post SHA256, timestamped `cp -p` rollback backups): PASS
-- LIVE_VISUAL_VALIDATION = NOT PERFORMED (no browser automation available)
+- LIVE_VISUAL_VALIDATION = PASS (user-confirmed on the .23 testbed)
 - production `192.168.20.254` untouched
 
 ## Next step
 
-Visually validate the Stage 1 UI changes on the `.23` testbed (or via an
-authenticated browser/HTTP session) to confirm the sticky headers, removed
-headings and Device Details field order render as intended; no further code
-change is requested in this stage.
+No further code change is requested in this stage; Stage 1 UI-consistency work
+is complete and visually validated.

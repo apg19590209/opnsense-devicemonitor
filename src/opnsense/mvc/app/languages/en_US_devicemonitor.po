@@ -550,8 +550,8 @@ msgid "Device seen on multiple interfaces"
 msgstr "Device seen on multiple interfaces"
 
 #: activitytimeline.volt - page and section heading
-msgid "Device Activity History"
-msgstr "Device Activity History"
+msgid "Device Activity"
+msgstr "Device Activity"
 
 msgid "Services"
 msgstr "Services"

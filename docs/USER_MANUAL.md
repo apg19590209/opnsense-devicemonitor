@@ -77,8 +77,8 @@ Two additional pages are reached from the Devices list rather than the menu:
 
 - **Device Details** — a single device's summary, notes, lifecycle history and physical-device
   grouping. Open it with the note/comment icon (or **History**) in a device's **Actions** column.
-- **Device Activity History** — the chronological activity log for a single device. Open it
-  with the **Activity Timeline** button on the Device Details page.
+- **Device Activity** — the chronological activity log for a single device. Open it
+  with the **Device Activity** button on the Device Details page.
 
 Device Monitor also provides a small dashboard widget (OPNsense Lobby) showing the daemon
 status (**Running**/**Stopped** with its PID), total devices, and how many are **Online**.
@@ -159,7 +159,7 @@ Devices**). The installed plugin version is shown under **Settings → About**.
 Click the pencil icon next to **Friendly Name**, enter a name and save, or clear it. The
 Friendly Name is your own label (`custom_hostname`); it is independent of the detected
 Hostname, and editing it never overwrites the detected hostname. The change is recorded in
-the device's Device Activity History.
+the device's Device Activity.
 
 ### 4.7 Important notes
 
@@ -255,14 +255,14 @@ Lists the device's lifecycles as a table with columns: **Lifecycle**, **Status**
   Lifecycle** and per-row **Relink**.
 - Each lifecycle row lets you view its notes.
 
-### 6.5 Device Activity History link
+### 6.5 Device Activity link
 
-The **Activity Timeline** button on Device Details opens the **Device Activity History** page
+The **Device Activity** button on Device Details opens the **Device Activity** page
 for the device (see below).
 
-### 6.6 Device Activity History page
+### 6.6 Device Activity page
 
-**Path:** Device Details → **Device Activity History**
+**Path:** Device Details → **Device Activity**
 
 Shows the device's activity history in a table with columns: **Date / time**, **Activity**
 (colour-coded label), **Details**, and **Lifecycle** (the lifecycle number).
@@ -796,7 +796,7 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 | ACL / permissions | `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/ACL/ACL.xml` |
 | Devices page (list, filters, CSV, actions) | `views/.../devices.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | Device Details (summary, notes, lifecycle, physical device) | `views/.../devicehistory.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
-| Device Activity History | `views/.../activitytimeline.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
+| Device Activity | `views/.../activitytimeline.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | IP and MAC Conflicts | `views/.../identityevents.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | Infrastructure Services | `views/.../infrastructureservices.volt`, `Api/DevicesController.php`, `scan_network.py` |
 | Nmap Scan History | `views/.../scanhistory.volt`, `Api/DevicesController.php` |
