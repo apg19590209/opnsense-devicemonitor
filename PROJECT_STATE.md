@@ -315,6 +315,78 @@ deployed and live-validated:
 - grouping admission (`c28c14d`) and lifecycle (`d0f82b8`) write semantics are
   unchanged, and no database write occurred during this deployment
 
+## Stage 3 — Device Details / lifecycle usability redesign
+
+Stage 3 is complete. Stage 1 (UI/header consistency) and Stage 2 (device
+identity/grouping redesign) remain complete; Stage 2 is deployed and GUI
+validated on `192.168.20.23`.
+
+Design:
+
+- Device Details is reframed as a concise operational summary of one MAC
+  identity and its lifecycle context, with explicit navigation to Device
+  Activity and grouping management rather than duplicating those pages.
+- Panel order is now: Device Summary, Physical Device, Lifecycle History, Notes.
+- Device Summary leads with **IP Address**, then **Friendly Name**, **Hostname**
+  (with its source, when known), **MAC Address**, **Vendor**; the second column
+  shows **Status**, **VLAN**, **First Seen**, **Last Seen**, **Current
+  Lifecycle**. The separate Notes-count row was removed (notes live in the
+  Notes panel).
+- Lifecycle History gained a plain-language explanation and reordered columns
+  (**Lifecycle, Status, IP Address, Friendly Name, Hostname, Vendor, VLAN,
+  First Seen, Last Seen, Notes, Actions**); the Lifecycle column now shows the
+  lifecycle number (`#n`).
+- Returning-device semantics and controls (Start New Lifecycle / Relink) are
+  unchanged; timestamped lifecycle comments remain historical.
+
+Terminology:
+
+- The user-facing term **Physical Device** is retained. The underlying model
+  (one real-world device with multiple network identities/interfaces) is
+  already described in `DECISIONS.md` §17 and the user manual, and members are
+  already labelled "identities". No backend/database identifier was renamed.
+- `DM-BL-004` (Unbound) and `DM-BL-007` (Pi-hole) are already complete in this
+  repository and were deliberately not modified; they remain outside the
+  Stage 3 release boundary, so `PRODUCT_BACKLOG.md` was left unchanged (it
+  already records no open backlog items).
+
+Files changed:
+
+- `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devicehistory.volt`
+- `src/opnsense/mvc/app/languages/en_US_devicemonitor.po`
+- `src/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po`
+- `tests/test_device_details_ui.js` (new)
+- `.github/workflows/ci.yml`
+- `docs/USER_MANUAL.md`
+
+Implementation commit:
+
+- `5c45464` — `feat: redesign Device Details summary and lifecycle presentation`
+
+Validation:
+
+- full Node (UI) suite: PASS (incl. new `test_device_details_ui.js`)
+- full PHP suite: PASS
+- full Python suite: PASS
+- PHP lint / Python compile / shell syntax / gettext (`msgfmt -c`): PASS
+- `git diff --check`: PASS
+- GitHub Actions: PASS (run `35502449067`)
+
+Deployment (`192.168.20.23`):
+
+- guarded deployment of `devicehistory.volt` and both compiled `.mo` catalogues
+  (candidate/pre/post SHA256, timestamped `cp -p` rollback backups): PASS
+- no `Menu.xml` change, so the OPNsense menu cache was not invalidated
+- stale compiled `devicehistory.volt` Volt template removed to force recompilation
+- no service restart / php-fpm reload / daemon change (file-only deployment)
+- read-only DB safety counts unchanged by the deployment
+- unauthenticated route smoke check (HTTP 302, no PHP fatal): PASS
+
+GUI validation:
+
+- authenticated visual click-through was not performed by Cline (no GUI
+  credentials); a human validation checklist is provided in the final report.
+
 ## TESTBED environment and migration state
 
 The Device Monitor testbed/development environment has been migrated to the
@@ -1362,5 +1434,7 @@ Validation:
 
 ## Next step
 
-No further code change is requested in this stage; Stage 1 UI-consistency work
-is complete and visually validated.
+Stage 3 code is committed, pushed and CI-green, and the runtime files are
+deployed to the `192.168.20.23` testbed with hash parity. The only remaining
+gate is authenticated visual GUI validation of the redesigned Device Details
+page (human checklist in the final report). No further code change is requested.
