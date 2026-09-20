@@ -1,14 +1,8 @@
 <div class="content-box">
     <div class="content-box-main">
 
-        <!-- Header with version and statistics -->
+        <!-- Header with statistics -->
         <div id="devices-sticky-summary" class="devices-header">
-            <h1>
-                {{ lang._('Device Monitor') }}
-                <small id="plugin-version"></small>
-                <span class="devices-divider">&ndash;</span>
-                <span class="devices-title">{{ lang._('Devices') }}</span>
-            </h1>
             <div class="devices-stats">
                 <span>
                     {{ lang._('Total Devices') }}:
@@ -278,11 +272,6 @@ $(document).ready(function() {
         $('body').append($t); $t.fadeIn(300);
         setTimeout(function(){ $t.fadeOut(300,function(){ $t.remove(); }); },3000);
     }
-
-    // Verze + statistiky
-    $.getJSON('/api/devicemonitor/config/getversion', function(d) {
-        $('#plugin-version').text('v'+(d.version||'?'));
-    });
 
     function loadStats() {
         $.ajax({url:'/api/devicemonitor/devices/stats',type:'GET',success:function(d){

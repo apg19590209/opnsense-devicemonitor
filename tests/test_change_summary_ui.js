@@ -245,7 +245,7 @@ check(
 );
 
 /* Full sticky-stack mechanism: one unified opaque sticky controls wrapper
-   (panel title + toolbar + custom-range + fallback notice + summary counters)
+   (toolbar + custom-range + fallback notice + summary counters)
    with the table thead sticky immediately beneath it. The wrapping
    .table-responsive overflow must be overridden (it would otherwise create a
    scroll container that stops position:sticky from sticking to page scroll). */
@@ -261,7 +261,6 @@ check(
 );
 
 [
-    'id="change-summary-title"',
     'id="change-summary-toolbar"',
     'id="change-summary-custom-range"',
     'id="change-summary-fallback"',

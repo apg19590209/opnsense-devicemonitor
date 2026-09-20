@@ -37,9 +37,7 @@
                 {{ lang._('Activity Timeline') }}
             </a>
             <h1 style="margin:0;font-size:20px;">
-                {{ lang._('Device Monitor') }}
-                <span style="color:#555;margin:0 8px;">&ndash;</span>
-                <span style="font-weight:normal;">{{ lang._('Device Details') }}</span>
+                {{ lang._('Device Details') }}
             </h1>
         </div>
 
@@ -55,12 +53,12 @@
                     <div class="col-md-6">
                         <table class="table table-condensed" style="margin-bottom:5px;">
                             <tbody>
-                                <tr><th style="width:135px;">{{ lang._('Friendly Name') }}</th><td id="summary-friendly-name">&mdash;</td></tr>
+                                <tr><th style="width:135px;">{{ lang._('IP Address') }}</th><td id="summary-ip">&mdash;</td></tr>
+                                <tr><th>{{ lang._('Hostname') }}</th><td id="summary-hostname">&mdash;</td></tr>
                                 <tr><th>{{ lang._('MAC Address') }}</th><td id="summary-mac">&mdash;</td></tr>
-                                <tr><th>{{ lang._('IP Address') }}</th><td id="summary-ip">&mdash;</td></tr>
                                 <tr><th>{{ lang._('Vendor') }}</th><td id="summary-vendor">&mdash;</td></tr>
-                                <tr><th>{{ lang._('VLAN') }}</th><td id="summary-vlan">&mdash;</td></tr>
                                 <tr><th>{{ lang._('Status') }}</th><td id="summary-status">&mdash;</td></tr>
+                                <tr><th>{{ lang._('First Seen') }}</th><td id="summary-first-seen">&mdash;</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -68,10 +66,10 @@
                     <div class="col-md-6">
                         <table class="table table-condensed" style="margin-bottom:5px;">
                             <tbody>
-                                <tr><th style="width:135px;">{{ lang._('Hostname') }}</th><td id="summary-hostname">&mdash;</td></tr>
+                                <tr><th style="width:135px;">{{ lang._('Last Seen') }}</th><td id="summary-last-seen">&mdash;</td></tr>
+                                <tr><th>{{ lang._('Friendly Name') }}</th><td id="summary-friendly-name">&mdash;</td></tr>
+                                <tr><th>{{ lang._('VLAN') }}</th><td id="summary-vlan">&mdash;</td></tr>
                                 <tr><th>{{ lang._('Current Lifecycle') }}</th><td id="summary-lifecycle">&mdash;</td></tr>
-                                <tr><th>{{ lang._('First Seen') }}</th><td id="summary-first-seen">&mdash;</td></tr>
-                                <tr><th>{{ lang._('Last Seen') }}</th><td id="summary-last-seen">&mdash;</td></tr>
                                 <tr><th>{{ lang._('Notes') }}</th><td id="summary-note-count">0</td></tr>
                             </tbody>
                         </table>

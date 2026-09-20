@@ -1297,10 +1297,55 @@ Validated:
   or vertical jumping; no defects observed)
 - production `192.168.20.254` untouched
 
+## Device Monitor UI consistency — Stage 1 (page headers)
+
+Completed the first staged Device Monitor UI-consistency pass (low-risk
+presentation/layout only).
+
+- IP and MAC Conflicts (`identityevents.volt`) and Nmap Scan History
+  (`scanhistory.volt`) table headers were converted from the nested-scroll
+  sticky (`max-height` + `overflow-y: auto`, transparent `th`) to the proven
+  Change Summary sticky-stack pattern: normal page scrolling, opaque header
+  backgrounds, sticky `header.page-content-head`, gap cover, and table
+  `thead th` sticky immediately beneath the controls heading.
+- Removed the redundant in-page `Device Monitor – <Page>` banners from Devices,
+  Change Summary, Infrastructure Services, IP and MAC Conflicts, Nmap Scan
+  History and Settings; the OPNsense breadcrumb is now the primary page
+  identity. Useful stats/controls/tab strips were retained.
+- Removed the ordinary-page version display from the Devices header and the
+  Settings page heading; version/repository/licensing information remains in
+  Settings → About.
+- Device Details now uses a single `Device Details` heading (redundant
+  `Device Monitor –` prefix removed).
+- The per-device activity page heading was standardised to
+  `Device Activity History` (page and section headings); the Device Details
+  `Activity Timeline` navigation button label was left unchanged.
+- Device Details device-summary field order now leads with `IP Address`,
+  followed by `Hostname`, `MAC Address`, `Vendor`, `Status`, `First Seen`,
+  `Last Seen`, then the remaining fields (Friendly Name, VLAN, Current
+  Lifecycle, Notes). Presentation-only; no backend/API/schema changes.
+- Updated `docs/USER_MANUAL.md` to match the heading convention, terminology,
+  field order and sticky behaviour.
+
+Files changed: eight `.volt` views, the en_US and cs_CZ gettext catalogues,
+`tests/test_change_summary_ui.js`, and `docs/USER_MANUAL.md`.
+
+Validation:
+
+- full Python suite: PASS
+- Node (UI) suite: PASS
+- PHP suite: PASS
+- PHP lint / Python compile / shell syntax / gettext (`msgfmt`): PASS
+- Volt template compile check (Phalcon): PASS
+- `git diff --check`: PASS
+- guarded testbed deployment of the eight changed `.volt` files (candidate/
+  pre/post SHA256, timestamped `cp -p` rollback backups): PASS
+- LIVE_VISUAL_VALIDATION = NOT PERFORMED (no browser automation available)
+- production `192.168.20.254` untouched
+
 ## Next step
 
-No new product-backlog feature is designated as the next implementation task;
-`PRODUCT_BACKLOG.md` remains authoritative for deferred work.
-
-The Device Monitor testbed remains `192.168.20.23`; production `192.168.20.254`
-was not modified.
+Visually validate the Stage 1 UI changes on the `.23` testbed (or via an
+authenticated browser/HTTP session) to confirm the sticky headers, removed
+headings and Device Details field order render as intended; no further code
+change is requested in this stage.

@@ -77,8 +77,8 @@ Two additional pages are reached from the Devices list rather than the menu:
 
 - **Device Details** — a single device's summary, notes, lifecycle history and physical-device
   grouping. Open it with the note/comment icon (or **History**) in a device's **Actions** column.
-- **Activity Timeline** — the chronological activity log for a single device. Open it with
-  the **Activity Timeline** button on the Device Details page.
+- **Device Activity History** — the chronological activity log for a single device. Open it
+  with the **Activity Timeline** button on the Device Details page.
 
 Device Monitor also provides a small dashboard widget (OPNsense Lobby) showing the daemon
 status (**Running**/**Stopped** with its PID), total devices, and how many are **Online**.
@@ -98,9 +98,11 @@ whether a device is online, run a targeted Nmap scan, open its history, or remov
 
 ### 4.2 Page header
 
-- **Device Monitor** title, followed by the installed plugin **version**.
 - **Total Devices** — the number of devices currently shown.
 - **Online** — how many of those devices are currently online.
+
+The page title is provided by the OPNsense breadcrumb (**Services → Device Monitor →
+Devices**). The installed plugin version is shown under **Settings → About**.
 
 ### 4.3 Toolbar controls
 
@@ -157,7 +159,7 @@ whether a device is online, run a targeted Nmap scan, open its history, or remov
 Click the pencil icon next to **Friendly Name**, enter a name and save, or clear it. The
 Friendly Name is your own label (`custom_hostname`); it is independent of the detected
 Hostname, and editing it never overwrites the detected hostname. The change is recorded in
-the device's Activity Timeline.
+the device's Device Activity History.
 
 ### 4.7 Important notes
 
@@ -226,8 +228,8 @@ Show everything Device Monitor knows about a single device, and let you annotate
 
 ### 6.2 Device Summary panel
 
-Displays: **Friendly Name**, **MAC Address**, **IP Address**, **Vendor**, **VLAN**,
-**Status**, **Hostname**, **Current Lifecycle**, **First Seen**, **Last Seen**, and the
+Displays: **IP Address**, **Hostname**, **MAC Address**, **Vendor**, **Status**,
+**First Seen**, **Last Seen**, **Friendly Name**, **VLAN**, **Current Lifecycle**, and the
 **Notes** count. **Read-only.**
 
 ### 6.3 Notes panel
@@ -253,14 +255,14 @@ Lists the device's lifecycles as a table with columns: **Lifecycle**, **Status**
   Lifecycle** and per-row **Relink**.
 - Each lifecycle row lets you view its notes.
 
-### 6.5 Activity Timeline link
+### 6.5 Device Activity History link
 
-The **Activity Timeline** button on Device Details opens the chronological activity log for
-the device (see below).
+The **Activity Timeline** button on Device Details opens the **Device Activity History** page
+for the device (see below).
 
-### 6.6 Activity Timeline page
+### 6.6 Device Activity History page
 
-**Path:** Device Details → **Activity Timeline**
+**Path:** Device Details → **Device Activity History**
 
 Shows the device's activity history in a table with columns: **Date / time**, **Activity**
 (colour-coded label), **Details**, and **Lifecycle** (the lifecycle number).
@@ -330,6 +332,9 @@ Device Monitor never blocks or remediates a device.
 - **Other MAC** / **Other IP** — the conflicting counterpart.
 - **Interface** — the interface where the event was observed.
 - **Details / Actions** — a details expand button and a resolve/reopen button.
+
+The controls heading and table column headers stay pinned while the list scrolls (normal
+page scrolling).
 
 ### 8.4 Actions
 
@@ -430,6 +435,9 @@ their results.
 - **Open Ports** — a summary of open ports found.
 - **Email** — whether a scan-result email was sent for this scan.
 - **Details** — expand to see the full result.
+
+The controls heading and table column headers stay pinned while the list scrolls (normal
+page scrolling).
 
 ### 10.4 Notes
 
@@ -788,7 +796,7 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 | ACL / permissions | `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/ACL/ACL.xml` |
 | Devices page (list, filters, CSV, actions) | `views/.../devices.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | Device Details (summary, notes, lifecycle, physical device) | `views/.../devicehistory.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
-| Activity Timeline | `views/.../activitytimeline.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
+| Device Activity History | `views/.../activitytimeline.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | IP and MAC Conflicts | `views/.../identityevents.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | Infrastructure Services | `views/.../infrastructureservices.volt`, `Api/DevicesController.php`, `scan_network.py` |
 | Nmap Scan History | `views/.../scanhistory.volt`, `Api/DevicesController.php` |

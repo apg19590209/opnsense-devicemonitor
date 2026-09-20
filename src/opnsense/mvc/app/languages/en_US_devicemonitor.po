@@ -548,6 +548,11 @@ msgstr "Device using multiple IPv4 addresses"
 
 msgid "Device seen on multiple interfaces"
 msgstr "Device seen on multiple interfaces"
+
+#: activitytimeline.volt - page and section heading
+msgid "Device Activity History"
+msgstr "Device Activity History"
+
 msgid "Services"
 msgstr "Services"
 

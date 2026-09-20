@@ -3,14 +3,6 @@
 
         <div id="infrastructure-sticky-controls" class="infrastructure-sticky-controls">
             <div class="infrastructure-header">
-                <h1>
-                    {{ lang._('Device Monitor') }}
-                    <span class="infrastructure-divider">&ndash;</span>
-                    <span class="infrastructure-title">
-                        {{ lang._('Infrastructure Services') }}
-                    </span>
-                </h1>
-
                 <div class="infrastructure-stats">
                     <span>
                         {{ lang._('Total') }}:

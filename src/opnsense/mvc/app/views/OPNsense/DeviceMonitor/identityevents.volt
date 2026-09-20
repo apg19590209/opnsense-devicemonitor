@@ -1,16 +1,8 @@
 <div class="content-box">
     <div class="content-box-main">
 
-        <div style="padding:10px 10px 8px 10px;border-bottom:1px solid #333;margin-bottom:12px;">
-            <h1 style="margin:0;font-size:20px;">
-                {{ lang._('Device Monitor') }}
-                <span style="color:#555;margin:0 8px;">&ndash;</span>
-                <span style="font-weight:normal;">{{ lang._('IP and MAC Conflicts') }}</span>
-            </h1>
-        </div>
-
         <div class="panel panel-default">
-            <div class="panel-heading identity-events-heading">
+            <div id="identity-events-sticky-controls" class="panel-heading identity-events-heading">
                 <strong style="font-size:13px;">
                     <i class="fa fa-exclamation-triangle"></i>
                     {{ lang._('IP and MAC Conflicts') }}
@@ -120,6 +112,19 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    position: sticky;
+    z-index: 20;
+}
+
+.identity-events-heading::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: var(--identity-events-sticky-gap, 0px);
+    background: inherit;
+    pointer-events: none;
 }
 
 .identity-events-summary {
@@ -164,8 +169,7 @@
 }
 
 #identity-events-scroll {
-    max-height: 520px;
-    overflow-y: auto;
+    overflow: visible;
 }
 
 #grid-identity-events {
@@ -178,9 +182,12 @@
     vertical-align: middle;
     white-space: nowrap;
     position: sticky;
-    top: 0;
-    z-index: 2;
-    background: inherit;
+    z-index: 10;
+}
+
+header.page-content-head {
+    position: sticky;
+    z-index: 30;
 }
 
 #grid-identity-events tbody td {
@@ -609,6 +616,96 @@ $(document).ready(function() {
             loadIdentityEvents();
         }
     );
+
+    // Keep the OPNsense page title bar, the controls heading and the table
+    // column header sticky while conflict rows scroll underneath (normal page
+    // scroll, no nested vertical scrolling). Mirrors the proven Change Summary
+    // sticky-header implementation.
+    var identityEventsStickyGeometry = null;
+
+    function opaqueIdentityBackground($el) {
+        var node = $el;
+        var bg = node.css('background-color');
+
+        while (
+            node.length &&
+            (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)')
+        ) {
+            node = node.parent();
+            bg = node.css('background-color');
+        }
+
+        return bg || '#101218';
+    }
+
+    function updateIdentityEventsStickyStack() {
+        var pageHead = $('header.page-content-head');
+        var $controls = $('#identity-events-sticky-controls');
+        var $table = $('#grid-identity-events');
+
+        if (
+            identityEventsStickyGeometry === null &&
+            pageHead.length &&
+            $controls.length
+        ) {
+            var pageHeadRect = pageHead[0].getBoundingClientRect();
+            var controlsRect = $controls[0].getBoundingClientRect();
+            var scrollTop =
+                (document.scrollingElement || document.documentElement)
+                    .scrollTop;
+
+            identityEventsStickyGeometry = {
+                pageHeadTop: pageHeadRect.top + scrollTop,
+                gap: controlsRect.top - pageHeadRect.bottom
+            };
+        }
+
+        if (identityEventsStickyGeometry === null) {
+            return;
+        }
+
+        var pageHeadTop = identityEventsStickyGeometry.pageHeadTop;
+        var initialGap = identityEventsStickyGeometry.gap;
+        var pageHeadHeight = pageHead.length
+            ? pageHead[0].offsetHeight
+            : 0;
+
+        if (pageHead.length) {
+            pageHead.css('top', pageHeadTop + 'px');
+            pageHead.css(
+                'background-color',
+                opaqueIdentityBackground(pageHead)
+            );
+        }
+
+        if ($controls.length) {
+            var controlsTop = pageHeadTop + pageHeadHeight + initialGap;
+
+            $controls.css('top', controlsTop + 'px');
+            $controls.css(
+                'background-color',
+                opaqueIdentityBackground($controls)
+            );
+
+            $controls[0].style.setProperty(
+                '--identity-events-sticky-gap',
+                initialGap + 'px'
+            );
+
+            var controlsHeight =
+                $controls[0].getBoundingClientRect().height;
+            var tableHeaderTop = controlsTop + controlsHeight;
+            var thead = $table.find('thead th');
+            var theadBg = opaqueIdentityBackground(thead);
+
+            thead.css('top', tableHeaderTop + 'px');
+            thead.css('background-color', theadBg);
+            $table.find('thead').css('background-color', theadBg);
+        }
+    }
+
+    $(window).on('resize', updateIdentityEventsStickyStack);
+    updateIdentityEventsStickyStack();
 
     loadIdentityEvents();
 

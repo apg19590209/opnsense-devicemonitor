@@ -549,6 +549,11 @@ msgstr "Zařízení používá více adres IPv4"
 
 msgid "Device seen on multiple interfaces"
 msgstr "Zařízení zjištěno na více rozhraních"
+
+#: activitytimeline.volt - page and section heading
+msgid "Device Activity History"
+msgstr "Historie aktivit zařízení"
+
 msgid "Services"
 msgstr "Služby"
 

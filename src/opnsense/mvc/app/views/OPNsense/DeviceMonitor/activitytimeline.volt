@@ -23,11 +23,7 @@
             </a>
 
             <h1 style="margin:0;font-size:20px;">
-                {{ lang._('Device Monitor') }}
-                <span style="color:#555;margin:0 8px;">&ndash;</span>
-                <span style="font-weight:normal;">
-                    {{ lang._('Activity Timeline') }}
-                </span>
+                {{ lang._('Device Activity History') }}
             </h1>
         </div>
 
@@ -35,7 +31,7 @@
             <div class="panel-heading">
                 <strong>
                     <i class="fa fa-clock-o"></i>
-                    {{ lang._('Activity Timeline') }}
+                    {{ lang._('Device Activity History') }}
                 </strong>
                 <span class="text-muted" style="margin-left:10px;">
                     {{ lang._('MAC address') }}:

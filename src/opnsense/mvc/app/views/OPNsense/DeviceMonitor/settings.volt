@@ -1,13 +1,6 @@
 <div class="content-box">
     <div class="content-box-main">
 
-        <h1 style="padding-left:10px;">
-            {{ lang._('Device Monitor') }}
-            <small id="settings-version" style="font-size:13px;color:#888;margin-left:5px;"></small>
-            <span style="color:#555;margin:0 8px;">–</span>
-            <span style="font-weight:normal;font-size:18px;">{{ lang._('Settings') }}</span>
-        </h1>
-
         <ul class="nav nav-tabs" role="tablist" style="margin:10px 0 0 0;">
             <li role="presentation" class="active">
                 <a href="#tab-monitoring" role="tab" data-toggle="tab">
@@ -472,7 +465,6 @@ $().ready(function() {
     // Version
     $.getJSON('/api/devicemonitor/config/getversion', function(d) {
         var v = 'v'+(d.version||'?');
-        $('#settings-version').text(v);
         $('#about-version').text(v);
     });
 

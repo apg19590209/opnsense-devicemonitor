@@ -2,16 +2,6 @@
     <div class="content-box-main">
 
         <div id="change-summary-sticky-controls" class="change-summary-sticky-controls">
-            <div id="change-summary-title"
-                 class="change-summary-title"
-                 style="padding:10px 10px 8px 10px;border-bottom:1px solid #333;margin-bottom:12px;">
-            <h1 style="margin:0;font-size:20px;">
-                {{ lang._('Device Monitor') }}
-                <span style="color:#555;margin:0 8px;">&ndash;</span>
-                <span style="font-weight:normal;">{{ lang._('Change Summary') }}</span>
-            </h1>
-        </div>
-
             <div class="panel panel-default change-summary-controls-panel">
             <div id="change-summary-toolbar" class="panel-heading change-summary-heading">
                 <div class="change-summary-controls">
