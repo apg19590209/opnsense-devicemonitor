@@ -61,10 +61,10 @@
         <table class="table table-condensed table-hover table-striped devices-table" id="grid-devices">
             <thead>
                 <tr>
-                    <th class="sortable devices-table-header" data-col="mac">{{ lang._('MAC Address') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable devices-table-header" data-col="ip">{{ lang._('IP Address') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable devices-table-header" data-col="custom_hostname">{{ lang._('Friendly Name') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable devices-table-header" data-col="hostname">{{ lang._('Hostname') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable devices-table-header" data-col="mac">{{ lang._('MAC Address') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable devices-table-header" data-col="vendor">{{ lang._('Vendor') }} <i class="fa fa-sort"></i></th>                    <th class="devices-table-header">{{ lang._('Services') }}</th>
 
                     <th class="sortable devices-table-header" data-col="vlan">{{ lang._('VLAN') }} <i class="fa fa-sort"></i></th>
@@ -646,10 +646,10 @@ $(document).ready(function() {
             if (row.vlan && vlanNames[row.vlan]) vlanLabel += ' \u2013 '+vlanNames[row.vlan];
 
             $('<tr>').append(
-                $('<td>').text(row.mac||''),
                 $('<td>').html(ipHtml),
                 $friendlyCell,
                 $hostnameCell,
+                $('<td>').text(row.mac||''),
                 $('<td>').text(row.vendor||''),
                 buildServicesCell(row),
                 $('<td>').text(vlanLabel),
