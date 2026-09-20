@@ -34,6 +34,7 @@ STOP and report the discrepancy before making changes.
 - Do not guess when behaviour, scope, schema, architecture, or deployment state is unclear.
 - STOP and report when clarification is required.
 - Do not automatically advance to another phase after completing the current phase.
+- Keep `docs/USER_MANUAL.md` in sync: any change that alters user-visible functionality, controls, settings, status values, workflows, terminology, navigation, page content, warnings, or other documented behaviour must review `docs/USER_MANUAL.md` and update it in the same task when applicable.
 
 ### Shell scripting safety
 
