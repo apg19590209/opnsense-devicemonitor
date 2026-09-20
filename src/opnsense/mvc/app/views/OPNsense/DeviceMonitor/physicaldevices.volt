@@ -153,6 +153,9 @@ $(document).ready(function() {
     var allGroups = [];
     var stateFilter = 'all';
     var searchText = '';
+    var params = new URLSearchParams(window.location.search);
+    var groupParam = params.get('group') || '';
+    var revealedGroup = false;
 
     function showToast(msg, type) {
         var bg = type === 'success'
@@ -233,6 +236,7 @@ $(document).ready(function() {
 
                 updateStats();
                 renderPhysicalDevices();
+                revealGroup();
             },
             error: function() {
                 physicalDevicesError('Unable to load physical devices');
@@ -328,6 +332,29 @@ $(document).ready(function() {
         $('#stat-visible').text(visible);
     }
 
+    function revealGroup() {
+        if (!groupParam || revealedGroup) {
+            return;
+        }
+
+        revealedGroup = true;
+
+        var $target = $(
+            '.physical-device-panel[data-group-id="' + groupParam + '"]'
+        );
+
+        if (!$target.length) {
+            return;
+        }
+
+        $target.find('.panel-body').show();
+        $target.find('i.fa-chevron-right')
+            .toggleClass('fa-chevron-right fa-chevron-down');
+        $('html, body').animate({
+            scrollTop: $target.offset().top - 20
+        }, 300);
+    }
+
     function buildGroupPanel(group) {
         var isArchived = !!group.archived_at;
         var members = Array.isArray(group.members) ? group.members : [];
@@ -338,9 +365,9 @@ $(document).ready(function() {
             return !!member.removed_at;
         });
 
-        var $panel = $('<div>').addClass(
-            'panel panel-default physical-device-panel'
-        );
+        var $panel = $('<div>')
+            .addClass('panel panel-default physical-device-panel')
+            .attr('data-group-id', group.id);
         var $heading = $('<div>').addClass('panel-heading');
         var $body = $('<div>').addClass('panel-body').css('display', 'none');
 

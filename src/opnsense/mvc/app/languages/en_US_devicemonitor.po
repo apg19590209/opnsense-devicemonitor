@@ -706,3 +706,6 @@ msgstr "Loading physical devices..."
 
 msgid "The seed MAC must belong to a current, active device. Grouping is explicit and does not merge or rewrite device, lifecycle or identity history."
 msgstr "The seed MAC must belong to a current, active device. Grouping is explicit and does not merge or rewrite device, lifecycle or identity history."
+
+msgid "Loading physical device..."
+msgstr "Loading physical device..."

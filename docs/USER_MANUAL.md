@@ -298,8 +298,9 @@ On the **Physical Devices** page:
   **Read-only.**
 - **View** a member to open its **Device Details** page. **Read-only.**
 
-The same grouping is also shown, and can still be edited, on a device's **Device Details**
-page in the **Physical Device / Related Identities** panel.
+On a device's **Device Details** page, a read-only **Physical Device** summary shows the
+device's current group (name and identity count) and links to the **Physical Devices** page
+for management.
 
 ### 7.3 What is displayed
 

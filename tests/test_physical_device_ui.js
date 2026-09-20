@@ -15,88 +15,64 @@ function check(condition, message) {
 [
     'id="physical-device-grouping"',
     'id="physical-device-content"',
-    'Physical Device / Related Identities',
+    'Physical Device',
     '/api/devicemonitor/devices/physicaldevice',
-    '/api/devicemonitor/devices/createphysicaldevice',
-    '/api/devicemonitor/devices/linkphysicaldeviceidentity',
-    '/api/devicemonitor/devices/removephysicaldeviceidentity',
-    '/ui/devicemonitor/index/devicehistory?mac=',
+    'loadPhysicalDevice();',
+    'renderPhysicalDeviceSummary',
+    'View / Manage Physical Device',
+    'Assign to Physical Device',
+    '/ui/devicemonitor/index/physicaldevices',
+    '?group=',
+    'Identities',
+    'memberCount'
+].forEach(function(value) {
+    check(
+        history.includes(value),
+        'Device Details physical-device summary missing: ' + value
+    );
+});
+
+[
+    'createphysicaldevice',
+    'linkphysicaldeviceidentity',
+    'removephysicaldeviceidentity',
     'Create Physical Device',
+    'physical-device-select',
+    'physical-device-controls',
+    'physical-device-name',
+    'btn-create-physical-device',
+    'btn-link-current-identity',
+    'related-identity-mac',
     'Link Identity',
-    'Identity history will be preserved.'
-].forEach(function(value) {
-    check(
-        history.includes(value),
-        'Device Details physical-device UI missing: ' + value
-    );
-});
-
-[
-    'physical-device-link-guidance',
-    'belongs to the same physical',
-    'such as another network interface',
-    'Do not link separate devices',
-    'merely because they are the same type or vendor.'
-].forEach(function(value) {
-    check(
-        history.includes(value),
-        'Device Details physical-device SAME-DEVICE link guidance ' +
-        'missing: ' + value
-    );
-});
-
-check(
-    history.includes(
-        'Only continue if this MAC belongs to the same physical'
-    ) &&
-    history.includes(
-        'hardware. Do not link separate devices merely because'
-    ) &&
-    history.includes('type, model or vendor.'),
-    'Link confirmation does not explicitly require SAME physical hardware'
-);
-
-check(
-    !history.includes('members.length > 1'),
-    'UI must allow explicit removal of the sole physical-device identity'
-);
-
-check(
-    history.includes('loadPhysicalDevice();'),
-    'Physical-device grouping is not loaded on Device Details'
-);
-
-[
-    "'physical-device-select'",
-    '-- Select existing physical device --',
-    '+ Create new physical device...',
-    "'physical-device-controls'",
-    '/api/devicemonitor/devices/listphysicaldevices',
-    'Link this identity',
-    "'btn-link-current-identity'",
+    'Related identity removed',
     'renderPhysicalDeviceLinkForm',
-    'linkCurrentIdentityToPhysicalDevice',
-    "' identity'",
-    "' identities'",
-    "'data-name'"
+    'renderPhysicalDeviceControls',
+    'linkCurrentIdentityToPhysicalDevice'
 ].forEach(function(value) {
     check(
-        history.includes(value),
-        'Device Details physical-device dropdown missing: ' + value
+        !history.includes(value),
+        'Device Details must not contain grouping management: ' + value
     );
 });
 
+check(
+    !history.includes('function validMac'),
+    'Obsolete Device Details physical-device helper not removed'
+);
+
 [
-    ".addClass('selectpicker')",
-    ".selectpicker();",
-    ".selectpicker('refresh');",
-    "'data-style': 'btn-default btn-xs'",
-    "'data-width': '340px'",
-    "find('option[value=\"__create__\"]')"
+    'loadDeviceData',
+    '/api/devicemonitor/devices/lifecycles',
+    'renderSummary',
+    'renderHistory',
+    'renderNotes',
+    'startnewlifecycle',
+    'addcomment'
 ].forEach(function(value) {
     check(
         history.includes(value),
-        'Device Details physical-device selectpicker lifecycle missing: ' + value
+        'Device Details lifecycle/comments/history functionality missing: ' +
+        value
     );
 });
 
@@ -116,7 +92,7 @@ scripts.forEach(function(block) {
         new Function(javascript);
     } catch (error) {
         console.error(
-            'FAIL: Device Details physical-device JavaScript syntax: ' +
+            'FAIL: Device Details physical-device summary JavaScript syntax: ' +
             error.message
         );
         process.exit(1);

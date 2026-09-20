@@ -707,3 +707,6 @@ msgstr "Načítání fyzických zařízení..."
 
 msgid "The seed MAC must belong to a current, active device. Grouping is explicit and does not merge or rewrite device, lifecycle or identity history."
 msgstr "Seed MAC musí patřit k aktuálnímu aktivnímu zařízení. Seskupování je explicitní a neslučuje ani nepřepisuje historii zařízení, životních cyklů nebo identit."
+
+msgid "Loading physical device..."
+msgstr "Načítání fyzického zařízení..."
