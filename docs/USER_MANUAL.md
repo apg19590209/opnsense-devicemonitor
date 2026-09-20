@@ -225,15 +225,30 @@ devices) → **Device Details**
 
 ### 6.1 Purpose
 
-Show everything Device Monitor knows about a single device, and let you annotate it.
+Give a concise operational summary of one device's current identity and lifecycle, with
+clear navigation to its full activity history and to grouping management.
 
 ### 6.2 Device Summary panel
 
-Displays: **IP Address**, **Hostname**, **MAC Address**, **Vendor**, **Status**,
-**First Seen**, **Last Seen**, **Friendly Name**, **VLAN**, **Current Lifecycle**, and the
-**Notes** count. **Read-only.**
+Shows the device's current identity in two columns. **IP Address** is the first field,
+followed by **Friendly Name**, **Hostname** (with its source, when known), **MAC Address**,
+and **Vendor**. The second column shows **Status**, **VLAN**, **First Seen**, **Last Seen**,
+and **Current Lifecycle**. **Read-only.**
 
-### 6.3 Notes panel
+### 6.3 Lifecycle History panel
+
+Lists the device's lifecycles as a table. A short explanation at the top describes what a
+lifecycle is: one continuous period during which a MAC address is treated as the same known
+device; earlier lifecycles are archived (not deleted) and remain available below.
+
+Columns: **Lifecycle**, **Status**, **IP Address**, **Friendly Name**, **Hostname**,
+**Vendor**, **VLAN**, **First Seen**, **Last Seen**, **Notes**, and **Actions**.
+
+- For a **RETURNING** device, this panel shows the resolution controls: **Start New
+  Lifecycle** and per-row **Relink**.
+- Each lifecycle row lets you view its notes.
+
+### 6.4 Notes panel
 
 - **Add Note** — add a free-text note to the device's *active* lifecycle. **Changes state.**
 - Each note is numbered, shows its text and timestamp, and supports:
@@ -245,16 +260,6 @@ Displays: **IP Address**, **Hostname**, **MAC Address**, **Vendor**, **Status**,
 > **Prerequisite.** Notes belong to an active lifecycle. If a device is **RETURNING** and
 > has no active lifecycle, you must first resolve it in Lifecycle History (Start New
 > Lifecycle or Relink) before adding notes.
-
-### 6.4 Lifecycle History panel
-
-Lists the device's lifecycles as a table with columns: **Lifecycle**, **Status**,
-**Friendly Name**, **Hostname**, **IP Address**, **Vendor**, **VLAN**, **First Seen**,
-**Last Seen**, **Notes**, and **Actions**.
-
-- For a **RETURNING** device, this panel shows the resolution controls: **Start New
-  Lifecycle** and per-row **Relink**.
-- Each lifecycle row lets you view its notes.
 
 ### 6.5 Device Activity link
 

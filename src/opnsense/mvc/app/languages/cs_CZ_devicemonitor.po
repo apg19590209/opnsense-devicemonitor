@@ -710,3 +710,49 @@ msgstr "Seed MAC musí patřit k aktuálnímu aktivnímu zařízení. Seskupová
 
 msgid "Loading physical device..."
 msgstr "Načítání fyzického zařízení..."
+
+# [devicehistory.volt] Device Details page
+msgid "Device Details"
+msgstr "Detail zařízení"
+
+msgid "Device Summary"
+msgstr "Souhrn zařízení"
+
+msgid "Back to Devices"
+msgstr "Zpět na zařízení"
+
+msgid "Current Lifecycle"
+msgstr "Aktuální životní cyklus"
+
+msgid "Lifecycle History"
+msgstr "Historie životního cyklu"
+
+msgid "MAC address"
+msgstr "MAC adresa"
+
+msgid "A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below."
+msgstr "Životní cyklus je jedno souvislé období, během kterého je tato MAC adresa považována za stejné známé zařízení. Dřívější životní cykly jsou archivovány, nikoli smazány, a zůstávají k dispozici níže."
+
+msgid "Start New Lifecycle"
+msgstr "Zahájit nový životní cyklus"
+
+msgid "Use this when the returning device should be treated as new."
+msgstr "Použijte, když má být navracející se zařízení považováno za nové."
+
+msgid "Loading device history..."
+msgstr "Načítání historie zařízení..."
+
+msgid "Notes"
+msgstr "Poznámky"
+
+msgid "There is no active lifecycle. Resolve the returning device in Lifecycle History before adding notes."
+msgstr "Není aktivní životní cyklus. Před přidáním poznámek vyřešte navracející se zařízení v Historii životního cyklu."
+
+msgid "Add Note"
+msgstr "Přidat poznámku"
+
+msgid "Enter a new note..."
+msgstr "Zadejte novou poznámku..."
+
+msgid "Loading notes..."
+msgstr "Načítání poznámek..."

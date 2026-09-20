@@ -46,11 +46,10 @@
                         <table class="table table-condensed" style="margin-bottom:5px;">
                             <tbody>
                                 <tr><th style="width:135px;">{{ lang._('IP Address') }}</th><td id="summary-ip">&mdash;</td></tr>
+                                <tr><th>{{ lang._('Friendly Name') }}</th><td id="summary-friendly-name">&mdash;</td></tr>
                                 <tr><th>{{ lang._('Hostname') }}</th><td id="summary-hostname">&mdash;</td></tr>
                                 <tr><th>{{ lang._('MAC Address') }}</th><td id="summary-mac">&mdash;</td></tr>
                                 <tr><th>{{ lang._('Vendor') }}</th><td id="summary-vendor">&mdash;</td></tr>
-                                <tr><th>{{ lang._('Status') }}</th><td id="summary-status">&mdash;</td></tr>
-                                <tr><th>{{ lang._('First Seen') }}</th><td id="summary-first-seen">&mdash;</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -58,11 +57,11 @@
                     <div class="col-md-6">
                         <table class="table table-condensed" style="margin-bottom:5px;">
                             <tbody>
-                                <tr><th style="width:135px;">{{ lang._('Last Seen') }}</th><td id="summary-last-seen">&mdash;</td></tr>
-                                <tr><th>{{ lang._('Friendly Name') }}</th><td id="summary-friendly-name">&mdash;</td></tr>
+                                <tr><th style="width:135px;">{{ lang._('Status') }}</th><td id="summary-status">&mdash;</td></tr>
                                 <tr><th>{{ lang._('VLAN') }}</th><td id="summary-vlan">&mdash;</td></tr>
+                                <tr><th>{{ lang._('First Seen') }}</th><td id="summary-first-seen">&mdash;</td></tr>
+                                <tr><th>{{ lang._('Last Seen') }}</th><td id="summary-last-seen">&mdash;</td></tr>
                                 <tr><th>{{ lang._('Current Lifecycle') }}</th><td id="summary-lifecycle">&mdash;</td></tr>
-                                <tr><th>{{ lang._('Notes') }}</th><td id="summary-note-count">0</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -81,6 +80,64 @@
                 <div class="text-muted">
                     {{ lang._('Loading physical device...') }}
                 </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default" id="lifecycle-history">
+            <div class="panel-heading">
+                <strong>
+                    <i class="fa fa-history"></i>
+                    {{ lang._('Lifecycle History') }}
+                </strong>
+                <span class="text-muted" style="margin-left:10px;">
+                    {{ lang._('MAC address') }}:
+                    <span id="device-history-mac"></span>
+                </span>
+            </div>
+
+            <div class="text-muted" style="padding:10px 15px;">
+                {{ lang._('A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below.') }}
+            </div>
+
+            <div id="return-resolution-controls"
+                 style="display:none;padding:10px 15px;border-bottom:1px solid #ddd;">
+                <button id="btn-start-new-lifecycle"
+                        type="button"
+                        class="btn btn-sm btn-primary">
+                    <i class="fa fa-plus-circle"></i>
+                    {{ lang._('Start New Lifecycle') }}
+                </button>
+                <span class="text-muted" style="margin-left:8px;">
+                    {{ lang._('Use this when the returning device should be treated as new.') }}
+                </span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-condensed table-hover table-striped"
+                       id="grid-device-history">
+                    <thead>
+                        <tr>
+                            <th>{{ lang._('Lifecycle') }}</th>
+                            <th>{{ lang._('Status') }}</th>
+                            <th>{{ lang._('IP Address') }}</th>
+                            <th>{{ lang._('Friendly Name') }}</th>
+                            <th>{{ lang._('Hostname') }}</th>
+                            <th>{{ lang._('Vendor') }}</th>
+                            <th>{{ lang._('VLAN') }}</th>
+                            <th>{{ lang._('First Seen') }}</th>
+                            <th>{{ lang._('Last Seen') }}</th>
+                            <th>{{ lang._('Notes') }}</th>
+                            <th class="text-center">{{ lang._('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="11" class="text-muted">
+                                {{ lang._('Loading device history...') }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -124,60 +181,6 @@
             </div>
         </div>
 
-        <div class="panel panel-default" id="lifecycle-history">
-            <div class="panel-heading">
-                <strong>
-                    <i class="fa fa-history"></i>
-                    {{ lang._('Lifecycle History') }}
-                </strong>
-                <span class="text-muted" style="margin-left:10px;">
-                    {{ lang._('MAC address') }}:
-                    <span id="device-history-mac"></span>
-                </span>
-            </div>
-
-            <div id="return-resolution-controls"
-                 style="display:none;padding:10px 15px;border-bottom:1px solid #ddd;">
-                <button id="btn-start-new-lifecycle"
-                        type="button"
-                        class="btn btn-sm btn-primary">
-                    <i class="fa fa-plus-circle"></i>
-                    {{ lang._('Start New Lifecycle') }}
-                </button>
-                <span class="text-muted" style="margin-left:8px;">
-                    {{ lang._('Use this when the returning device should be treated as new.') }}
-                </span>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-condensed table-hover table-striped"
-                       id="grid-device-history">
-                    <thead>
-                        <tr>
-                            <th>{{ lang._('Lifecycle') }}</th>
-                            <th>{{ lang._('Status') }}</th>
-                            <th>{{ lang._('Friendly Name') }}</th>
-                            <th>{{ lang._('Hostname') }}</th>
-                            <th>{{ lang._('IP Address') }}</th>
-                            <th>{{ lang._('Vendor') }}</th>
-                            <th>{{ lang._('VLAN') }}</th>
-                            <th>{{ lang._('First Seen') }}</th>
-                            <th>{{ lang._('Last Seen') }}</th>
-                            <th>{{ lang._('Notes') }}</th>
-                            <th class="text-center">{{ lang._('Actions') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td colspan="11" class="text-muted">
-                                {{ lang._('Loading device history...') }}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
     </div>
 </div>
 
@@ -192,6 +195,20 @@ $(document).ready(function() {
         return value === null || value === undefined || value === ''
             ? '\u2014'
             : value;
+    }
+
+    function hostnameSourceLabel(source) {
+        var labels = {
+            adguard: 'AdGuard DNS rewrite',
+            dnsmasq: 'Dnsmasq',
+            kea: 'Kea DHCP',
+            isc: 'ISC DHCP',
+            unbound: 'Unbound',
+            pihole: 'Pi-hole',
+            hostwatch: 'Hostwatch'
+        };
+
+        return labels[source] || source || '';
     }
 
     function showToast(msg, type) {
@@ -315,7 +332,6 @@ $(document).ready(function() {
         if (!row) {
             $('#summary-friendly-name,#summary-ip,#summary-vendor,#summary-vlan,#summary-hostname,#summary-first-seen,#summary-last-seen,#summary-lifecycle')
                 .text('\u2014');
-            $('#summary-note-count').text('0');
             $('#current-lifecycle-badge').hide().text('');
             $('#notes-editor').hide();
             $('#notes-no-active').show();
@@ -328,26 +344,29 @@ $(document).ready(function() {
         $('#summary-ip').text(dash(row.ip));
         $('#summary-vendor').text(dash(row.vendor));
         $('#summary-vlan').text(dash(row.vlan));
-        $('#summary-hostname').text(dash(row.hostname));
+
+        $('#summary-hostname').empty().text(dash(row.hostname));
+        var hostnameSource = (row.hostname_source || '').toString().trim();
+        if (hostnameSource) {
+            $('<div>')
+                .addClass('text-muted')
+                .css('font-size', '11px')
+                .text(hostnameSourceLabel(hostnameSource))
+                .appendTo($('#summary-hostname'));
+        }
+
         $('#summary-first-seen').text(dash(row.first_seen));
         $('#summary-last-seen').text(dash(row.last_seen));
 
         if (active) {
             $('#summary-lifecycle').text('#' + active.id + ' (active)');
-            $('#summary-note-count').text(
-                parseInt(active.comment_count, 10) || 0
-            );
         } else if (returnPending) {
             $('#summary-lifecycle').text('Pending decision');
-            $('#summary-note-count').text('0');
         } else {
             $('#summary-lifecycle').text(
                 row.id
                     ? '#' + row.id + ' (' + dash(row.status) + ')'
                     : '\u2014'
-            );
-            $('#summary-note-count').text(
-                parseInt(row.comment_count, 10) || 0
             );
         }
 
@@ -763,11 +782,11 @@ $(document).ready(function() {
             }
 
             $('<tr>').append(
-                $('<td>').text(dash(row.id)),
+                $('<td>').text('#' + row.id),
                 $('<td>').append($status),
+                $('<td>').text(dash(row.ip)),
                 $('<td>').text(dash(row.custom_hostname)),
                 $('<td>').text(dash(row.hostname)),
-                $('<td>').text(dash(row.ip)),
                 $('<td>').text(dash(row.vendor)),
                 $('<td>').text(dash(row.vlan)),
                 $('<td>').text(dash(row.first_seen)),

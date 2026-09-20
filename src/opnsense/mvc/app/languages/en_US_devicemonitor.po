@@ -709,3 +709,49 @@ msgstr "The seed MAC must belong to a current, active device. Grouping is explic
 
 msgid "Loading physical device..."
 msgstr "Loading physical device..."
+
+# [devicehistory.volt] Device Details page
+msgid "Device Details"
+msgstr "Device Details"
+
+msgid "Device Summary"
+msgstr "Device Summary"
+
+msgid "Back to Devices"
+msgstr "Back to Devices"
+
+msgid "Current Lifecycle"
+msgstr "Current Lifecycle"
+
+msgid "Lifecycle History"
+msgstr "Lifecycle History"
+
+msgid "MAC address"
+msgstr "MAC address"
+
+msgid "A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below."
+msgstr "A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below."
+
+msgid "Start New Lifecycle"
+msgstr "Start New Lifecycle"
+
+msgid "Use this when the returning device should be treated as new."
+msgstr "Use this when the returning device should be treated as new."
+
+msgid "Loading device history..."
+msgstr "Loading device history..."
+
+msgid "Notes"
+msgstr "Notes"
+
+msgid "There is no active lifecycle. Resolve the returning device in Lifecycle History before adding notes."
+msgstr "There is no active lifecycle. Resolve the returning device in Lifecycle History before adding notes."
+
+msgid "Add Note"
+msgstr "Add Note"
+
+msgid "Enter a new note..."
+msgstr "Enter a new note..."
+
+msgid "Loading notes..."
+msgstr "Loading notes..."

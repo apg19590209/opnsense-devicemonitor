@@ -801,6 +801,11 @@ jobs:
           set -eu
           node tests/test_physical_device_ui.js
 
+      - name: Validate device details UI
+        run: |
+          set -eu
+          node tests/test_device_details_ui.js
+
       - name: Validate devices page grouping indicator
         run: |
           set -eu
