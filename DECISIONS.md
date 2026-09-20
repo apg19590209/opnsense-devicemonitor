@@ -437,8 +437,7 @@ association while preserving the existing authoritative history.
 
 This decision extends Decision 17. It does not supersede it.
 
-Status: approved; **not yet implemented**. Until it is implemented, the rules
-below describe intended behaviour, not current behaviour.
+Status: approved; **implemented**.
 
 #### Membership removal
 

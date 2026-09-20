@@ -67,7 +67,7 @@ list. You can also trigger discovery manually from the Devices page (see [Sectio
 | Menu item | Purpose |
 |-----------|---------|
 | **Devices** | Main device inventory and per-device actions. |
-| **Physical Devices** | Manage physical-device groups and their related identities. |
+| **Physical Devices** | Manage a real-world device's current and previous network identities. |
 | **Change Summary** | Chronological review of device, lifecycle, identity and service changes. |
 | **Infrastructure Services** | Network services discovered on your devices (DHCP, DNS, SSH, …). |
 | **IP and MAC Conflicts** | Detected identity anomalies (an IP/MAC seen with conflicting devices). |
@@ -77,7 +77,7 @@ list. You can also trigger discovery manually from the Devices page (see [Sectio
 Two additional pages are reached from the Devices list rather than the menu:
 
 - **Device Details** — a single device's summary, notes, lifecycle history and physical-device
-  grouping. Open it with the note/comment icon (or **History**) in a device's **Actions** column.
+  association. Open it with the note/comment icon (or **History**) in a device's **Actions** column.
 - **Device Activity** — the chronological activity log for a single device. Open it
   with the **Device Activity** button on the Device Details page.
 
@@ -134,8 +134,8 @@ Devices**). The installed plugin version is shown under **Settings → About**.
 - **VLAN** — the VLAN/interface the device was observed on.
 - **Status** — **ONLINE** (green), **OFFLINE** (grey), or **RETURNING** (orange). See
   [Section 5](#5-device-lifecycle-and-returning-devices).
-- **Physical Device** — the physical-device group this device is linked to (if any), with
-  the group's member count. See [Section 7](#7-physical-devices--identity-grouping).
+- **Physical Device** — the physical device this device is linked to (if any), with its
+  identity count. See [Section 7](#7-physical-devices).
 - **Scan Status** — status of the device's most recent targeted Nmap scan: e.g. **Pending**,
   a completed status, or **Failed n/5** (attempt count out of 5). See [Section 12](#12-networknmapsecurity-scanning).
 - **First Seen** — when the device was first observed.
@@ -279,43 +279,51 @@ and identity changes (IP/hostname/source changes). **Read-only.**
 
 ---
 
-## 7. Physical Devices / identity grouping
+## 7. Physical Devices
 
 **Path:** Services → Device Monitor → **Physical Devices**
 
 ### 7.1 Purpose
 
-Group several MAC addresses into one "physical device" when, for example, one machine has
-multiple network interfaces (wired + Wi-Fi) that each appear as a separate MAC. Grouping is
-**explicit and user-confirmed**: it never merges or rewrites device, lifecycle or identity
-history.
+A **physical device** is one real-world piece of equipment that you recognise and name
+(for example "Reception PC" or "Lab printer"). Because one machine can appear on the
+network under several MAC addresses (wired + Wi-Fi, for instance), you can associate
+several network identities with the same physical device.
+
+- **Current Identities** are the MAC/network identities currently associated with the
+  device.
+- **Previous Identities** are identities that were associated in the past and are kept
+  as history.
+
+Associating identities is **explicit and user-confirmed**: it never merges or rewrites
+device, lifecycle or identity history.
 
 ### 7.2 What you can do
 
 On the **Physical Devices** page:
 
-- **Create Physical Device** — enter a group name and a seed MAC; a new group is created and
-  that MAC becomes its first member. The seed MAC must be a current, active device.
-  **Changes state.**
-- Expand a group to see its member identities, then use **Link Identity** to add another MAC,
-  or **Remove** to unlink an active identity. **Changes state.**
-- Filter the list with **All Groups / Active Only / Archived Only** and search by name or MAC.
-  **Read-only.**
-- **View** a member to open its **Device Details** page. **Read-only.**
+- **Create Device** — enter a name and a starting MAC address; the new device is created
+  with that MAC as its first current identity. The starting MAC must be a currently online
+  device. **Changes state.**
+- Expand a device to see its identities, then use **Add Identity** to add another MAC, or
+  **Unlink Identity** to remove a current identity. **Changes state.**
+- Filter the list with **All Devices / Current Devices / Archived Devices** and search by
+  name or MAC. **Read-only.**
+- **View Device Details** for any identity to open its **Device Details** page. **Read-only.**
 
 On a device's **Device Details** page, a read-only **Physical Device** summary shows the
-device's current group (name and identity count) and links to the **Physical Devices** page
-for management.
+device's name and current identity count and links to the **Physical Devices** page.
 
 ### 7.3 What is displayed
 
-The page lists every physical-device group (active and archived) with its active/total
-identity counts, and each group expands to show its active and historical identities.
-Archived groups are read-only; removed identities are retained as history. The Devices page
-**Physical Device** column shows the group name plus the member count.
+The page lists every physical device (current and archived) with its current identity
+count, online/offline status and last-seen time. Each device expands to show its
+**Device Summary**, **Current Identities** and **Previous Identities**. Archived devices
+are read-only; removed identities are retained as history. The Devices page **Physical
+Device** column shows the device name plus the identity count.
 
-> Grouping is purely organisational. It does not change how devices are scanned, monitored
-> or notified, and it does not alter device or lifecycle history.
+> Physical devices are purely organisational. They do not change how devices are scanned,
+> monitored or notified, and they do not alter device or lifecycle history.
 
 ---
 
@@ -468,7 +476,7 @@ page scrolling).
 ### 11.1 Purpose
 
 Provide a chronological, filterable review of recent changes across devices, lifecycles,
-identities, physical-device groupings, notes/history, and infrastructure services.
+identities, physical devices, notes/history, and infrastructure services.
 
 ### 11.2 Controls
 
@@ -708,11 +716,11 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 3. In **Lifecycle History**, choose **Start New Lifecycle** (new identity) or **Relink**
    (restore a previous lifecycle).
 
-### 16.4 Group interfaces of one machine into a physical device
+### 16.4 Associate several MAC addresses with one physical device
 
 1. Open **Services → Device Monitor → Physical Devices**.
-2. Click **Create Physical Device**, enter a name and the machine's seed MAC, then confirm.
-3. Expand the new group and use **Link Identity** to add the machine's other MACs.
+2. Click **Create Device**, enter a name and one of the machine's MAC addresses, then confirm.
+3. Expand the new device and use **Add Identity** to add the machine's other MACs.
 
 ### 16.5 Review what changed recently
 
@@ -791,8 +799,8 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 - **Friendly Name** — your own label for a device (`custom_hostname`), independent of the
   detected hostname.
 - **Hostname** — the hostname Device Monitor detected (with a source tag).
-- **Physical Device** — a user-created group of related MAC addresses (one machine, many
-  interfaces).
+- **Physical Device** — one real-world piece of equipment, recognised by you, with one or
+  more current or previous network identities.
 - **Identity event** — a detected IP/MAC anomaly or conflict.
 - **Infrastructure service** — a network service (DHCP, DNS, SSH, SMB, …) found on a device.
 - **Targeted Nmap scan** — a single-host port/security scan.
@@ -808,7 +816,7 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 | Navigation menu | `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/Menu/Menu.xml` |
 | ACL / permissions | `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/ACL/ACL.xml` |
 | Devices page (list, filters, CSV, actions) | `views/.../devices.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
-| Physical Devices (grouping management) | `views/.../physicaldevices.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
+| Physical Devices | `views/.../physicaldevices.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | Device Details (summary, notes, lifecycle, physical device) | `views/.../devicehistory.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | Device Activity | `views/.../activitytimeline.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | IP and MAC Conflicts | `views/.../identityevents.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
