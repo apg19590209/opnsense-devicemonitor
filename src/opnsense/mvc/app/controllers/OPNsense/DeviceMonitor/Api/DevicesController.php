@@ -394,6 +394,21 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
+     * Read-only overview of every physical-device group (active and archived)
+     * with member counts and full membership history.
+     * GET /api/devicemonitor/devices/physicaldevices
+     */
+    public function physicaldevicesAction()
+    {
+        $model = new DeviceMonitor();
+
+        return [
+            'result' => 'ok',
+            'physical_devices' => $model->getPhysicalDevicesOverview()
+        ];
+    }
+
+    /**
      * Create a physical-device group with one explicitly selected known MAC.
      * POST /api/devicemonitor/devices/createphysicaldevice
      */

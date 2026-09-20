@@ -2682,6 +2682,101 @@ class DeviceMonitor
     }
 
     /**
+     * Read-only overview of every physical-device group (active and archived)
+     * with its active/total member counts and full membership history.
+     *
+     * This does not alter device, lifecycle, membership or grouping state.
+     *
+     * @return array Ordered list of groups. Each group includes id, name,
+     *               created_at, updated_at, archived_at, active_member_count,
+     *               total_member_count and members[] (each with id, mac,
+     *               added_at, removed_at). Active groups precede archived
+     *               groups, and within each group active memberships precede
+     *               historical memberships.
+     */
+    public function getPhysicalDevicesOverview()
+    {
+        $db = $this->getDb();
+        $groups = [];
+
+        $stmt = $db->prepare(
+            'SELECT p.id, p.name, p.created_at, p.updated_at, p.archived_at, ' .
+            '(SELECT COUNT(*) FROM physical_device_memberships m ' .
+            'WHERE m.physical_device_id = p.id AND m.removed_at IS NULL) ' .
+            'AS active_member_count, ' .
+            '(SELECT COUNT(*) FROM physical_device_memberships m ' .
+            'WHERE m.physical_device_id = p.id) AS total_member_count ' .
+            'FROM physical_devices p ' .
+            'ORDER BY CASE WHEN p.archived_at IS NULL THEN 0 ELSE 1 END, ' .
+            'lower(p.name), p.id'
+        );
+
+        if ($stmt === false) {
+            $db->close();
+            return $groups;
+        }
+
+        $result = $stmt->execute();
+
+        if ($result !== false) {
+            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                $groups[] = [
+                    'id' => (int)$row['id'],
+                    'name' => (string)$row['name'],
+                    'created_at' => $row['created_at'],
+                    'updated_at' => $row['updated_at'],
+                    'archived_at' => $row['archived_at'],
+                    'active_member_count' => (int)$row['active_member_count'],
+                    'total_member_count' => (int)$row['total_member_count'],
+                    'members' => []
+                ];
+            }
+        }
+
+        if (count($groups) > 0) {
+            $memberStmt = $db->prepare(
+                'SELECT id, physical_device_id, mac, added_at, removed_at ' .
+                'FROM physical_device_memberships ' .
+                'ORDER BY physical_device_id, ' .
+                'CASE WHEN removed_at IS NULL THEN 0 ELSE 1 END, ' .
+                'lower(trim(mac)), id'
+            );
+
+            if ($memberStmt !== false) {
+                $memberResult = $memberStmt->execute();
+
+                $indexById = [];
+
+                foreach ($groups as $index => $group) {
+                    $indexById[$group['id']] = $index;
+                }
+
+                if ($memberResult !== false) {
+                    while ($member = $memberResult->fetchArray(SQLITE3_ASSOC)) {
+                        $groupId = (int)$member['physical_device_id'];
+
+                        if (!isset($indexById[$groupId])) {
+                            continue;
+                        }
+
+                        $groups[$indexById[$groupId]]['members'][] = [
+                            'id' => (int)$member['id'],
+                            'mac' => strtolower(
+                                trim((string)($member['mac'] ?? ''))
+                            ),
+                            'added_at' => $member['added_at'],
+                            'removed_at' => $member['removed_at']
+                        ];
+                    }
+                }
+            }
+        }
+
+        $db->close();
+        return $groups;
+    }
+
+    /**
      * Create a physical-device group with one explicitly selected known MAC.
      *
      * Returns the new physical-device ID, or 0 on failure.

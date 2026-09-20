@@ -16,6 +16,7 @@ namespace OPNsense\DeviceMonitor {
         public static $linkResult = false;
         public static $removeResult = false;
         public static $activeDevices = [];
+        public static $overview = [];
 
         public static function reset()
         {
@@ -25,6 +26,7 @@ namespace OPNsense\DeviceMonitor {
             self::$linkResult = false;
             self::$removeResult = false;
             self::$activeDevices = [];
+            self::$overview = [];
         }
 
         public function getPhysicalDeviceForMac($mac)
@@ -55,6 +57,12 @@ namespace OPNsense\DeviceMonitor {
         {
             self::$calls[] = ['list', $excludeMac];
             return self::$activeDevices;
+        }
+
+        public function getPhysicalDevicesOverview()
+        {
+            self::$calls[] = ['overview'];
+            return self::$overview;
         }
     }
 }
@@ -200,6 +208,39 @@ namespace {
             ['list', null]
         ],
         'Physical-device list action did not delegate an empty MAC correctly'
+    );
+
+    DeviceMonitor::reset();
+
+    DeviceMonitor::$overview = [
+        [
+            'id' => 1,
+            'name' => 'Active Group',
+            'created_at' => '2026-09-01 08:00:00',
+            'updated_at' => '2026-09-02 08:00:00',
+            'archived_at' => null,
+            'active_member_count' => 1,
+            'total_member_count' => 2,
+            'members' => [
+                [
+                    'id' => 1,
+                    'mac' => 'aa:bb:cc:dd:ee:01',
+                    'added_at' => '2026-09-01 08:00:00',
+                    'removed_at' => null
+                ]
+            ]
+        ]
+    ];
+
+    $response = controller_with(
+        new FakeRequest(false, [], [])
+    )->physicaldevicesAction();
+
+    check(
+        $response['result'] === 'ok' &&
+        $response['physical_devices'] === DeviceMonitor::$overview &&
+        DeviceMonitor::$calls === [['overview']],
+        'Physical-devices overview action did not delegate correctly'
     );
 
     DeviceMonitor::reset();

@@ -783,6 +783,14 @@ jobs:
           set -eu
           php tests/test_physical_device_api.php
 
+      - name: Validate physical-devices overview model
+        env:
+          DM_MODEL_PATH: src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php
+          DM_DEFAULTS_PATH: src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
+        run: |
+          set -eu
+          php tests/test_physical_devices_overview.php
+
       - name: Validate physical-device UI
         run: |
           set -eu
