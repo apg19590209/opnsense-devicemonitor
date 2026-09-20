@@ -1260,10 +1260,45 @@ REAL_UNBOUND_VALIDATION = NOT PERFORMED (the implemented provider reads local
 OPNsense `/conf/config.xml`, and the current testbed has no suitable real
 Unbound source data).
 
+## Infrastructure Services tabs and sticky headers
+
+The Infrastructure Services page (Services → Device Monitor → Infrastructure
+Services) now presents each service category in its own tab, with sticky page
+controls and table headers.
+
+Implemented:
+
+- one tab per service category (DHCP Servers, DNS Servers, NTP Servers, SSH
+  Servers, Web / Admin Services, File / NAS Services, Remote Access, Directory
+  / Authentication, SNMP / Management, VPN Endpoints) plus a leading Recent
+  Service Changes tab; categories derive from the existing `groupTitle()`
+  mapping and preserve its order
+- client-side tab switching (no additional API requests on tab change)
+- sticky page heading, toolbar, tab strip and active table column headers,
+  reusing the Change Summary sticky-header approach
+- all existing data, counts, badges, status indicators, filters, buttons and
+  discovery behaviour preserved; no backend, API, schema or detection changes
+
+Files changed:
+
+- `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/infrastructureservices.volt`
+- `docs/USER_MANUAL.md`
+
+Validated:
+
+- full Python, Node (Bun) and PHP test suites: PASS
+- JavaScript syntax build check (Bun): PASS
+- Volt template compile check (Phalcon): PASS
+- guarded live deployment of `infrastructureservices.volt` with hash
+  verification: PASS (rollback backup retained at
+  `/root/devicemonitor_backup/infrastructureservices.volt.pre-infratabs-20260920-043318`)
+- LIVE_VISUAL_VALIDATION = NOT PERFORMED (no browser available)
+- production `192.168.20.254` untouched
+
 ## Next step
 
-All hostname-enrichment backlog items (DM-BL-004, DM-BL-005, DM-BL-007) are
-complete. There are no open hostname-enrichment backlog items remaining.
+No new product-backlog feature is designated as the next implementation task;
+`PRODUCT_BACKLOG.md` remains authoritative for deferred work.
 
 The Device Monitor testbed remains `192.168.20.23`; production `192.168.20.254`
 was not modified.

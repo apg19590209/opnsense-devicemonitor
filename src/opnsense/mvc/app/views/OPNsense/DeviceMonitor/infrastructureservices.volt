@@ -1,114 +1,128 @@
 <div class="content-box">
     <div class="content-box-main">
 
-        <div class="infrastructure-header">
-            <h1>
-                {{ lang._('Device Monitor') }}
-                <span class="infrastructure-divider">&ndash;</span>
-                <span class="infrastructure-title">
-                    {{ lang._('Infrastructure Services') }}
-                </span>
-            </h1>
+        <div id="infrastructure-sticky-controls" class="infrastructure-sticky-controls">
+            <div class="infrastructure-header">
+                <h1>
+                    {{ lang._('Device Monitor') }}
+                    <span class="infrastructure-divider">&ndash;</span>
+                    <span class="infrastructure-title">
+                        {{ lang._('Infrastructure Services') }}
+                    </span>
+                </h1>
 
-            <div class="infrastructure-stats">
-                <span>
-                    {{ lang._('Total') }}:
-                    <strong id="services-total">0</strong>
-                </span>
-                <span>
-                    {{ lang._('Available') }}:
-                    <strong id="services-available">0</strong>
-                </span>
-                <span>
-                    {{ lang._('Unavailable') }}:
-                    <strong id="services-unavailable">0</strong>
-                </span>
-                <span>
-                    {{ lang._('Stale') }}:
-                    <strong id="services-stale">0</strong>
-                </span>
-            </div>
-        </div>
-
-        <div class="infrastructure-toolbar">
-            <button
-                id="btn-services-refresh"
-                type="button"
-                class="btn btn-primary btn-sm"
-            >
-                <i class="fa fa-refresh"></i>
-                {{ lang._('Refresh View') }}
-            </button>
-            <button
-                id="btn-services-discover"
-                type="button"
-                class="btn btn-success btn-sm"
-            >
-                <i class="fa fa-search"></i>
-                {{ lang._('Discover Now') }}
-            </button>
-
-            <select
-                id="services-type-filter"
-                class="selectpicker"
-                data-style="btn-default btn-sm"
-                data-width="180px"
-            >
-                <option value="">
-                    {{ lang._('All Services') }}
-                </option>
-            </select>
-
-            <select
-                id="services-status-filter"
-                class="selectpicker"
-                data-style="btn-default btn-sm"
-                data-width="180px"
-            >
-                <option value="">
-                    {{ lang._('All Statuses') }}
-                </option>
-                <option value="available">
-                    {{ lang._('Available') }}
-                </option>
-                <option value="unavailable">
-                    {{ lang._('Unavailable') }}
-                </option>
-                <option value="stale">
-                    {{ lang._('Stale') }}
-                </option>
-            </select>
-
-            <input
-                id="services-search"
-                type="text"
-                class="form-control input-sm"
-                placeholder="{{ lang._('Search services') }}"
-            />
-
-            <span class="text-muted">
-                {{ lang._('Showing') }}
-                <strong id="services-visible">0</strong>
-            </span>
-        </div>
-
-        <div class="panel panel-default infrastructure-recent-changes">
-            <div class="panel-heading">
-                <strong>{{ lang._('Recent Service Changes') }}</strong>
-                <span class="text-muted">
-                    {{ lang._('Latest verified or authoritative service changes') }}
-                </span>
-            </div>
-            <div id="infrastructure-recent-changes">
-                <div class="text-muted">
-                    {{ lang._('Loading recent service changes') }}...
+                <div class="infrastructure-stats">
+                    <span>
+                        {{ lang._('Total') }}:
+                        <strong id="services-total">0</strong>
+                    </span>
+                    <span>
+                        {{ lang._('Available') }}:
+                        <strong id="services-available">0</strong>
+                    </span>
+                    <span>
+                        {{ lang._('Unavailable') }}:
+                        <strong id="services-unavailable">0</strong>
+                    </span>
+                    <span>
+                        {{ lang._('Stale') }}:
+                        <strong id="services-stale">0</strong>
+                    </span>
                 </div>
             </div>
+
+            <div class="infrastructure-toolbar">
+                <button
+                    id="btn-services-refresh"
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                >
+                    <i class="fa fa-refresh"></i>
+                    {{ lang._('Refresh View') }}
+                </button>
+                <button
+                    id="btn-services-discover"
+                    type="button"
+                    class="btn btn-success btn-sm"
+                >
+                    <i class="fa fa-search"></i>
+                    {{ lang._('Discover Now') }}
+                </button>
+
+                <select
+                    id="services-type-filter"
+                    class="selectpicker"
+                    data-style="btn-default btn-sm"
+                    data-width="180px"
+                >
+                    <option value="">
+                        {{ lang._('All Services') }}
+                    </option>
+                </select>
+
+                <select
+                    id="services-status-filter"
+                    class="selectpicker"
+                    data-style="btn-default btn-sm"
+                    data-width="180px"
+                >
+                    <option value="">
+                        {{ lang._('All Statuses') }}
+                    </option>
+                    <option value="available">
+                        {{ lang._('Available') }}
+                    </option>
+                    <option value="unavailable">
+                        {{ lang._('Unavailable') }}
+                    </option>
+                    <option value="stale">
+                        {{ lang._('Stale') }}
+                    </option>
+                </select>
+
+                <input
+                    id="services-search"
+                    type="text"
+                    class="form-control input-sm"
+                    placeholder="{{ lang._('Search services') }}"
+                />
+
+                <span class="text-muted">
+                    {{ lang._('Showing') }}
+                    <strong id="services-visible">0</strong>
+                </span>
+            </div>
+
+            <ul id="infrastructure-tabs"
+                class="nav nav-tabs infrastructure-tabs"
+                role="tablist">
+                <li role="presentation" class="active">
+                    <a href="#tab-infrastructure-recent-changes"
+                       data-toggle="tab"
+                       role="tab"
+                       aria-controls="tab-infrastructure-recent-changes">
+                        {{ lang._('Recent Service Changes') }}
+                    </a>
+                </li>
+            </ul>
         </div>
 
-        <div id="infrastructure-service-groups">
-            <div class="text-muted">
-                {{ lang._('Loading infrastructure services') }}...
+        <div id="infrastructure-tab-content" class="tab-content infrastructure-tab-content">
+            <div id="tab-infrastructure-recent-changes"
+                 class="tab-pane fade in active"
+                 role="tabpanel">
+                <div class="panel panel-default infrastructure-recent-changes">
+                    <div class="panel-heading">
+                        <span class="text-muted">
+                            {{ lang._('Latest verified or authoritative service changes') }}
+                        </span>
+                    </div>
+                    <div id="infrastructure-recent-changes">
+                        <div class="text-muted">
+                            {{ lang._('Loading recent service changes') }}...
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -333,7 +347,57 @@
     word-break: normal;
     font-variant-numeric: tabular-nums;
     font-size: 12px;
-}</style>
+}
+
+/* Tabbed Infrastructure Services layout. */
+.infrastructure-tabs {
+    padding: 0 4px;
+    margin-bottom: 0;
+}
+
+.infrastructure-tabs > li > a {
+    padding: 8px 14px;
+}
+
+.infrastructure-tabs .badge {
+    margin-left: 6px;
+    background-color: #555;
+    font-weight: 600;
+}
+
+.infrastructure-tab-content {
+    padding: 12px 4px 0 4px;
+}
+
+/* Sticky stack: OPNsense page title bar, then the unified controls block
+   (header + toolbar + tab strip), then the active table column headers.
+   Mirrors the proven Change Summary sticky-header implementation. */
+.infrastructure-sticky-controls {
+    position: sticky;
+    z-index: 20;
+}
+
+.infrastructure-sticky-controls::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: var(--infrastructure-sticky-gap, 0px);
+    background: inherit;
+    pointer-events: none;
+}
+
+header.page-content-head {
+    position: sticky;
+    z-index: 30;
+}
+
+.infrastructure-tab-content thead th {
+    position: sticky;
+    z-index: 10;
+}
+</style>
 
 <script>
 $(document).ready(function() {
@@ -752,64 +816,99 @@ $(document).ready(function() {
         });
     }
 
-    function renderServices() {
-        var rows = filteredRows();
-        var groups = {};
-        var $root = $('#infrastructure-service-groups').empty();
+    var preferredOrder = [
+        'DHCP',
+        'DNS',
+        'NTP',
+        'SSH',
+        'WEB_ADMIN',
+        'SMB',
+        'NFS',
+        'RDP',
+        'VNC',
+        'WINRM',
+        'LDAP',
+        'LDAPS',
+        'KERBEROS',
+        'SNMP',
+        'VPN'
+    ];
 
-        $('#services-visible').text(rows.length);
+    var categoryOrder = [
+        'DHCP Servers',
+        'DNS Servers',
+        'NTP Servers',
+        'SSH Servers',
+        'Web / Admin Services',
+        'File / NAS Services',
+        'Remote Access',
+        'Directory / Authentication',
+        'SNMP / Management',
+        'VPN Endpoints'
+    ];
 
-        if (!rows.length) {
-            $('<div>')
-                .addClass('alert alert-info')
-                .text('No infrastructure services match the current filter.')
-                .appendTo($root);
+    var servicePaneIds = {};
 
-            return;
+    function categoryForType(type) {
+        return groupTitle(type);
+    }
+
+    function categoryRank(category) {
+        var index = categoryOrder.indexOf(category);
+
+        return index === -1 ? 999 : index;
+    }
+
+    function typeRank(type) {
+        var index = preferredOrder.indexOf(type);
+
+        return index === -1 ? 999 : index;
+    }
+
+    function ipCompare(a, b) {
+        var aa = (a || '').split('.').map(Number);
+        var bb = (b || '').split('.').map(Number);
+
+        for (var i = 0; i < 4; i++) {
+            var av = aa[i] || 0;
+            var bv = bb[i] || 0;
+
+            if (av !== bv) {
+                return av - bv;
+            }
         }
 
-        rows.forEach(function(row) {
-            var type = (row.service_type || 'OTHER')
-                .toUpperCase();
+        return 0;
+    }
 
-            if (!groups[type]) {
-                groups[type] = [];
+    function categorySlug(name) {
+        return 'tab-services-' +
+            String(name)
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+    }
+
+    function renderTabs() {
+        var categories = {};
+
+        allServices.forEach(function(row) {
+            var category = categoryForType(
+                String(row.service_type || 'OTHER').toUpperCase()
+            );
+
+            if (!categories[category]) {
+                categories[category] = 0;
             }
 
-            groups[type].push(row);
+            categories[category] += 1;
         });
 
-        var preferredOrder = [
-            'DHCP',
-            'DNS',
-            'NTP',
-            'SSH',
-            'WEB_ADMIN',
-            'SMB',
-            'NFS',
-            'RDP',
-            'VNC',
-            'WINRM',
-            'LDAP',
-            'LDAPS',
-            'KERBEROS',
-            'SNMP',
-            'VPN'
-        ];
+        var names = Object.keys(categories);
 
-        var types = Object.keys(groups);
-
-        types.sort(function(a, b) {
-            var ai = preferredOrder.indexOf(a);
-            var bi = preferredOrder.indexOf(b);
-
-            if (ai === -1) {
-                ai = 999;
-            }
-
-            if (bi === -1) {
-                bi = 999;
-            }
+        names.sort(function(a, b) {
+            var ai = categoryRank(a);
+            var bi = categoryRank(b);
 
             if (ai !== bi) {
                 return ai - bi;
@@ -818,134 +917,228 @@ $(document).ready(function() {
             return a.localeCompare(b);
         });
 
-        types.forEach(function(type) {
-            var groupRows = groups[type];
+        servicePaneIds = {};
 
-            groupRows.sort(function(a, b) {
-                var aa = (a.ip || "").split(".").map(Number);
-                var bb = (b.ip || "").split(".").map(Number);
+        var $tabs = $('#infrastructure-tabs');
+        var $content = $('#infrastructure-tab-content');
 
-                for (var i = 0; i < 4; i++) {
-                    var av = aa[i] || 0;
-                    var bv = bb[i] || 0;
+        var activeHref = '';
+        var $active = $('#infrastructure-tabs li.active > a');
 
-                    if (av !== bv) {
-                        return av - bv;
-                    }
-                }
+        if ($active.length) {
+            activeHref = $active.attr('href');
+        }
 
-                return 0;
-            });
+        $tabs.find('[data-service-tab]').remove();
+        $content.find('[data-service-pane]').remove();
 
-            var $panel = $('<div>')
-                .addClass(
-                    'panel panel-default infrastructure-service-group'
-                );
+        names.forEach(function(name) {
+            var paneId = categorySlug(name);
+
+            servicePaneIds[name] = paneId;
+
+            $('<li>')
+                .attr('role', 'presentation')
+                .attr('data-service-tab', '1')
+                .append(
+                    $('<a>')
+                        .attr('href', '#' + paneId)
+                        .attr('data-toggle', 'tab')
+                        .attr('role', 'tab')
+                        .attr('aria-controls', paneId)
+                        .append(document.createTextNode(' ' + name + ' '))
+                        .append(
+                            $('<span>')
+                                .addClass('badge')
+                                .text(categories[name])
+                        )
+                )
+                .appendTo($tabs);
 
             $('<div>')
-                .addClass('panel-heading')
-                .append(
-                    $('<strong>').text(groupTitle(type)),
-                    $('<span>')
-                        .addClass('badge')
-                        .text(groupRows.length)
-                )
-                .appendTo($panel);
+                .addClass('tab-pane fade')
+                .attr('role', 'tabpanel')
+                .attr('id', paneId)
+                .attr('data-service-pane', '1')
+                .appendTo($content);
+        });
 
-            var $table = $('<table>')
-                .addClass(
-                    'table table-condensed table-hover ' +
-                    'infrastructure-service-table'
+        if (
+            activeHref &&
+            activeHref !== '#tab-infrastructure-recent-changes'
+        ) {
+            var $restore = $(
+                '#infrastructure-tabs a[href="' + activeHref + '"]'
+            );
+
+            if ($restore.length) {
+                $restore.tab('show');
+            }
+        }
+    }
+
+    function renderServices() {
+        var rows = filteredRows();
+
+        $('#services-visible').text(rows.length);
+
+        var grouped = {};
+
+        rows.forEach(function(row) {
+            var category = categoryForType(
+                String(row.service_type || 'OTHER').toUpperCase()
+            );
+
+            if (!grouped[category]) {
+                grouped[category] = [];
+            }
+
+            grouped[category].push(row);
+        });
+
+        Object.keys(servicePaneIds).forEach(function(name) {
+            var categoryRows = grouped[name] || [];
+
+            categoryRows.sort(function(a, b) {
+                var at = typeRank(
+                    String(a.service_type || '').toUpperCase()
+                );
+                var bt = typeRank(
+                    String(b.service_type || '').toUpperCase()
                 );
 
-            $('<thead>')
-                .append(
-                    $('<tr>').append(
-                        $('<th>').text('IP Address'),
-                        $('<th>').text('Hostname'),
-                        $('<th>').text('Status'),
-                        $('<th>').text('Port / Protocol'),
-                        $('<th>').text('Interface / VLAN'),
-                        $('<th>').text('Detection'),
-                        $('<th>').text('Confidence'),
-                        $('<th>').text('Product / Version'),
-                        $('<th>').text('Last Verified')
-                    )
-                )
-                .appendTo($table);
-
-            var $body = $('<tbody>');
-
-            groupRows.forEach(function(row) {
-                var endpoint =
-                    dash(row.port) +
-                    ' / ' +
-                    (row.protocol || '').toUpperCase();
-
-                var $hostname = $('<td>');
-                var friendly = row.custom_hostname || '';
-
-                if (friendly) {
-                    var $friendly = $('<div>');
-                    $('<i>')
-                        .addClass('fa fa-tag')
-                        .attr('title', 'Friendly name')
-                        .appendTo($friendly);
-                    $friendly.append(document.createTextNode(' ' + friendly));
-                    $friendly.appendTo($hostname);
-
-                    $('<small>')
-                        .addClass('text-muted')
-                        .css('display', 'block')
-                        .text(dash(row.hostname))
-                        .appendTo($hostname);
-                } else {
-                    $('<div>')
-                        .text(dash(row.hostname))
-                        .appendTo($hostname);
+                if (at !== bt) {
+                    return at - bt;
                 }
 
-                if (row.vendor) {
-                    $('<small>')
-                        .addClass('text-muted')
-                        .css('display', 'block')
-                        .text(row.vendor)
-                        .appendTo($hostname);
-                }
-
-                $('<tr>')
-                    .append(
-                        $('<td>').text(dash(row.ip)),
-                        $hostname,
-                        $('<td>').append(
-                            statusBadge(row.display_status || row.status)
-                        ),
-                        $('<td>').text(endpoint),
-                        $('<td>').text(locationText(row)),
-                        $('<td>').text(
-                            row.evidence && row.evidence.length
-                                ? row.evidence.join(' + ')
-                                : dash(row.detection_method)
-                        ),
-                        $('<td>').text(
-                            dash(row.confidence)
-                        ),
-                        $('<td>')
-                            .addClass(
-                                'infrastructure-service-product'
-                            )
-                            .text(productText(row)),
-                        $('<td>').text(
-                            dash(row.last_verified)
-                        )
-                    )
-                    .appendTo($body);
+                return ipCompare(a.ip, b.ip);
             });
 
-            $body.appendTo($table);
-            $table.appendTo($panel);
-            $panel.appendTo($root);
+            var $badge = $(
+                '#infrastructure-tabs a[aria-controls="' +
+                servicePaneIds[name] + '"] .badge'
+            );
+
+            if ($badge.length) {
+                $badge.text(categoryRows.length);
+            }
+
+            renderServiceTable(
+                $('#' + servicePaneIds[name]),
+                categoryRows
+            );
         });
+    }
+    function renderServiceTable($pane, rows) {
+        $pane.empty();
+
+        if (!rows.length) {
+            $('<div>')
+                .addClass('alert alert-info')
+                .text('No infrastructure services match the current filter.')
+                .appendTo($pane);
+
+            return;
+        }
+
+        var $panel = $('<div>')
+            .addClass(
+                'panel panel-default infrastructure-service-group'
+            )
+            .appendTo($pane);
+
+        var $table = $('<table>')
+            .addClass(
+                'table table-condensed table-hover ' +
+                'infrastructure-service-table'
+            )
+            .appendTo($panel);
+
+        $('<thead>')
+            .append(
+                $('<tr>').append(
+                    $('<th>').text('IP Address'),
+                    $('<th>').text('Hostname'),
+                    $('<th>').text('Status'),
+                    $('<th>').text('Port / Protocol'),
+                    $('<th>').text('Interface / VLAN'),
+                    $('<th>').text('Detection'),
+                    $('<th>').text('Confidence'),
+                    $('<th>').text('Product / Version'),
+                    $('<th>').text('Last Verified')
+                )
+            )
+            .appendTo($table);
+
+        var $body = $('<tbody>');
+
+        rows.forEach(function(row) {
+            var endpoint =
+                dash(row.port) +
+                ' / ' +
+                (row.protocol || '').toUpperCase();
+
+            var $hostname = $('<td>');
+            var friendly = row.custom_hostname || '';
+
+            if (friendly) {
+                var $friendly = $('<div>');
+                $('<i>')
+                    .addClass('fa fa-tag')
+                    .attr('title', 'Friendly name')
+                    .appendTo($friendly);
+                $friendly.append(document.createTextNode(' ' + friendly));
+                $friendly.appendTo($hostname);
+
+                $('<small>')
+                    .addClass('text-muted')
+                    .css('display', 'block')
+                    .text(dash(row.hostname))
+                    .appendTo($hostname);
+            } else {
+                $('<div>')
+                    .text(dash(row.hostname))
+                    .appendTo($hostname);
+            }
+
+            if (row.vendor) {
+                $('<small>')
+                    .addClass('text-muted')
+                    .css('display', 'block')
+                    .text(row.vendor)
+                    .appendTo($hostname);
+            }
+
+            $('<tr>')
+                .append(
+                    $('<td>').text(dash(row.ip)),
+                    $hostname,
+                    $('<td>').append(
+                        statusBadge(row.display_status || row.status)
+                    ),
+                    $('<td>').text(endpoint),
+                    $('<td>').text(locationText(row)),
+                    $('<td>').text(
+                        row.evidence && row.evidence.length
+                            ? row.evidence.join(' + ')
+                            : dash(row.detection_method)
+                    ),
+                    $('<td>').text(
+                        dash(row.confidence)
+                    ),
+                    $('<td>')
+                        .addClass(
+                            'infrastructure-service-product'
+                        )
+                        .text(productText(row)),
+                    $('<td>').text(
+                        dash(row.last_verified)
+                    )
+                )
+                .appendTo($body);
+        });
+
+        $body.appendTo($table);
     }
 
     function populateTypes(types) {
@@ -1021,7 +1214,9 @@ $(document).ready(function() {
                         : []
                 );
 
+                renderTabs();
                 renderServices();
+                updateInfrastructureStickyStack();
             },
 
             error: function() {
@@ -1035,8 +1230,7 @@ $(document).ready(function() {
                             )
                     );
 
-                $('#infrastructure-service-groups')
-                    .empty()
+                $('#infrastructure-tab-content')
                     .append(
                         $('<div>')
                             .addClass('alert alert-danger')
@@ -1100,6 +1294,103 @@ $(document).ready(function() {
         .on('change', renderServices);
 
     $('#services-search').on('input', renderServices);
+
+    var infrastructureStickyGeometry = null;
+
+    function opaqueBackground($el) {
+        var node = $el;
+        var bg = node.css('background-color');
+
+        while (
+            node.length &&
+            (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)')
+        ) {
+            node = node.parent();
+            bg = node.css('background-color');
+        }
+
+        return bg || '#101218';
+    }
+
+    function applyInfrastructureTableHeaderSticky(headerTop) {
+        var $active = $(
+            '.infrastructure-tab-content .tab-pane.active'
+        );
+        var $table = $active.find('table').first();
+        var thead = $table.find('thead th');
+
+        if (!thead.length) {
+            return;
+        }
+
+        var theadBg = opaqueBackground(thead);
+
+        thead.css('top', headerTop + 'px');
+        thead.css('background-color', theadBg);
+        $table.find('thead').css('background-color', theadBg);
+    }
+
+    function updateInfrastructureStickyStack() {
+        var pageHead = $('header.page-content-head');
+        var $controls = $('#infrastructure-sticky-controls');
+
+        if (
+            infrastructureStickyGeometry === null &&
+            pageHead.length &&
+            $controls.length
+        ) {
+            var pageHeadRect = pageHead[0].getBoundingClientRect();
+            var controlsRect = $controls[0].getBoundingClientRect();
+            var scrollTop =
+                (document.scrollingElement || document.documentElement)
+                    .scrollTop;
+
+            infrastructureStickyGeometry = {
+                pageHeadTop: pageHeadRect.top + scrollTop,
+                gap: controlsRect.top - pageHeadRect.bottom
+            };
+        }
+
+        if (infrastructureStickyGeometry === null) {
+            return;
+        }
+
+        var pageHeadTop = infrastructureStickyGeometry.pageHeadTop;
+        var initialGap = infrastructureStickyGeometry.gap;
+        var pageHeadHeight = pageHead.length
+            ? pageHead[0].offsetHeight
+            : 0;
+
+        if (pageHead.length) {
+            pageHead.css('top', pageHeadTop + 'px');
+            pageHead.css('background-color', opaqueBackground(pageHead));
+        }
+
+        if ($controls.length) {
+            var controlsTop = pageHeadTop + pageHeadHeight + initialGap;
+
+            $controls.css('top', controlsTop + 'px');
+            $controls.css('background-color', opaqueBackground($controls));
+
+            $controls[0].style.setProperty(
+                '--infrastructure-sticky-gap',
+                initialGap + 'px'
+            );
+
+            var controlsHeight =
+                $controls[0].getBoundingClientRect().height;
+
+            applyInfrastructureTableHeaderSticky(
+                controlsTop + controlsHeight
+            );
+        }
+    }
+
+    $(document).on('shown.bs.tab', 'a[data-toggle="tab"]', function() {
+        updateInfrastructureStickyStack();
+    });
+
+    $(window).on('resize', updateInfrastructureStickyStack);
 
     loadServices();
 });

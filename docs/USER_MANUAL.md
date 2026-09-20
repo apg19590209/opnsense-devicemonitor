@@ -348,8 +348,8 @@ change device records or network state.
 
 ### 9.1 Purpose
 
-Show the network services discovered on your devices, grouped by service type, and a feed
-of recent service changes.
+Show the network services discovered on your devices, organised into tabs by service
+category, plus a feed of recent service changes.
 
 ### 9.2 Header statistics
 
@@ -366,11 +366,22 @@ services.
 - **Search services** — free-text filter.
 - **Showing n** — number of services currently displayed.
 
-### 9.4 Service groups and table columns
+### 9.4 Tabs and table columns
 
-Services are grouped under headings such as **DHCP**, **DNS**, **NTP**, **SSH**,
-**Web / Admin Services**, **File / NAS Services** (SMB/NFS), **RDP**, **VNC**, **WinRM**,
-**SNMP**, **LDAP/LDAPS**, **Kerberos**, and **VPN Endpoints**.
+Services are organised into tabs, one per service category:
+
+- **Recent Service Changes** — the latest service events feed (see 9.5).
+- **DHCP Servers**, **DNS Servers**, **NTP Servers**, **SSH Servers**,
+  **Web / Admin Services**, **File / NAS Services** (SMB/NFS), **Remote Access**
+  (RDP/VNC/WinRM), **Directory / Authentication** (LDAP/LDAPS/Kerberos),
+  **SNMP / Management**, and **VPN Endpoints**.
+
+Only the categories that actually contain services are shown as tabs, in the order
+above. Click a tab to view that category; switching tabs is instant and does not
+reload data. Each tab shows a badge with its current service count.
+
+The page heading, common controls and the tab strip remain visible while you scroll,
+and the active table's column headings stay pinned beneath them.
 
 Each service row shows:
 
@@ -387,11 +398,11 @@ Each service row shows:
 > **"Stale"** means the service has not been re-verified recently (rather than being
 > confirmed down). "Unavailable" means it was confirmed unreachable.
 
-### 9.5 Recent Service Changes panel
+### 9.5 Recent Service Changes tab
 
-A feed of the latest service events with columns: **Date / Time**, **Change** (discovered /
-unavailable / recovered / changed), **Service**, **Device**, **Endpoint**, **Evidence**, and
-**History**. **Read-only.**
+The first tab shows a feed of the latest service events with columns: **Date / Time**,
+**Change** (discovered / unavailable / recovered / changed), **Service**, **Device**,
+**Endpoint**, **Evidence**, and **History**. **Read-only.**
 
 ---
 
