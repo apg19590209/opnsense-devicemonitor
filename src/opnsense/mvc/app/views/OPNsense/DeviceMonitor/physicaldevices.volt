@@ -5,15 +5,15 @@
             <div class="physical-devices-header">
                 <div class="physical-devices-stats">
                     <span>
-                        {{ lang._('Total Groups') }}:
-                        <strong id="stat-groups">&mdash;</strong>
+                        {{ lang._('Devices') }}:
+                        <strong id="stat-devices">&mdash;</strong>
                     </span>
                     <span>
-                        {{ lang._('Active Groups') }}:
-                        <strong id="stat-active">&mdash;</strong>
+                        {{ lang._('Current') }}:
+                        <strong id="stat-current">&mdash;</strong>
                     </span>
                     <span>
-                        {{ lang._('Archived Groups') }}:
+                        {{ lang._('Archived') }}:
                         <strong id="stat-archived">&mdash;</strong>
                     </span>
                 </div>
@@ -31,16 +31,16 @@
                         type="button"
                         class="btn btn-primary btn-sm">
                     <i class="fa fa-plus"></i>
-                    {{ lang._('Create Physical Device') }}
+                    {{ lang._('Create Device') }}
                 </button>
 
                 <select id="filter-state"
                         class="selectpicker"
                         data-style="btn-default btn-sm"
-                        data-width="160px">
-                    <option value="all">{{ lang._('All Groups') }}</option>
-                    <option value="active">{{ lang._('Active Only') }}</option>
-                    <option value="archived">{{ lang._('Archived Only') }}</option>
+                        data-width="170px">
+                    <option value="all">{{ lang._('All Devices') }}</option>
+                    <option value="current">{{ lang._('Current Devices') }}</option>
+                    <option value="archived">{{ lang._('Archived Devices') }}</option>
                 </select>
 
                 <input id="physical-devices-search"
@@ -59,7 +59,7 @@
             <div class="panel-heading">
                 <strong>
                     <i class="fa fa-plus-circle"></i>
-                    {{ lang._('Create Physical Device') }}
+                    {{ lang._('Create Device') }}
                 </strong>
             </div>
             <div class="panel-body">
@@ -67,7 +67,7 @@
                     <input id="create-name"
                            type="text"
                            class="form-control input-sm"
-                           placeholder="{{ lang._('Physical-device name') }}"
+                           placeholder="{{ lang._('Device name') }}"
                            style="margin-right:6px;" />
                     <input id="create-mac"
                            type="text"
@@ -83,13 +83,13 @@
                     </button>
                 </div>
                 <div class="text-muted" style="margin-top:8px;">
-                    {{ lang._('The seed MAC must belong to a current, active device. Grouping is explicit and does not merge or rewrite device, lifecycle or identity history.') }}
+                    {{ lang._('Start with one MAC address from this device. It must belong to a currently online device. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history.') }}
                 </div>
             </div>
         </div>
 
         <div id="physical-devices-list">
-            <div class="text-muted">{{ lang._('Loading physical devices...') }}</div>
+            <div class="text-muted">{{ lang._('Loading devices...') }}</div>
         </div>
 
     </div>
@@ -150,12 +150,12 @@
 
 <script>
 $(document).ready(function() {
-    var allGroups = [];
+    var allDevices = [];
     var stateFilter = 'all';
     var searchText = '';
     var params = new URLSearchParams(window.location.search);
-    var groupParam = params.get('group') || '';
-    var revealedGroup = false;
+    var deviceParam = params.get('group') || '';
+    var revealedDevice = false;
 
     function showToast(msg, type) {
         var bg = type === 'success'
@@ -207,6 +207,20 @@ $(document).ready(function() {
             : value;
     }
 
+    function statusLabel(status) {
+        return status === 'online' ? 'Online' : 'Offline';
+    }
+
+    function identityStatusLabel(isActive) {
+        if (isActive === 1) {
+            return 'Online';
+        }
+        if (isActive === 0) {
+            return 'Offline';
+        }
+        return '\u2014';
+    }
+
     function loadPhysicalDevices() {
         $('#physical-devices-list')
             .removeClass('text-danger')
@@ -214,7 +228,7 @@ $(document).ready(function() {
             .append(
                 $('<div>')
                     .addClass('text-muted')
-                    .text('Loading physical devices...')
+                    .text('Loading devices...')
             );
 
         $.ajax({
@@ -225,21 +239,21 @@ $(document).ready(function() {
                     physicalDevicesError(
                         result && result.error
                             ? result.error
-                            : 'Unable to load physical devices'
+                            : 'Unable to load devices'
                     );
                     return;
                 }
 
-                allGroups = Array.isArray(result.physical_devices)
+                allDevices = Array.isArray(result.physical_devices)
                     ? result.physical_devices
                     : [];
 
                 updateStats();
                 renderPhysicalDevices();
-                revealGroup();
+                revealDevice();
             },
             error: function() {
-                physicalDevicesError('Unable to load physical devices');
+                physicalDevicesError('Unable to load devices');
             }
         });
     }
@@ -252,26 +266,26 @@ $(document).ready(function() {
     }
 
     function updateStats() {
-        var active = 0;
+        var current = 0;
         var archived = 0;
 
-        allGroups.forEach(function(group) {
-            if (group.archived_at) {
+        allDevices.forEach(function(device) {
+            if (device.archived_at) {
                 archived++;
             } else {
-                active++;
+                current++;
             }
         });
 
-        $('#stat-groups').text(allGroups.length);
-        $('#stat-active').text(active);
+        $('#stat-devices').text(allDevices.length);
+        $('#stat-current').text(current);
         $('#stat-archived').text(archived);
     }
 
-    function groupMacs(group) {
+    function deviceMacs(device) {
         var macs = [];
 
-        (Array.isArray(group.members) ? group.members : []).forEach(
+        (Array.isArray(device.members) ? device.members : []).forEach(
             function(member) {
                 if (member && member.mac) {
                     macs.push(member.mac);
@@ -282,22 +296,20 @@ $(document).ready(function() {
         return macs.join(' ');
     }
 
-    function groupMatches(group) {
-        if (stateFilter === 'active' && group.archived_at) {
+    function deviceMatches(device) {
+        if (stateFilter === 'current' && device.archived_at) {
             return false;
         }
 
-        if (stateFilter === 'archived' && !group.archived_at) {
+        if (stateFilter === 'archived' && !device.archived_at) {
             return false;
         }
 
         if (searchText) {
             var hay = (
-                (group.name || '') +
+                (device.name || '') +
                 ' ' +
-                (group.id || '') +
-                ' ' +
-                groupMacs(group)
+                deviceMacs(device)
             ).toLowerCase();
 
             if (hay.indexOf(searchText) === -1) {
@@ -312,35 +324,35 @@ $(document).ready(function() {
         var $list = $('#physical-devices-list').empty();
         var visible = 0;
 
-        allGroups.forEach(function(group) {
-            if (!groupMatches(group)) {
+        allDevices.forEach(function(device) {
+            if (!deviceMatches(device)) {
                 return;
             }
 
             visible++;
-            $list.append(buildGroupPanel(group));
+            $list.append(buildDevicePanel(device));
         });
 
         if (!visible) {
             $list.append(
                 $('<div>')
                     .addClass('text-muted')
-                    .text('No physical devices found.')
+                    .text('No devices found.')
             );
         }
 
         $('#stat-visible').text(visible);
     }
 
-    function revealGroup() {
-        if (!groupParam || revealedGroup) {
+    function revealDevice() {
+        if (!deviceParam || revealedDevice) {
             return;
         }
 
-        revealedGroup = true;
+        revealedDevice = true;
 
         var $target = $(
-            '.physical-device-panel[data-group-id="' + groupParam + '"]'
+            '.physical-device-panel[data-device-id="' + deviceParam + '"]'
         );
 
         if (!$target.length) {
@@ -355,31 +367,47 @@ $(document).ready(function() {
         }, 300);
     }
 
-    function buildGroupPanel(group) {
-        var isArchived = !!group.archived_at;
-        var members = Array.isArray(group.members) ? group.members : [];
-        var activeMembers = members.filter(function(member) {
+    function buildDevicePanel(device) {
+        var isArchived = !!device.archived_at;
+        var members = Array.isArray(device.members) ? device.members : [];
+        var current = members.filter(function(member) {
             return !member.removed_at;
         });
-        var historicalMembers = members.filter(function(member) {
+        var previous = members.filter(function(member) {
             return !!member.removed_at;
         });
 
         var $panel = $('<div>')
             .addClass('panel panel-default physical-device-panel')
-            .attr('data-group-id', group.id);
+            .attr('data-device-id', device.id);
         var $heading = $('<div>').addClass('panel-heading');
         var $body = $('<div>').addClass('panel-body').css('display', 'none');
 
         $heading.append(
-            $('<i>').addClass('fa fa-sitemap'),
-            $('<span>').css('margin-left', '4px').text(group.name || '')
+            $('<i>').addClass('fa fa-server'),
+            $('<span>').css('margin-left', '4px').text(device.name || '')
         );
 
         $('<span>')
             .addClass('label label-info')
             .css('margin-left', '8px')
-            .text((group.active_member_count || 0) + ' active')
+            .text((device.current_identity_count || 0) + ' current')
+            .appendTo($heading);
+
+        var statusClass = device.status === 'online'
+            ? 'label-success'
+            : 'label-default';
+
+        $('<span>')
+            .addClass('label ' + statusClass)
+            .css('margin-left', '8px')
+            .text(statusLabel(device.status))
+            .appendTo($heading);
+
+        $('<span>')
+            .addClass('text-muted')
+            .css({'margin-left': '8px', 'font-size': '12px'})
+            .text('Last Seen: ' + dash(device.last_seen))
             .appendTo($heading);
 
         if (isArchived) {
@@ -402,22 +430,22 @@ $(document).ready(function() {
                 .toggleClass('fa-chevron-down fa-chevron-right');
         });
 
-        $body.append(buildGroupSummary(group, isArchived));
-        $body.append(buildActiveMembersTable(group, activeMembers, isArchived));
+        $body.append(buildDeviceSummary(device, isArchived));
+        $body.append(buildCurrentIdentitiesSection(device, current, isArchived));
 
-        if (historicalMembers.length) {
-            $body.append(buildHistoricalMembersSection(historicalMembers));
+        if (previous.length) {
+            $body.append(buildPreviousIdentitiesSection(previous));
         }
 
         if (!isArchived) {
-            $body.append(buildLinkForm(group));
+            $body.append(buildAddIdentityForm(device));
         }
 
         $panel.append($heading, $body);
         return $panel;
     }
 
-    function buildGroupSummary(group, isArchived) {
+    function buildDeviceSummary(device, isArchived) {
         var $table = $('<table>')
             .addClass('table table-condensed')
             .css('margin-bottom', '8px');
@@ -426,20 +454,24 @@ $(document).ready(function() {
 
         $tbody.append(
             $('<tr>').append(
-                $('<th>').css('width', '130px').text('Group ID'),
-                $('<td>').text(group.id || '\u2014')
+                $('<th>').css('width', '170px').text('Device Name'),
+                $('<td>').text(device.name || '\u2014')
             ),
             $('<tr>').append(
-                $('<th>').text('Active identities'),
-                $('<td>').text(group.active_member_count || 0)
+                $('<th>').text('Status'),
+                $('<td>').text(statusLabel(device.status))
             ),
             $('<tr>').append(
-                $('<th>').text('Total identities'),
-                $('<td>').text(group.total_member_count || 0)
+                $('<th>').text('Current Identities'),
+                $('<td>').text(device.current_identity_count || 0)
+            ),
+            $('<tr>').append(
+                $('<th>').text('Previous Identities'),
+                $('<td>').text(device.previous_identity_count || 0)
             ),
             $('<tr>').append(
                 $('<th>').text('Created'),
-                $('<td>').text(dash(group.created_at))
+                $('<td>').text(dash(device.created_at))
             )
         );
 
@@ -447,14 +479,7 @@ $(document).ready(function() {
             $tbody.append(
                 $('<tr>').append(
                     $('<th>').text('Archived'),
-                    $('<td>').text(dash(group.archived_at))
-                )
-            );
-        } else {
-            $tbody.append(
-                $('<tr>').append(
-                    $('<th>').text('Updated'),
-                    $('<td>').text(dash(group.updated_at))
+                    $('<td>').text(dash(device.archived_at))
                 )
             );
         }
@@ -463,23 +488,27 @@ $(document).ready(function() {
         return $table;
     }
 
-    function buildActiveMembersTable(group, activeMembers, isArchived) {
+    function buildCurrentIdentitiesSection(device, current, isArchived) {
         var $section = $('<div>');
 
         $('<div>')
-            .addClass('member-section-title')
-            .text('Active identities')
+            .addClass('member-section-title text-muted')
+            .text('Current Identities')
             .appendTo($section);
 
         var $table = $('<table>')
-            .addClass('table table-condensed table-hover table-striped')
+            .addClass('table table-condensed table-striped')
             .css('margin-bottom', '8px');
 
         $('<thead>')
             .append(
                 $('<tr>').append(
+                    $('<th>').text('IP Address'),
+                    $('<th>').text('Friendly Name'),
+                    $('<th>').text('Hostname'),
                     $('<th>').text('MAC Address'),
-                    $('<th>').text('Added'),
+                    $('<th>').text('Status'),
+                    $('<th>').text('Last Seen'),
                     $('<th>')
                         .addClass('text-center')
                         .css('width', '180px')
@@ -490,18 +519,18 @@ $(document).ready(function() {
 
         var $tbody = $('<tbody>').appendTo($table);
 
-        if (!activeMembers.length) {
+        if (!current.length) {
             $('<tr>')
                 .append(
                     $('<td>')
-                        .attr('colspan', 3)
+                        .attr('colspan', 7)
                         .addClass('text-muted')
-                        .text('No active identities')
+                        .text('No current identities')
                 )
                 .appendTo($tbody);
         }
 
-        activeMembers.forEach(function(member) {
+        current.forEach(function(member) {
             var $actions = $('<div>').addClass('btn-group');
 
             $('<a>')
@@ -511,21 +540,21 @@ $(document).ready(function() {
                     title: 'Open Device Details'
                 })
                 .addClass('btn btn-xs btn-default')
-                .html('<i class="fa fa-external-link"></i> View')
+                .html('<i class="fa fa-external-link"></i> View Device Details')
                 .appendTo($actions);
 
             if (!isArchived) {
                 $('<button>')
                     .attr({
                         type: 'button',
-                        title: 'Remove this identity from the physical device'
+                        title: 'Unlink this identity from the device'
                     })
                     .addClass('btn btn-xs btn-danger')
-                    .html('<i class="fa fa-unlink"></i> Remove')
+                    .html('<i class="fa fa-unlink"></i> Unlink Identity')
                     .on('click', function() {
                         removePhysicalDeviceIdentity(
-                            group.id,
-                            group.name,
+                            device.id,
+                            device.name,
                             member.mac,
                             $(this)
                         );
@@ -535,8 +564,12 @@ $(document).ready(function() {
 
             $('<tr>')
                 .append(
+                    $('<td>').text(dash(member.ip)),
+                    $('<td>').text(dash(member.friendly_name)),
+                    $('<td>').text(dash(member.hostname)),
                     $('<td>').text(member.mac || '\u2014'),
-                    $('<td>').text(dash(member.added_at)),
+                    $('<td>').text(identityStatusLabel(member.is_active)),
+                    $('<td>').text(dash(member.last_seen)),
                     $('<td>').addClass('text-center').append($actions)
                 )
                 .appendTo($tbody);
@@ -546,12 +579,12 @@ $(document).ready(function() {
         return $section;
     }
 
-    function buildHistoricalMembersSection(historicalMembers) {
+    function buildPreviousIdentitiesSection(previous) {
         var $section = $('<div>');
 
         $('<div>')
             .addClass('member-section-title text-muted')
-            .text('Historical identities')
+            .text('Previous Identities')
             .appendTo($section);
 
         var $table = $('<table>')
@@ -562,7 +595,10 @@ $(document).ready(function() {
             .append(
                 $('<tr>').append(
                     $('<th>').text('MAC Address'),
-                    $('<th>').text('Added'),
+                    $('<th>').text('Friendly Name'),
+                    $('<th>').text('IP Address'),
+                    $('<th>').text('Hostname'),
+                    $('<th>').text('Linked'),
                     $('<th>').text('Removed'),
                     $('<th>')
                         .addClass('text-center')
@@ -574,7 +610,7 @@ $(document).ready(function() {
 
         var $tbody = $('<tbody>').appendTo($table);
 
-        historicalMembers.forEach(function(member) {
+        previous.forEach(function(member) {
             var $actions = $('<div>').addClass('btn-group');
 
             $('<a>')
@@ -584,12 +620,15 @@ $(document).ready(function() {
                     title: 'Open Device Details'
                 })
                 .addClass('btn btn-xs btn-default')
-                .html('<i class="fa fa-external-link"></i> View')
+                .html('<i class="fa fa-external-link"></i> View Device Details')
                 .appendTo($actions);
 
             $('<tr>')
                 .append(
                     $('<td>').text(member.mac || '\u2014'),
+                    $('<td>').text(dash(member.friendly_name)),
+                    $('<td>').text(dash(member.ip)),
+                    $('<td>').text(dash(member.hostname)),
                     $('<td>').text(dash(member.added_at)),
                     $('<td>').text(dash(member.removed_at)),
                     $('<td>').addClass('text-center').append($actions)
@@ -601,7 +640,7 @@ $(document).ready(function() {
         return $section;
     }
 
-    function buildLinkForm(group) {
+    function buildAddIdentityForm(device) {
         var $form = $('<div>')
             .addClass('form-inline')
             .css('margin-top', '4px');
@@ -618,20 +657,20 @@ $(document).ready(function() {
                 'margin-right': '6px'
             });
 
-        var $linkButton = $('<button>')
+        var $addButton = $('<button>')
             .attr('type', 'button')
             .addClass('btn btn-xs btn-primary')
-            .html('<i class="fa fa-link"></i> Link Identity')
+            .html('<i class="fa fa-plus"></i> Add Identity')
             .on('click', function() {
-                linkPhysicalDeviceIdentity(
-                    group.id,
-                    group.name,
+                addPhysicalDeviceIdentity(
+                    device.id,
+                    device.name,
                     $macInput.val(),
                     $(this)
                 );
             });
 
-        $form.append($macInput, $linkButton);
+        $form.append($macInput, $addButton);
         return $form;
     }
 
@@ -640,12 +679,20 @@ $(document).ready(function() {
         mac = (mac || '').trim().toLowerCase();
 
         if (!name) {
-            showError('Enter a physical-device name');
+            showError('Enter a device name');
             return;
         }
 
         if (!validMac(mac)) {
-            showError('Enter a valid seed MAC address');
+            showError('Enter a valid MAC address');
+            return;
+        }
+
+        if (
+            !confirm(
+                'Create device "' + name + '" with MAC address ' + mac + '?'
+            )
+        ) {
             return;
         }
 
@@ -657,7 +704,7 @@ $(document).ready(function() {
             data: {name: name, mac: mac},
             success: function(result) {
                 if (result && result.result === 'saved') {
-                    showToast('Physical device created', 'success');
+                    showToast('Device created', 'success');
                     $('#create-form').hide();
                     $('#create-name').val('');
                     $('#create-mac').val('');
@@ -669,7 +716,7 @@ $(document).ready(function() {
                 showError(
                     result && result.error
                         ? result.error
-                        : 'Unable to create physical device'
+                        : 'Unable to create device'
                 );
             },
             error: function(xhr) {
@@ -677,15 +724,15 @@ $(document).ready(function() {
                 showError(
                     xhr.responseJSON && xhr.responseJSON.error
                         ? xhr.responseJSON.error
-                        : 'Unable to create physical device'
+                        : 'Unable to create device'
                 );
             }
         });
     }
 
-    function linkPhysicalDeviceIdentity(
-        physicalDeviceId,
-        physicalDeviceName,
+    function addPhysicalDeviceIdentity(
+        deviceId,
+        deviceName,
         relatedMac,
         button
     ) {
@@ -698,13 +745,13 @@ $(document).ready(function() {
 
         if (
             !confirm(
-                'Link ' +
+                'Add ' +
                 relatedMac +
-                ' to physical device "' +
-                physicalDeviceName +
+                ' to device "' +
+                deviceName +
                 '"?\n\n' +
                 'Only continue if this MAC belongs to the same physical ' +
-                'hardware. Do not link separate devices merely because ' +
+                'hardware. Do not add separate devices merely because ' +
                 'they are the same type, model or vendor.'
             )
         ) {
@@ -717,12 +764,12 @@ $(document).ready(function() {
             url: '/api/devicemonitor/devices/linkphysicaldeviceidentity',
             type: 'POST',
             data: {
-                physical_device_id: physicalDeviceId,
+                physical_device_id: deviceId,
                 mac: relatedMac
             },
             success: function(result) {
                 if (result && result.result === 'saved') {
-                    showToast('Identity linked', 'success');
+                    showToast('Identity added', 'success');
                     loadPhysicalDevices();
                     return;
                 }
@@ -731,7 +778,7 @@ $(document).ready(function() {
                 showError(
                     result && result.error
                         ? result.error
-                        : 'Unable to link identity'
+                        : 'Unable to add identity'
                 );
             },
             error: function(xhr) {
@@ -739,24 +786,24 @@ $(document).ready(function() {
                 showError(
                     xhr.responseJSON && xhr.responseJSON.error
                         ? xhr.responseJSON.error
-                        : 'Unable to link identity'
+                        : 'Unable to add identity'
                 );
             }
         });
     }
 
     function removePhysicalDeviceIdentity(
-        physicalDeviceId,
-        physicalDeviceName,
+        deviceId,
+        deviceName,
         relatedMac,
         button
     ) {
         if (
             !confirm(
-                'Remove ' +
+                'Unlink ' +
                 relatedMac +
-                ' from physical device "' +
-                physicalDeviceName +
+                ' from device "' +
+                deviceName +
                 '"? Identity history will be preserved.'
             )
         ) {
@@ -769,12 +816,12 @@ $(document).ready(function() {
             url: '/api/devicemonitor/devices/removephysicaldeviceidentity',
             type: 'POST',
             data: {
-                physical_device_id: physicalDeviceId,
+                physical_device_id: deviceId,
                 mac: relatedMac
             },
             success: function(result) {
                 if (result && result.result === 'removed') {
-                    showToast('Identity removed', 'success');
+                    showToast('Identity unlinked', 'success');
                     loadPhysicalDevices();
                     return;
                 }
@@ -783,7 +830,7 @@ $(document).ready(function() {
                 showError(
                     result && result.error
                         ? result.error
-                        : 'Unable to remove identity'
+                        : 'Unable to unlink identity'
                 );
             },
             error: function(xhr) {
@@ -791,7 +838,7 @@ $(document).ready(function() {
                 showError(
                     xhr.responseJSON && xhr.responseJSON.error
                         ? xhr.responseJSON.error
-                        : 'Unable to remove identity'
+                        : 'Unable to unlink identity'
                 );
             }
         });

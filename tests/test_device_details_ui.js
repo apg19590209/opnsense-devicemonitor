@@ -105,8 +105,8 @@ check(
 // Grouping summary remains, but no grouping management controls return.
 [
     'id="physical-device-grouping"',
-    'View / Manage Physical Device',
-    'Assign to Physical Device'
+    'Open Device',
+    'Add to Device'
 ].forEach(function(value) {
     check(
         history.includes(value),

@@ -250,7 +250,6 @@ $(document).ready(function() {
         confirm_delete: '{{ lang._('Delete device') }}',
         confirm_clear:  '{{ lang._('Really delete all devices from database?') }}',
         all_vlans:      '{{ lang._('All VLANs') }}',
-        grouped:        '{{ lang._('Grouped') }}',
         identity:       '{{ lang._('identity') }}',
         identities:     '{{ lang._('identities') }}'
     };
@@ -475,7 +474,7 @@ $(document).ready(function() {
             );
         }
 
-        var label = groupName !== '' ? groupName : translations.grouped;
+        var label = groupName;
         label += ' \u00b7 ' + memberCount + ' ' +
             (memberCount === 1 ? translations.identity : translations.identities);
 

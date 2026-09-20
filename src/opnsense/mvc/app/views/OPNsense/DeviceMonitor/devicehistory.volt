@@ -983,7 +983,7 @@ $(document).ready(function() {
 
         $tbody.append(
             $('<tr>').append(
-                $('<th>').css('width', '160px').text('Physical Device'),
+                $('<th>').css('width', '160px').text('Device'),
                 $('<td>').text(physicalDeviceName || '\u2014')
             )
         );
@@ -992,7 +992,7 @@ $(document).ready(function() {
             $tbody.append(
                 $('<tr>').append(
                     $('<th>').text('Identities'),
-                    $('<td>').text(memberCount)
+                    $('<td>').text(memberCount + ' current')
                 )
             );
         }
@@ -1006,24 +1006,24 @@ $(document).ready(function() {
                 .attr({
                     href: '/ui/devicemonitor/index/physicaldevices?group=' +
                         encodeURIComponent(physicalDeviceId),
-                    title: 'Manage this physical device'
+                    title: 'Open this device'
                 })
                 .addClass('btn btn-xs btn-primary')
                 .html(
                     '<i class="fa fa-sitemap"></i> ' +
-                    'View / Manage Physical Device'
+                    'Open Device'
                 )
                 .appendTo($actions);
         } else {
             $('<a>')
                 .attr({
                     href: '/ui/devicemonitor/index/physicaldevices',
-                    title: 'Assign this device to a physical device'
+                    title: 'Add this device to a physical device'
                 })
                 .addClass('btn btn-xs btn-primary')
                 .html(
                     '<i class="fa fa-sitemap"></i> ' +
-                    'Assign to Physical Device'
+                    'Add to Device'
                 )
                 .appendTo($actions);
         }

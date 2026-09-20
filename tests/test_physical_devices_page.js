@@ -20,19 +20,25 @@ function check(condition, message) {
     'id="btn-create-toggle"',
     'id="btn-create-submit"',
     'id="btn-refresh"',
-    'id="stat-groups"',
-    'id="stat-active"',
+    'id="stat-devices"',
+    'id="stat-current"',
     'id="stat-archived"',
     'id="stat-visible"',
-    'data-group-id',
+    'data-device-id',
     'URLSearchParams',
-    'revealGroup();',
-    'Create Physical Device',
-    'Link Identity',
-    'Historical identities',
-    'Active identities',
-    'Physical-device name',
-    '/api/devicemonitor/devices/physicaldevices',
+    'revealDevice();',
+    'Create Device',
+    'Add Identity',
+    'Unlink Identity',
+    'View Device Details',
+    'Device name',
+    'Device Name',
+    'Current Identities',
+    'Previous Identities',
+    'Current Devices',
+    'Archived Devices',
+    'All Devices',
+    "/api/devicemonitor/devices/physicaldevices",
     '/api/devicemonitor/devices/createphysicaldevice',
     '/api/devicemonitor/devices/linkphysicaldeviceidentity',
     '/api/devicemonitor/devices/removephysicaldeviceidentity',
@@ -41,12 +47,30 @@ function check(condition, message) {
     'Identity history will be preserved.',
     'belongs to the same physical',
     'archived_at',
-    'active_member_count',
-    'total_member_count'
+    'current_identity_count',
+    'previous_identity_count',
+    "params.get('group')"
 ].forEach(function(value) {
     check(
         page.includes(value),
         'Physical Devices page missing: ' + value
+    );
+});
+
+// User-facing implementation terminology must not remain.
+[
+    'Group ID',
+    'Active identities',
+    'Historical identities',
+    'Link Identity',
+    'Total Groups',
+    'Active Groups',
+    'All Groups',
+    'seed MAC'
+].forEach(function(value) {
+    check(
+        !page.includes(value),
+        'Physical Devices page must not expose: ' + value
     );
 });
 

@@ -22,7 +22,6 @@ function check(condition, message) {
     'devices-grouping-badge',
     'devices-grouping-cell',
     '/ui/devicemonitor/index/physicaldevices?group=',
-    'translations.grouped',
     'translations.identity',
     'translations.identities',
     'memberCount === 1 ? translations.identity : translations.identities',
@@ -42,6 +41,11 @@ check(
 check(
     !devices.includes('#physical-device-grouping'),
     'Grouping badge must no longer target the Device Details anchor'
+);
+
+check(
+    !devices.includes('translations.grouped'),
+    'Devices page grouping badge must not use a grouped fallback label'
 );
 
 check(

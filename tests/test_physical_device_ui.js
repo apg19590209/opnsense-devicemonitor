@@ -19,12 +19,13 @@ function check(condition, message) {
     '/api/devicemonitor/devices/physicaldevice',
     'loadPhysicalDevice();',
     'renderPhysicalDeviceSummary',
-    'View / Manage Physical Device',
-    'Assign to Physical Device',
+    'Open Device',
+    'Add to Device',
     '/ui/devicemonitor/index/physicaldevices',
     '?group=',
     'Identities',
-    'memberCount'
+    'memberCount',
+    "memberCount + ' current'"
 ].forEach(function(value) {
     check(
         history.includes(value),

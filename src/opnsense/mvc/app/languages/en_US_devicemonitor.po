@@ -668,26 +668,20 @@ msgstr "Next"
 msgid "Physical Devices"
 msgstr "Physical Devices"
 
-msgid "Total Groups"
-msgstr "Total Groups"
+msgid "Archived"
+msgstr "Archived"
 
-msgid "Active Groups"
-msgstr "Active Groups"
+msgid "Create Device"
+msgstr "Create Device"
 
-msgid "Archived Groups"
-msgstr "Archived Groups"
+msgid "All Devices"
+msgstr "All Devices"
 
-msgid "Create Physical Device"
-msgstr "Create Physical Device"
+msgid "Current Devices"
+msgstr "Current Devices"
 
-msgid "All Groups"
-msgstr "All Groups"
-
-msgid "Active Only"
-msgstr "Active Only"
-
-msgid "Archived Only"
-msgstr "Archived Only"
+msgid "Archived Devices"
+msgstr "Archived Devices"
 
 msgid "Search by name or MAC"
 msgstr "Search by name or MAC"
@@ -695,17 +689,17 @@ msgstr "Search by name or MAC"
 msgid "Showing"
 msgstr "Showing"
 
-msgid "Physical-device name"
-msgstr "Physical-device name"
+msgid "Device name"
+msgstr "Device name"
 
 msgid "Create"
 msgstr "Create"
 
-msgid "Loading physical devices..."
-msgstr "Loading physical devices..."
+msgid "Loading devices..."
+msgstr "Loading devices..."
 
-msgid "The seed MAC must belong to a current, active device. Grouping is explicit and does not merge or rewrite device, lifecycle or identity history."
-msgstr "The seed MAC must belong to a current, active device. Grouping is explicit and does not merge or rewrite device, lifecycle or identity history."
+msgid "Start with one MAC address from this device. It must belong to a currently online device. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
+msgstr "Start with one MAC address from this device. It must belong to a currently online device. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
 
 msgid "Loading physical device..."
 msgstr "Loading physical device..."
