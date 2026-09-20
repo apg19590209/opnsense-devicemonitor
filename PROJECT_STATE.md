@@ -30,8 +30,8 @@ Python 3.13 TLS`
 
 Latest repository commit (HEAD):
 
-`bb0cbeeedd903f533a02aceba6b6648576250fd6` — `feat: simplify physical device
-details summary`
+`184819eb90ba8db9da113b5b1307f52309680e97` — `feat: route grouping badges to
+physical devices`
 
 Workflow state:
 
@@ -91,8 +91,11 @@ Stage 2 — dedicated Physical Devices page redesign — is in progress:
 - Unit 3 (Device Details summary): `bb0cbee` — Device Details grouping is now a
   compact read-only **Physical Device** summary linking to the dedicated page;
   create/link/remove management removed from Device Details. CI `35498323464`: PASS.
-- Remaining: Unit 4 — repoint the Devices-page **Physical Device** badge to the
-  dedicated page.
+- Unit 4 (Devices-page badge): `184819e` — the Devices-page **Physical Device**
+  badge now routes to `/ui/devicemonitor/index/physicaldevices?group=<id>`.
+  CI `35498804635`: PASS.
+
+Stage 2 (dedicated Physical Devices page redesign) is complete.
 
 **Description:** Add an explicit user-controlled physical-device grouping layer
 above existing MAC identities so multiple legitimate MAC addresses can be
