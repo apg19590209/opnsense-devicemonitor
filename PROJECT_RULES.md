@@ -242,6 +242,22 @@ procedure:
 8. Abort and report on any hash mismatch.
 9. Retain the rollback backup until validation has succeeded.
 
+### OPNsense menu cache
+
+When deploying any change to a plugin `Menu.xml`, invalidate the OPNsense menu
+cache before GUI validation:
+
+    /var/lib/php/tmp/opnsense_menu_cache.xml
+
+Delete the cache file after the new `Menu.xml` has been installed and
+hash-verified.
+
+No service restart is normally required; OPNsense regenerates the menu cache on
+the next GUI request.
+
+Do not conclude that a `Menu.xml` deployment failed merely because a new menu
+item is absent until this cache has been invalidated and the GUI refreshed.
+
 ## Validation expectations
 
 Syntax validation alone is not sufficient evidence that behaviour is correct.
