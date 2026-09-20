@@ -2,11 +2,8 @@ const fs = require('fs');
 
 const devicesPath =
     'src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt';
-const historyPath =
-    'src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devicehistory.volt';
 
 const devices = fs.readFileSync(devicesPath, 'utf8');
-const history = fs.readFileSync(historyPath, 'utf8');
 
 function check(condition, message) {
     if (!condition) {
@@ -24,8 +21,7 @@ function check(condition, message) {
     'physical_device_member_count',
     'devices-grouping-badge',
     'devices-grouping-cell',
-    '/ui/devicemonitor/index/devicehistory?mac=',
-    '#physical-device-grouping',
+    '/ui/devicemonitor/index/physicaldevices?group=',
     'translations.grouped',
     'translations.identity',
     'translations.identities',
@@ -44,8 +40,18 @@ check(
 );
 
 check(
-    history.includes('id="physical-device-grouping"'),
-    'Destination physical-device grouping section anchor is missing'
+    !devices.includes('#physical-device-grouping'),
+    'Grouping badge must no longer target the Device Details anchor'
+);
+
+check(
+    devices.includes('if (!groupId || memberCount < 1)'),
+    'Grouping badge has no invalid/missing group-id guard'
+);
+
+check(
+    devices.includes("$('<span>').addClass('text-muted').text('\\u2014')"),
+    'Ungrouped state must render a quiet non-link span'
 );
 
 [

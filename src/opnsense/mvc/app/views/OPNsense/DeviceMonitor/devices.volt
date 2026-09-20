@@ -483,9 +483,8 @@ $(document).ready(function() {
             $('<a>')
                 .addClass('label label-info devices-grouping-badge')
                 .attr({
-                    href: '/ui/devicemonitor/index/devicehistory?mac=' +
-                        encodeURIComponent(row.mac || '') +
-                        '#physical-device-grouping',
+                    href: '/ui/devicemonitor/index/physicaldevices?group=' +
+                        encodeURIComponent(groupId),
                     title: label
                 })
                 .text(label)
