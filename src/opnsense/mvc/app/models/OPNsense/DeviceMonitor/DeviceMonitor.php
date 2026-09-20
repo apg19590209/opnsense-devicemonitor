@@ -2728,6 +2728,11 @@ class DeviceMonitor
                     'archived_at' => $row['archived_at'],
                     'active_member_count' => (int)$row['active_member_count'],
                     'total_member_count' => (int)$row['total_member_count'],
+                    'current_identity_count' => (int)$row['active_member_count'],
+                    'previous_identity_count' => (int)$row['total_member_count'] -
+                        (int)$row['active_member_count'],
+                    'status' => 'offline',
+                    'last_seen' => null,
                     'members' => []
                 ];
             }
@@ -2735,11 +2740,15 @@ class DeviceMonitor
 
         if (count($groups) > 0) {
             $memberStmt = $db->prepare(
-                'SELECT id, physical_device_id, mac, added_at, removed_at ' .
-                'FROM physical_device_memberships ' .
-                'ORDER BY physical_device_id, ' .
-                'CASE WHEN removed_at IS NULL THEN 0 ELSE 1 END, ' .
-                'lower(trim(mac)), id'
+                'SELECT m.id, m.physical_device_id, m.mac, m.added_at, ' .
+                'm.removed_at, d.ip, d.hostname, d.hostname_source, ' .
+                'd.custom_hostname AS friendly_name, d.is_active, d.last_seen ' .
+                'FROM physical_device_memberships m ' .
+                'LEFT JOIN devices d ' .
+                'ON lower(trim(d.mac)) = lower(trim(m.mac)) ' .
+                'ORDER BY m.physical_device_id, ' .
+                'CASE WHEN m.removed_at IS NULL THEN 0 ELSE 1 END, ' .
+                'lower(trim(m.mac)), m.id'
             );
 
             if ($memberStmt !== false) {
@@ -2765,11 +2774,55 @@ class DeviceMonitor
                                 trim((string)($member['mac'] ?? ''))
                             ),
                             'added_at' => $member['added_at'],
-                            'removed_at' => $member['removed_at']
+                            'removed_at' => $member['removed_at'],
+                            'ip' => $member['ip'] ?? null,
+                            'hostname' => $member['hostname'] ?? null,
+                            'hostname_source' => $member['hostname_source'] ?? null,
+                            'friendly_name' => $member['friendly_name'] ?? null,
+                            'is_active' => isset($member['is_active'])
+                                ? (int)$member['is_active']
+                                : null,
+                            'last_seen' => $member['last_seen'] ?? null
                         ];
                     }
                 }
             }
+        }
+
+        // Derive per-device online/offline status and the most recent Last Seen
+        // across current identities. This is read-only and does not change any
+        // stored device, membership, lifecycle or identity state.
+        foreach ($groups as $index => $group) {
+            $online = false;
+            $lastSeen = null;
+
+            foreach ($group['members'] as $member) {
+                if ($member['removed_at'] !== null) {
+                    continue;
+                }
+
+                if ((int)($member['is_active'] ?? 0) === 1) {
+                    $online = true;
+                }
+
+                if (
+                    $member['last_seen'] !== null &&
+                    $member['last_seen'] !== ''
+                ) {
+                    if (
+                        $lastSeen === null ||
+                        strcmp(
+                            (string)$member['last_seen'],
+                            (string)$lastSeen
+                        ) > 0
+                    ) {
+                        $lastSeen = $member['last_seen'];
+                    }
+                }
+            }
+
+            $groups[$index]['status'] = $online ? 'online' : 'offline';
+            $groups[$index]['last_seen'] = $lastSeen;
         }
 
         $db->close();

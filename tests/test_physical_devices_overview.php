@@ -66,6 +66,17 @@ $db->exec(
     "(2, 'aa:bb:cc:dd:ee:04', '2026-09-03 08:00:00', '2026-09-05 08:00:00')"
 );
 
+// Identity enrichment comes from the existing devices table (read-only).
+$db->exec(
+    "INSERT INTO devices " .
+    "(mac, ip, hostname, hostname_source, custom_hostname, is_active, last_seen) " .
+    "VALUES " .
+    "('aa:bb:cc:dd:ee:01', '192.168.20.10', 'laptop', 'kea', 'Alice Laptop', 1, '2026-09-10 12:00:00'), " .
+    "('aa:bb:cc:dd:ee:02', '192.168.20.11', 'phone', 'hostwatch', NULL, 0, '2026-09-11 12:00:00'), " .
+    "('aa:bb:cc:dd:ee:03', '192.168.20.12', 'old-phone', 'kea', NULL, 0, '2026-09-01 11:00:00'), " .
+    "('aa:bb:cc:dd:ee:04', '192.168.20.13', 'printer', 'hostwatch', NULL, 0, '2026-09-04 09:00:00')"
+);
+
 $db->close();
 
 $overview = $model->getPhysicalDevicesOverview();
@@ -136,6 +147,48 @@ check(
 check(
     $archived['members'][0]['added_at'] === '2026-09-03 08:00:00',
     'Archived group membership added_at was not preserved'
+);
+
+/* Read-model enrichment: identity fields are surfaced alongside membership. */
+check(
+    $active['members'][0]['friendly_name'] === 'Alice Laptop' &&
+    $active['members'][0]['ip'] === '192.168.20.10' &&
+    $active['members'][0]['hostname'] === 'laptop' &&
+    $active['members'][0]['hostname_source'] === 'kea' &&
+    $active['members'][0]['is_active'] === 1 &&
+    $active['members'][0]['last_seen'] === '2026-09-10 12:00:00',
+    'Current identity enrichment fields are missing or wrong'
+);
+
+check(
+    $active['members'][1]['friendly_name'] === null &&
+    $active['members'][1]['is_active'] === 0,
+    'Current identity without a friendly name was not enriched cleanly'
+);
+
+/* Derived device-level counts, online/offline status and Last Seen. */
+check(
+    $active['current_identity_count'] === 2 &&
+    $active['previous_identity_count'] === 1,
+    'Derived current/previous identity counts are wrong'
+);
+
+check(
+    $active['status'] === 'online',
+    'Device with an online current identity must derive status online'
+);
+
+check(
+    $active['last_seen'] === '2026-09-11 12:00:00',
+    'Derived device Last Seen must be the max across current identities'
+);
+
+check(
+    $archived['current_identity_count'] === 0 &&
+    $archived['previous_identity_count'] === 1 &&
+    $archived['status'] === 'offline' &&
+    $archived['last_seen'] === null,
+    'Archived device derived fields are wrong'
 );
 
 /* Existing listphysicaldevices contract still excludes archived groups. */
