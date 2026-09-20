@@ -933,11 +933,14 @@ Release-facing metadata and documentation have been reviewed and corrected.
 
 - `PRODUCT_BACKLOG.md` remains the authoritative list of deferred Device Monitor work.
 - `DM-BL-002` and `DM-BL-003` are complete and have been removed from the open backlog.
-- `DM-BL-004` remains deferred because Unbound is not used in this environment.
+- `DM-BL-004` (Unbound) is functionally complete with regression coverage and
+  testbed smoke validation; real-environment validation against actual Unbound
+  data remains deferred because no suitable real Unbound data exists in the
+  current environment (FUNCTIONALLY COMPLETE / VALIDATION DEFERRED).
 - `DM-BL-001` is implemented, fully live-validated on the testbed
   `192.168.20.23`, and is no longer an open backlog feature (see the DM-BL-001
   live-validation section above).
-- Open backlog items are now `DM-BL-004`, `DM-BL-005`, `DM-BL-006` and `DM-BL-007`.
+- No open backlog items currently remain.
 - Architectural constraints remain in `DECISIONS.md`; environment facts remain
   in `SYSTEM_MAP.md`.
 
@@ -1036,8 +1039,8 @@ Release-facing metadata and documentation have been reviewed and corrected.
 - No known lifecycle/history implementation defect remains.
 - Natural GUI validation of a real `return_pending` device remains deferred until
   one occurs; regression coverage for that workflow passes.
-- `PRODUCT_BACKLOG.md` remains authoritative for deferred work; open items are
-  `DM-BL-004`, `DM-BL-005`, `DM-BL-006` and `DM-BL-007`.
+- `PRODUCT_BACKLOG.md` remains authoritative for deferred work; no open backlog
+  items currently remain.
 
 ## v2.9 development — DM-BL-002 complete
 
