@@ -25,13 +25,13 @@ OPNsense 26.7.2_2
 
 Latest completed v2.9 implementation commit:
 
-`18524878c6abbcbbbb32504e7aa89eeaf4dfeed7` — `fix: support Pi-hole CA with
-Python 3.13 TLS`
+`d8421ca` — `feat: clarify physical device identity management` (final
+pre-release Physical Devices UX redesign; read-model enrichment `67a476c`,
+documentation `97abb98`)
 
 Latest repository commit (HEAD):
 
-`184819eb90ba8db9da113b5b1307f52309680e97` — `feat: route grouping badges to
-physical devices`
+`97abb98` — `docs: document physical device identity model`
 
 Workflow state:
 
@@ -1435,9 +1435,44 @@ Validation:
 - LIVE_VISUAL_VALIDATION = PASS (user-confirmed on the .23 testbed)
 - production `192.168.20.254` untouched
 
+## Physical Devices UX redesign (final pre-release)
+
+Implemented the approved human-friendly Physical Devices redesign
+(`v2.9-development`) without changing the underlying model, write actions,
+lifecycle semantics or database schema.
+
+- Unit 1 (read model): `getPhysicalDevicesOverview()` now enriches every
+  identity with mac, friendly name, IP, hostname, hostname source, online
+  state and last seen, and derives per-device current/previous identity counts,
+  online/offline status and last seen. Read-only.
+- Unit 2 (page): `physicaldevices.volt` now shows one panel per real-world
+  device (Device Name, current identities, status, last seen) expanding to a
+  Device Summary + Current Identities + Previous Identities layout.
+  `devicehistory.volt` compact summary and the `devices.volt` badge wording
+  were aligned; the obsolete `Grouped` badge fallback was removed.
+- Translations (`en_US`/`cs_CZ`), `docs/USER_MANUAL.md` and the stale
+  DECISIONS.md §18 status banner were reconciled.
+
+Files changed: `DeviceMonitor.php`, `physicaldevices.volt`,
+`devicehistory.volt`, `devices.volt`, both gettext catalogues, and the focused
+UI/API/overview regression tests.
+
+Validation: PHP suite, Node (UI) suite, PHP lint, gettext (`msgfmt -c`) and
+`git diff --check` PASS locally; GitHub Actions PASS for commits `67a476c`
+(run `35508985779`), `d8421ca` (run `35509262180`) and `97abb98`
+(run `35509328114`).
+
+Deployment (`192.168.20.23`, guarded): `DeviceMonitor.php`, three `.volt`
+views and both compiled `.mo` catalogues deployed with candidate/pre/post
+SHA256 parity and timestamped `cp -p` rollback backups (tag `uxredesign`).
+Affected Volt template caches cleared; `Menu.xml` unchanged so the menu cache
+was not invalidated; no service restart. Read-only DB safety counts unchanged
+(`devices=8`, `physical_devices=1`, `physical_device_memberships=3`,
+`device_lifecycles=8`). Unauthenticated route smoke check: HTTP 301→302, no
+PHP fatal.
+
 ## Next step
 
-Stage 3 code is committed, pushed and CI-green, and the runtime files are
-deployed to the `192.168.20.23` testbed with hash parity. The only remaining
-gate is authenticated visual GUI validation of the redesigned Device Details
-page (human checklist in the final report). No further code change is requested.
+Authenticated visual GUI validation of the redesigned Physical Devices page and
+Device Details summary on `192.168.20.23` (human GUI checklist in the final
+report). No further code change is requested.
