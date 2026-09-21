@@ -1,4 +1,5 @@
 import importlib.util
+import ipaddress
 import sqlite3
 import tempfile
 from contextlib import closing
@@ -53,6 +54,17 @@ def load_module():
 
     module.log = lambda message: None
     return module
+
+
+def networks_fixture():
+    return [{
+        "name": "opt1",
+        "description": "DMTEST",
+        "device": "vlan0.50",
+        "ip": "192.168.50.1",
+        "subnet": "24",
+        "network": ipaddress.ip_network("192.168.50.0/24"),
+    }]
 
 
 def test_pending_return_survives_init_db():
@@ -146,6 +158,7 @@ def test_returning_device_gets_fresh_first_seen():
         module.init_db()
 
         mac = "aa:bb:cc:dd:ee:ff"
+        out_mac = "aa:bb:cc:dd:ee:77"
         original_first = "2026-09-01 10:00:00"
         deleted_last = "2026-09-02 10:00:00"
         returned_at = "2026-09-11 12:00:00"
@@ -185,9 +198,19 @@ def test_returning_device_gets_fresh_first_seen():
                 """,
                 (mac, original_first, deleted_last),
             )
+
+            conn.execute(
+                """
+                INSERT INTO devices
+                    (mac, ip, is_active, return_pending)
+                VALUES (?, ?, 1, 1)
+                """,
+                (out_mac, "192.168.20.99"),
+            )
             conn.commit()
 
-        module.load_config = lambda: {"enabled": False}
+        module.load_config = lambda: {"enabled": False, "monitored_interfaces": "opt1"}
+        module.resolve_monitored_networks = lambda config: (networks_fixture(), None)
         module.detect_source_capabilities = lambda: {
             "hostwatch": {"readable": True},
             "kea": {
@@ -198,10 +221,10 @@ def test_returning_device_gets_fresh_first_seen():
             "isc": {"enabled": False},
             "dnsmasq": {"configured": False},
         }
-        module.prime_hostwatch_lan_visibility = lambda: None
-        module.get_hostwatch_devices = lambda: [{
+        module.prime_selected_interface_visibility = lambda networks: None
+        module.get_hostwatch_devices = lambda networks: [{
             "mac": mac,
-            "ip": "192.168.20.50",
+            "ip": "192.168.50.50",
             "hostname": "returned-device",
             "hostname_source": "hostwatch",
             "vendor": "Test Vendor",
@@ -219,7 +242,7 @@ def test_returning_device_gets_fresh_first_seen():
         module.detect_recent_hostwatch_ipv6_identity_events = lambda *args, **kwargs: 0
         module.get_new_high_identity_events = lambda *args, **kwargs: []
         module.should_send_identity_email = lambda *args, **kwargs: False
-        module.run_scheduled_service_discovery = lambda: None
+        module.run_scheduled_service_discovery = lambda networks=None: None
 
         assert module.full_scan() == 0
 
@@ -251,6 +274,13 @@ def test_returning_device_gets_fresh_first_seen():
         assert device == (returned_at, None, 1)
         assert lifecycle_first == original_first
         assert known_first == original_first
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            out_return_pending = conn.execute(
+                "SELECT return_pending FROM devices WHERE mac = ?",
+                (out_mac,),
+            ).fetchone()[0]
+        assert out_return_pending == 1, out_return_pending
 
     print("DEVICE_RETURN_FIRST_SEEN_REGRESSION=PASS")
 

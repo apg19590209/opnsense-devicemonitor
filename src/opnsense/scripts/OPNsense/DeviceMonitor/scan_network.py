@@ -67,6 +67,7 @@ def load_config():
             log(f"Config file not found: {CONFIG_FILE}, using defaults")
         return {
             'enabled': DEFAULT_CONFIG['enabled'] == '1',
+            'monitored_interfaces': DEFAULT_CONFIG.get('monitored_interfaces', ''),
             'email_enabled': DEFAULT_CONFIG.get('email_enabled', '1') == '1',
             'identity_email_enabled': DEFAULT_CONFIG.get('identity_email_enabled', '0') == '1',
             'service_email_enabled': DEFAULT_CONFIG.get('service_email_enabled', '0') == '1',
@@ -100,6 +101,7 @@ def load_config():
 
             return {
                 'enabled': config.get('enabled', '0') == '1',
+                'monitored_interfaces': config.get('monitored_interfaces', DEFAULT_CONFIG.get('monitored_interfaces', '')),
                 'email_enabled': config.get('email_enabled', '1') == '1',
                 'identity_email_enabled': config.get('identity_email_enabled', '0') == '1',
                 'service_email_enabled': config.get('service_email_enabled', DEFAULT_CONFIG.get('service_email_enabled', '0')) == '1',
@@ -131,6 +133,7 @@ def load_config():
             log(f"Config load error: {e}")
         return {
             'enabled': False,
+            'monitored_interfaces': '',
             'email_enabled': True,
             'identity_email_enabled': False,
             'service_email_enabled': False,
@@ -159,6 +162,133 @@ def load_config():
         }
 
 
+
+
+def resolve_monitored_networks(config):
+    """Resolve configured monitored logical interfaces to IPv4 subnets.
+
+    Returns ``(networks, error)``. ``networks`` is a list of dicts with keys
+    ``name``, ``description``, ``device``, ``ip``, ``subnet`` (prefix string)
+    and ``network`` (an ``ipaddress`` IPv4 network). ``error`` is a non-empty
+    string when the selection is empty or any entry is invalid. The function
+    fails closed and never falls back to the LAN.
+    """
+    raw = (config.get('monitored_interfaces') or '').strip()
+    names = [n.strip() for n in raw.split(',') if n.strip()]
+    if not names:
+        return None, 'No monitored interfaces selected (monitored_interfaces is empty)'
+
+    try:
+        root = ET.parse('/conf/config.xml').getroot()
+    except (OSError, ET.ParseError) as e:
+        return None, f'Cannot read /conf/config.xml: {e}'
+
+    networks = []
+    seen = set()
+    for name in names:
+        if not re.fullmatch(r'[A-Za-z0-9_]+', name):
+            return None, f'Monitored interface "{name}" is not a valid interface name'
+
+        node = root.find(f'./interfaces/{name}')
+        if node is None:
+            return None, f'Monitored interface "{name}" does not exist in /conf/config.xml'
+
+        enable = (node.findtext('enable') or '').strip()
+        if enable != '1':
+            return None, f'Monitored interface "{name}" is not enabled'
+
+        device = (node.findtext('if') or '').strip()
+        if not device:
+            return None, f'Monitored interface "{name}" has no device'
+
+        ip = (node.findtext('ipaddr') or '').strip()
+        subnet = (node.findtext('subnet') or '').strip()
+
+        try:
+            address = ipaddress.ip_address(ip)
+        except ValueError:
+            return None, f'Monitored interface "{name}" has invalid IPv4 address "{ip}"'
+        if address.version != 4:
+            return None, f'Monitored interface "{name}" is not IPv4'
+
+        if not subnet.isdigit():
+            return None, f'Monitored interface "{name}" has invalid subnet "{subnet}"'
+        prefix = int(subnet)
+        if prefix < 1 or prefix > 32:
+            return None, (
+                f'Monitored interface "{name}" subnet prefix must be '
+                f'between 1 and 32 (got {subnet})'
+            )
+
+        try:
+            network = ipaddress.ip_network(f'{ip}/{prefix}', strict=False)
+        except ValueError:
+            return None, f'Monitored interface "{name}" has invalid subnet "{subnet}"'
+        if network.version != 4:
+            return None, f'Monitored interface "{name}" subnet is not IPv4'
+
+        if name in seen:
+            continue
+        seen.add(name)
+
+        networks.append({
+            'name': name,
+            'description': (node.findtext('descr') or '').strip() or name,
+            'device': device,
+            'ip': ip,
+            'subnet': str(prefix),
+            'network': network,
+        })
+
+    # Reject duplicate or overlapping selected subnets so scope stays
+    # deterministic and no address is primed or probed more than once.
+    for i in range(len(networks)):
+        for j in range(i + 1, len(networks)):
+            left = networks[i]
+            right = networks[j]
+            if left['network'].overlaps(right['network']):
+                return None, (
+                    f'Monitored interfaces "{left["name"]}" '
+                    f'({left["ip"]}/{left["subnet"]}) and "{right["name"]}" '
+                    f'({right["ip"]}/{right["subnet"]}) overlap; '
+                    'select non-overlapping subnets only'
+                )
+
+    return networks, None
+
+
+def ip_is_in_scope(ip, networks):
+    """Return True when ``ip`` is an IPv4 address inside one of ``networks``."""
+    try:
+        address = ipaddress.ip_address((ip or '').strip())
+    except ValueError:
+        return False
+    if address.version != 4:
+        return False
+    return any(address in net['network'] for net in networks or [])
+
+
+def find_matching_scope(ip, networks):
+    """Return the matching resolved scope dict for ``ip``, or None."""
+    try:
+        address = ipaddress.ip_address((ip or '').strip())
+    except ValueError:
+        return None
+    if address.version != 4:
+        return None
+    for net in networks or []:
+        if address in net['network']:
+            return net
+    return None
+
+
+def scoped_device_macs(conn, networks):
+    """Return stored device MACs whose current IPv4 address is in scope."""
+    rows = conn.execute('SELECT mac, ip FROM devices').fetchall()
+    return {
+        mac for mac, ip in rows
+        if mac and ip_is_in_scope(ip, networks)
+    }
 
 
 def init_db():
@@ -839,8 +969,10 @@ def backfill_device_lifecycles(conn):
                 )
 
 
-def get_hostwatch_devices():
-    """Load devices directly from the OPNsense Hostwatch database"""
+def get_hostwatch_devices(networks):
+    """Load devices from the OPNsense Hostwatch database, restricted to the
+    configured monitored subnets. Only IPv4 addresses inside ``networks`` are
+    admitted; Hostwatch ``interface_name`` is not an admission condition."""
     devices = []
 
     if not os.path.exists(HOSTWATCH_DB):
@@ -888,9 +1020,23 @@ def get_hostwatch_devices():
             if not mac:
                 continue
 
-            # Mapuj interface_name na VLAN popis
-            iface = row['interface_name'] or ''
-            vlan = map_interface_to_vlan(iface)
+            ip = row['ip_address'] or ''
+
+            # Strictly admit only devices whose IPv4 address belongs to a
+            # selected monitored subnet. interface_name is metadata only and
+            # is never used as an admission condition (VLAN observations may
+            # be attributed to a parent physical interface such as re0).
+            matched = find_matching_scope(ip, networks)
+
+            if matched is None:
+                continue
+
+            # Derive the displayed label from the matched selected interface,
+            # not solely from Hostwatch interface_name.
+            device = matched.get('device') or ''
+            vlan = map_interface_to_vlan(device)
+            if not device:
+                vlan = (matched.get('name') or '').upper() or 'Unknown'
 
             vendor = row['organization_name'] or 'Unknown'
             if len(vendor) > 40:
@@ -898,7 +1044,7 @@ def get_hostwatch_devices():
 
             devices.append({
                 'mac': mac,
-                'ip': row['ip_address'] or '',
+                'ip': ip,
                 'hostname': '',
                 'vendor': vendor,
                 'vlan': vlan,
@@ -1772,7 +1918,7 @@ def update_service_inventory_from_nmap(
     return recorded
 
 
-def discover_dns_servers(timeout=1.5):
+def discover_dns_servers(networks, timeout=1.5):
     """
     Verify DNS servers using one real UDP DNS query per active IPv4 device.
 
@@ -1805,6 +1951,9 @@ def discover_dns_servers(timeout=1.5):
                 return
 
             if parsed.version != 4:
+                return
+
+            if not ip_is_in_scope(ip, networks):
                 return
 
             if (
@@ -2096,28 +2245,22 @@ def discover_dns_servers(timeout=1.5):
         finally:
             sock.close()
 
-def discover_dhcp_servers():
+def discover_dhcp_servers(networks):
     """
     Actively discover DHCPv4 servers by DHCP OFFER.
 
-    Only interfaces already represented by Device Monitor devices are probed.
-    A DHCP server is recorded only when broadcast-dhcp-discover returns a
-    Server Identifier IPv4 address.
+    Interfaces are derived from the selected resolved interfaces, never from
+    untrusted historical device rows. A DHCP server is recorded only when
+    broadcast-dhcp-discover returns a Server Identifier IPv4 address that
+    belongs to the selected scope.
     """
     init_db()
 
     with sqlite3.connect(DB_FILE) as conn:
         monitored = [
-            str(row[0]).strip()
-            for row in conn.execute(
-                '''
-                SELECT DISTINCT vlan
-                FROM devices
-                WHERE vlan IS NOT NULL
-                  AND TRIM(vlan) <> ''
-                '''
-            )
-            if row[0]
+            net.get('device')
+            for net in networks
+            if net.get('device')
         ]
 
         try:
@@ -2218,6 +2361,9 @@ def discover_dhcp_servers():
                     if parsed.version != 4:
                         continue
                 except ValueError:
+                    continue
+
+                if not ip_is_in_scope(server_ip, networks):
                     continue
 
                 mac_row = conn.execute(
@@ -2329,12 +2475,12 @@ def _valid_service_probe_ipv4(ip):
     )
 
 
-def _service_probe_candidates(conn, limit=128):
+def _service_probe_candidates(conn, networks, limit=128):
     """
     Build a bounded set of IPv4 endpoints for infrastructure probing.
 
     Includes currently active Device Monitor devices plus endpoints already
-    known to host infrastructure services.
+    known to host infrastructure services, restricted to the selected scope.
     """
     candidates = {}
 
@@ -2342,6 +2488,9 @@ def _service_probe_candidates(conn, limit=128):
         ip = (ip or '').strip()
 
         if not _valid_service_probe_ipv4(ip):
+            return
+
+        if not ip_is_in_scope(ip, networks):
             return
 
         mac = (mac or '').strip().lower()
@@ -2396,8 +2545,8 @@ def _service_probe_candidates(conn, limit=128):
     return candidates
 
 
-def _nmap_tcp_service_candidates(conn):
-    """Return bounded structured Nmap TCP service evidence."""
+def _nmap_tcp_service_candidates(conn, networks):
+    """Return bounded structured Nmap TCP service evidence within scope."""
     try:
         tables = {
             row[0]
@@ -2417,7 +2566,7 @@ def _nmap_tcp_service_candidates(conn):
         } - tables:
             return []
 
-        return conn.execute(
+        rows = conn.execute(
             '''
             SELECT DISTINCT
                 h.ip,
@@ -2434,6 +2583,8 @@ def _nmap_tcp_service_candidates(conn):
             LIMIT 1000
             '''
         ).fetchall()
+
+        return [row for row in rows if ip_is_in_scope(row[0], networks)]
 
     except Exception as e:
         log(f"[SERVICES] Unable to read Nmap service evidence: {e}")
@@ -2496,7 +2647,7 @@ def _probe_ntp_service(ip, timeout=0.8):
         sock.close()
 
 
-def discover_ntp_servers():
+def discover_ntp_servers(networks):
     """Protocol-verify NTP servers on known infrastructure endpoints."""
     init_db()
 
@@ -2504,7 +2655,7 @@ def discover_ntp_servers():
     verified = set()
 
     with sqlite3.connect(DB_FILE) as conn:
-        candidates = _service_probe_candidates(conn)
+        candidates = _service_probe_candidates(conn, networks)
 
         previous = conn.execute(
             '''
@@ -2520,6 +2671,7 @@ def discover_ntp_servers():
 
             if (
                 _valid_service_probe_ipv4(ip)
+                and ip_is_in_scope(ip, networks)
                 and ip not in candidates
             ):
                 candidates[ip] = {
@@ -2709,7 +2861,7 @@ def _probe_ssh_service(target, timeout=0.8):
         sock.close()
 
 
-def discover_ssh_servers():
+def discover_ssh_servers(networks):
     """Protocol-verify SSH services using server identification banners."""
     init_db()
 
@@ -2717,7 +2869,7 @@ def discover_ssh_servers():
     verified = set()
 
     with sqlite3.connect(DB_FILE) as conn:
-        candidates = _service_probe_candidates(conn)
+        candidates = _service_probe_candidates(conn, networks)
         targets = {}
 
         # Standard SSH port on current/known infrastructure endpoints.
@@ -2744,6 +2896,9 @@ def discover_ssh_servers():
             if not _valid_service_probe_ipv4(ip):
                 continue
 
+            if not ip_is_in_scope(ip, networks):
+                continue
+
             targets.setdefault(
                 (ip, port),
                 {
@@ -2754,7 +2909,7 @@ def discover_ssh_servers():
 
         # Reuse Nmap service/version evidence to find non-standard SSH ports,
         # but still require a real SSH banner before marking verified.
-        for ip, port, service in _nmap_tcp_service_candidates(conn):
+        for ip, port, service in _nmap_tcp_service_candidates(conn, networks):
             ip = (ip or '').strip()
 
             try:
@@ -2972,7 +3127,7 @@ def _probe_web_service(target, timeout=0.6):
             pass
 
 
-def discover_web_admin_services():
+def discover_web_admin_services(networks):
     """
     Protocol-verify common Web/Admin HTTP and HTTPS endpoints.
 
@@ -2986,7 +3141,7 @@ def discover_web_admin_services():
     verified = set()
 
     with sqlite3.connect(DB_FILE) as conn:
-        candidates = _service_probe_candidates(conn)
+        candidates = _service_probe_candidates(conn, networks)
         targets = {}
 
         common_ports = (
@@ -3028,6 +3183,9 @@ def discover_web_admin_services():
             if not _valid_service_probe_ipv4(ip):
                 continue
 
+            if not ip_is_in_scope(ip, networks):
+                continue
+
             scheme = (
                 'https'
                 if method == 'https_response'
@@ -3049,7 +3207,7 @@ def discover_web_admin_services():
             5001
         }
 
-        for ip, port, service in _nmap_tcp_service_candidates(conn):
+        for ip, port, service in _nmap_tcp_service_candidates(conn, networks):
             ip = (ip or '').strip()
 
             try:
@@ -3293,8 +3451,8 @@ def _classify_phase3_nmap_service(port, protocol, service):
     return None
 
 
-def _phase3_nmap_rows(conn):
-    """Return recent structured Nmap evidence for Phase 3 services."""
+def _phase3_nmap_rows(conn, networks):
+    """Return recent structured Nmap evidence for Phase 3 services within scope."""
     try:
         tables = {
             row[0]
@@ -3317,7 +3475,7 @@ def _phase3_nmap_rows(conn):
         } - tables:
             return []
 
-        return conn.execute(
+        rows = conn.execute(
             '''
             SELECT
                 h.ip,
@@ -3337,6 +3495,8 @@ def _phase3_nmap_rows(conn):
             LIMIT 3000
             '''
         ).fetchall()
+
+        return [row for row in rows if ip_is_in_scope(row[0], networks)]
 
     except Exception as e:
         log(
@@ -3842,10 +4002,13 @@ def _probe_phase3_target(item):
 
 
 
-def _discover_local_wireguard(conn, candidates):
+def _discover_local_wireguard(conn, candidates, networks):
     """
     Discover WireGuard hosted locally by OPNsense from authoritative
     runtime state. No peer keys, endpoints or allowed networks are stored.
+
+    The local endpoint must belong to the selected scope. There is no
+    hardcoded LAN fallback.
     """
     method = 'opnsense_wireguard_runtime'
     discovered = []
@@ -3881,15 +4044,9 @@ def _discover_local_wireguard(conn, candidates):
             local_ip = candidate_ip
             break
 
-    if not local_ip:
-        try:
-            root = ET.parse('/conf/config.xml').getroot()
-            local_ip = (
-                root.findtext('./interfaces/lan/ipaddr')
-                or ''
-            ).strip()
-        except (OSError, ET.ParseError):
-            local_ip = ''
+    if not local_ip or not ip_is_in_scope(local_ip, networks):
+        log("[SERVICES] WireGuard local IPv4 is outside the selected scope")
+        return discovered
 
     if not _valid_service_probe_ipv4(local_ip):
         log("[SERVICES] WireGuard local IPv4 could not be determined")
@@ -4278,7 +4435,7 @@ def _run_phase3_protocol_probes(target_list):
     ]
 
 
-def discover_phase3_services():
+def discover_phase3_services(networks):
     """
     Discover Phase 3 infrastructure services.
 
@@ -4304,15 +4461,16 @@ def discover_phase3_services():
     )
 
     with sqlite3.connect(DB_FILE) as conn:
-        candidates = _service_probe_candidates(conn)
+        candidates = _service_probe_candidates(conn, networks)
         # Automatic discovery reuses existing targeted Nmap evidence.
         # It does not launch fresh Nmap identification across all devices.
-        nmap_rows = _phase3_nmap_rows(conn)
+        nmap_rows = _phase3_nmap_rows(conn, networks)
 
         discovered.extend(
             _discover_local_wireguard(
                 conn,
-                candidates
+                candidates,
+                networks
             )
         )
 
@@ -4417,6 +4575,9 @@ def discover_phase3_services():
             ip = (ip or '').strip()
 
             if not _valid_service_probe_ipv4(ip):
+                return
+
+            if not ip_is_in_scope(ip, networks):
                 return
 
             try:
@@ -4777,8 +4938,8 @@ def discover_phase3_services():
     return discovered
 
 
-def discover_infrastructure_services():
-    """Run all supported infrastructure-service discovery."""
+def discover_infrastructure_services(networks):
+    """Run all supported infrastructure-service discovery within ``networks``."""
     services = []
 
     discoveries = (
@@ -4792,7 +4953,7 @@ def discover_infrastructure_services():
 
     for name, discovery in discoveries:
         try:
-            found = discovery()
+            found = discovery(networks)
 
             if found:
                 services.extend(found)
@@ -4827,14 +4988,21 @@ def discover_infrastructure_services():
     return services
 
 
-def run_scheduled_service_discovery(interval_seconds=3600):
+def run_scheduled_service_discovery(interval_seconds=3600, networks=None):
     """
     Run infrastructure discovery at most once per interval.
 
     Discovery failure is observational and must never make the normal
-    Device Monitor scan fail.
+    Device Monitor scan fail. Scope is resolved when not supplied.
     """
     try:
+        if networks is None:
+            config = load_config()
+            networks, error = resolve_monitored_networks(config)
+            if error:
+                log(f"[SERVICES] Refusing scheduled discovery: {error}")
+                return False
+
         init_db()
 
         with sqlite3.connect(DB_FILE) as conn:
@@ -4869,7 +5037,7 @@ def run_scheduled_service_discovery(interval_seconds=3600):
             except (TypeError, ValueError):
                 pass
 
-        services = discover_infrastructure_services()
+        services = discover_infrastructure_services(networks)
 
         log(
             "[SERVICES] Scheduled discovery completed: "
@@ -4885,7 +5053,7 @@ def run_scheduled_service_discovery(interval_seconds=3600):
         )
         return False
 
-def get_pending_service_alert_events(conn, limit_per_source=200):
+def get_pending_service_alert_events(conn, networks, limit_per_source=200):
     """
     Return infrastructure-service alert candidates newer than the persisted
     high-water marks without changing alert state.
@@ -4984,6 +5152,7 @@ def get_pending_service_alert_events(conn, limit_per_source=200):
             'product': row[10] or '',
             'version': row[11] or '',
             'alert_eligible': confidence in ('verified', 'authoritative'),
+            'in_scope': ip_is_in_scope(row[2] or '', networks),
         })
 
     activity_rows = conn.execute(
@@ -5044,6 +5213,7 @@ def get_pending_service_alert_events(conn, limit_per_source=200):
             'product': service_metadata.get('product', ''),
             'version': service_metadata.get('version', ''),
             'alert_eligible': bool(service_metadata),
+            'in_scope': ip_is_in_scope(ip, networks),
         })
 
     events.sort(key=lambda event: (
@@ -5084,6 +5254,7 @@ def select_service_alert_events(config, events):
     return [
         event for event in events
         if event.get('alert_eligible')
+        and event.get('in_scope')
         and enabled_types.get(event.get('event_type'), False)
     ]
 
@@ -5096,7 +5267,9 @@ def plan_service_alert_cursor_advance(
     """
     Plan monotonic cursor advancement without skipping a selected alert.
 
-    When delivery has not succeeded, each source may advance only through rows
+    Out-of-scope events are never selected for delivery and may safely be
+    skipped/acknowledged; they must not block later in-scope events. When
+    delivery has not succeeded, each source may advance only through rows
     before its first selected event. If a source has no selected events, all
     fetched rows from that source may advance. After successful delivery, all
     fetched rows may advance.
@@ -5322,14 +5495,15 @@ def send_service_alert_email(events):
         return False
 
 
-def process_service_alerts(config):
+def process_service_alerts(config, networks):
     """
     Process pending infrastructure-service alerts without affecting scan success.
 
     Cursor state is advanced over disabled or unselected rows so enabling alerts
     later cannot replay old changes. Selected rows are retained for retry until
     email delivery succeeds; only the safe prefix before the first selected row
-    may advance after a delivery failure.
+    may advance after a delivery failure. Out-of-scope rows are never sent,
+    acknowledged or advanced past.
 
     A non-blocking process lock serialises this read/send/cursor sequence so
     overlapping full scans cannot normally deliver the same pending alert.
@@ -5344,7 +5518,7 @@ def process_service_alerts(config):
 
         conn = sqlite3.connect(DB_FILE)
         try:
-            events = get_pending_service_alert_events(conn)
+            events = get_pending_service_alert_events(conn, networks)
         finally:
             conn.close()
 
@@ -5846,8 +6020,8 @@ def targeted_scan_and_email(device, config):
         except Exception:
             pass
 
-def send_email_via_php_api(new_devices):
-    """Mark devices in the database for email delivery"""
+def send_email_via_php_api(new_devices, in_scope_macs):
+    """Mark in-scope devices in the database for email delivery"""
     if not new_devices:
         return
 
@@ -5855,8 +6029,13 @@ def send_email_via_php_api(new_devices):
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
 
-        # Pending must represent exactly this delivery channel's filtered set.
-        cursor.execute("UPDATE devices SET notification_pending = 0")
+        # Pending must represent exactly this delivery channel's filtered set,
+        # restricted to the in-scope device rows.
+        for mac in in_scope_macs:
+            cursor.execute(
+                "UPDATE devices SET notification_pending = 0 WHERE mac = ?",
+                (mac,)
+            )
 
         # Mark devices for notification
         for device in new_devices:
@@ -5887,8 +6066,8 @@ def send_email_via_php_api(new_devices):
         log(f"[EMAIL] Error: {e}")
 
 
-def send_webhook_via_php_api(new_devices):
-    """Mark devices in the database for webhook delivery"""
+def send_webhook_via_php_api(new_devices, in_scope_macs):
+    """Mark in-scope devices in the database for webhook delivery"""
     if not new_devices:
         return
 
@@ -5896,8 +6075,13 @@ def send_webhook_via_php_api(new_devices):
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
 
-        # Pending must represent exactly this delivery channel's filtered set.
-        cursor.execute("UPDATE devices SET notification_pending = 0")
+        # Pending must represent exactly this delivery channel's filtered set,
+        # restricted to the in-scope device rows.
+        for mac in in_scope_macs:
+            cursor.execute(
+                "UPDATE devices SET notification_pending = 0 WHERE mac = ?",
+                (mac,)
+            )
 
         # Mark devices for notification
         for device in new_devices:
@@ -6070,7 +6254,7 @@ def record_identity_event(conn, mac, event_type, severity,
     return True
 
 
-def detect_recent_hostwatch_identity_events(conn, minutes=5, kea_leases=None):
+def detect_recent_hostwatch_identity_events(conn, minutes=5, kea_leases=None, networks=None):
     """Detect recent duplicate-MAC evidence without changing device state."""
     if not os.path.exists(HOSTWATCH_DB):
         return 0
@@ -6112,6 +6296,9 @@ def detect_recent_hostwatch_identity_events(conn, minutes=5, kea_leases=None):
             if ipaddress.ip_address(ip).version != 4:
                 continue
         except ValueError:
+            continue
+
+        if networks is not None and not ip_is_in_scope(ip, networks):
             continue
 
         recent.setdefault(mac, []).append({
@@ -6236,8 +6423,15 @@ def detect_recent_hostwatch_identity_events(conn, minutes=5, kea_leases=None):
 
     return created
 
-def detect_recent_hostwatch_ipv6_identity_events(conn, minutes=5):
+def detect_recent_hostwatch_ipv6_identity_events(conn, minutes=5, networks=None):
     """Detect strong non-link-local IPv6 ownership conflicts."""
+    if networks is not None:
+        log(
+            '[IDENTITY] IPv6 identity detection skipped: '
+            'cannot map IPv6 observations to selected IPv4 scope'
+        )
+        return 0
+
     if not os.path.exists(HOSTWATCH_DB):
         return 0
 
@@ -6331,9 +6525,17 @@ def detect_recent_hostwatch_ipv6_identity_events(conn, minutes=5):
 def update_status_only():
     """Quick online/offline status update from Hostwatch DB"""
     log("Quick status update (hostwatch DB)")
+    config = load_config()
+
+    networks, error = resolve_monitored_networks(config)
+    if error:
+        log(f"ERROR: Refusing to scan: {error}")
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 2
+
     init_db()
 
-    devices = get_hostwatch_devices()
+    devices = get_hostwatch_devices(networks)
     if not devices:
         log("No data from Hostwatch DB")
         print("ERROR: No hostwatch data")
@@ -6341,8 +6543,13 @@ def update_status_only():
 
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    previously_active = {r[0] for r in cursor.execute("SELECT mac FROM devices WHERE is_active = 1")}
-    cursor.execute("UPDATE devices SET is_active = 0")
+    in_scope_macs = scoped_device_macs(conn, networks)
+    previously_active = {
+        r[0] for r in cursor.execute("SELECT mac FROM devices WHERE is_active = 1")
+        if r[0] in in_scope_macs
+    }
+    for mac in in_scope_macs:
+        cursor.execute("UPDATE devices SET is_active = 0 WHERE mac = ?", (mac,))
     for d in devices:
         if is_device_active(d.get('last_seen', ''), d.get('ip', ''), d['mac'] in previously_active):
             cursor.execute(
@@ -6351,8 +6558,13 @@ def update_status_only():
             )
 
     conn.commit()
-    online = conn.execute("SELECT COUNT(*) FROM devices WHERE is_active = 1").fetchone()[0]
-    total = conn.execute("SELECT COUNT(*) FROM devices").fetchone()[0]
+    online = sum(
+        1 for (mac,) in conn.execute(
+            "SELECT mac FROM devices WHERE is_active = 1"
+        ).fetchall()
+        if mac in in_scope_macs
+    )
+    total = len(in_scope_macs)
     conn.close()
 
     log(f"Status: {online}/{total} online")
@@ -6486,41 +6698,42 @@ def apply_hostname_provenance(
     return device
 
 
-def prime_hostwatch_lan_visibility():
-    """Prime Hostwatch visibility for quiet devices on the LAN."""
-    try:
-        root = ET.parse('/conf/config.xml').getroot()
-        lan_ip = (root.findtext('./interfaces/lan/ipaddr') or '').strip()
-        lan_subnet = (root.findtext('./interfaces/lan/subnet') or '').strip()
+def prime_selected_interface_visibility(networks):
+    """Prime Hostwatch visibility for quiet devices on selected subnets.
 
-        local_address = ipaddress.ip_address(lan_ip)
-        network = ipaddress.ip_network(
-            f'{lan_ip}/{lan_subnet}',
-            strict=False
-        )
+    Each resolved monitored subnet is probed with a bounded single-ICMP pass
+    so Hostwatch can observe otherwise-quiet devices before Device Monitor
+    reads the Hostwatch database. Probing is strictly limited to the resolved
+    selected subnets; the LAN is never primed unless explicitly selected.
+    """
+    if not networks:
+        return
 
-        if local_address.version != 4 or network.version != 4:
-            log("[DISCOVERY] LAN visibility priming skipped: LAN is not IPv4")
-            return
+    all_targets = []
+    for net in networks:
+        network = net['network']
+        if network.version != 4:
+            continue
 
         if network.prefixlen < 24:
             log(
-                "[DISCOVERY] LAN visibility priming skipped: "
+                "[DISCOVERY] Visibility priming skipped: "
                 f"{network} is larger than /24"
             )
-            return
+            continue
 
-    except (OSError, ET.ParseError, ValueError):
-        log("[DISCOVERY] LAN visibility priming skipped: invalid LAN configuration")
-        return
+        try:
+            local_address = ipaddress.ip_address(net['ip'])
+        except ValueError:
+            continue
 
-    targets = [
-        str(address)
-        for address in network.hosts()
-        if address != local_address
-    ]
+        all_targets.extend(
+            str(address)
+            for address in network.hosts()
+            if address != local_address
+        )
 
-    if not targets:
+    if not all_targets:
         return
 
     def probe(address):
@@ -6538,15 +6751,15 @@ def prime_hostwatch_lan_visibility():
     try:
         with ThreadPoolExecutor(max_workers=32) as executor:
             responded = sum(
-                1 for result in executor.map(probe, targets) if result
+                1 for result in executor.map(probe, all_targets) if result
             )
     except Exception:
-        log("[DISCOVERY] LAN visibility priming failed")
+        log("[DISCOVERY] Visibility priming failed")
         return
 
     log(
-        "[DISCOVERY] LAN visibility priming complete: "
-        f"{len(targets)} probed, {responded} responded"
+        "[DISCOVERY] Visibility priming complete: "
+        f"{len(all_targets)} probed, {responded} responded"
     )
 
     time.sleep(2)
@@ -6555,6 +6768,13 @@ def full_scan():
     """Full scan from OPNsense Hostwatch DB with DHCP labels"""
     log("Starting full scan from Hostwatch DB...")
     config = load_config()
+
+    networks, error = resolve_monitored_networks(config)
+    if error:
+        log(f"ERROR: Refusing to scan: {error}")
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 2
+
     init_db()
 
     capabilities = detect_source_capabilities()
@@ -6566,10 +6786,10 @@ def full_scan():
         f'Dnsmasq={capabilities["dnsmasq"]["configured"]}'
     )
 
-    prime_hostwatch_lan_visibility()
+    prime_selected_interface_visibility(networks)
 
     # 1. Data z hostwatch
-    devices = get_hostwatch_devices()
+    devices = get_hostwatch_devices(networks)
     if not devices:
         log("ERROR: No data from Hostwatch DB")
         return 1
@@ -6593,8 +6813,17 @@ def full_scan():
     new_devices = []
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     conn = sqlite3.connect(DB_FILE)
-    previously_active = {r[0] for r in conn.execute('SELECT mac FROM devices WHERE is_active = 1')}
-    conn.execute('UPDATE devices SET is_active = 0, notification_pending = 0')
+    in_scope_macs = scoped_device_macs(conn, networks)
+    previously_active = {
+        r[0] for r in conn.execute('SELECT mac FROM devices WHERE is_active = 1')
+        if r[0] in in_scope_macs
+    }
+    for mac in in_scope_macs:
+        conn.execute(
+            'UPDATE devices SET is_active = 0, notification_pending = 0 '
+            'WHERE mac = ?',
+            (mac,)
+        )
 
     for device in devices:
         mac = device['mac']
@@ -6777,10 +7006,12 @@ def full_scan():
         conn,
         minutes=5,
         kea_leases=kea_identity_leases,
+        networks=networks,
     )
     identity_events += detect_recent_hostwatch_ipv6_identity_events(
         conn,
         minutes=5,
+        networks=networks,
     )
 
     if identity_events:
@@ -6793,10 +7024,14 @@ def full_scan():
         identity_event_start_id,
     )
 
-    online = conn.execute(
-        "SELECT COUNT(*) FROM devices WHERE is_active = 1"
-    ).fetchone()[0]
-    total = conn.execute("SELECT COUNT(*) FROM devices").fetchone()[0]
+    scoped_macs = scoped_device_macs(conn, networks)
+    online = sum(
+        1 for (mac,) in conn.execute(
+            "SELECT mac FROM devices WHERE is_active = 1"
+        ).fetchall()
+        if mac in scoped_macs
+    )
+    total = len(scoped_macs)
     conn.close()
 
     if should_send_identity_email(config, new_high_identity_events):
@@ -6804,11 +7039,11 @@ def full_scan():
 
     # Infrastructure-service discovery is intentionally rate-limited.
     # It must not add DHCP/DNS probes to every normal monitoring cycle.
-    run_scheduled_service_discovery()
+    run_scheduled_service_discovery(networks=networks)
 
     # Process pending service alerts every full scan. Discovery is hourly, but
     # failed delivery retries and cursor housekeeping should not wait an hour.
-    process_service_alerts(config)
+    process_service_alerts(config, networks)
 
     # 4. Notifications filtered by VLAN
     log(f"New devices: {len(new_devices)}, Online: {online}/{total}")
@@ -6818,7 +7053,7 @@ def full_scan():
         email_devs    = [d for d in new_devices if not email_vlans   or d.get('vlan','') in email_vlans]
         webhook_devs  = [d for d in new_devices if not webhook_vlans or d.get('vlan','') in webhook_vlans]
         if email_devs and config.get('email_enabled') and config.get('email_to'):
-            send_email_via_php_api(email_devs)
+            send_email_via_php_api(email_devs, in_scope_macs)
 
             if config.get('targeted_nmap_enabled', True):
                 # Queue every newly detected emailed device for a targeted scan.
@@ -6837,7 +7072,7 @@ def full_scan():
                 log(f"[NMAP] Queued {len(email_devs)} new device(s) for targeted scanning")
 
         if webhook_devs and config.get('webhook_enabled') and config.get('webhook_url'):
-            send_webhook_via_php_api(webhook_devs)
+            send_webhook_via_php_api(webhook_devs, in_scope_macs)
 
     # Drain a bounded number of queued targeted scans each cycle.
     # Retry backoff after failures: 15m, 1h, 6h, 24h, then stop.
@@ -6852,18 +7087,26 @@ def full_scan():
 
         with sqlite3.connect(DB_FILE) as queue_conn:
             queue_conn.row_factory = sqlite3.Row
-            scan_rows = queue_conn.execute('''
+            cursor = queue_conn.execute('''
                 SELECT mac, ip, hostname, vendor, vlan, first_seen,
                        nmap_scan_attempts, nmap_next_attempt, nmap_last_error
                 FROM devices
                 WHERE nmap_scan_pending = 1
                   AND (nmap_next_attempt IS NULL OR nmap_next_attempt <= ?)
                 ORDER BY first_seen ASC
-                LIMIT ?
-            ''', (retry_now, nmap_max_per_cycle)).fetchall()
+            ''', (retry_now,))
 
-        for row in scan_rows:
-            device = dict(row)
+            # Select enough rows to obtain up to nmap_max_per_cycle in-scope
+            # scans. Out-of-scope queued rows are skipped and never occupy the
+            # in-scope batch limit.
+            in_scope_scan_rows = []
+            for row in cursor:
+                if ip_is_in_scope(row['ip'], networks):
+                    in_scope_scan_rows.append(dict(row))
+                    if len(in_scope_scan_rows) >= nmap_max_per_cycle:
+                        break
+
+        for device in in_scope_scan_rows:
             success, error = run_targeted_scan_with_history(device, config, 'automatic')
 
             if success:
@@ -6932,9 +7175,15 @@ def full_scan():
 
         if remaining_scans:
             log(f"[NMAP] {remaining_scans} targeted scan(s) remain queued")
-    # Do not leave stale pending flags between scans/channels.
+    # Do not leave stale pending flags between scans/channels. Scope strictly
+    # so out-of-scope rows are never touched.
     with sqlite3.connect(DB_FILE) as cleanup_conn:
-        cleanup_conn.execute('UPDATE devices SET notification_pending = 0')
+        cleanup_macs = scoped_device_macs(cleanup_conn, networks)
+        for mac in cleanup_macs:
+            cleanup_conn.execute(
+                'UPDATE devices SET notification_pending = 0 WHERE mac = ?',
+                (mac,)
+            )
 
     return 0
 
@@ -6945,6 +7194,12 @@ def manual_targeted_scan(mac):
 
     if not re.fullmatch(r'(?:[0-9a-f]{2}:){5}[0-9a-f]{2}', mac):
         print(f"ERROR: Invalid MAC address: {mac}", file=sys.stderr)
+        return 2
+
+    config = load_config()
+    networks, error = resolve_monitored_networks(config)
+    if error:
+        print(f"ERROR: Refusing targeted scan: {error}", file=sys.stderr)
         return 2
 
     init_db()
@@ -6965,7 +7220,13 @@ def manual_targeted_scan(mac):
         return 3
 
     device = dict(row)
-    config = load_config()
+    if not ip_is_in_scope(device.get('ip'), networks):
+        print(
+            f"ERROR: Device {mac} ({device.get('ip')}) is outside the "
+            f"selected monitored interfaces",
+            file=sys.stderr,
+        )
+        return 4
 
     success, error = run_targeted_scan_with_history(device, config, 'manual')
 
@@ -6975,6 +7236,26 @@ def manual_targeted_scan(mac):
 
     print(f"ERROR: {error or 'Targeted Nmap scan failed'}", file=sys.stderr)
     return 1
+
+
+def list_targets():
+    """Resolve and print configured monitored interfaces, then exit.
+
+    This mode performs no ping, reads no Hostwatch data and opens no
+    Device Monitor database.
+    """
+    config = load_config()
+    networks, error = resolve_monitored_networks(config)
+    if error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 2
+
+    for net in networks:
+        print(
+            f"{net['name']}: description={net['description']} "
+            f"device={net['device']} subnet={net['network']}"
+        )
+    return 0
 
 
 def main():
@@ -6989,6 +7270,7 @@ Examples:
   %(prog)s                    # Full scan (default)
   %(prog)s --update-only      # Quick status update (hostwatch DB)
   %(prog)s --scan-mac MAC     # Targeted Nmap scan for one existing device
+  %(prog)s --list-targets     # Print resolved monitored interfaces
   %(prog)s --verbose          # Full scan with verbose output
   %(prog)s --help             # Show this help
         '''
@@ -7017,6 +7299,12 @@ Examples:
         action='store_true',
         help='Discover infrastructure services such as DHCP servers'
     )
+
+    parser.add_argument(
+        '--list-targets',
+        action='store_true',
+        help='Print resolved monitored interfaces and exit (no scanning)'
+    )
     args = parser.parse_args()
 
     # Verbose mode
@@ -7024,13 +7312,22 @@ Examples:
     if args.verbose:
         DEBUG_LOGGING = True
     if args.discover_services:
-        services = discover_infrastructure_services()
+        config = load_config()
+        networks, error = resolve_monitored_networks(config)
+        if error:
+            print(f"ERROR: {error}", file=sys.stderr)
+            return 2
+
+        services = discover_infrastructure_services(networks)
 
         print(json.dumps({
             'result': 'ok',
             'services': services
         }))
         return 0
+
+    if args.list_targets:
+        return list_targets()
 
     try:
         # Dispatch according to mode

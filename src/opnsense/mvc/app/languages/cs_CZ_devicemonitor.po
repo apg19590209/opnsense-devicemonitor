@@ -235,6 +235,22 @@ msgstr "sekund"
 msgid "Seconds between scans (60-3600)"
 msgstr "Sekund mezi skeny (60-3600)"
 
+#: settings.volt - tab 3: popisek sledovaných rozhraní
+msgid "Monitored Interfaces"
+msgstr "Sledovaná rozhraní"
+
+#: settings.volt - tab 3: nápověda ke sledovaným rozhraním
+msgid "Only devices on selected interfaces are scanned. With no selection, scanning is refused."
+msgstr "Skenují se pouze zařízení na vybraných rozhraních. Bez výběru je skenování odmítnuto."
+
+#: settings.volt - tab 3: fail-closed varování bez výběru rozhraní
+msgid "Monitoring is enabled but no interface is selected. Scans will be refused."
+msgstr "Monitorování je zapnuto, ale není vybráno žádné rozhraní. Skeny budou odmítnuty."
+
+#: settings.volt - tab 3: zobrazeno, když nejsou žádná povolená IPv4 rozhraní
+msgid "No enabled IPv4 interfaces found"
+msgstr "Nenalezena žádná povolená IPv4 rozhraní"
+
 #: settings.volt - tab 4: popis pluginu
 msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
 msgstr "Plugin pro OPNsense pro sledování síťových zařízení, konfliktů IP a MAC adres, zjišťování infrastrukturních služeb, provádění cílených bezpečnostních skenů a odesílání konfigurovatelných upozornění s využitím nativních dat hostwatch."

@@ -234,6 +234,22 @@ msgstr "seconds"
 msgid "Seconds between scans (60-3600)"
 msgstr "Seconds between scans (60-3600)"
 
+#: settings.volt - tab 3: monitored interfaces label
+msgid "Monitored Interfaces"
+msgstr "Monitored Interfaces"
+
+#: settings.volt - tab 3: monitored interfaces help
+msgid "Only devices on selected interfaces are scanned. With no selection, scanning is refused."
+msgstr "Only devices on selected interfaces are scanned. With no selection, scanning is refused."
+
+#: settings.volt - tab 3: monitored interfaces fail-closed warning
+msgid "Monitoring is enabled but no interface is selected. Scans will be refused."
+msgstr "Monitoring is enabled but no interface is selected. Scans will be refused."
+
+#: settings.volt - tab 3: shown when no enabled IPv4 interfaces
+msgid "No enabled IPv4 interfaces found"
+msgstr "No enabled IPv4 interfaces found"
+
 #: settings.volt - tab 4: plugin description
 msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
 msgstr "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."

@@ -1,29 +1,43 @@
+import builtins
 import importlib.util
 import inspect
+import ipaddress
 import subprocess
+from pathlib import Path
 
-p='src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py'
-s=importlib.util.spec_from_file_location('dm',p)
-m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
-
-
-class Root:
-    def __init__(self, ip='192.168.20.254', subnet='24'):
-        self.values = {
-            './interfaces/lan/ipaddr': ip,
-            './interfaces/lan/subnet': subnet,
-        }
-
-    def findtext(self, path):
-        return self.values.get(path)
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE = ROOT / "src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py"
+DEFAULTS = ROOT / "src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"
 
 
-class Tree:
-    def __init__(self, root):
-        self.root = root
+def load_module():
+    real_open = builtins.open
 
-    def getroot(self):
-        return self.root
+    def test_open(path, *args, **kwargs):
+        if str(path) == "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json":
+            path = DEFAULTS
+        return real_open(path, *args, **kwargs)
+
+    spec = importlib.util.spec_from_file_location("dm_visibility_test", SOURCE)
+    module = importlib.util.module_from_spec(spec)
+    builtins.open = test_open
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        builtins.open = real_open
+    module.log = lambda message: None
+    return module
+
+
+def net(ip, prefix):
+    return {
+        "name": "opt1",
+        "description": "DMTEST",
+        "device": "vlan0.50",
+        "ip": ip,
+        "subnet": str(prefix),
+        "network": ipaddress.ip_network(f"{ip}/{prefix}", strict=False),
+    }
 
 
 class Result:
@@ -47,79 +61,61 @@ class Executor:
         return [func(value) for value in values]
 
 
-orig_parse = m.ET.parse
+m = load_module()
+
 orig_run = m.subprocess.run
 orig_executor = m.ThreadPoolExecutor
 orig_sleep = m.time.sleep
-orig_log = m.log
 
 try:
     m.ThreadPoolExecutor = Executor
     m.time.sleep = lambda seconds: None
-    m.log = lambda message: None
 
-    # Valid /24: all usable hosts except OPNsense itself are probed.
+    # Selected /24 (opt1): every usable host except the interface IP is probed.
     calls = []
-    m.ET.parse = lambda path: Tree(Root(subnet='24'))
-    m.subprocess.run = lambda args, **kwargs: (
-        calls.append((args, kwargs)) or Result(0)
-    )
-
-    m.prime_hostwatch_lan_visibility()
+    m.subprocess.run = lambda args, **kwargs: (calls.append((args, kwargs)) or Result(0))
+    m.prime_selected_interface_visibility([net("192.168.50.1", 24)])
 
     addresses = [call[0][4] for call in calls]
     assert len(addresses) == 253
-    assert '192.168.20.254' not in addresses
-    assert '192.168.20.1' in addresses
-    assert '192.168.20.253' in addresses
+    assert "192.168.50.1" not in addresses
+    assert "192.168.50.2" in addresses
+    assert "192.168.50.254" in addresses
+    assert not any(a.startswith("192.168.20.") for a in addresses)
     assert Executor.workers == 32
 
     for args, kwargs in calls:
-        assert args[:3] == ['/sbin/ping', '-n', '-c']
+        assert args[:3] == ["/sbin/ping", "-n", "-c"]
         assert args[4]
-        assert kwargs['timeout'] == 2
-        assert kwargs['check'] is False
-        assert kwargs['stdout'] is subprocess.DEVNULL
-        assert kwargs['stderr'] is subprocess.DEVNULL
+        assert kwargs["timeout"] == 2
+        assert kwargs["check"] is False
+        assert kwargs["stdout"] is subprocess.DEVNULL
+        assert kwargs["stderr"] is subprocess.DEVNULL
 
-    # Smaller network such as /25 is allowed.
+    # Smaller network such as /25 is allowed (interface ip .254 -> .129..253).
     calls = []
-    m.ET.parse = lambda path: Tree(Root(subnet='25'))
-    m.subprocess.run = lambda args, **kwargs: (
-        calls.append(args[4]) or Result(0)
-    )
-
-    m.prime_hostwatch_lan_visibility()
+    m.subprocess.run = lambda args, **kwargs: (calls.append(args[4]) or Result(0))
+    m.prime_selected_interface_visibility([net("192.168.50.254", 25)])
 
     assert len(calls) == 125
-    assert '192.168.20.254' not in calls
-    assert '192.168.20.129' in calls
-    assert '192.168.20.253' in calls
+    assert "192.168.50.129" in calls
+    assert "192.168.50.253" in calls
+    assert "192.168.50.254" not in calls
+    assert not any(a.startswith("192.168.20.") for a in calls)
 
-    # Networks larger than /24 are rejected.
+    # Networks larger than /24 are rejected (no probe).
     calls = []
-    m.ET.parse = lambda path: Tree(Root(subnet='23'))
-    m.subprocess.run = lambda *args, **kwargs: (
-        calls.append(True) or Result(0)
-    )
-
-    m.prime_hostwatch_lan_visibility()
+    m.subprocess.run = lambda *args, **kwargs: (calls.append(True) or Result(0))
+    m.prime_selected_interface_visibility([net("192.168.50.1", 23)])
     assert calls == []
 
-    # Malformed LAN configuration fails soft.
-    m.ET.parse = lambda path: Tree(Root(ip='not-an-ip', subnet='24'))
-    m.subprocess.run = lambda *args, **kwargs: (
-        (_ for _ in ()).throw(Exception('ping should not run'))
-    )
+    # Malformed interface IP fails soft (no probe).
+    bad_ip = dict(net("192.168.50.1", 24), ip="not-an-ip")
+    m.subprocess.run = lambda *args, **kwargs: (_ for _ in ()).throw(Exception("ping should not run"))
+    m.prime_selected_interface_visibility([bad_ip])
 
-    m.prime_hostwatch_lan_visibility()
-
-    # Missing/unreadable config fails soft.
-    def missing_config(path):
-        raise OSError('missing config')
-
-    m.ET.parse = missing_config
-    m.prime_hostwatch_lan_visibility()
+    # Empty selection is a no-op.
+    m.prime_selected_interface_visibility([])
 
     # Individual ping timeout/failure must not abort the pass.
     seen = []
@@ -127,54 +123,42 @@ try:
     def mixed_ping(args, **kwargs):
         address = args[4]
         seen.append(address)
-
-        if address == '192.168.20.1':
-            raise subprocess.TimeoutExpired('ping', 2)
-
-        if address == '192.168.20.2':
+        if address == "192.168.50.1":
+            raise subprocess.TimeoutExpired("ping", 2)
+        if address == "192.168.50.2":
             return Result(1)
-
         return Result(0)
 
-    m.ET.parse = lambda path: Tree(Root(subnet='25'))
+    # /25 target set excludes .1/.2.
     m.subprocess.run = mixed_ping
-
-    m.prime_hostwatch_lan_visibility()
-
-    assert '192.168.20.1' not in seen
+    m.prime_selected_interface_visibility([net("192.168.50.254", 25)])
+    assert "192.168.50.1" not in seen
     assert len(seen) == 125
 
-    # Use a /24 containing .1/.2 for timeout/failure coverage.
+    # /24 target set includes .1/.2.
     seen = []
-    m.ET.parse = lambda path: Tree(
-        Root(ip='192.168.20.254', subnet='24')
-    )
     m.subprocess.run = mixed_ping
-
-    m.prime_hostwatch_lan_visibility()
-
-    assert '192.168.20.1' in seen
-    assert '192.168.20.2' in seen
+    m.prime_selected_interface_visibility([net("192.168.50.254", 24)])
+    assert "192.168.50.1" in seen
+    assert "192.168.50.2" in seen
     assert len(seen) == 253
 
     # Full scan must prime Hostwatch before reading Hostwatch.
     full_source = inspect.getsource(m.full_scan)
     assert (
-        full_source.index('prime_hostwatch_lan_visibility()')
+        full_source.index("prime_selected_interface_visibility(networks)")
         <
-        full_source.index('devices = get_hostwatch_devices()')
+        full_source.index("devices = get_hostwatch_devices(networks)")
     )
 
-    # Quick update mode must remain passive and not run LAN priming.
+    # Quick update mode must remain passive and not run visibility priming.
     update_source = inspect.getsource(m.update_status_only)
-    assert 'prime_hostwatch_lan_visibility' not in update_source
+    assert "prime_selected_interface_visibility" not in update_source
 
 finally:
-    m.ET.parse = orig_parse
     m.subprocess.run = orig_run
     m.ThreadPoolExecutor = orig_executor
     m.time.sleep = orig_sleep
-    m.log = orig_log
 
 
-print('HOSTWATCH_LAN_VISIBILITY_REGRESSION=PASS')
+print("HOSTWATCH_LAN_VISIBILITY_REGRESSION=PASS")

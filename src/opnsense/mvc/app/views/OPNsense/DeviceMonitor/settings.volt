@@ -235,6 +235,18 @@
                             </td>
                         </tr>
                         <tr>
+                            <td style="vertical-align:top;">
+                                <strong>{{ lang._('Monitored Interfaces') }}</strong>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ lang._('Only devices on selected interfaces are scanned. With no selection, scanning is refused.') }}</small>
+                                <div style="margin-top:6px;border:1px solid #444;border-radius:4px;padding:8px;max-width:450px;max-height:200px;overflow-y:auto;" id="monitored-interface-list"></div>
+                                <div id="monitored-interface-warning" class="text-danger" style="margin-top:6px;display:none;">
+                                    <i class="fa fa-exclamation-triangle"></i> {{ lang._('Monitoring is enabled but no interface is selected. Scans will be refused.') }}
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
                             <td><strong>{{ lang._('Scan Interval') }}</strong></td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:10px;">
@@ -450,6 +462,7 @@ $().ready(function() {
     };
 
     var allVlanNames = {};
+    var monitoredInterfaces = {};
 
     function showToast(msg, type) {
         var bg = type==='success'?'#4CAF50':(type==='error'?'#f44336':'#2196F3');
@@ -492,6 +505,42 @@ $().ready(function() {
         var sel=[], total=$('#'+containerId+' .notif-vlan-cb').length;
         $('#'+containerId+' .notif-vlan-cb:checked').each(function(){ sel.push($(this).val()); });
         return (sel.length===total) ? '' : sel.join(',');
+    }
+
+    function buildMonitoredInterfaceList(selected) {
+        var $c = $('#monitored-interface-list').empty();
+        var names = Object.keys(monitoredInterfaces).sort();
+        if (!names.length) {
+            $c.html('<em style="color:#888;font-size:12px;">{{ lang._('No enabled IPv4 interfaces found') }}</em>');
+            updateMonitoredWarning();
+            return;
+        }
+        var sel = selected ? selected.split(',').map(function(v){return v.trim();}).filter(Boolean) : [];
+        names.forEach(function(name) {
+            var it = monitoredInterfaces[name] || {};
+            var parts = [name];
+            if (it.description && it.description !== name) parts.push(it.description);
+            if (it.device) parts.push(it.device);
+            if (it.ipaddr) parts.push(it.ipaddr + '/' + (it.subnet || ''));
+            var label = parts.join(' \u2013 ');
+            $c.append($('<label>').css({display:'block',margin:'3px 0',fontWeight:'normal',cursor:'pointer'}).append(
+                $('<input type="checkbox" class="monitored-iface-cb">').val(name).prop('checked', sel.indexOf(name) !== -1),
+                $('<span>').css('margin-left','8px').text(label)
+            ));
+        });
+        updateMonitoredWarning();
+    }
+
+    function getSelectedMonitoredInterfaces() {
+        var sel = [];
+        $('#monitored-interface-list .monitored-iface-cb:checked').each(function(){ sel.push($(this).val()); });
+        return sel.join(',');
+    }
+
+    function updateMonitoredWarning() {
+        var enabled = $('#enabled').is(':checked');
+        var selected = $('#monitored-interface-list .monitored-iface-cb:checked').length > 0;
+        $('#monitored-interface-warning').toggle(enabled && !selected);
     }
 
     function loadConfig() {
@@ -550,6 +599,8 @@ $().ready(function() {
             $('#webhook_url').val(d.webhook_url||'');
             buildVlanCheckList('email-vlan-list',   d.email_vlans   || '');
             buildVlanCheckList('webhook-vlan-list', d.webhook_vlans || '');
+            buildMonitoredInterfaceList(d.monitored_interfaces || '');
+            updateMonitoredWarning();
             toggleEmailConfig();
             toggleServiceEmailOptions();
             toggleEmailMethod();
@@ -590,6 +641,8 @@ $().ready(function() {
     $('#webhook_enabled').change(toggleWebhookConfig);
     $('#adguard_rewrite_enabled').change(toggleAdGuardConfig);
     $('#pihole_enabled').change(togglePiHoleConfig);
+    $('#enabled').change(updateMonitoredWarning);
+    $('#monitored-interface-list').on('change', '.monitored-iface-cb', updateMonitoredWarning);
 
     function collectConfigData() {
         return {
@@ -619,6 +672,7 @@ $().ready(function() {
             webhook_enabled:  $('#webhook_enabled').is(':checked')?'1':'0',
             webhook_url:      $('#webhook_url').val(),
             webhook_vlans:    getSelectedVlans('webhook-vlan-list'),
+            monitored_interfaces: getSelectedMonitoredInterfaces(),
             scan_interval: $('#scan_interval').val(),
             targeted_nmap_enabled: $('#targeted_nmap_enabled').is(':checked')?'1':'0',
             nmap_top_ports: $('#nmap_top_ports').val(),
@@ -687,8 +741,19 @@ $().ready(function() {
 
     // Load interfaces then config
     $.ajax({ url:'/api/devicemonitor/config/getinterfaces', type:'GET',
-        success:function(data){ allVlanNames=data||{}; loadConfig(); },
-        error:function(){ loadConfig(); }
+        success:function(data){
+            allVlanNames = data || {};
+            $.ajax({ url:'/api/devicemonitor/config/getmonitoredinterfaces', type:'GET',
+                success:function(monData){ monitoredInterfaces = monData || {}; loadConfig(); },
+                error:function(){ loadConfig(); }
+            });
+        },
+        error:function(){
+            $.ajax({ url:'/api/devicemonitor/config/getmonitoredinterfaces', type:'GET',
+                success:function(monData){ monitoredInterfaces = monData || {}; loadConfig(); },
+                error:function(){ loadConfig(); }
+            });
+        }
     });
 });
 </script>

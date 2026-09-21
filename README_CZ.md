@@ -38,6 +38,13 @@ Plugin automaticky sleduje síť a upozorňuje na:
 
 ## Historie verzí
 
+### v2.9 (září 2026) — Fail-closed scoping sledovaných rozhraní
+
+- Přidává **Sledovaná rozhraní**: detekce, priming, čítače stavů, upozornění a cílené skeny jsou omezeny na explicitně vybraná rozhraní; prázdný výběr fail-closed odmítne skenování.
+- Nahrazuje LAN-only Hostwatch priming primingem vybraných rozhraní/podsítí.
+- Zabraňuje hladovění cílených skenů: fronta mimo rozsah už nespotřebovává limit dávky v rozsahu.
+- Opravuje čítače v hlavičce stránky Devices, aby **Total Devices** a **Online** odpovídaly filtrovaným řádkům.
+
 ### v2.8 (září 2026) — Infrastrukturní služby a vylepšení identity zařízení
 
 - Přidává samostatný inventář **Infrastructure Services** s ověřenou detekcí služeb DHCP, DNS, NTP, SSH, Web/Admin, SMB/NFS, vzdáleného přístupu, SNMP, adresářových/autentizačních služeb a VPN.
@@ -260,6 +267,7 @@ Také odstraněno rozbité `configctl webgui restart` a `service php-fpm restart
 ### 🎯 Základní funkce
 
 ✅ **Detekce zařízení** přes OPNsense hostwatch SQLite databázi (`/var/db/hostwatch/hosts.db`)
+✅ **Sledovaná rozhraní** — fail-closed omezení na vybraná rozhraní/VLAN
 ✅ **Emailová upozornění** — profesionální HTML emaily s inline CSS
 ✅ **Webhook upozornění** — ntfy.sh, Discord, vlastní HTTP POST endpointy
 ✅ **Historie zařízení** — časy první/poslední detekce
@@ -352,7 +360,8 @@ Jdi na: **Services → DeviceMonitor → Settings**
 
 | Nastavení | Popis |
 |-----------|-------|
-| Enable Device Monitor | Zapnout/vypnout skenování |
+| Enable Device Monitor | Zapnout/vypnout skenování (daemon zůstává vypnutý, dokud ho nezapnete) |
+| Monitored Interfaces | Rozhraní, jejichž zařízení se skenují; prázdný výběr fail-closed odmítne skenování |
 | Scan Interval | Jak často skenovat (5–30 minut) |
 
 ### Emailová upozornění

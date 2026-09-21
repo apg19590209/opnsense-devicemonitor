@@ -48,6 +48,57 @@ class ConfigController extends ApiControllerBase
         return $result;
     }
 
+    public function getmonitoredinterfacesAction()
+    {
+        $result = [];
+        try {
+            $xml = @simplexml_load_file('/conf/config.xml');
+            if ($xml && isset($xml->interfaces)) {
+                foreach ($xml->interfaces->children() as $ifName => $ifData) {
+                    $name = (string)$ifName;
+                    $enable = trim((string)($ifData->enable ?? ''));
+                    $device = trim((string)($ifData->if ?? ''));
+                    $ipaddr = trim((string)($ifData->ipaddr ?? ''));
+                    $subnet = trim((string)($ifData->subnet ?? ''));
+                    $descr = trim((string)($ifData->descr ?? ''));
+
+                    if ($enable !== '1' || $device === '') {
+                        continue;
+                    }
+
+                    $valid = (
+                        filter_var($ipaddr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false
+                        && ctype_digit($subnet) && $subnet !== ''
+                        && (int)$subnet >= 1 && (int)$subnet <= 32
+                    );
+                    if (!$valid) {
+                        continue;
+                    }
+
+                    $result[$name] = [
+                        'name' => $name,
+                        'description' => $descr !== '' ? $descr : strtoupper($name),
+                        'device' => $device,
+                        'ipaddr' => $ipaddr,
+                        'subnet' => $subnet,
+                    ];
+                }
+            }
+        } catch (\Exception $e) {}
+        return $result;
+    }
+    private function ipv4SubnetRange($ip, $prefix)
+    {
+        $ipLong = ip2long($ip);
+        if ($ipLong === false || $prefix < 1 || $prefix > 32) {
+            return null;
+        }
+        $mask = (-1 << (32 - $prefix)) & 0xFFFFFFFF;
+        $start = $ipLong & $mask;
+        $end = $start | (~$mask & 0xFFFFFFFF);
+        return [$start, $end];
+    }
+
     public function setAction()
     {
         if (!$this->request->isPost()) {
@@ -86,6 +137,7 @@ class ConfigController extends ApiControllerBase
         $scan_interval = $this->request->getPost('scan_interval', 'int', 300);
         $email_vlans = $this->request->getPost('email_vlans', 'string', '');
         $webhook_vlans = $this->request->getPost('webhook_vlans', 'string', '');
+        $monitored_interfaces_raw = trim($this->request->getPost('monitored_interfaces', 'string', ''));
 
         $targeted_nmap_enabled = $this->request->getPost('targeted_nmap_enabled', 'string', '1');
         $nmap_top_ports = (int)$this->request->getPost('nmap_top_ports', 'int', 100);
@@ -247,6 +299,67 @@ class ConfigController extends ApiControllerBase
             return ['result' => 'failed', 'message' => 'Nmap scans per cycle must be between 1 and 10'];
         }
 
+        $monitored_interfaces = [];
+        $monitored_ranges = [];
+        if ($monitored_interfaces_raw !== '') {
+            $names = array_values(array_unique(
+                array_filter(array_map('trim', explode(',', $monitored_interfaces_raw)), 'strlen')
+            ));
+
+            $xml = @simplexml_load_file('/conf/config.xml');
+            if (!$xml || !isset($xml->interfaces)) {
+                return ['result' => 'failed', 'message' => 'Cannot read /conf/config.xml'];
+            }
+
+            foreach ($names as $name) {
+                if (!preg_match('/^[A-Za-z0-9_]+$/', $name)) {
+                    return ['result' => 'failed', 'message' => 'Monitored interface name is invalid'];
+                }
+
+                $ifData = $xml->interfaces->{$name} ?? null;
+                if (!$ifData) {
+                    return ['result' => 'failed', 'message' => 'Monitored interface "' . $name . '" does not exist'];
+                }
+                if (trim((string)($ifData->enable ?? '')) !== '1') {
+                    return ['result' => 'failed', 'message' => 'Monitored interface "' . $name . '" is not enabled'];
+                }
+                $device = trim((string)($ifData->if ?? ''));
+                if ($device === '') {
+                    return ['result' => 'failed', 'message' => 'Monitored interface "' . $name . '" has no device'];
+                }
+                $ipaddr = trim((string)($ifData->ipaddr ?? ''));
+                $subnet = trim((string)($ifData->subnet ?? ''));
+                if (filter_var($ipaddr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
+                    return ['result' => 'failed', 'message' => 'Monitored interface "' . $name . '" has no valid static IPv4 address'];
+                }
+                if (
+                    $subnet === '' ||
+                    !ctype_digit($subnet) ||
+                    (int)$subnet < 1 ||
+                    (int)$subnet > 32
+                ) {
+                    return ['result' => 'failed', 'message' => 'Monitored interface "' . $name . '" subnet prefix must be between 1 and 32'];
+                }
+
+                $range = $this->ipv4SubnetRange($ipaddr, (int)$subnet);
+                if ($range === null) {
+                    return ['result' => 'failed', 'message' => 'Monitored interface "' . $name . '" has an invalid IPv4 subnet'];
+                }
+
+                foreach ($monitored_ranges as $existing) {
+                    if (!($range[1] < $existing[0] || $existing[1] < $range[0])) {
+                        return [
+                            'result' => 'failed',
+                            'message' => 'Monitored interfaces "' . $existing[2] . '" and "' . $name . '" overlap; select non-overlapping subnets only'
+                        ];
+                    }
+                }
+
+                $monitored_ranges[] = [$range[0], $range[1], $name];
+                $monitored_interfaces[] = $name;
+            }
+        }
+
         $config = $model->getConfig();
         $config['enabled'] = $enabled;
         $config['email_enabled'] = $email_enabled;
@@ -275,6 +388,7 @@ class ConfigController extends ApiControllerBase
         $config['scan_interval'] = (int)$scan_interval;
         $config['email_vlans'] = $email_vlans;
         $config['webhook_vlans'] = $webhook_vlans;
+        $config['monitored_interfaces'] = implode(',', $monitored_interfaces);
         $config['targeted_nmap_enabled'] = $targeted_nmap_enabled;
         $config['nmap_top_ports'] = $nmap_top_ports;
         $config['nmap_timing'] = $nmap_timing;

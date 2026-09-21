@@ -2,7 +2,7 @@
 
 ## Last updated
 
-20 September 2026
+21 September 2026
 
 ## Current version / branch / environment
 
@@ -58,6 +58,31 @@ Workflow state:
 - branch `v2.9-development`; worktree clean and synced with
   `origin/v2.9-development` before this documentation edit
 
+
+## Completed work — fail-closed monitored-interface scoping
+
+Completed 21 September 2026 (commit message: "Device Monitor: enforce fail-closed
+interface scoping").
+
+- **Fail-closed monitored-interface scoping**: new `monitored_interfaces` setting
+  (`defaults.json`, `ConfigController.php`), Settings UI with a fail-closed warning
+  (`settings.volt`), and `scan_network.py` scoping (`resolve_monitored_networks`,
+  `ip_is_in_scope`, `scoped_device_macs`, `get_hostwatch_devices(networks)`). An
+  empty selection is refused and there is no LAN fallback.
+- **Scoped status counters / identity events / notification cleanup / Nmap queue**
+  (`scan_network.py`), plus a starvation fix: out-of-scope queued scans no longer
+  consume the in-scope batch limit.
+- **Superseded LAN-only Hostwatch priming** with selected-interface/subnet priming
+  (`DECISIONS.md` Decision 25).
+- **Filtered Devices-page summary counters** (`devices.volt`) with CI coverage
+  (`tests/test_devices_page_summary.js`, `.github/workflows/ci.yml`).
+- **Documentation**: `docs/USER_MANUAL.md`, `README.md`, `README_CZ.md` and gettext
+  catalogues updated.
+- **Deployment**: `devices.volt` deployed to the OPNsense testbed (SHA-256
+  verified). Device Monitor daemon remains disabled/stopped; the live database was
+  not modified.
+- **Validation**: Node UI suite 9/9 PASS, PHP lint PASS, Python compile PASS, shell
+  syntax PASS, `git diff --check` PASS.
 
 ## Current objective
 

@@ -1,5 +1,6 @@
 import builtins
 import importlib.util
+import ipaddress
 import json
 import os
 import sqlite3
@@ -75,6 +76,17 @@ def alert_config(**overrides):
     return config
 
 
+def networks_fixture():
+    return [{
+        "name": "opt1",
+        "description": "DMTEST",
+        "device": "vlan0.50",
+        "ip": "192.168.50.1",
+        "subnet": "24",
+        "network": ipaddress.ip_network("192.168.50.0/24"),
+    }]
+
+
 def seed_alert_events(module):
     module.init_db()
 
@@ -99,7 +111,7 @@ def seed_alert_events(module):
             """,
             (
                 "aa:aa:aa:aa:aa:11",
-                "192.0.2.11",
+                "192.168.50.11",
                 "LAN",
                 "SSH",
                 22,
@@ -128,7 +140,7 @@ def seed_alert_events(module):
             """,
             (
                 "aa:aa:aa:aa:aa:12",
-                "192.0.2.12",
+                "192.168.50.12",
                 "LAN",
                 "DNS",
                 53,
@@ -148,6 +160,35 @@ def seed_alert_events(module):
 
         conn.execute(
             """
+            INSERT INTO device_services (
+                mac, ip, interface, service_type, port, protocol,
+                status, detection_method, confidence,
+                product, version, first_detected, last_verified
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "aa:aa:aa:aa:aa:13",
+                "192.168.20.10",
+                "LAN",
+                "SSH",
+                22,
+                "tcp",
+                "available",
+                "nmap_service",
+                "verified",
+                "Out-of-scope",
+                "1.0",
+                "2026-09-12 02:30:00",
+                "2026-09-12 02:30:00",
+            ),
+        )
+        out_of_scope_id = conn.execute(
+            "SELECT last_insert_rowid()"
+        ).fetchone()[0]
+
+        conn.execute(
+            """
             INSERT INTO device_activity_events (
                 mac, lifecycle_id, event_type, occurred_at,
                 old_value, new_value, details
@@ -161,7 +202,7 @@ def seed_alert_events(module):
                 "2026-09-12 03:00:00",
                 "available",
                 "degraded",
-                "DNS|192.0.2.12|53|udp|LAN|dns_query",
+                "DNS|192.168.50.12|53|udp|LAN|dns_query",
             ),
         )
         changed_id = conn.execute(
@@ -183,7 +224,7 @@ def seed_alert_events(module):
                 "2026-09-12 04:00:00",
                 "available",
                 "unavailable",
-                "DNS|192.0.2.12|53|udp|LAN|dns_query",
+                "DNS|192.168.50.12|53|udp|LAN|dns_query",
             ),
         )
         unavailable_id = conn.execute(
@@ -205,7 +246,7 @@ def seed_alert_events(module):
                 "2026-09-12 05:00:00",
                 "unavailable",
                 "available",
-                "DNS|192.0.2.12|53|udp|LAN|dns_query",
+                "DNS|192.168.50.12|53|udp|LAN|dns_query",
             ),
         )
         recovered_id = conn.execute(
@@ -217,6 +258,7 @@ def seed_alert_events(module):
     return {
         "discovered": discovered_id,
         "trusted": trusted_id,
+        "out_of_scope": out_of_scope_id,
         "changed": changed_id,
         "unavailable": unavailable_id,
         "recovered": recovered_id,
@@ -243,7 +285,7 @@ def test_reader_filtering_and_global_gates():
         ids = seed_alert_events(module)
 
         with closing(sqlite3.connect(module.DB_FILE)) as conn:
-            events = module.get_pending_service_alert_events(conn)
+            events = module.get_pending_service_alert_events(conn, networks_fixture())
 
         by_key = {
             (event["source"], event["record_id"]): event
@@ -256,6 +298,13 @@ def test_reader_filtering_and_global_gates():
 
         assert by_key[
             ("device_services", ids["trusted"])
+        ]["alert_eligible"] is True
+
+        assert by_key[
+            ("device_services", ids["out_of_scope"])
+        ]["in_scope"] is False
+        assert by_key[
+            ("device_services", ids["out_of_scope"])
         ]["alert_eligible"] is True
 
         for activity_id in (
@@ -279,6 +328,9 @@ def test_reader_filtering_and_global_gates():
         assert "SERVICE_UNAVAILABLE" in selected_types
         assert "SERVICE_AVAILABLE" in selected_types
         assert "SERVICE_CHANGED" not in selected_types
+        assert "192.168.20.10" not in [
+            event["ip"] for event in selected
+        ]
 
         for disabled_config in (
             alert_config(enabled=False),
@@ -365,7 +417,7 @@ def test_failure_retry_success_and_disabled_cursor_behavior():
         config = alert_config(service_email_recovered=False)
 
         module.send_service_alert_email = lambda events: False
-        assert module.process_service_alerts(config) is False
+        assert module.process_service_alerts(config, networks_fixture()) is False
 
         assert read_cursor(module) == (
             ids["discovered"],
@@ -375,10 +427,10 @@ def test_failure_retry_success_and_disabled_cursor_behavior():
 
         releases.clear()
         module.send_service_alert_email = lambda events: True
-        assert module.process_service_alerts(config) is True
+        assert module.process_service_alerts(config, networks_fixture()) is True
 
         assert read_cursor(module) == (
-            ids["trusted"],
+            ids["out_of_scope"],
             ids["recovered"],
         )
         assert releases == [lock_token]
@@ -400,12 +452,13 @@ def test_failure_retry_success_and_disabled_cursor_behavior():
         )
 
         assert module.process_service_alerts(
-            alert_config(service_email_enabled=False)
+            alert_config(service_email_enabled=False),
+            networks_fixture(),
         ) is True
 
         assert sends == []
         assert read_cursor(module) == (
-            ids["trusted"],
+            ids["out_of_scope"],
             ids["recovered"],
         )
 
@@ -460,9 +513,67 @@ def test_busy_lock_skips_without_processing():
 
     module.init_db = forbidden_init
 
-    assert module.process_service_alerts(alert_config()) is True
+    assert module.process_service_alerts(alert_config(), networks_fixture()) is True
 
     print("SERVICE_ALERT_BUSY_LOCK_SKIP=PASS")
+
+
+def test_out_of_scope_events_do_not_starve_in_scope_alerts():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.LOG_FILE = str(Path(tmp) / "devicemonitor.log")
+        module.init_db()
+
+        lock_token = object()
+        releases = []
+        module.acquire_service_alert_lock = lambda: lock_token
+        module.release_service_alert_lock = lambda value: releases.append(value)
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            conn.execute(
+                "UPDATE service_alert_state SET last_service_id = 0, "
+                "last_activity_event_id = 0 WHERE id = 1"
+            )
+            # id 1: in-scope, id 2: out-of-scope, id 3: in-scope (later).
+            for mac, ip in (
+                ("aa:aa:aa:aa:00:01", "192.168.50.11"),
+                ("aa:aa:aa:aa:00:02", "192.168.20.10"),
+                ("aa:aa:aa:aa:00:03", "192.168.50.12"),
+            ):
+                conn.execute(
+                    """
+                    INSERT INTO device_services
+                        (mac, ip, interface, service_type, port, protocol,
+                         status, detection_method, confidence, product, version,
+                         first_detected)
+                    VALUES (?, ?, 'VLAN50', 'SSH', 22, 'tcp', 'available',
+                            'nmap_service', 'verified', 'X', '1',
+                            '2026-01-01 00:00:00')
+                    """,
+                    (mac, ip),
+                )
+            conn.commit()
+
+        sends = []
+        module.send_service_alert_email = lambda events: (sends.append(events) or True)
+
+        assert module.process_service_alerts(alert_config(), networks_fixture()) is True
+
+        delivered_ips = sorted({e["ip"] for batch in sends for e in batch})
+        assert delivered_ips == ["192.168.50.11", "192.168.50.12"], delivered_ips
+        assert "192.168.20.10" not in delivered_ips
+
+        # Cursor advanced past the out-of-scope row (acknowledged/skipped).
+        assert read_cursor(module) == (3, 0), read_cursor(module)
+
+        # No re-delivery on the next cycle (delivered exactly once).
+        sends.clear()
+        assert module.process_service_alerts(alert_config(), networks_fixture()) is True
+        assert sends == [], sends
+
+    print("SERVICE_ALERT_NO_STARVATION=PASS")
 
 
 def main():
@@ -471,6 +582,7 @@ def main():
     test_failure_retry_success_and_disabled_cursor_behavior()
     test_real_nonblocking_lock()
     test_busy_lock_skips_without_processing()
+    test_out_of_scope_events_do_not_starve_in_scope_alerts()
     print("DM_BL003_SERVICE_ALERT_REGRESSION=PASS")
 
 

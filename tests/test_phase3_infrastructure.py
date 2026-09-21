@@ -37,6 +37,17 @@ def forbidden_auto_nmap(candidates):
     )
 
 
+def networks_fixture():
+    return [{
+        "name": "opt1",
+        "description": "DMTEST",
+        "device": "vlan0.50",
+        "ip": "192.168.50.1",
+        "subnet": "24",
+        "network": ipaddress.ip_network("192.168.50.0/24"),
+    }]
+
+
 def test_no_automatic_nmap():
     module = load_module()
 
@@ -49,15 +60,15 @@ def test_no_automatic_nmap():
         module._service_probe_candidates = (
             lambda conn, *args, **kwargs: {}
         )
-        module._phase3_nmap_rows = lambda conn: []
+        module._phase3_nmap_rows = lambda conn, networks: []
         module._discover_local_wireguard = (
-            lambda conn, candidates: []
+            lambda conn, candidates, networks: []
         )
         module._probe_phase3_nmap_identification = (
             forbidden_auto_nmap
         )
 
-        result = module.discover_phase3_services()
+        result = module.discover_phase3_services(networks_fixture())
 
         assert result == [], result
 
@@ -362,20 +373,25 @@ def test_active_service_lifecycle():
         module.DB_FILE = str(tmp_path / "devices.db")
         module.LOG_FILE = str(tmp_path / "devicemonitor.log")
 
-        test_ip = "192.168.254.250"
+        test_ip = "192.168.50.250"
+        out_of_scope_ip = "192.168.20.250"
 
         module._service_probe_candidates = (
             lambda conn, *args, **kwargs: {
                 test_ip: {
                     "mac": "02:00:00:00:00:10",
                     "interface": "TEST",
-                }
+                },
+                out_of_scope_ip: {
+                    "mac": "02:00:00:00:00:20",
+                    "interface": "LAN",
+                },
             }
         )
 
-        module._phase3_nmap_rows = lambda conn: []
+        module._phase3_nmap_rows = lambda conn, networks: []
         module._discover_local_wireguard = (
-            lambda conn, candidates: []
+            lambda conn, candidates, networks: []
         )
         module._probe_phase3_nmap_identification = (
             forbidden_auto_nmap
@@ -408,7 +424,7 @@ def test_active_service_lifecycle():
             success_runner
         )
 
-        module.discover_phase3_services()
+        module.discover_phase3_services(networks_fixture())
 
         with sqlite3.connect(module.DB_FILE) as conn:
             rows = conn.execute(
@@ -447,6 +463,14 @@ def test_active_service_lifecycle():
             for row in rows
         )
 
+        # The out-of-scope production candidate must never create a service row.
+        with sqlite3.connect(module.DB_FILE) as conn:
+            out_of_scope_count = conn.execute(
+                "SELECT COUNT(*) FROM device_services WHERE ip = ?",
+                (out_of_scope_ip,),
+            ).fetchone()[0]
+        assert out_of_scope_count == 0, out_of_scope_count
+
         first_verified = {
             (row[0], int(row[1]), row[2]): row[4]
             for row in rows
@@ -465,7 +489,7 @@ def test_active_service_lifecycle():
             ]
         )
 
-        module.discover_phase3_services()
+        module.discover_phase3_services(networks_fixture())
 
         with sqlite3.connect(module.DB_FILE) as conn:
             rows = conn.execute(
@@ -537,7 +561,7 @@ def test_active_service_lifecycle():
             success_runner
         )
 
-        module.discover_phase3_services()
+        module.discover_phase3_services(networks_fixture())
 
         with sqlite3.connect(module.DB_FILE) as conn:
             rows = conn.execute(

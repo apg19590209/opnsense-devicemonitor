@@ -638,3 +638,33 @@ Unbound host overrides are user-authored static DNS mappings already maintained
 locally in OPNsense, so they are a trustworthy native source. Reading them
 directly avoids network queries and keeps enrichment deterministic, while the
 generic provider framework isolates parsing from core selection logic.
+
+## 25. Discovery priming and scope follow the selected monitored interfaces
+
+### Decision
+
+This decision supersedes Decision 13 (Full scans may prime Hostwatch visibility
+for quiet LAN devices).
+
+A full scan may still perform a bounded IPv4 ICMP visibility priming pass before
+reading Hostwatch, but the priming target set is derived from the explicitly
+selected **Monitored Interfaces** (their configured IPv4 subnets), not the LAN.
+
+Monitored-interface scoping is fail-closed:
+
+- Discovery, priming, status counters, identity events, notification cleanup and
+  the targeted Nmap queue are all restricted to the selected interfaces' subnets.
+- An empty selection is refused: a full scan exits with an error and no LAN
+  fallback is performed.
+- Selected subnets must not overlap.
+
+Hostwatch remains authoritative for discovered device identity; `interface_name`
+is metadata only and is never an admission condition (a VLAN observation may be
+attributed to a parent physical interface such as `re0`).
+
+### Reason
+
+Device Monitor may observe arbitrary OPNsense interfaces and VLANs, not just the
+LAN. Deriving priming and admission scope from the explicitly selected interfaces
+keeps discovery deterministic and prevents observation, priming or scanning
+outside the intended scope.

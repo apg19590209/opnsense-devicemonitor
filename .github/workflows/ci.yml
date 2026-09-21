@@ -811,6 +811,11 @@ jobs:
           set -eu
           node tests/test_devices_page_grouping.js
 
+      - name: Validate devices page filtered summary counters
+        run: |
+          set -eu
+          node tests/test_devices_page_summary.js
+
       - name: Validate static selectpicker controls
         run: |
           set -eu

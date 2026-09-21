@@ -237,6 +237,38 @@ header.page-content-head {
 </style>
 
 <script>
+    // Pure filter/summary helpers live at script scope so the Devices page
+    // header counters and the rendered table share one source of truth and
+    // can be unit-tested without a DOM.
+    function applyDeviceFilters(rows, activeVlans, activeStatus) {
+        var vlans = activeVlans || [];
+        var status = activeStatus || '';
+
+        if (!rows || !rows.length) {
+            return [];
+        }
+
+        return rows.filter(function (r) {
+            var vlanOk = !vlans.length || vlans.indexOf(r.vlan) !== -1;
+            var statusOk = !status || r.status === status;
+            return vlanOk && statusOk;
+        });
+    }
+
+    function summarizeDevices(rows) {
+        var total = 0;
+        var online = 0;
+
+        (rows || []).forEach(function (r) {
+            total += 1;
+            if (r.status === 'online') {
+                online += 1;
+            }
+        });
+
+        return { total: total, online: online };
+    }
+
 $(document).ready(function() {
 
     var translations = {
@@ -272,11 +304,10 @@ $(document).ready(function() {
         setTimeout(function(){ $t.fadeOut(300,function(){ $t.remove(); }); },3000);
     }
 
-    function loadStats() {
-        $.ajax({url:'/api/devicemonitor/devices/stats',type:'GET',success:function(d){
-            $('#stat-total').text(d.total||0);
-            $('#stat-online').text(d.online||0);
-        }});
+    function updateSummary(rows) {
+        var summary = summarizeDevices(rows);
+        $('#stat-total').text(summary.total);
+        $('#stat-online').text(summary.online);
     }
 
     // VLAN multi-select dropdown
@@ -369,12 +400,7 @@ $(document).ready(function() {
 
     // Filtering
     function applyFilters() {
-        if (!allRows || !allRows.length) return;
-        var filtered = allRows.filter(function(r){
-            var vo = !activeVlans.length || activeVlans.indexOf(r.vlan) !== -1;
-            var so = !activeStatus || r.status === activeStatus;
-            return vo && so;
-        });
+        var filtered = applyDeviceFilters(allRows, activeVlans, activeStatus);
         // Sorting
         filtered.sort(function(a, b) {
             var va = a[sortCol] || '';
@@ -410,6 +436,7 @@ $(document).ready(function() {
         });
 
         renderTable(filtered);
+        updateSummary(filtered);
         // Update sort-arrow icons
         $('th.sortable .fa').removeClass('fa-sort-asc fa-sort-desc').addClass('fa-sort');
         $('th.sortable[data-col="'+sortCol+'"] .fa')
@@ -691,7 +718,7 @@ $(document).ready(function() {
                 success:function(r){
                     showToast(r.result==='deleted'?translations.deleted:translations.delete_error,
                               r.result==='deleted'?'success':'error');
-                    loadDevices(); loadStats();
+                    loadDevices();
                 }
             });
         });
@@ -805,7 +832,7 @@ $(document).ready(function() {
     // Toolbar
     $('#filter-status').on('change',function(){ activeStatus=$(this).val(); applyFilters(); });
 
-    $('#btn-refresh').on('click',function(){ loadDevices(); loadStats(); });
+    $('#btn-refresh').on('click',function(){ loadDevices(); });
 
 
     $('#btn-scan-now').on('click', function() {
@@ -814,7 +841,7 @@ $(document).ready(function() {
         $.ajax({ url: '/api/devicemonitor/service/scan', type: 'POST',
             success: function() {
                 setTimeout(function() {
-                    loadDevices(); loadStats();
+                    loadDevices();
                     $btn.prop('disabled', false).html('<i class="fa fa-search"></i>');
                 }, 3000);
             },
@@ -888,7 +915,7 @@ $(document).ready(function() {
             success:function(r){
                 showToast(r.result==='cleared'?translations.db_cleared:translations.db_clear_error,
                           r.result==='cleared'?'success':'error');
-                loadDevices(); loadStats();
+                loadDevices();
             }
         });
     });
@@ -946,7 +973,6 @@ $(document).ready(function() {
         success:function(data){ vlanNames=data||{}; loadDevices(); },
         error:function(){ loadDevices(); }
     });
-    loadStats();
-    setInterval(function(){ loadDevices(); loadStats(); },30000);
+    setInterval(function(){ loadDevices(); },30000);
 });
 </script>

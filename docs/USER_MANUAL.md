@@ -43,9 +43,11 @@ After the plugin is installed, open **Services → Device Monitor**. The submenu
 
 1. Go to **Services → Device Monitor → Settings**.
 2. On the **Monitoring** tab, tick **Enable Device Monitor**.
-3. Optionally adjust the **Scan interval** (how often discovery runs, in seconds; allowed
+3. Select one or more **Monitored Interfaces**. With no interface selected, discovery is
+   refused (fail-closed) — nothing is scanned.
+4. Optionally adjust the **Scan interval** (how often discovery runs, in seconds; allowed
    range 60–3600).
-4. Save the settings.
+5. Save the settings.
 
 When enabled, the background daemon runs discovery on a schedule and populates the Devices
 list. You can also trigger discovery manually from the Devices page (see [Section 4](#4-devices)).
@@ -57,7 +59,9 @@ list. You can also trigger discovery manually from the Devices page (see [Sectio
 - The **Settings** page controls monitoring, notifications and security scanning.
 
 > **Prerequisite.** Device Monitor reads device observations from the OPNsense Hostwatch
-> service. If Hostwatch is not observing your LAN interface, few or no devices will appear.
+> service. Each selected Monitored Interface must be observed by Hostwatch. For a VLAN
+> interface, select that VLAN in **Interfaces → Neighbors → Automatic Discovery** and
+> restart Hostwatch, otherwise few or no devices on that VLAN will appear.
 > See [Section 17](#17-troubleshooting).
 
 ---
@@ -99,8 +103,9 @@ whether a device is online, run a targeted Nmap scan, open its history, or remov
 
 ### 4.2 Page header
 
-- **Total Devices** — the number of devices currently shown.
-- **Online** — how many of those devices are currently online.
+- **Total Devices** — the number of devices currently shown, matching the active
+  VLAN/status filter.
+- **Online** — how many of those (filtered) devices are currently online.
 
 The page title is provided by the OPNsense breadcrumb (**Services → Device Monitor →
 Devices**). The installed plugin version is shown under **Settings → About**.
@@ -612,7 +617,11 @@ rejected with an error message.
 ### 14.1 Monitoring tab
 
 - **Enable Device Monitor** — master switch for the background monitoring daemon
-  (default: off). **Changes state.**
+  (default: off). The daemon stays disabled until you deliberately enable it.
+  **Changes state.**
+- **Monitored Interfaces** — select the interfaces whose devices are scanned. Empty
+  selection fails closed: discovery is refused and nothing is scanned. Selected
+  subnets must not overlap.
 - **Scan interval** — seconds between discovery runs. Allowed 60–3600 (default 300).
 - **Email VLANs** — restrict email notifications to selected VLANs/interfaces. Empty means
   all.
@@ -751,8 +760,10 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 ## 17. Troubleshooting
 
 - **No devices appear.**
-  Confirm Device Monitor is enabled, Hostwatch is observing the LAN interface, and the LAN
-  interface has a usable IPv4 address/prefix. Then click **Run scan now**.
+  Confirm Device Monitor is enabled, at least one **Monitored Interface** is selected, the
+  interface has a usable IPv4 address/prefix, and Hostwatch is observing that interface. For
+  a VLAN interface, select it in **Interfaces → Neighbors → Automatic Discovery** and restart
+  Hostwatch. Then click **Run scan now**.
 - **A device shows "RETURNING".**
   This is expected when a previously removed MAC reappears. Resolve it in Device Details →
   Lifecycle History.
@@ -785,8 +796,8 @@ Displays the installed Device Monitor version and descriptive information. **Rea
   scan-interval and scans-per-cycle values conservative on a busy firewall.
 - The Change Summary "Since last review" marker is browser-local, not a shared server
   setting.
-- Automatic monitoring should be run on an interface/network you intend to observe; on a
-  live LAN it may observe the whole subnet.
+- Automatic monitoring is scoped to the selected Monitored Interfaces; an empty selection is
+  refused (fail-closed), so no subnet is observed unless you explicitly select it.
 
 ---
 

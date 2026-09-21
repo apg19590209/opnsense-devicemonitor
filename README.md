@@ -38,6 +38,13 @@ The plugin automatically monitors the network and alerts you about:
 
 ## Version history
 
+### v2.9 (September 2026) — Fail-closed monitored-interface scoping
+
+- Adds **Monitored Interfaces**: discovery, priming, status counters, notifications and targeted scans are scoped to the explicitly selected interfaces; an empty selection fails closed (nothing is scanned).
+- Supersedes LAN-only Hostwatch priming with selected-interface/subnet priming.
+- Prevents targeted-scan starvation: out-of-scope queued scans no longer consume the in-scope batch limit.
+- Fixes the Devices-page header counters so **Total Devices** and **Online** match the filtered rows.
+
 ### v2.8 (September 2026) — Infrastructure services and device identity improvements
 
 - Adds the dedicated **Infrastructure Services** inventory with verified DHCP, DNS, NTP, SSH, Web/Admin, SMB/NFS, remote-access, SNMP, directory/authentication and VPN service discovery.
@@ -260,6 +267,7 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 ### 🎯 Core features
 
 ✅ **Device discovery** via OPNsense hostwatch SQLite database (`/var/db/hostwatch/hosts.db`)
+✅ **Monitored Interfaces** — fail-closed scoping to selected interfaces/VLANs
 ✅ **Email notifications** — professional HTML emails with inline CSS
 ✅ **Webhook notifications** — ntfy.sh, Discord, custom HTTP POST endpoints
 ✅ **Device history** — first/last detection timestamps
@@ -373,7 +381,8 @@ Go to: **Services → DeviceMonitor → Settings**
 
 | Setting | Description |
 |---------|-------------|
-| Enable Device Monitor | Enable/disable scanning |
+| Enable Device Monitor | Enable/disable scanning (daemon stays disabled until you enable it) |
+| Monitored Interfaces | Interfaces whose devices are scanned; empty selection fails closed |
 | Scan Interval | How often to scan (5–30 minutes) |
 
 ### Email notifications
