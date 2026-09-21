@@ -147,6 +147,8 @@ class ConfigController extends ApiControllerBase
         $pihole_url = trim($this->request->getPost('pihole_url', 'string', ''));
         $pihole_password = $this->request->getPost('pihole_password', 'string', '');
 
+        $unbound_enabled = $this->request->getPost('unbound_enabled', 'string', '0');
+
         $webhook_enabled = $this->request->getPost('webhook_enabled', 'string', '0');
         $webhook_url = $this->request->getPost('webhook_url', 'string', '');
         $scan_interval = $this->request->getPost('scan_interval', 'int', 300);
@@ -256,6 +258,10 @@ class ConfigController extends ApiControllerBase
             if ($pihole_password === '') {
                 return ['result' => 'failed', 'message' => 'Pi-hole app password must not be empty'];
             }
+        }
+
+        if (!in_array($unbound_enabled, ['0', '1'], true)) {
+            return ['result' => 'failed', 'message' => 'Invalid Unbound enabled value'];
         }
 
         if ($email_enabled == '1') {
@@ -401,6 +407,7 @@ class ConfigController extends ApiControllerBase
         $config['pihole_enabled'] = $pihole_enabled;
         $config['pihole_url'] = $pihole_url;
         $config['pihole_password'] = $pihole_password;
+        $config['unbound_enabled'] = $unbound_enabled;
         $config['webhook_enabled'] = $webhook_enabled;
         $config['webhook_url'] = $webhook_url;
         $config['scan_interval'] = (int)$scan_interval;

@@ -80,6 +80,10 @@ def load_config():
             'adguard_url': DEFAULT_CONFIG.get('adguard_url', ''),
             'adguard_username': DEFAULT_CONFIG.get('adguard_username', ''),
             'adguard_password': DEFAULT_CONFIG.get('adguard_password', ''),
+            'pihole_enabled': DEFAULT_CONFIG.get('pihole_enabled', '0') == '1',
+            'pihole_url': DEFAULT_CONFIG.get('pihole_url', ''),
+            'pihole_password': DEFAULT_CONFIG.get('pihole_password', ''),
+            'unbound_enabled': DEFAULT_CONFIG.get('unbound_enabled', '0') == '1',
             'webhook_enabled': DEFAULT_CONFIG.get('webhook_enabled', '0') == '1',
             'webhook_url': DEFAULT_CONFIG.get('webhook_url', ''),
             'scan_interval': int(DEFAULT_CONFIG.get('scan_interval', 300)),
@@ -114,6 +118,10 @@ def load_config():
                 'adguard_url': config.get('adguard_url', DEFAULT_CONFIG.get('adguard_url', '')),
                 'adguard_username': config.get('adguard_username', DEFAULT_CONFIG.get('adguard_username', '')),
                 'adguard_password': config.get('adguard_password', DEFAULT_CONFIG.get('adguard_password', '')),
+                'pihole_enabled': config.get('pihole_enabled', DEFAULT_CONFIG.get('pihole_enabled', '0')) == '1',
+                'pihole_url': config.get('pihole_url', DEFAULT_CONFIG.get('pihole_url', '')),
+                'pihole_password': config.get('pihole_password', DEFAULT_CONFIG.get('pihole_password', '')),
+                'unbound_enabled': config.get('unbound_enabled', DEFAULT_CONFIG.get('unbound_enabled', '0')) == '1',
                 'webhook_enabled': config.get('webhook_enabled', '0') == '1',
                 'webhook_url': config.get('webhook_url', ''),
                 'scan_interval': int(config.get('scan_interval', DEFAULT_CONFIG.get('scan_interval', 300))),
@@ -146,6 +154,10 @@ def load_config():
             'adguard_url': '',
             'adguard_username': '',
             'adguard_password': '',
+            'pihole_enabled': False,
+            'pihole_url': '',
+            'pihole_password': '',
+            'unbound_enabled': False,
             'webhook_enabled': False,
             'webhook_url': '',
             'scan_interval': 300,
@@ -6810,7 +6822,9 @@ def full_scan():
     }
 
     dnsmasq_descriptions = get_dnsmasq_descriptions()
-    unbound_hostnames = get_unbound_hostnames()
+    unbound_hostnames = (
+        get_unbound_hostnames() if config.get('unbound_enabled') else {}
+    )
     adguard_rewrite_hostnames = get_adguard_rewrite_hostnames(config)
     pihole_hostnames = get_pihole_hostnames(config)
 

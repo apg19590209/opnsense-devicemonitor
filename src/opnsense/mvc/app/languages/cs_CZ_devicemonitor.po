@@ -251,6 +251,40 @@ msgstr "Monitorování je zapnuto, ale není vybráno žádné rozhraní. Skeny 
 msgid "No enabled IPv4 interfaces found"
 msgstr "Nenalezena žádná povolená IPv4 rozhraní"
 
+#: settings.volt - Monitoring: hostname enrichment providers (Pi-hole / Unbound)
+msgid "Pi-hole Hostnames"
+msgstr "Názvy hostitelů Pi-hole"
+
+msgid "Unbound Hostnames"
+msgstr "Názvy hostitelů Unbound"
+
+msgid "Experimental"
+msgstr "Experimentální"
+
+msgid "Enable Pi-hole hostname enrichment"
+msgstr "Zapnout obohacení názvů hostitelů z Pi-hole"
+
+msgid "Enable Unbound hostname enrichment"
+msgstr "Zapnout obohacení názvů hostitelů z Unbound"
+
+msgid "Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default."
+msgstr "Používá DHCP pronájmy Pi-hole v6 jako zdroj názvů hostitelů. Vyžaduje Pi-hole v6, HTTPS a aplikační heslo. Ve výchozím stavu vypnuto."
+
+msgid "Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default."
+msgstr "Čte pouze lokální host overrides a host aliases OPNsense Unbound. Neprovádí žádné síťové dotazy. Ve výchozím stavu vypnuto."
+
+msgid "Pi-hole URL"
+msgstr "URL Pi-hole"
+
+msgid "HTTPS base URL of your Pi-hole server"
+msgstr "HTTPS základní URL vašeho Pi-hole serveru"
+
+msgid "App password"
+msgstr "Aplikační heslo"
+
+msgid "Pi-hole app password generated in the Pi-hole web interface"
+msgstr "Aplikační heslo Pi-hole vygenerované ve webovém rozhraní Pi-hole"
+
 #: settings.volt - tab 4: popis pluginu
 msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
 msgstr "Plugin pro OPNsense pro sledování síťových zařízení, konfliktů IP a MAC adres, zjišťování infrastrukturních služeb, provádění cílených bezpečnostních skenů a odesílání konfigurovatelných upozornění s využitím nativních dat hostwatch."

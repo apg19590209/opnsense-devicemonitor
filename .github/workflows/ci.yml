@@ -871,4 +871,6 @@ jobs:
           PHP
 
           php tests/test_adguard_config.php
+          php tests/test_pihole_config.php
+          php tests/test_unbound_config.php
           php tests/test_loopback_monitoring.php

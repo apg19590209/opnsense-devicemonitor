@@ -41,6 +41,7 @@
     "pihole_enabled": "0",
     "pihole_url": "",
     "pihole_password": "",
+    "unbound_enabled": "0",
     "targeted_nmap_enabled": "1",
     "nmap_top_ports": "100",
     "nmap_timing": "4",

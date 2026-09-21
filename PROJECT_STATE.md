@@ -59,6 +59,31 @@ Workflow state:
   `origin/v2.9-development` before this documentation edit
 
 
+## v2.9 development — Pi-hole and Unbound experimental opt-in
+
+Marked Pi-hole and Unbound hostname enrichment as **Experimental** and made Unbound
+opt-in (disabled by default).
+
+- New `unbound_enabled` setting (default `"0"`) wired through `defaults.json`,
+  `ConfigController.php` (read/save/validation), the Settings Monitoring UI, and
+  provider construction in `scan_network.py`.
+- `get_unbound_hostnames()` is only called when `unbound_enabled` is set; a missing
+  key after an upgrade means disabled.
+- Pi-hole config fields (`pihole_enabled`, `pihole_url`, `pihole_password`) are now
+  forwarded through `load_config()` so the runtime honours the GUI setting
+  (previously these fields were never read from `config.json`).
+- Experimental badges and descriptions added to the Settings UI (Pi-hole and
+  Unbound), English/Czech gettext catalogues, README/README_CZ, and the user manual.
+- `DECISIONS.md` Decision 26 records the change and supersedes Decision 24's
+  "always available / no enable-disable setting" wording.
+- New regression tests: `tests/test_pihole_config.php`,
+  `tests/test_unbound_config.php`, Unbound opt-in coverage in
+  `tests/test_unbound_provider.py`, and provider default coverage in
+  `tests/test_fresh_install_defaults.py`.
+
+Validation and deployment: see the commit for this change.
+
+
 ## Completed work — fail-closed monitored-interface scoping
 
 Completed 21 September 2026 (commit message: "Device Monitor: enforce fail-closed

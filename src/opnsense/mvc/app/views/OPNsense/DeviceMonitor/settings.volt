@@ -290,6 +290,7 @@
                         <tr>
                             <td style="vertical-align:top;">
                                 <strong>{{ lang._('Pi-hole Hostnames') }}</strong>
+                                <span class="badge" style="background:#f0ad4e;color:#fff;margin-left:6px;font-weight:normal;">{{ lang._('Experimental') }}</span>
                             </td>
                             <td>
                                 <label style="margin:0;">
@@ -298,7 +299,7 @@
                                 </label>
                                 <br>
                                 <small class="text-muted">
-                                    {{ lang._('Uses Pi-hole DHCP leases as a hostname source. Enable this only if you use Pi-hole as your DHCP server.') }}
+                                    {{ lang._('Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default.') }}
                                 </small>
 
                                 <div id="pihole_config" style="margin-top:14px;max-width:600px;display:none;">
@@ -311,6 +312,23 @@
                                     <input type="password" id="pihole_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
                                     <small class="text-muted">{{ lang._('Pi-hole app password generated in the Pi-hole web interface') }}</small>
                                 </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:top;">
+                                <strong>{{ lang._('Unbound Hostnames') }}</strong>
+                                <span class="badge" style="background:#f0ad4e;color:#fff;margin-left:6px;font-weight:normal;">{{ lang._('Experimental') }}</span>
+                            </td>
+                            <td>
+                                <label style="margin:0;">
+                                    <input type="checkbox" id="unbound_enabled" />
+                                    <strong>{{ lang._('Enable Unbound hostname enrichment') }}</strong>
+                                </label>
+                                <br>
+                                <small class="text-muted">
+                                    {{ lang._('Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default.') }}
+                                </small>
                             </td>
                         </tr>
 
@@ -554,6 +572,7 @@ $().ready(function() {
             $('#pihole_enabled').prop('checked', d.pihole_enabled==='1');
             $('#pihole_url').val(d.pihole_url||'');
             $('#pihole_password').val(d.pihole_password||'');
+            $('#unbound_enabled').prop('checked', d.unbound_enabled==='1');
             $('#targeted_nmap_enabled').prop(
                 'checked',
                 String(
@@ -607,6 +626,7 @@ $().ready(function() {
             toggleWebhookConfig();
             toggleAdGuardConfig();
             togglePiHoleConfig();
+            toggleUnboundConfig();
         }});
     }
 
@@ -635,12 +655,18 @@ $().ready(function() {
     function togglePiHoleConfig() {
         $('#pihole_enabled').prop('checked') ? $('#pihole_config').slideDown() : $('#pihole_config').slideUp();
     }
+    function toggleUnboundConfig() {
+        // Unbound has no nested configuration; the control only exposes the
+        // enable/disable checkbox. Kept as a no-op for symmetry with the other
+        // providers so the checkbox state is simply read on save.
+    }
     $('#email_enabled').change(toggleEmailConfig);
     $('#service_email_enabled').change(toggleServiceEmailOptions);
     $('#email_method').change(toggleEmailMethod);
     $('#webhook_enabled').change(toggleWebhookConfig);
     $('#adguard_rewrite_enabled').change(toggleAdGuardConfig);
     $('#pihole_enabled').change(togglePiHoleConfig);
+    $('#unbound_enabled').change(toggleUnboundConfig);
     $('#enabled').change(updateMonitoredWarning);
     $('#monitored-interface-list').on('change', '.monitored-iface-cb', updateMonitoredWarning);
 
@@ -654,6 +680,7 @@ $().ready(function() {
             pihole_enabled:  $('#pihole_enabled').is(':checked')?'1':'0',
             pihole_url:      $('#pihole_url').val(),
             pihole_password: $('#pihole_password').val(),
+            unbound_enabled: $('#unbound_enabled').is(':checked')?'1':'0',
             email_enabled:    $('#email_enabled').is(':checked')?'1':'0',
             identity_email_enabled: $('#identity_email_enabled').is(':checked')?'1':'0',
             service_email_enabled: $('#service_email_enabled').is(':checked')?'1':'0',

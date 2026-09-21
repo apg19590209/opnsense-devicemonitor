@@ -668,3 +668,37 @@ Device Monitor may observe arbitrary OPNsense interfaces and VLANs, not just the
 LAN. Deriving priming and admission scope from the explicitly selected interfaces
 keeps discovery deterministic and prevents observation, priming or scanning
 outside the intended scope.
+
+## 26. Pi-hole and Unbound hostname enrichment are experimental and opt-in
+
+### Decision
+
+This decision supersedes the "always available / no enable-disable setting"
+statement in Decision 24 (Unbound hostname enrichment is native and uses the
+generic provider framework).
+
+Pi-hole and Unbound hostname enrichment are both marked **Experimental** and are
+**disabled by default**.
+
+- Unbound enrichment is gated behind a new `unbound_enabled` setting (default
+  `"0"`). When disabled, `get_unbound_hostnames()` is not called and no Unbound
+  provider is constructed. A missing key after an upgrade means disabled.
+- Pi-hole enrichment remains gated behind `pihole_enabled` (default `"0"`),
+  exactly as recorded in Decision 23.
+- Only `"0"` and `"1"` are accepted for the `unbound_enabled` setting.
+- When either provider is enabled, the existing provider precedence
+  (`AdGuard > Dnsmasq > Kea > ISC > Unbound > Pi-hole > Hostwatch`) and existing
+  fail-soft behaviour are unchanged.
+- Disabling a provider never erases or downgrades an already-resolved hostname.
+- No provider is enabled automatically during install or upgrade.
+- No Unbound network query is introduced; Unbound continues to read local
+  `/conf/config.xml` only.
+
+### Reason
+
+Pi-hole and Unbound enrichment are optional, low-precedence sources whose value
+depends on administrator-maintained external or local data. Marking them
+experimental and disabled-by-default prevents a previously absent Unbound source
+from silently changing resolved hostnames after an upgrade, keeps the native
+always-on sources (Hostwatch/ISC/Kea/Dnsmasq) as the safe default, and makes the
+opt-in explicit and reversible.

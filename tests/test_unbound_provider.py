@@ -1,5 +1,8 @@
 import importlib.util
 import inspect
+import json
+import os
+import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -254,6 +257,94 @@ def test_apply_wrapper_accepts_unbound():
     print("UNBOUND_APPLY_WRAPPER=PASS")
 
 
+def test_unbound_defaults_off_when_key_absent():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        cfg = os.path.join(tmp, "config.json")
+        with open(cfg, "w", encoding="utf-8") as handle:
+            json.dump({"enabled": "0"}, handle)
+
+        module.CONFIG_FILE = cfg
+        config = module.load_config()
+
+        assert config["unbound_enabled"] is False
+        assert config["pihole_enabled"] is False
+
+    print("UNBOUND_DEFAULT_OFF=PASS")
+
+
+def test_unbound_config_boolean_only():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        cfg = os.path.join(tmp, "config.json")
+
+        for raw, expected in [
+            ("0", False),
+            ("1", True),
+            ("true", False),
+            ("on", False),
+            ("", False),
+        ]:
+            with open(cfg, "w", encoding="utf-8") as handle:
+                json.dump({"unbound_enabled": raw}, handle)
+
+            module.CONFIG_FILE = cfg
+            assert module.load_config()["unbound_enabled"] is expected
+
+    print("UNBOUND_BOOLEAN_ONLY=PASS")
+
+
+def test_disabled_unbound_provider_not_constructed():
+    module = load_module()
+    build = module.build_hostname_providers
+
+    disabled = build({}, {}, {}, {}, {}, {})
+    assert "unbound" not in [provider.name for provider in disabled]
+
+    enabled = build({}, {}, {}, {}, {}, {IP: "unbound-name"})
+    assert "unbound" in [provider.name for provider in enabled]
+
+    print("UNBOUND_DISABLED_NOT_CONSTRUCTED=PASS")
+
+
+def test_unbound_call_site_gated_by_config():
+    module = load_module()
+    source = SOURCE.read_text(encoding="utf-8")
+
+    # The runtime must only invoke the Unbound provider when the opt-in flag is
+    # set; otherwise an empty mapping is used without touching config.xml.
+    assert "config.get('unbound_enabled')" in source
+    assert "get_unbound_hostnames() if" in source
+
+    print("UNBOUND_GATED_BY_CONFIG=PASS")
+
+
+def test_full_precedence_all_enabled():
+    module = load_module()
+    build = module.build_hostname_providers
+    resolve = module.resolve_hostname
+
+    providers = build(
+        {MAC_LOWER: "isc-name"},
+        {MAC_LOWER: "kea-name"},
+        {MAC_LOWER: "dnsmasq-name"},
+        {IP: "adguard-name"},
+        {MAC_LOWER: "pihole-name"},
+        {IP: "unbound-name"},
+    )
+
+    hostname, source = resolve(
+        {"mac": MAC, "ip": IP, "hostname": "hostwatch-name"}, providers
+    )
+
+    assert hostname == "adguard-name"
+    assert source == "adguard"
+
+    print("UNBOUND_FULL_PRECEDENCE_ALL_ENABLED=PASS")
+
+
 def main():
     test_host_override_returns_hostname()
     test_no_records_returns_empty()
@@ -268,6 +359,11 @@ def main():
     test_duplicate_idempotent()
     test_resolve_hostname_has_no_unbound_branch()
     test_apply_wrapper_accepts_unbound()
+    test_unbound_defaults_off_when_key_absent()
+    test_unbound_config_boolean_only()
+    test_disabled_unbound_provider_not_constructed()
+    test_unbound_call_site_gated_by_config()
+    test_full_precedence_all_enabled()
 
     print("UNBOUND_PROVIDER_REGRESSION=PASS")
 

@@ -385,6 +385,20 @@ Go to: **Services → DeviceMonitor → Settings**
 | Monitored Interfaces | Interfaces whose devices are scanned; empty selection fails closed |
 | Scan Interval | How often to scan (5–30 minutes) |
 
+### Hostname enrichment
+
+Device Monitor fills each device **Hostname** from an ordered precedence of sources:
+**AdGuard > Dnsmasq > Kea > ISC > Unbound > Pi-hole > Hostwatch**.
+
+- **Hostwatch**, **ISC**, **Kea** and **Dnsmasq** are native sources used automatically.
+- **Unbound** *(Experimental)* — reads local OPNsense Unbound host overrides and host
+  aliases from `/conf/config.xml` only. Disabled by default; enable it in Settings.
+- **Pi-hole** *(Experimental)* — reads Pi-hole v6 DHCP leases over HTTPS (requires Pi-hole
+  v6 and an app password). Disabled by default.
+
+Pi-hole and Unbound enrichment are experimental and disabled by default. No provider is
+enabled automatically during install or upgrade.
+
 ### Email notifications
 
 Device Monitor offers two independent email delivery methods:

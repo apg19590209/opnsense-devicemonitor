@@ -250,6 +250,40 @@ msgstr "Monitoring is enabled but no interface is selected. Scans will be refuse
 msgid "No enabled IPv4 interfaces found"
 msgstr "No enabled IPv4 interfaces found"
 
+#: settings.volt - Monitoring: hostname enrichment providers (Pi-hole / Unbound)
+msgid "Pi-hole Hostnames"
+msgstr "Pi-hole Hostnames"
+
+msgid "Unbound Hostnames"
+msgstr "Unbound Hostnames"
+
+msgid "Experimental"
+msgstr "Experimental"
+
+msgid "Enable Pi-hole hostname enrichment"
+msgstr "Enable Pi-hole hostname enrichment"
+
+msgid "Enable Unbound hostname enrichment"
+msgstr "Enable Unbound hostname enrichment"
+
+msgid "Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default."
+msgstr "Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default."
+
+msgid "Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default."
+msgstr "Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default."
+
+msgid "Pi-hole URL"
+msgstr "Pi-hole URL"
+
+msgid "HTTPS base URL of your Pi-hole server"
+msgstr "HTTPS base URL of your Pi-hole server"
+
+msgid "App password"
+msgstr "App password"
+
+msgid "Pi-hole app password generated in the Pi-hole web interface"
+msgstr "Pi-hole app password generated in the Pi-hole web interface"
+
 #: settings.volt - tab 4: plugin description
 msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
 msgstr "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."

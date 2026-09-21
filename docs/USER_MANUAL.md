@@ -582,11 +582,12 @@ Precedence (strongest first):
 - **Hostwatch** — the observational base. This is the hostname OPNsense itself observes.
 - **ISC / Kea / Dnsmasq** — native OPNsense DHCP lease sources (when those services provide
   leases with hostnames).
-- **Unbound** — reads local OPNsense Unbound host overrides (A records) and host aliases
-  from `/conf/config.xml`. It is native and requires no configuration.
+- **Unbound** *(Experimental)* — reads local OPNsense Unbound host overrides (A records)
+  and host aliases from `/conf/config.xml`. It reads local configuration only, performs no
+  network queries, is disabled by default and must be enabled in Settings.
 - **AdGuard** — optional external DNS-rewrite source. Configured in Settings.
-- **Pi-hole** — optional external DHCP-lease source (Pi-hole v6 REST API). Configured in
-  Settings.
+- **Pi-hole** *(Experimental)* — optional external DHCP-lease source (Pi-hole v6 REST
+  API). Configured in Settings and disabled by default.
 
 ### 13.3 Behaviour and guarantees
 
@@ -599,9 +600,10 @@ Precedence (strongest first):
 
 ### 13.4 Configuration
 
-Configure AdGuard and Pi-hole on the **Settings → Monitoring** tab (see Section 14).
-Unbound, ISC, Kea, Dnsmasq and Hostwatch require no Device Monitor configuration; they are
-used when the underlying data is present on OPNsense.
+Configure AdGuard, Pi-hole and Unbound on the **Settings → Monitoring** tab (see
+Section 14). ISC, Kea, Dnsmasq and Hostwatch require no Device Monitor configuration; they
+are used when the underlying data is present on OPNsense. Pi-hole and Unbound are
+experimental and disabled by default.
 
 ---
 
@@ -640,14 +642,24 @@ rejected with an error message.
 - **AdGuard URL** — the AdGuard Home base URL (HTTPS).
 - **AdGuard username / password** — credentials for the AdGuard API.
 
-#### Pi-hole
+#### Pi-hole (Experimental)
 
-- **Enable Pi-hole** — enable hostname enrichment from Pi-hole v6 DHCP leases.
+- **Enable Pi-hole** — enable hostname enrichment from Pi-hole v6 DHCP leases (disabled by
+  default).
 - **Pi-hole URL** — the Pi-hole base URL (HTTPS).
 - **Pi-hole password** — the Pi-hole v6 app password (used for session auth).
 
-> AdGuard and Pi-hole are optional external sources. Both use HTTPS with certificate
-> verification enabled, and credentials are never written to logs or error messages.
+Pi-hole requires Pi-hole v6, HTTPS and an app password.
+
+#### Unbound (Experimental)
+
+- **Enable Unbound hostname enrichment** — enable hostname enrichment from local Unbound
+  host overrides and host aliases (disabled by default). This reads `/conf/config.xml`
+  only and performs no network queries.
+
+> AdGuard is an optional external source. Pi-hole and Unbound are experimental and disabled
+> by default. AdGuard and Pi-hole use HTTPS with certificate verification enabled, and
+> credentials are never written to logs or error messages.
 
 ### 14.2 Email Notifications tab
 
@@ -791,7 +803,8 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 - **Clear Database** and per-device **Delete** are destructive; they are always confirmed.
   Deleting a device archives (does not erase) its lifecycle history.
 - External hostname sources (AdGuard, Pi-hole) are optional and use HTTPS with certificate
-  verification enabled. Credentials are never logged.
+  verification enabled. Credentials are never logged. Pi-hole and Unbound hostname
+  enrichment are experimental and disabled by default.
 - Resource use is bounded: the daemon rate-limits discovery and scan work. Keep the
   scan-interval and scans-per-cycle values conservative on a busy firewall.
 - The Change Summary "Since last review" marker is browser-local, not a shared server

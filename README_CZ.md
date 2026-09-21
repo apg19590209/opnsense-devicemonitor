@@ -364,6 +364,20 @@ Jdi na: **Services → DeviceMonitor → Settings**
 | Monitored Interfaces | Rozhraní, jejichž zařízení se skenují; prázdný výběr fail-closed odmítne skenování |
 | Scan Interval | Jak často skenovat (5–30 minut) |
 
+### Obohacení hostname
+
+Device Monitor doplňuje **Hostname** každého zařízení z uspořádané priority zdrojů:
+**AdGuard > Dnsmasq > Kea > ISC > Unbound > Pi-hole > Hostwatch**.
+
+- **Hostwatch**, **ISC**, **Kea** a **Dnsmasq** jsou nativní zdroje používané automaticky.
+- **Unbound** *(Experimentální)* — čte pouze lokální OPNsense Unbound host overrides a host
+  aliases z `/conf/config.xml`. Ve výchozím stavu vypnuto; zapíná se v Nastavení.
+- **Pi-hole** *(Experimentální)* — čte DHCP pronájmy Pi-hole v6 přes HTTPS (vyžaduje
+  Pi-hole v6 a aplikační heslo). Ve výchozím stavu vypnuto.
+
+Obohacení z Pi-hole a Unbound je experimentální a ve výchozím stavu vypnuto. Žádný zdroj se
+při instalaci ani upgradu nezapíná automaticky.
+
 ### Emailová upozornění
 
 Vyžaduje funkční SMTP: **System → Settings → Notifications → E-Mail**
