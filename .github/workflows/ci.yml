@@ -862,6 +862,7 @@ jobs:
           python3 tests/test_unbound_provider.py
           python3 tests/test_hostwatch_lan_visibility.py
           python3 tests/test_liveness_fallback.py
+          python3 tests/test_loopback_monitoring.py
 
           sudo mkdir -p /usr/local/opnsense/scripts/OPNsense/DeviceMonitor
           sudo tee /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php >/dev/null <<'PHP'
@@ -870,3 +871,4 @@ jobs:
           PHP
 
           php tests/test_adguard_config.php
+          php tests/test_loopback_monitoring.php

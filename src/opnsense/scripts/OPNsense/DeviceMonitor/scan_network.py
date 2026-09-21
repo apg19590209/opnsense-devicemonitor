@@ -210,6 +210,11 @@ def resolve_monitored_networks(config):
             return None, f'Monitored interface "{name}" has invalid IPv4 address "{ip}"'
         if address.version != 4:
             return None, f'Monitored interface "{name}" is not IPv4'
+        if address.is_loopback:
+            return None, (
+                f'Monitored interface "{name}" uses a loopback address '
+                f'({ip}); loopback interfaces cannot be monitored'
+            )
 
         if not subnet.isdigit():
             return None, f'Monitored interface "{name}" has invalid subnet "{subnet}"'

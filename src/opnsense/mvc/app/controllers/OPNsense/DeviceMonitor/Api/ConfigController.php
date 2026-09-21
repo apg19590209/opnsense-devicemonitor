@@ -75,6 +75,10 @@ class ConfigController extends ApiControllerBase
                         continue;
                     }
 
+                    if ($this->isLoopbackIpv4($ipaddr)) {
+                        continue;
+                    }
+
                     $result[$name] = [
                         'name' => $name,
                         'description' => $descr !== '' ? $descr : strtoupper($name),
@@ -97,6 +101,17 @@ class ConfigController extends ApiControllerBase
         $start = $ipLong & $mask;
         $end = $start | (~$mask & 0xFFFFFFFF);
         return [$start, $end];
+    }
+
+    private function isLoopbackIpv4($ip)
+    {
+        $ipLong = ip2long($ip);
+        if ($ipLong === false) {
+            return false;
+        }
+        $loStart = ip2long('127.0.0.0');
+        $loEnd = ip2long('127.255.255.255');
+        return $ipLong >= $loStart && $ipLong <= $loEnd;
     }
 
     public function setAction()
@@ -331,6 +346,9 @@ class ConfigController extends ApiControllerBase
                 $subnet = trim((string)($ifData->subnet ?? ''));
                 if (filter_var($ipaddr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
                     return ['result' => 'failed', 'message' => 'Monitored interface "' . $name . '" has no valid static IPv4 address'];
+                }
+                if ($this->isLoopbackIpv4($ipaddr)) {
+                    return ['result' => 'failed', 'message' => 'Monitored interface "' . $name . '" uses a loopback address and cannot be monitored'];
                 }
                 if (
                     $subnet === '' ||
