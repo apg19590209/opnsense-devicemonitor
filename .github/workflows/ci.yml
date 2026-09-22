@@ -821,6 +821,11 @@ jobs:
           set -eu
           node tests/test_devices_page_summary.js
 
+      - name: Validate devices page VLAN filtering
+        run: |
+          set -eu
+          node tests/test_devices_page_vlan.js
+
       - name: Validate static selectpicker controls
         run: |
           set -eu

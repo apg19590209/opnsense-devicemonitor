@@ -45,6 +45,10 @@
                 </ul>
             </div>
 
+            <!-- Explicit apply/clear controls for the VLAN multi-select -->
+            <button type="button" id="vlan-apply" class="btn btn-default btn-sm">{{ lang._('Apply') }}</button>
+            <button type="button" id="vlan-clear" class="btn btn-default btn-sm">{{ lang._('Clear') }}</button>
+
             <!-- Status filtr -->
             <select id="filter-status"
                     class="selectpicker"
@@ -286,6 +290,27 @@ header.page-content-head {
         return { total: total, online: online };
     }
 
+    // Resolve a set of checked VLANs into the active VLAN filter array.
+    // Selecting no VLANs, or every known VLAN, means "no VLAN filter"
+    // (an empty array), matching the existing All VLANs behaviour.
+    function finalizeVlanSelection(selectedVlans, allVlans) {
+        var selected = selectedVlans || [];
+        var all = allVlans || [];
+        var uniq = [];
+        selected.forEach(function (v) {
+            if (uniq.indexOf(v) === -1) {
+                uniq.push(v);
+            }
+        });
+        if (!uniq.length) {
+            return [];
+        }
+        if (all.length && uniq.length === all.length) {
+            return [];
+        }
+        return uniq.sort();
+    }
+
 $(document).ready(function() {
 
     var translations = {
@@ -327,32 +352,16 @@ $(document).ready(function() {
         $('#stat-online').text(summary.online);
     }
 
-    // VLAN multi-select dropdown
+    // VLAN multi-select dropdown (pending selection; Apply commits it)
     function buildVlanDropdown(vlans) {
         var $list = $('#vlan-checklist').empty();
         if (!vlans.length) return;
         var allSel = (activeVlans.length === 0);
 
         $list.append($('<li>').append(
-            $('<a>').attr('href','#').css({padding:'5px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}).append(
-                $('<label>').css({margin:0,cursor:'pointer',display:'flex',alignItems:'center',gap:'6px'}).append(
-                    $('<input type="checkbox" id="vlan-all">').prop('checked', allSel),
-                    $('<span>').css({'font-style':'italic'}).text(translations.all_vlans)
-                ),
-                $('<a>').attr('href','#').addClass('vlan-select-none')
-                    .css({fontSize:'11px',color:'#aaa',marginLeft:'12px',whiteSpace:'nowrap'})
-                    .text('Select none')
-                    .on('click', function(e){
-                        e.preventDefault();
-                        e.stopPropagation();
-                        // Reset means all individual VLANs unchecked and All VLANs selected
-                        $('#vlan-checklist .vlan-cb').prop('checked', false);
-                        $('#vlan-all').prop('checked', true);
-                        activeVlans = [];
-                        try { localStorage.setItem('dm_vlan_filter', JSON.stringify([])); } catch(e2) {}
-                        updateVlanLabel();
-                        applyFilters();
-                    })
+            $('<label>').css({margin:0,cursor:'pointer',display:'flex',alignItems:'center',gap:'6px',padding:'5px 14px'}).append(
+                $('<input type="checkbox" id="vlan-all">').prop('checked', allSel),
+                $('<span>').css({'font-style':'italic'}).text(translations.all_vlans)
             )
         ));
 
@@ -363,7 +372,7 @@ $(document).ready(function() {
             var label = (n && n !== v) ? (v+' \u2013 '+n) : v;
             var chk = allSel || (activeVlans.indexOf(v) !== -1);
             $list.append($('<li>').append(
-                $('<a>').attr('href','#').css({padding:'4px 14px',display:'block'}).append(
+                $('<label>').css({margin:0,cursor:'pointer',display:'flex',alignItems:'center',gap:'6px',padding:'4px 14px'}).append(
                     $('<input type="checkbox" class="vlan-cb">').val(v).prop('checked', chk),
                     $('<span>').css('margin-left','8px').text(label)
                 )
@@ -372,37 +381,45 @@ $(document).ready(function() {
         updateVlanLabel();
     }
 
-    // Keep dropdown open when clicking a checkbox
+    // Keep the dropdown open while checkboxes are toggled.
     $('#vlan-checklist').on('click', function(e){ e.stopPropagation(); });
 
+    // Toggling a checkbox only updates the pending visual state; the table is
+    // not filtered or re-rendered until Apply/Clear.
     $(document).on('change','#vlan-all',function(){
         $('#vlan-checklist .vlan-cb').prop('checked',$(this).prop('checked'));
-        persistVlans();
     });
     $(document).on('change','#vlan-checklist .vlan-cb',function(){
         var total=$('#vlan-checklist .vlan-cb').length;
         var checked=$('#vlan-checklist .vlan-cb:checked').length;
         $('#vlan-all').prop('checked', total===checked);
-        persistVlans();
     });
 
-    function persistVlans() {
+    function readCheckedVlans() {
         var sel = [];
-        var total = $('#vlan-checklist .vlan-cb').length;
         $('#vlan-checklist .vlan-cb:checked').each(function(){ sel.push($(this).val()); });
+        return sel;
+    }
 
-        if (sel.length === total || sel.length === 0) {
-            // All selected or none selected means no filter
-            activeVlans = [];
-            $('#vlan-all').prop('checked', true);
-        } else {
-            activeVlans = sel;
-            $('#vlan-all').prop('checked', false);
-        }
+    function commitVlans() {
+        var allVlans = [];
+        $('#vlan-checklist .vlan-cb').each(function(){ allVlans.push($(this).val()); });
+        activeVlans = finalizeVlanSelection(readCheckedVlans(), allVlans);
         try { localStorage.setItem('dm_vlan_filter', JSON.stringify(activeVlans)); } catch(e) {}
         updateVlanLabel();
         applyFilters();
     }
+
+    $('#vlan-apply').on('click', function(){ commitVlans(); });
+
+    $('#vlan-clear').on('click', function(){
+        $('#vlan-checklist .vlan-cb').prop('checked', true);
+        $('#vlan-all').prop('checked', true);
+        activeVlans = [];
+        try { localStorage.setItem('dm_vlan_filter', JSON.stringify([])); } catch(e) {}
+        updateVlanLabel();
+        applyFilters();
+    });
 
     function updateVlanLabel() {
         if (!activeVlans.length) {
@@ -413,6 +430,20 @@ $(document).ready(function() {
         } else {
             $('#vlan-filter-label').text(activeVlans.length+' VLANs');
         }
+    }
+
+    // Preserve the user's vertical and horizontal scroll position across a
+    // table re-render so filtering never visibly jumps or scrolls the page.
+    function captureScrollPosition() {
+        var root = document.scrollingElement || document.documentElement;
+        var x = (window.pageXOffset !== undefined) ? window.pageXOffset : (root ? root.scrollLeft : 0);
+        var y = (window.pageYOffset !== undefined) ? window.pageYOffset : (root ? root.scrollTop : 0);
+        return { x: x, y: y };
+    }
+
+    function restoreScrollPosition(pos) {
+        if (!pos) return;
+        window.scrollTo(pos.x, pos.y);
     }
 
     // Filtering
@@ -452,7 +483,9 @@ $(document).ready(function() {
             return sortDir === 'asc' ? cmp : -cmp;
         });
 
+        var scroll = captureScrollPosition();
         renderTable(filtered);
+        restoreScrollPosition(scroll);
         updateSummary(filtered);
         // Update sort-arrow icons
         $('th.sortable .fa').removeClass('fa-sort-asc fa-sort-desc').addClass('fa-sort');
@@ -937,7 +970,12 @@ $(document).ready(function() {
         });
     });
 
-    // Keep toolbar and table header sticky while the device list scrolls.
+    // Keep the summary, toolbar and table header sticky below the page
+    // navigation area (page-head + page-content-head) so they never cover the
+    // Network Identities / Device Profiles tabs. The natural-flow gap is
+    // measured once so the sticky stack does not jump upward when it engages.
+    var devicesStickyGeometry = null;
+
     function updateStickyOffsets() {
         var shellHead = $('header.page-head');
         var pageHead = $('header.page-content-head');
@@ -945,6 +983,18 @@ $(document).ready(function() {
         var summary = $('#devices-sticky-summary');
         var toolbar = $('#devices-sticky-toolbar');
         var thead = $('#grid-devices thead th');
+
+        // Measure the natural-flow position once (before sticky offsets shift
+        // anything) so the sticky stack sits at its true position.
+        if (devicesStickyGeometry === null && pageHead.length && summary.length) {
+            var scrollTop = (document.scrollingElement || document.documentElement).scrollTop;
+            var pageHeadRect = pageHead[0].getBoundingClientRect();
+            var summaryRect = summary[0].getBoundingClientRect();
+            devicesStickyGeometry = {
+                pageHeadTop: pageHeadRect.top + scrollTop,
+                gap: summaryRect.top - pageHeadRect.bottom
+            };
+        }
 
         var top = shellHead.length ? shellHead.outerHeight() : 62;
 
@@ -954,7 +1004,6 @@ $(document).ready(function() {
         }
 
         if (contentMain.length) {
-            top += parseInt(contentMain.css('padding-top'), 10) || 0;
             var bg = contentMain.css('background-color');
             summary.css('background-color', bg);
             toolbar.css('background-color', bg);
@@ -964,6 +1013,13 @@ $(document).ready(function() {
             summary.css('box-shadow', shield);
             toolbar.css('box-shadow', shield);
             thead.css('box-shadow', shield);
+        }
+
+        // Confine the sticky stack below the page title bar and the navigation
+        // tabs (the measured gap includes the tabs and explanatory text).
+        if (devicesStickyGeometry !== null) {
+            var pageHeadHeight = pageHead.length ? pageHead[0].offsetHeight : 0;
+            top = devicesStickyGeometry.pageHeadTop + pageHeadHeight + devicesStickyGeometry.gap;
         }
 
         if (summary.length) {

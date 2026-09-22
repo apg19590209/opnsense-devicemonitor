@@ -325,6 +325,10 @@ msgstr "Vyžaduje OPNsense"
 msgid "Apply"
 msgstr "Použít"
 
+#: devices.volt - tlačítko zrušit filtr VLAN
+msgid "Clear"
+msgstr "Vyčistit"
+
 #: settings.volt - spinner text při ukládání (Apply button)
 msgid "Saving..."
 msgstr "Ukládám..."

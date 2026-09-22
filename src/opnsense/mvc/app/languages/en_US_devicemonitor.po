@@ -324,6 +324,10 @@ msgstr "Requires OPNsense"
 msgid "Apply"
 msgstr "Apply"
 
+#: devices.volt - clear VLAN filter button
+msgid "Clear"
+msgstr "Clear"
+
 #: settings.volt - spinner text on Apply button while saving
 msgid "Saving..."
 msgstr "Saving..."

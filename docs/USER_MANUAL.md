@@ -117,8 +117,9 @@ Devices**). The installed plugin version is shown under **Settings → About**.
 
 ### 4.3 Toolbar controls
 
-- **All VLANs (drop-down)** — a multi-select VLAN filter. Tick one or more VLANs to show
-  only devices on those VLANs. **Read-only.**
+- **All VLANs (drop-down)** — a multi-select VLAN filter. Tick one or more VLANs, then
+  press **Apply** to show only devices on those VLANs, or **Clear** to return to the
+  unfiltered all-VLAN view. **Read-only.**
 - **All statuses (drop-down)** — filter by **All statuses**, **Online** or **Offline**.
   **Read-only.**
 - **Refresh** — reload the list and statistics immediately. **Read-only.**

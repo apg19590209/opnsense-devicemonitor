@@ -59,6 +59,36 @@ Workflow state:
   `origin/v2.9-development` before this documentation edit
 
 
+## Device Monitor: stabilise VLAN filtering
+
+Repaired the Network Identities VLAN multi-select and its sticky header.
+
+- Root cause: the VLAN checklist wrapped checkboxes in `<a href="#">` anchors
+  (unreliable single-click toggling and page jumps) and `persistVlans()` re-rendered
+  the whole table on every checkbox change. The sticky summary/toolbar/thead stack
+  was positioned from a fixed `padding-top` offset rather than the measured natural
+  flow gap, so it could jump upward and cover the navigation tabs.
+- Interaction change: checkboxes are now native `<label>` items that only update a
+  pending selection; explicit **Apply** and **Clear** buttons commit the selection
+  once. `applyFilters()` preserves vertical and horizontal scroll position around the
+  single re-render, and `updateStickyOffsets()` now derives the sticky offsets from a
+  measured `getBoundingClientRect()` gap so the header stays below the page
+  navigation area and never covers the tabs.
+- Status filtering, filtered summary counters, refresh behaviour and VLAN label
+  formatting are unchanged. No API, route, database, scanner or stored-data changes.
+- Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt`,
+  `src/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po`,
+  `src/opnsense/mvc/app/languages/en_US_devicemonitor.po`,
+  `docs/USER_MANUAL.md`, `.github/workflows/ci.yml`,
+  `tests/test_devices_page_vlan.js` (new).
+- Tests: added `tests/test_devices_page_vlan.js`; full Node/Python/PHP suite,
+  `py_compile`, `php -l`, `sh -n`, `msgfmt` and `git diff --check` all PASS.
+- Deployed to testbed `192.168.20.23` with rollback backup retained at
+  `/tmp/dm_deploy_backup_20260922075730`. Production `192.168.20.254` untouched;
+  daemon, database, config.json and config.xml unchanged.
+- Next step: authenticated testbed visual acceptance.
+
+
 ## Device navigation and terminology consolidation
 
 Consolidated the Device Monitor submenu and terminology. Implemented, validated
