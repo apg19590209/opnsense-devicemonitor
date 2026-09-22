@@ -51,17 +51,31 @@ check(
 // ---------------------------------------------------------------------------
 
 check(view.includes('id="vlan-apply"'), 'VLAN Apply button missing');
-check(view.includes('id="vlan-clear"'), 'VLAN Clear button missing');
-check(view.includes("{{ lang._('Apply') }}"), 'Apply button must be localised');
-check(view.includes("{{ lang._('Clear') }}"), 'Clear button must be localised');
+check(!view.includes('id="vlan-clear"'), 'standalone VLAN Clear button must be removed');
+check(
+    view.includes("{{ lang._('Apply VLAN Filter') }}"),
+    'Apply button must be localised as "Apply VLAN Filter"'
+);
+check(
+    !view.includes("{{ lang._('Apply') }}"),
+    'generic "Apply" must not be reused for the VLAN apply button'
+);
+check(
+    view.includes("{{ lang._('Not applied') }}"),
+    'pending "Not applied" indicator must be localised'
+);
+check(
+    view.includes('id="vlan-not-applied"'),
+    'pending "Not applied" indicator element missing'
+);
 
 check(
     view.includes("$('#vlan-apply').on('click', function(){ commitVlans(); });"),
     'Apply button must commit the pending VLAN selection'
 );
 check(
-    view.includes("$('#vlan-clear').on('click', function(){"),
-    'Clear button handler missing'
+    !view.includes("$('#vlan-clear').on('click'"),
+    'VLAN Clear handler must be removed'
 );
 
 // ---------------------------------------------------------------------------
@@ -88,9 +102,12 @@ check(
 );
 
 check(
-    view.includes("$('#vlan-clear').on('click', function(){") &&
-        view.includes('activeVlans = [];'),
-    'Clear must reset activeVlans to the unfiltered all-VLAN view'
+    !view.includes("$('#vlan-clear').on('click'"),
+    'no standalone VLAN Clear handler may remain'
+);
+check(
+    view.includes('activeVlans = []'),
+    'activeVlans must still be initialised to the unfiltered all-VLAN state'
 );
 
 // ---------------------------------------------------------------------------
@@ -222,8 +239,22 @@ check(
 check(
     view.includes('devices-col-secondary') &&
         view.includes('display: none') &&
-        view.includes('max-width: 1199px'),
-    'priority-based responsive column hiding must exist'
+        view.includes('devices-hide-1') &&
+        view.includes('devices-col-sec-1') &&
+        view.includes('devices-col-sec-5'),
+    'progressive responsive column hiding must exist'
+);
+check(
+    !view.includes('max-width: 1199px'),
+    'viewport-based responsive breakpoint must be removed'
+);
+check(
+    view.includes('function syncResponsiveColumns'),
+    'responsive column sync helper missing'
+);
+check(
+    view.includes("new ResizeObserver(syncResponsiveColumns)"),
+    'responsive columns must observe the table width'
 );
 check(
     !view.includes('margin:10px 0 0 0') &&
@@ -266,13 +297,35 @@ check(
     'Multiple selected checkboxes must display the checked count'
 );
 // updateVlanLabel is called from build + both checkbox change handlers +
-// commitVlans + clear (5 call sites), so checkbox changes update the label
+// commitVlans (4 call sites), so checkbox changes update the label
 // immediately without filtering.
 const labelCallSites = view.split('updateVlanLabel();').length - 1;
 check(
-    labelCallSites === 5,
-    'updateVlanLabel must be called from build + change handlers + apply + clear, got ' +
+    labelCallSites === 4,
+    'updateVlanLabel must be called from build + change handlers + apply, got ' +
         labelCallSites
+);
+
+// ---------------------------------------------------------------------------
+// Apply button reflects pending-vs-applied state
+// ---------------------------------------------------------------------------
+
+check(
+    view.includes('function syncVlanApplyButton'),
+    'VLAN apply button sync helper missing'
+);
+check(
+    view.includes("$btn.prop('disabled', same)"),
+    'Apply button must be disabled while pending equals applied'
+);
+check(
+    view.includes("$btn.removeClass('btn-primary').addClass('btn-default')") &&
+        view.includes("$btn.removeClass('btn-default').addClass('btn-primary')"),
+    'Apply button must switch between muted and OPNsense orange styles'
+);
+check(
+    view.includes("$('#vlan-not-applied').toggle(!same)"),
+    'Not applied indicator must track the pending/applied state'
 );
 
 // ---------------------------------------------------------------------------
@@ -375,6 +428,7 @@ console.log('DEVICES_VLAN_NO_SCROLL_MOVEMENT=PASS');
 console.log('DEVICES_VLAN_LAYOUT_ORDER=PASS');
 console.log('DEVICES_VLAN_STICKY_REGION=PASS');
 console.log('DEVICES_VLAN_COUNT_STATE=PASS');
+console.log('DEVICES_VLAN_APPLY_BUTTON=PASS');
 console.log('DEVICES_VLAN_SELECTION_HELPER=PASS');
 console.log('DEVICES_VLAN_SUMMARY_COUNTERS=PASS');
 console.log('DEVICES_VLAN_JAVASCRIPT=PASS');

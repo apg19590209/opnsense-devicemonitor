@@ -118,8 +118,11 @@ Devices**). The installed plugin version is shown under **Settings → About**.
 ### 4.3 Toolbar controls
 
 - **All VLANs (drop-down)** — a multi-select VLAN filter. Tick one or more VLANs, then
-  press **Apply** to show only devices on those VLANs, or **Clear** to return to the
-  unfiltered all-VLAN view. **Read-only.**
+  press **Apply VLAN Filter** to show only devices on those VLANs. Tick **All VLANs**
+  (or clear every tick) and press **Apply VLAN Filter** to return to the unfiltered
+  all-VLAN view. Checkbox changes are not applied to the table until you press the
+  button, which stays muted/disabled until your selection differs from what is applied.
+  **Read-only.**
 - **All statuses (drop-down)** — filter by **All statuses**, **Online** or **Offline**.
   **Read-only.**
 - **Refresh** — reload the list and statistics immediately. **Read-only.**
@@ -179,10 +182,11 @@ the device's Device Activity.
 - The page title, navigation tabs, explanatory text, summary counters, filter
   toolbar and table column headings remain "sticky" while scrolling a long
   list.
-- At narrower window widths, lower-priority columns (Services, Device Profile,
-  Scan Status, First Seen, Last Seen) are hidden so the essential identity,
-  status and action columns remain usable; that information remains available
-  on the Device Details page.
+- At narrower window/content widths, lower-priority columns (Services, Device
+  Profile, Scan Status, First Seen, Last Seen) are hidden progressively - only
+  as many as needed - so the essential identity, status and action columns
+  remain usable without horizontal scrolling; that information remains
+  available on the Device Details page.
 - **Clear Database** and per-row **Delete** are the only destructive actions on this page.
 
 ---

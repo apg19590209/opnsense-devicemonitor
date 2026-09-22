@@ -51,9 +51,11 @@
                     </ul>
                 </div>
 
-                <!-- Explicit apply/clear controls for the VLAN multi-select -->
-                <button type="button" id="vlan-apply" class="btn btn-default btn-sm">{{ lang._('Apply') }}</button>
-                <button type="button" id="vlan-clear" class="btn btn-default btn-sm">{{ lang._('Clear') }}</button>
+                <!-- Explicit apply control for the VLAN multi-select. Checkbox
+                     changes only update the pending selection and the dropdown
+                     label; rows are filtered only when Apply is pressed. -->
+                <button type="button" id="vlan-apply" class="btn btn-default btn-sm" disabled>{{ lang._('Apply VLAN Filter') }}</button>
+                <span id="vlan-not-applied" class="text-muted" style="display:none;">{{ lang._('Not applied') }}</span>
 
                 <!-- Status filtr -->
                 <select id="filter-status"
@@ -95,14 +97,14 @@
                     <th class="sortable devices-table-header" data-col="hostname">{{ lang._('Hostname') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable devices-table-header" data-col="mac">{{ lang._('MAC Address') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable devices-table-header" data-col="vendor">{{ lang._('Vendor') }} <i class="fa fa-sort"></i></th>
-                    <th class="devices-table-header devices-col-secondary">{{ lang._('Services') }}</th>
+                    <th class="devices-table-header devices-col-secondary devices-col-sec-1">{{ lang._('Services') }}</th>
 
                     <th class="sortable devices-table-header" data-col="vlan">{{ lang._('VLAN') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable devices-table-header" data-col="status">{{ lang._('Status') }} <i class="fa fa-sort"></i></th>
-                    <th class="devices-table-header devices-col-secondary">{{ lang._('Device Profile') }}</th>
-                    <th class="sortable devices-table-header devices-col-secondary" data-col="nmap_scan_status">{{ lang._('Scan Status') }} <i class="fa fa-sort"></i></th>
-                    <th class="devices-table-header devices-col-secondary">{{ lang._('First Seen') }}</th>
-                    <th class="sortable devices-table-header devices-col-secondary" data-col="last_seen">{{ lang._('Last Seen') }} <i class="fa fa-sort"></i></th>
+                    <th class="devices-table-header devices-col-secondary devices-col-sec-2">{{ lang._('Device Profile') }}</th>
+                    <th class="sortable devices-table-header devices-col-secondary devices-col-sec-3" data-col="nmap_scan_status">{{ lang._('Scan Status') }} <i class="fa fa-sort"></i></th>
+                    <th class="devices-table-header devices-col-secondary devices-col-sec-4">{{ lang._('First Seen') }}</th>
+                    <th class="sortable devices-table-header devices-col-secondary devices-col-sec-5" data-col="last_seen">{{ lang._('Last Seen') }} <i class="fa fa-sort"></i></th>
                     <th class="devices-table-header">{{ lang._('Actions') }}</th>
                 </tr>
             </thead>
@@ -175,7 +177,6 @@
 }
 .devices-table {
     margin-top: 0;
-    border-top: 2px solid #444;
 }
 .devices-table-header {
     cursor: default;
@@ -240,13 +241,28 @@ header.page-content-head {
     padding-top: 0;
 }
 
-/* Responsive: at narrower widths hide lower-priority columns (Services, Device
-   Profile, Scan Status, First Seen, Last Seen) so the table stays within the
-   content box instead of squeezing 13 columns into unusable widths. */
-@media (max-width: 1199px) {
-    .devices-col-secondary {
-        display: none;
-    }
+/* Responsive: hide lower-priority columns (Services, Device Profile, Scan
+   Status, First Seen, Last Seen) progressively - only as many as needed - so
+   the table stays within its content-box owner. syncResponsiveColumns()
+   measures the table against its container and toggles the devices-hide-N
+   classes, so the break point tracks the actual content width rather than a
+   hard-coded viewport width. */
+#grid-devices.devices-hide-1 .devices-col-sec-1,
+#grid-devices.devices-hide-2 .devices-col-sec-1,
+#grid-devices.devices-hide-2 .devices-col-sec-2,
+#grid-devices.devices-hide-3 .devices-col-sec-1,
+#grid-devices.devices-hide-3 .devices-col-sec-2,
+#grid-devices.devices-hide-3 .devices-col-sec-3,
+#grid-devices.devices-hide-4 .devices-col-sec-1,
+#grid-devices.devices-hide-4 .devices-col-sec-2,
+#grid-devices.devices-hide-4 .devices-col-sec-3,
+#grid-devices.devices-hide-4 .devices-col-sec-4,
+#grid-devices.devices-hide-5 .devices-col-sec-1,
+#grid-devices.devices-hide-5 .devices-col-sec-2,
+#grid-devices.devices-hide-5 .devices-col-sec-3,
+#grid-devices.devices-hide-5 .devices-col-sec-4,
+#grid-devices.devices-hide-5 .devices-col-sec-5 {
+    display: none;
 }
 
 /* With separated borders the thead's bottom border and the first body row's
@@ -409,6 +425,7 @@ $(document).ready(function() {
             ));
         });
         updateVlanLabel();
+        syncVlanApplyButton();
     }
 
     // Keep the dropdown open while checkboxes are toggled.
@@ -419,12 +436,14 @@ $(document).ready(function() {
     $(document).on('change','#vlan-all',function(){
         $('#vlan-checklist .vlan-cb').prop('checked',$(this).prop('checked'));
         updateVlanLabel();
+        syncVlanApplyButton();
     });
     $(document).on('change','#vlan-checklist .vlan-cb',function(){
         var total=$('#vlan-checklist .vlan-cb').length;
         var checked=$('#vlan-checklist .vlan-cb:checked').length;
         $('#vlan-all').prop('checked', total===checked);
         updateVlanLabel();
+        syncVlanApplyButton();
     });
 
     function readCheckedVlans() {
@@ -440,18 +459,10 @@ $(document).ready(function() {
         try { localStorage.setItem('dm_vlan_filter', JSON.stringify(activeVlans)); } catch(e) {}
         updateVlanLabel();
         applyFilters();
+        syncVlanApplyButton();
     }
 
     $('#vlan-apply').on('click', function(){ commitVlans(); });
-
-    $('#vlan-clear').on('click', function(){
-        $('#vlan-checklist .vlan-cb').prop('checked', true);
-        $('#vlan-all').prop('checked', true);
-        activeVlans = [];
-        try { localStorage.setItem('dm_vlan_filter', JSON.stringify([])); } catch(e) {}
-        updateVlanLabel();
-        applyFilters();
-    });
 
     // The button reflects the pending checkbox selection immediately: it shows
     // the number of checked VLANs, or "All VLANs" when nothing is restricted
@@ -466,6 +477,38 @@ $(document).ready(function() {
         } else {
             $('#vlan-filter-label').text(checked + ' VLANs');
         }
+    }
+
+    // Compare two VLAN arrays for the Apply button's applied/pending state.
+    function arraysEqual(a, b) {
+        a = a || [];
+        b = b || [];
+        if (a.length !== b.length) return false;
+        var aa = a.slice().sort();
+        var bb = b.slice().sort();
+        for (var i = 0; i < aa.length; i++) {
+            if (aa[i] !== bb[i]) return false;
+        }
+        return true;
+    }
+
+    // The Apply button stays muted and disabled while the pending checkbox
+    // selection equals the applied filter; it switches to the standard OPNsense
+    // orange action style (and shows a "Not applied" hint) only when they
+    // differ. It never filters rows.
+    function syncVlanApplyButton() {
+        var allVlans = [];
+        $('#vlan-checklist .vlan-cb').each(function(){ allVlans.push($(this).val()); });
+        var pending = finalizeVlanSelection(readCheckedVlans(), allVlans);
+        var same = arraysEqual(pending, activeVlans);
+        var $btn = $('#vlan-apply');
+        $btn.prop('disabled', same);
+        if (same) {
+            $btn.removeClass('btn-primary').addClass('btn-default');
+        } else {
+            $btn.removeClass('btn-default').addClass('btn-primary');
+        }
+        $('#vlan-not-applied').toggle(!same);
     }
 
     // Preserve the user's vertical and horizontal scroll position across a
@@ -523,6 +566,7 @@ $(document).ready(function() {
         renderTable(filtered);
         restoreScrollPosition(scroll);
         updateSummary(filtered);
+        syncResponsiveColumns();
         // Update sort-arrow icons
         $('th.sortable .fa').removeClass('fa-sort-asc fa-sort-desc').addClass('fa-sort');
         $('th.sortable[data-col="'+sortCol+'"] .fa')
@@ -763,13 +807,13 @@ $(document).ready(function() {
                 $hostnameCell,
                 $('<td>').text(row.mac||''),
                 $('<td>').text(row.vendor||''),
-                buildServicesCell(row).addClass('devices-col-secondary'),
+                buildServicesCell(row).addClass('devices-col-secondary devices-col-sec-1'),
                 $('<td>').text(vlanLabel),
                 $('<td>').html(statusHtml),
-                buildGroupingCell(row).addClass('devices-col-secondary'),
-                buildScanStatusCell(row).addClass('devices-col-secondary'),
-                $('<td>').text(row.first_seen||'').addClass('devices-col-secondary'),
-                $('<td>').text(row.last_seen||'').addClass('devices-col-secondary'),
+                buildGroupingCell(row).addClass('devices-col-secondary devices-col-sec-2'),
+                buildScanStatusCell(row).addClass('devices-col-secondary devices-col-sec-3'),
+                $('<td>').text(row.first_seen||'').addClass('devices-col-secondary devices-col-sec-4'),
+                $('<td>').text(row.last_seen||'').addClass('devices-col-secondary devices-col-sec-5'),
                 $('<td>').html(
                 (row.return_pending === 1 || row.return_pending === '1'
                     ? '<a class="btn btn-xs btn-primary" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+'#lifecycle-history" title="Resolve returning device / lifecycle history" style="margin-right:2px;"><i class="fa fa-history"></i> History</a>'
@@ -1079,6 +1123,45 @@ $(document).ready(function() {
         if (dmStickyHeaderEl) {
             new ResizeObserver(syncDevicesStickyHeader).observe(
                 dmStickyHeaderEl
+            );
+        }
+    }
+
+    // Keep the identities table within its content-box owner by hiding
+    // lower-priority columns progressively - only as many as needed. Scoped to
+    // the table's actual width rather than the viewport, and re-run after each
+    // render and on resize.
+    function syncResponsiveColumns() {
+        var table = document.getElementById('grid-devices');
+        if (!table || !table.parentElement) {
+            return;
+        }
+
+        var avail = table.parentElement.clientWidth;
+        var level;
+
+        // Reset to the fully expanded table so scrollWidth reports the true
+        // natural width, then hide the next lower-priority column until the
+        // table fits its content-box owner.
+        for (level = 1; level <= 5; level++) {
+            table.classList.remove('devices-hide-' + level);
+        }
+
+        level = 0;
+        while (level < 5 && table.scrollWidth > avail) {
+            level += 1;
+            table.classList.add('devices-hide-' + level);
+        }
+    }
+
+    $(window).on('resize', syncResponsiveColumns);
+    syncResponsiveColumns();
+
+    if (window.ResizeObserver) {
+        var dmResponsiveTableEl = document.getElementById('grid-devices');
+        if (dmResponsiveTableEl) {
+            new ResizeObserver(syncResponsiveColumns).observe(
+                dmResponsiveTableEl
             );
         }
     }

@@ -60,6 +60,14 @@ msgstr "Online"
 msgid "All VLANs"
 msgstr "All VLANs"
 
+#: devices.volt - VLAN filter apply button
+msgid "Apply VLAN Filter"
+msgstr "Apply VLAN Filter"
+
+#: devices.volt - VLAN filter pending indicator
+msgid "Not applied"
+msgstr "Not applied"
+
 #: devices.volt - status dropdown - all statuses option
 msgid "All statuses"
 msgstr "All statuses"
@@ -323,10 +331,6 @@ msgstr "Requires OPNsense"
 #: settings.volt - Apply button on each tab
 msgid "Apply"
 msgstr "Apply"
-
-#: devices.volt - clear VLAN filter button
-msgid "Clear"
-msgstr "Clear"
 
 #: settings.volt - spinner text on Apply button while saving
 msgid "Saving..."

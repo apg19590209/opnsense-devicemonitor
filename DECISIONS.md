@@ -807,19 +807,28 @@ counters, the VLAN/status toolbar and the table column headings. The design:
   (`border-collapse: separate; border-spacing: 0`) so each sticky heading owns
   an opaque, contiguous box and the first body row keeps a single heading
   separator. Bootstrap's default `border-collapse: collapse` lets scrolled
-  `tbody` row content paint through the sticky `th` band;
-- keeps the table on natural (auto) column widths and, at narrower widths
-  (below 1200px), hides lower-priority columns (Services, Device Profile, Scan
-  Status, First Seen, Last Seen) through a `devices-col-secondary` class and a
-  media query, so the essential identity/status/action columns remain usable
-  without document-level horizontal overflow. A fixed-percentage `table-layout:
-  fixed` layout was tried and rejected: it squeezed the 13 columns into
-  unusable widths, causing Services badges to overlap VLAN/Status and dates to
-  wrap and concatenate.
+  `tbody` row content paint through the sticky `th` band. The table's
+  redundant `border-top` is removed so the toolbar's single bottom border is
+  the only separator above the sticky column headings, avoiding a 1px
+  double-line seam that only appeared at the top of the page;
+- keeps the table on natural (auto) column widths and hides lower-priority
+  columns (Services, Device Profile, Scan Status, First Seen, Last Seen)
+  progressively - only as many as needed - when the table would otherwise
+  exceed its content-box owner's actual width. `syncResponsiveColumns()` is
+  driven by a `ResizeObserver` on the table (plus a post-render call) and
+  toggles `devices-hide-N` classes, so the break point tracks the real content
+  width rather than a hard-coded viewport width. The essential
+  identity/status/action columns remain usable without document-level
+  horizontal overflow. A fixed-percentage `table-layout: fixed` layout was
+  tried and rejected: it squeezed the 13 columns into unusable widths, causing
+  Services badges to overlap VLAN/Status and dates to wrap and concatenate.
 
 Natural DOM order is preserved (page title -> tabs -> explanatory text ->
-counters -> toolbar -> headings -> rows), and VLAN Apply/Clear still preserve
-scroll position via `captureScrollPosition()`/`restoreScrollPosition()`.
+counters -> toolbar -> headings -> rows). The VLAN **Apply VLAN Filter** button
+commits the pending checkbox selection once and preserves scroll position via
+`captureScrollPosition()`/`restoreScrollPosition()`; there is no standalone
+VLAN Clear button (selecting all VLANs and applying restores the unfiltered
+view).
 
 The fragile techniques recorded as the reason for Decision 28 remain
 prohibited: global `scroll-snap`, pseudo-element "shield" masking, and cached

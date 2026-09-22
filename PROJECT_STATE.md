@@ -31,7 +31,7 @@ documentation `97abb98`)
 
 Latest repository commit (HEAD):
 
-`Device Monitor: correct responsive identities table layout` (DM-STICKY2D)
+`Device Monitor: contain identities table and clarify VLAN apply workflow` (DM-STICKY2E)
 
 Workflow state:
 
@@ -217,6 +217,46 @@ wrapping and tall rows; a blank gap also remained between the title and tabs.
 - Next step: authenticated testbed visual acceptance (four screenshots: desktop
   page top; desktop scrolled; narrow page top; narrow scrolled).
 
+
+## Device Monitor: contain identities table + clarify VLAN apply (DM-STICKY2E)
+
+Contained the Network Identities table within its content box and clarified the
+VLAN Apply workflow.
+
+- Root cause (overflow/clipping): the 13-column table overflowed its content-box
+  owner because the only responsive control was a viewport `max-width: 1199px`
+  media query, so the wide table painted past the right edge (and beside the
+  sticky header) whenever the content box was narrower than the viewport, clipping
+  the First/Last Seen dates at the document edge.
+- Root cause (seam): the toolbar's `border-bottom: 1px solid #333` and the table's
+  `border-top: 2px solid #444` (under `border-collapse: separate`) formed a
+  double-line seam that only appeared at the top of the page.
+- Change (contain): replaced the viewport media query with
+  `syncResponsiveColumns()`, which measures the table against its content-box
+  owner (ResizeObserver + post-render + resize) and progressively hides
+  Services -> Device Profile -> Scan Status -> First Seen -> Last Seen
+  (`devices-hide-N` / `devices-col-sec-N`) - only as many as needed. Removed the
+  table's redundant `border-top` so the toolbar border is the single separator.
+- Change (VLAN workflow): removed the standalone VLAN **Clear** button and renamed
+  **Apply** to **Apply VLAN Filter**. Checkbox changes only update the pending
+  selection and the dropdown label (All VLANs / 1 VLAN / N VLANs); the button is
+  muted+disabled while pending equals applied, and switches to the OPNsense orange
+  action style (with an optional "Not applied" hint) only when they differ.
+  Applying commits once, renders once, preserves scroll position, then disables;
+  selecting all VLANs and applying restores the unfiltered view.
+- Files changed: `devices.volt`, `tests/test_devices_page_vlan.js`,
+  `DECISIONS.md` (Decision 29 refinement), both gettext catalogues,
+  `docs/USER_MANUAL.md`.
+- Tests: 11 Node (UI), 13 Python, 11 PHP PASS; `php -l`, `py_compile`, `sh -n`,
+  `msgfmt`, Volt compile, `git diff --check` PASS.
+- Deployment (`192.168.20.23`, guarded hostname/IP/source-hash): `devices.volt`
+  and both compiled `.mo` catalogues deployed; Volt cache entry for
+  `devices.volt` cleared; no service restart; production `192.168.20.254`
+  untouched. Durable backup:
+  `/var/backups/devicemonitor/dm-sticky2e-20260922-235424`.
+- Next step: authenticated testbed visual acceptance (four screenshots: desktop
+  top; desktop scrolled; narrow top; narrow scrolled). **VISUAL ACCEPTANCE:
+  USER-PENDING** - do not claim the layout is fixed without those screenshots.
 
 ## Device navigation and terminology consolidation
 

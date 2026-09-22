@@ -61,6 +61,14 @@ msgstr "Online"
 msgid "All VLANs"
 msgstr "Všechny VLANy"
 
+#: devices.volt - VLAN filtr - tlačítko použít
+msgid "Apply VLAN Filter"
+msgstr "Použít filtr VLAN"
+
+#: devices.volt - VLAN filtr - indikátor neaplikováno
+msgid "Not applied"
+msgstr "Nepoužito"
+
 #: devices.volt - status dropdown - všechny stavy
 msgid "All statuses"
 msgstr "Všechny stavy"
@@ -324,10 +332,6 @@ msgstr "Vyžaduje OPNsense"
 #: settings.volt - Apply tlačítko na každém tabu
 msgid "Apply"
 msgstr "Použít"
-
-#: devices.volt - tlačítko zrušit filtr VLAN
-msgid "Clear"
-msgstr "Vyčistit"
 
 #: settings.volt - spinner text při ukládání (Apply button)
 msgid "Saving..."
