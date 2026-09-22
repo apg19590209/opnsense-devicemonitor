@@ -89,6 +89,31 @@ Repaired the Network Identities VLAN multi-select and its sticky header.
 - Next step: authenticated testbed visual acceptance.
 
 
+## Device Monitor: correct identities filter layout
+
+Corrected the remaining authenticated visual defects in the Network Identities
+VLAN filter without regressing the Apply/Clear interaction.
+
+- Root cause (layout): a custom measured-gap sticky stack (`updateStickyOffsets()`
+  with a cached `getBoundingClientRect()` gap) plus global `scroll-snap` let body
+  rows overlap the column header, reordered the summary/toolbar/thead during
+  scroll, left blank space below the title, and let the tabs scroll out of view.
+- Root cause (count): `updateVlanLabel()` derived the button from the applied
+  `activeVlans` state instead of the pending checkbox state, so the button could
+  read "2 VLANs" while only one checkbox was selected.
+- Change: removed all custom sticky positioning and `scroll-snap` (CSS and JS); the
+  page now renders in natural DOM order and filtering preserves scroll position.
+  `updateVlanLabel()` now counts checked VLANs ("All VLANs" / "1 VLAN" / "N VLANs")
+  and is invoked on every checkbox change without filtering.
+- Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt`,
+  `tests/test_devices_page_vlan.js`, `DECISIONS.md` (Decision 28).
+- Tests: `tests/test_devices_page_vlan.js` extended (layout order, sticky removal,
+  VLAN count state); full Node/Python/PHP suite, lint, `py_compile`, `sh -n`,
+  `msgfmt`, Volt compile and `git diff --check` all PASS.
+- Next step: authenticated testbed visual acceptance (top/middle/lower table,
+  pending count, Apply, Clear, scroll preservation, tab visibility).
+
+
 ## Device navigation and terminology consolidation
 
 Consolidated the Device Monitor submenu and terminology. Implemented, validated

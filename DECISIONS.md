@@ -750,3 +750,28 @@ different abstraction levels and implied the discovered view was somehow
 non-physical. The new labels map each view to its data model (a MAC identity
 versus a user-confirmed real-world profile) while keeping the internal
 identifiers stable so that the rename is purely presentational.
+
+## 28. Network Identities view: natural layout, no custom sticky header
+
+### Decision
+
+The Network Identities (`devices.volt`) view must not use custom sticky
+positioning, `scroll-snap`, runtime `getBoundingClientRect()` offset
+measurement, or pseudo-element "shield" extensions to pin the summary,
+toolbar or column header while rows scroll. The page renders in natural DOM
+order — page title, Network Identities / Device Profiles tabs, explanatory
+text, summary, filter toolbar, column header, device rows — and relies only
+on the OPNsense fixed global header for chrome.
+
+Filtering (VLAN Apply/Clear and status) preserves vertical and horizontal
+scroll position via `captureScrollPosition()`/`restoreScrollPosition()`, and
+must never call `scrollIntoView()`, `focus()`, or follow an anchor jump.
+
+### Reason
+
+A measured-gap sticky stack plus global `scroll-snap` proved fragile: body
+rows could appear above the column header, the summary/toolbar/thead stack
+reordered during scrolling, and a stale measured gap left blank space below
+the page title and could cover the tabs. Correct, stable natural layout is
+more important than a sticky header, so the fragile custom implementation was
+removed outright rather than patched with further measured offsets.

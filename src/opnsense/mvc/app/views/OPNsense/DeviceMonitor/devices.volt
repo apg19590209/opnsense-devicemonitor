@@ -210,38 +210,8 @@
     font-weight: 600;
     vertical-align: middle;
     white-space: nowrap;
-    position: sticky;
-    top: 100px;
-    z-index: 10;
-}
-#grid-devices tbody tr {
-    scroll-snap-align: start;
-}
-#devices-sticky-summary {
-    position: sticky;
-    z-index: 30;
-}
-#devices-sticky-summary::before,
-#devices-sticky-summary::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    background-color: inherit;
-    pointer-events: none;
-}
-#devices-sticky-summary::before {
-    top: -15px;
-    height: 15px;
-}
-#devices-sticky-summary::after {
-    bottom: -12px;
-    height: 12px;
 }
 #devices-sticky-toolbar {
-    position: sticky;
-    top: 50px;
-    z-index: 20;
     padding: 12px 4px 12px 4px;
     margin: 0;
     border-bottom: 1px solid #333;
@@ -249,11 +219,6 @@
 main.page-content > .row {
     height: auto;
     min-height: 100%;
-}
-header.page-content-head {
-    position: sticky;
-    top: 0;
-    z-index: 30;
 }
 </style>
 
@@ -388,11 +353,13 @@ $(document).ready(function() {
     // not filtered or re-rendered until Apply/Clear.
     $(document).on('change','#vlan-all',function(){
         $('#vlan-checklist .vlan-cb').prop('checked',$(this).prop('checked'));
+        updateVlanLabel();
     });
     $(document).on('change','#vlan-checklist .vlan-cb',function(){
         var total=$('#vlan-checklist .vlan-cb').length;
         var checked=$('#vlan-checklist .vlan-cb:checked').length;
         $('#vlan-all').prop('checked', total===checked);
+        updateVlanLabel();
     });
 
     function readCheckedVlans() {
@@ -421,14 +388,18 @@ $(document).ready(function() {
         applyFilters();
     });
 
+    // The button reflects the pending checkbox selection immediately: it shows
+    // the number of checked VLANs, or "All VLANs" when nothing is restricted
+    // (no VLANs or every VLAN checked). It never reads the applied state.
     function updateVlanLabel() {
-        if (!activeVlans.length) {
+        var total = $('#vlan-checklist .vlan-cb').length;
+        var checked = $('#vlan-checklist .vlan-cb:checked').length;
+        if (checked === 0 || checked === total) {
             $('#vlan-filter-label').text(translations.all_vlans);
-        } else if (activeVlans.length===1) {
-            var n=vlanNames[activeVlans[0]];
-            $('#vlan-filter-label').text(activeVlans[0]+(n?' \u2013 '+n:''));
+        } else if (checked === 1) {
+            $('#vlan-filter-label').text('1 VLAN');
         } else {
-            $('#vlan-filter-label').text(activeVlans.length+' VLANs');
+            $('#vlan-filter-label').text(checked + ' VLANs');
         }
     }
 
@@ -970,75 +941,11 @@ $(document).ready(function() {
         });
     });
 
-    // Keep the summary, toolbar and table header sticky below the page
-    // navigation area (page-head + page-content-head) so they never cover the
-    // Network Identities / Device Profiles tabs. The natural-flow gap is
-    // measured once so the sticky stack does not jump upward when it engages.
-    var devicesStickyGeometry = null;
-
-    function updateStickyOffsets() {
-        var shellHead = $('header.page-head');
-        var pageHead = $('header.page-content-head');
-        var contentMain = $('section.page-content-main');
-        var summary = $('#devices-sticky-summary');
-        var toolbar = $('#devices-sticky-toolbar');
-        var thead = $('#grid-devices thead th');
-
-        // Measure the natural-flow position once (before sticky offsets shift
-        // anything) so the sticky stack sits at its true position.
-        if (devicesStickyGeometry === null && pageHead.length && summary.length) {
-            var scrollTop = (document.scrollingElement || document.documentElement).scrollTop;
-            var pageHeadRect = pageHead[0].getBoundingClientRect();
-            var summaryRect = summary[0].getBoundingClientRect();
-            devicesStickyGeometry = {
-                pageHeadTop: pageHeadRect.top + scrollTop,
-                gap: summaryRect.top - pageHeadRect.bottom
-            };
-        }
-
-        var top = shellHead.length ? shellHead.outerHeight() : 62;
-
-        if (pageHead.length) {
-            pageHead.css('top', top + 'px');
-            top += pageHead.outerHeight();
-        }
-
-        if (contentMain.length) {
-            var bg = contentMain.css('background-color');
-            summary.css('background-color', bg);
-            toolbar.css('background-color', bg);
-            thead.css('background-color', bg);
-            $('#grid-devices thead').css('background-color', bg);
-            var shield = '0 0 0 2px ' + bg;
-            summary.css('box-shadow', shield);
-            toolbar.css('box-shadow', shield);
-            thead.css('box-shadow', shield);
-        }
-
-        // Confine the sticky stack below the page title bar and the navigation
-        // tabs (the measured gap includes the tabs and explanatory text).
-        if (devicesStickyGeometry !== null) {
-            var pageHeadHeight = pageHead.length ? pageHead[0].offsetHeight : 0;
-            top = devicesStickyGeometry.pageHeadTop + pageHeadHeight + devicesStickyGeometry.gap;
-        }
-
-        if (summary.length) {
-            summary.css('top', top + 'px');
-            top += summary.outerHeight(true);
-        }
-
-        if (toolbar.length) {
-            toolbar.css('top', top + 'px');
-            top += toolbar.outerHeight(true);
-        }
-
-        thead.css('top', top + 'px');
-        var scrollRoot = document.scrollingElement || document.documentElement;
-        $(scrollRoot).css('scroll-snap-type', 'y proximity');
-        $(scrollRoot).css('scroll-padding-top', (top + thead.first().outerHeight()) + 'px');
-    }
-    $(window).on('resize', updateStickyOffsets);
-    setTimeout(updateStickyOffsets, 100);
+    // Sticky header/scroll-snap behaviour was removed: the measured-gap sticky
+    // stack caused body rows to overlap the header, reordered the controls
+    // during scroll, and left blank space below the page title. The page now
+    // flows in natural DOM order (tabs -> summary -> toolbar -> thead -> rows)
+    // and filtering preserves scroll position without any sticky offsets.
 
     // Initialise by loading interface labels before devices
 

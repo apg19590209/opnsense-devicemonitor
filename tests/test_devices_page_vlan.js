@@ -136,36 +136,67 @@ check(
 );
 
 // ---------------------------------------------------------------------------
-// Sticky header / tab stacking and offsets
+// Corrected layout: natural DOM order, no fragile sticky/scroll-snap
+// ---------------------------------------------------------------------------
+
+// Document order must be tabs -> summary -> toolbar -> table (thead -> tbody).
+const tabsIdx = view.indexOf('nav-tabs');
+const summaryIdx = view.indexOf('id="devices-sticky-summary"');
+const toolbarIdx = view.indexOf('id="devices-sticky-toolbar"');
+const tableIdx = view.indexOf('id="grid-devices"');
+const theadIdx = view.indexOf('<thead>');
+const tbodyIdx = view.indexOf('<tbody>');
+
+check(
+    tabsIdx !== -1 && summaryIdx !== -1 && toolbarIdx !== -1 && tableIdx !== -1,
+    'tabs/summary/toolbar/table must all be present'
+);
+check(tabsIdx < summaryIdx, 'tabs must precede the summary');
+check(summaryIdx < toolbarIdx, 'summary must precede the toolbar');
+check(toolbarIdx < tableIdx, 'toolbar must precede the table');
+check(
+    theadIdx !== -1 && tbodyIdx !== -1 && theadIdx < tbodyIdx,
+    'thead must precede tbody'
+);
+
+// The fragile custom sticky stack and scroll-snap are removed entirely.
+check(!view.includes('position: sticky'), 'no sticky positioning may remain');
+check(!view.includes('scroll-snap-align'), 'no scroll-snap-align may remain');
+check(!view.includes('scroll-snap-type'), 'no scroll-snap-type may remain');
+check(!view.includes('scroll-padding-top'), 'no scroll-padding-top may remain');
+check(!view.includes('devicesStickyGeometry'), 'sticky geometry cache must be removed');
+check(!view.includes('updateStickyOffsets'), 'updateStickyOffsets must be removed');
+check(!view.includes('getBoundingClientRect'), 'measured-gap logic must be removed');
+check(
+    !view.includes('#devices-sticky-summary::before'),
+    'summary shield pseudo-elements must be removed'
+);
+
+// ---------------------------------------------------------------------------
+// VLAN count-state: button reflects pending checkbox selection
 // ---------------------------------------------------------------------------
 
 check(
-    view.includes('var devicesStickyGeometry = null;'),
-    'Sticky geometry cache missing'
+    view.includes("$('#vlan-checklist .vlan-cb:checked').length"),
+    'VLAN label must read the pending checked count'
 );
 check(
-    view.includes('getBoundingClientRect'),
-    'Sticky offsets must be derived from measured geometry'
+    view.includes('checked === 0 || checked === total'),
+    'All/None selection must display the All VLANs label'
 );
+check(view.includes("'1 VLAN'"), 'One selected checkbox must display "1 VLAN"');
 check(
-    view.includes('gap: summaryRect.top - pageHeadRect.bottom'),
-    'Sticky stack must measure the natural gap to the summary (below the tabs)'
+    view.includes("checked + ' VLANs'"),
+    'Multiple selected checkboxes must display the checked count'
 );
+// updateVlanLabel is called from build + both checkbox change handlers +
+// commitVlans + clear (5 call sites), so checkbox changes update the label
+// immediately without filtering.
+const labelCallSites = view.split('updateVlanLabel();').length - 1;
 check(
-    view.includes('top = devicesStickyGeometry.pageHeadTop + pageHeadHeight + devicesStickyGeometry.gap;'),
-    'Sticky summary must be confined below the page title bar and tabs'
-);
-check(
-    view.includes('#devices-sticky-summary') && view.includes('position: sticky'),
-    'Summary must remain position: sticky'
-);
-check(
-    view.includes('#devices-sticky-toolbar') && view.includes('position: sticky'),
-    'Toolbar must remain position: sticky'
-);
-check(
-    view.includes('#grid-devices thead th') && view.includes('position: sticky'),
-    'Table header cells must remain position: sticky'
+    labelCallSites === 5,
+    'updateVlanLabel must be called from build + change handlers + apply + clear, got ' +
+        labelCallSites
 );
 
 // ---------------------------------------------------------------------------
@@ -265,7 +296,8 @@ console.log('DEVICES_VLAN_SINGLE_RENDER=PASS');
 console.log('DEVICES_VLAN_CLEAR_RESTORES_ALL=PASS');
 console.log('DEVICES_VLAN_STATE_RETAINED=PASS');
 console.log('DEVICES_VLAN_NO_SCROLL_MOVEMENT=PASS');
-console.log('DEVICES_VLAN_STICKY_OFFSETS=PASS');
+console.log('DEVICES_VLAN_LAYOUT_ORDER=PASS');
+console.log('DEVICES_VLAN_COUNT_STATE=PASS');
 console.log('DEVICES_VLAN_SELECTION_HELPER=PASS');
 console.log('DEVICES_VLAN_SUMMARY_COUNTERS=PASS');
 console.log('DEVICES_VLAN_JAVASCRIPT=PASS');
