@@ -34,7 +34,7 @@
                         <option value="device">{{ lang._('Device') }}</option>
                         <option value="lifecycle">{{ lang._('Lifecycle') }}</option>
                         <option value="identity">{{ lang._('Identity') }}</option>
-                        <option value="physical_device">{{ lang._('Physical Device') }}</option>
+                        <option value="physical_device">{{ lang._('Device Profile') }}</option>
                         <option value="user_history">{{ lang._('Notes / History') }}</option>
                         <option value="infrastructure">{{ lang._('Infrastructure') }}</option>
                     </select>
@@ -398,8 +398,8 @@ $(document).ready(function() {
             MAC_MULTI_INTERFACE: 'Device seen on multiple interfaces',
             IDENTITY_RESOLVED: 'Identity issue resolved',
             IDENTITY_REOPENED: 'Identity issue reopened',
-            PHYSICAL_DEVICE_CREATED: 'Physical device group created',
-            PHYSICAL_DEVICE_ARCHIVED: 'Physical device group archived',
+            PHYSICAL_DEVICE_CREATED: 'Device profile created',
+            PHYSICAL_DEVICE_ARCHIVED: 'Device profile archived',
             PHYSICAL_DEVICE_IDENTITY_LINKED: 'Identity linked',
             PHYSICAL_DEVICE_IDENTITY_REMOVED: 'Identity removed'
         };
@@ -460,7 +460,7 @@ $(document).ready(function() {
             device: 'Device',
             lifecycle: 'Lifecycle',
             identity: 'Identity',
-            physical_device: 'Physical Device',
+            physical_device: 'Device Profile',
             user_history: 'Notes / History',
             infrastructure: 'Infrastructure'
         };

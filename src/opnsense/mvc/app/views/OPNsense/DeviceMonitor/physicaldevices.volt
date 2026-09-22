@@ -1,6 +1,23 @@
 <div class="content-box">
     <div class="content-box-main">
 
+        <!-- Device navigation tabs -->
+        <ul class="nav nav-tabs" role="tablist" style="margin:10px 0 0 0;">
+            <li role="presentation">
+                <a href="/ui/devicemonitor/index/devices">
+                    <i class="fa fa-list"></i> {{ lang._('Network Identities') }}
+                </a>
+            </li>
+            <li role="presentation" class="active">
+                <a href="/ui/devicemonitor/index/physicaldevices">
+                    <i class="fa fa-sitemap"></i> {{ lang._('Device Profiles') }}
+                </a>
+            </li>
+        </ul>
+        <p class="text-muted" style="margin:8px 0 0 0;">
+            {{ lang._('Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters.') }}
+        </p>
+
         <div id="physical-devices-sticky-controls">
             <div class="physical-devices-header">
                 <div class="physical-devices-stats">
@@ -31,16 +48,16 @@
                         type="button"
                         class="btn btn-primary btn-sm">
                     <i class="fa fa-plus"></i>
-                    {{ lang._('Create Device') }}
+                    {{ lang._('Create Profile') }}
                 </button>
 
                 <select id="filter-state"
                         class="selectpicker"
                         data-style="btn-default btn-sm"
                         data-width="170px">
-                    <option value="all">{{ lang._('All Devices') }}</option>
-                    <option value="current">{{ lang._('Current Devices') }}</option>
-                    <option value="archived">{{ lang._('Archived Devices') }}</option>
+                    <option value="all">{{ lang._('All Profiles') }}</option>
+                    <option value="current">{{ lang._('Current Profiles') }}</option>
+                    <option value="archived">{{ lang._('Archived Profiles') }}</option>
                 </select>
 
                 <input id="physical-devices-search"
@@ -59,7 +76,7 @@
             <div class="panel-heading">
                 <strong>
                     <i class="fa fa-plus-circle"></i>
-                    {{ lang._('Create Device') }}
+                    {{ lang._('Create Profile') }}
                 </strong>
             </div>
             <div class="panel-body">
@@ -67,7 +84,7 @@
                     <input id="create-name"
                            type="text"
                            class="form-control input-sm"
-                           placeholder="{{ lang._('Device name') }}"
+                           placeholder="{{ lang._('Profile name') }}"
                            style="margin-right:6px;" />
                     <input id="create-mac"
                            type="text"
@@ -83,7 +100,7 @@
                     </button>
                 </div>
                 <div class="text-muted" style="margin-top:8px;">
-                    {{ lang._('Start with one MAC address from this device. It must belong to a currently online device. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history.') }}
+                    {{ lang._('Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history.') }}
                 </div>
             </div>
         </div>
@@ -446,6 +463,13 @@ $(document).ready(function() {
     }
 
     function buildDeviceSummary(device, isArchived) {
+        var $section = $('<div>');
+
+        $('<div>')
+            .addClass('member-section-title text-muted')
+            .text('Profile Summary')
+            .appendTo($section);
+
         var $table = $('<table>')
             .addClass('table table-condensed')
             .css('margin-bottom', '8px');
@@ -454,7 +478,7 @@ $(document).ready(function() {
 
         $tbody.append(
             $('<tr>').append(
-                $('<th>').css('width', '170px').text('Device Name'),
+                $('<th>').css('width', '170px').text('Profile Name'),
                 $('<td>').text(device.name || '\u2014')
             ),
             $('<tr>').append(
@@ -485,7 +509,8 @@ $(document).ready(function() {
         }
 
         $table.append($tbody);
-        return $table;
+        $section.append($table);
+        return $section;
     }
 
     function buildCurrentIdentitiesSection(device, current, isArchived) {
@@ -547,7 +572,7 @@ $(document).ready(function() {
                 $('<button>')
                     .attr({
                         type: 'button',
-                        title: 'Unlink this identity from the device'
+                        title: 'Unlink this identity from the profile'
                     })
                     .addClass('btn btn-xs btn-danger')
                     .html('<i class="fa fa-unlink"></i> Unlink Identity')
@@ -679,7 +704,7 @@ $(document).ready(function() {
         mac = (mac || '').trim().toLowerCase();
 
         if (!name) {
-            showError('Enter a device name');
+            showError('Enter a profile name');
             return;
         }
 
@@ -690,7 +715,7 @@ $(document).ready(function() {
 
         if (
             !confirm(
-                'Create device "' + name + '" with MAC address ' + mac + '?'
+                'Create profile "' + name + '" with MAC address ' + mac + '?'
             )
         ) {
             return;
@@ -704,7 +729,7 @@ $(document).ready(function() {
             data: {name: name, mac: mac},
             success: function(result) {
                 if (result && result.result === 'saved') {
-                    showToast('Device created', 'success');
+                    showToast('Profile created', 'success');
                     $('#create-form').hide();
                     $('#create-name').val('');
                     $('#create-mac').val('');
@@ -716,7 +741,7 @@ $(document).ready(function() {
                 showError(
                     result && result.error
                         ? result.error
-                        : 'Unable to create device'
+                        : 'Unable to create profile'
                 );
             },
             error: function(xhr) {
@@ -724,7 +749,7 @@ $(document).ready(function() {
                 showError(
                     xhr.responseJSON && xhr.responseJSON.error
                         ? xhr.responseJSON.error
-                        : 'Unable to create device'
+                        : 'Unable to create profile'
                 );
             }
         });
@@ -747,11 +772,11 @@ $(document).ready(function() {
             !confirm(
                 'Add ' +
                 relatedMac +
-                ' to device "' +
+                ' to profile "' +
                 deviceName +
                 '"?\n\n' +
-                'Only continue if this MAC belongs to the same physical ' +
-                'hardware. Do not add separate devices merely because ' +
+                'Only continue if this MAC belongs to the same device profile. ' +
+                'Do not add separate devices merely because ' +
                 'they are the same type, model or vendor.'
             )
         ) {
@@ -802,7 +827,7 @@ $(document).ready(function() {
             !confirm(
                 'Unlink ' +
                 relatedMac +
-                ' from device "' +
+                ' from profile "' +
                 deviceName +
                 '"? Identity history will be preserved.'
             )

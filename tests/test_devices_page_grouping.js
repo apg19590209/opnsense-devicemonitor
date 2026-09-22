@@ -13,7 +13,7 @@ function check(condition, message) {
 }
 
 [
-    "{{ lang._('Physical Device') }}",
+    "{{ lang._('Device Profile') }}",
     'function buildGroupingCell(row)',
     'buildGroupingCell(row)',
     'physical_device_id',

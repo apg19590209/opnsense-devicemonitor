@@ -27,6 +27,18 @@ msgstr "Sledování zařízení"
 msgid "Devices"
 msgstr "Zařízení"
 
+#: devices.volt / physicaldevices.volt - navigation tabs
+msgid "Network Identities"
+msgstr "Síťové identity"
+
+#: devices.volt - navigation explanatory text
+msgid "Automatically discovered network identities. Each row represents one MAC address."
+msgstr "Automaticky nalezené síťové identity. Každý řádek představuje jednu MAC adresu."
+
+#: physicaldevices.volt - navigation explanatory text
+msgid "Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters."
+msgstr "Reálná zařízení propojená s jednou nebo více síťovými identitami, například kabelovým a Wi-Fi adaptérem."
+
 #: Menu.xml - menu položka | settings.volt - nadpis stránky
 msgid "Settings"
 msgstr "Nastavení"
@@ -652,8 +664,8 @@ msgstr "Životní cyklus"
 msgid "Identity"
 msgstr "Identita"
 
-msgid "Physical Device"
-msgstr "Fyzické zařízení"
+msgid "Device Profile"
+msgstr "Profil zařízení"
 
 msgid "Notes / History"
 msgstr "Poznámky / Historie"
@@ -715,24 +727,24 @@ msgstr "Načítání změn..."
 msgid "Next"
 msgstr "Další"
 
-# [physicaldevices.volt] Physical Devices page
-msgid "Physical Devices"
-msgstr "Fyzická zařízení"
+# [physicaldevices.volt] Device Profiles page
+msgid "Device Profiles"
+msgstr "Profily zařízení"
 
 msgid "Archived"
 msgstr "Archivované"
 
-msgid "Create Device"
-msgstr "Vytvořit zařízení"
+msgid "Create Profile"
+msgstr "Vytvořit profil"
 
-msgid "All Devices"
-msgstr "Všechna zařízení"
+msgid "All Profiles"
+msgstr "Všechny profily"
 
-msgid "Current Devices"
-msgstr "Aktuální zařízení"
+msgid "Current Profiles"
+msgstr "Aktuální profily"
 
-msgid "Archived Devices"
-msgstr "Archivovaná zařízení"
+msgid "Archived Profiles"
+msgstr "Archivované profily"
 
 msgid "Search by name or MAC"
 msgstr "Hledat podle názvu nebo MAC"
@@ -740,8 +752,8 @@ msgstr "Hledat podle názvu nebo MAC"
 msgid "Showing"
 msgstr "Zobrazeno"
 
-msgid "Device name"
-msgstr "Název zařízení"
+msgid "Profile name"
+msgstr "Název profilu"
 
 msgid "Create"
 msgstr "Vytvořit"
@@ -749,11 +761,11 @@ msgstr "Vytvořit"
 msgid "Loading devices..."
 msgstr "Načítání zařízení..."
 
-msgid "Start with one MAC address from this device. It must belong to a currently online device. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
-msgstr "Začněte jednou MAC adresou z tohoto zařízení. Musí patřit k aktuálně online zařízení. Přidávání identit je explicitní a nikdy neslučuje ani nepřepisuje historii zařízení, životních cyklů nebo identit."
+msgid "Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
+msgstr "Začněte jednou MAC adresou pro tento profil. Musí patřit k aktuálně online síťové identitě. Přidávání identit je explicitní a nikdy neslučuje ani nepřepisuje historii zařízení, životních cyklů nebo identit."
 
-msgid "Loading physical device..."
-msgstr "Načítání fyzického zařízení..."
+msgid "Loading device profile..."
+msgstr "Načítání profilu zařízení..."
 
 # [devicehistory.volt] Device Details page
 msgid "Device Details"

@@ -73,12 +73,12 @@
             <div class="panel-heading">
                 <strong>
                     <i class="fa fa-sitemap"></i>
-                    {{ lang._('Physical Device') }}
+                    {{ lang._('Device Profile') }}
                 </strong>
             </div>
             <div class="panel-body" id="physical-device-content">
                 <div class="text-muted">
-                    {{ lang._('Loading physical device...') }}
+                    {{ lang._('Loading device profile...') }}
                 </div>
             </div>
         </div>
@@ -934,7 +934,7 @@ $(document).ready(function() {
             .append(
                 $('<div>')
                     .addClass('text-muted')
-                    .text('Loading physical device...')
+                    .text('Loading device profile...')
             );
 
         $.ajax({
@@ -946,7 +946,7 @@ $(document).ready(function() {
                     physicalDeviceError(
                         result && result.error
                             ? result.error
-                            : 'Unable to load physical device'
+                            : 'Unable to load device profile'
                     );
                     return;
                 }
@@ -954,7 +954,7 @@ $(document).ready(function() {
                 renderPhysicalDeviceSummary(result.physical_device || null);
             },
             error: function() {
-                physicalDeviceError('Unable to load physical device');
+                physicalDeviceError('Unable to load device profile');
             }
         });
     }
@@ -968,7 +968,7 @@ $(document).ready(function() {
             ? (parseInt(physicalDevice.id, 10) || 0)
             : 0;
         var physicalDeviceName = physicalDevice
-            ? (physicalDevice.name || ('Physical device #' + physicalDeviceId))
+            ? (physicalDevice.name || ('Device profile #' + physicalDeviceId))
             : '';
         var members = physicalDevice && Array.isArray(physicalDevice.members)
             ? physicalDevice.members
@@ -1006,24 +1006,24 @@ $(document).ready(function() {
                 .attr({
                     href: '/ui/devicemonitor/index/physicaldevices?group=' +
                         encodeURIComponent(physicalDeviceId),
-                    title: 'Open this device'
+                    title: 'Open this profile'
                 })
                 .addClass('btn btn-xs btn-primary')
                 .html(
                     '<i class="fa fa-sitemap"></i> ' +
-                    'Open Device'
+                    'Open Profile'
                 )
                 .appendTo($actions);
         } else {
             $('<a>')
                 .attr({
                     href: '/ui/devicemonitor/index/physicaldevices',
-                    title: 'Add this device to a physical device'
+                    title: 'Add this network identity to a device profile'
                 })
                 .addClass('btn btn-xs btn-primary')
                 .html(
                     '<i class="fa fa-sitemap"></i> ' +
-                    'Add to Device'
+                    'Add to Profile'
                 )
                 .appendTo($actions);
         }

@@ -70,17 +70,21 @@ list. You can also trigger discovery manually from the Devices page (see [Sectio
 
 | Menu item | Purpose |
 |-----------|---------|
-| **Devices** | Main device inventory and per-device actions. |
-| **Physical Devices** | Manage a real-world device's current and previous network identities. |
+| **Devices** | Device inventory with two tabs: **Network Identities** and **Device Profiles**. |
 | **Change Summary** | Chronological review of device, lifecycle, identity and service changes. |
 | **Infrastructure Services** | Network services discovered on your devices (DHCP, DNS, SSH, …). |
 | **IP and MAC Conflicts** | Detected identity anomalies (an IP/MAC seen with conflicting devices). |
 | **Nmap Scan History** | History of targeted Nmap security scans and their results. |
 | **Settings** | Monitoring, notification and Nmap scanning configuration. |
 
+The **Devices** menu item opens two tab-style views:
+
+- **Network Identities** — automatically discovered network identities; each row is one MAC address.
+- **Device Profiles** — real-world devices linked to one or more network identities (for example wired and Wi-Fi adapters).
+
 Two additional pages are reached from the Devices list rather than the menu:
 
-- **Device Details** — a single device's summary, notes, lifecycle history and physical-device
+- **Device Details** — a single device's summary, notes, lifecycle history and device-profile
   association. Open it with the note/comment icon (or **History**) in a device's **Actions** column.
 - **Device Activity** — the chronological activity log for a single device. Open it
   with the **Device Activity** button on the Device Details page.
@@ -92,9 +96,10 @@ status (**Running**/**Stopped** with its PID), total devices, and how many are *
 
 ## 4. Devices
 
-**Path:** Services → Device Monitor → Devices
+**Path:** Services → Device Monitor → Devices → **Network Identities**
 
-This is the primary view of everything Device Monitor has discovered.
+This is the primary view of everything Device Monitor has discovered. Each row is one
+automatically discovered network identity (a MAC address).
 
 ### 4.1 Purpose
 
@@ -139,8 +144,8 @@ Devices**). The installed plugin version is shown under **Settings → About**.
 - **VLAN** — the VLAN/interface the device was observed on.
 - **Status** — **ONLINE** (green), **OFFLINE** (grey), or **RETURNING** (orange). See
   [Section 5](#5-device-lifecycle-and-returning-devices).
-- **Physical Device** — the physical device this device is linked to (if any), with its
-  identity count. See [Section 7](#7-physical-devices).
+- **Device Profile** — the device profile this identity is linked to (if any), with its
+  identity count. See [Section 7](#7-device-profiles).
 - **Scan Status** — status of the device's most recent targeted Nmap scan: e.g. **Pending**,
   a completed status, or **Failed n/5** (attempt count out of 5). See [Section 12](#12-networknmapsecurity-scanning).
 - **First Seen** — when the device was first observed.
@@ -284,16 +289,16 @@ and identity changes (IP/hostname/source changes). **Read-only.**
 
 ---
 
-## 7. Physical Devices
+## 7. Device Profiles
 
-**Path:** Services → Device Monitor → **Physical Devices**
+**Path:** Services → Device Monitor → Devices → **Device Profiles**
 
 ### 7.1 Purpose
 
-A **physical device** is one real-world piece of equipment that you recognise and name
+A **device profile** is one real-world piece of equipment that you recognise and name
 (for example "Reception PC" or "Lab printer"). Because one machine can appear on the
 network under several MAC addresses (wired + Wi-Fi, for instance), you can associate
-several network identities with the same physical device.
+several network identities with the same device profile.
 
 - **Current Identities** are the MAC/network identities currently associated with the
   device.
@@ -305,29 +310,29 @@ device, lifecycle or identity history.
 
 ### 7.2 What you can do
 
-On the **Physical Devices** page:
+On the **Device Profiles** page:
 
-- **Create Device** — enter a name and a starting MAC address; the new device is created
+- **Create Profile** — enter a name and a starting MAC address; the new profile is created
   with that MAC as its first current identity. The starting MAC must be a currently online
-  device. **Changes state.**
-- Expand a device to see its identities, then use **Add Identity** to add another MAC, or
+  network identity. **Changes state.**
+- Expand a profile to see its identities, then use **Add Identity** to add another MAC, or
   **Unlink Identity** to remove a current identity. **Changes state.**
-- Filter the list with **All Devices / Current Devices / Archived Devices** and search by
+- Filter the list with **All Profiles / Current Profiles / Archived Profiles** and search by
   name or MAC. **Read-only.**
 - **View Device Details** for any identity to open its **Device Details** page. **Read-only.**
 
-On a device's **Device Details** page, a read-only **Physical Device** summary shows the
-device's name and current identity count and links to the **Physical Devices** page.
+On a device's **Device Details** page, a read-only **Device Profile** summary shows the
+profile's name and current identity count and links to the **Device Profiles** page.
 
 ### 7.3 What is displayed
 
-The page lists every physical device (current and archived) with its current identity
-count, online/offline status and last-seen time. Each device expands to show its
-**Device Summary**, **Current Identities** and **Previous Identities**. Archived devices
-are read-only; removed identities are retained as history. The Devices page **Physical
-Device** column shows the device name plus the identity count.
+The page lists every device profile (current and archived) with its current identity
+count, online/offline status and last-seen time. Each profile expands to show its
+**Profile Summary**, **Current Identities** and **Previous Identities**. Archived profiles
+are read-only; removed identities are retained as history. The Devices page **Device
+Profile** column shows the profile name plus the identity count.
 
-> Physical devices are purely organisational. They do not change how devices are scanned,
+> Device profiles are purely organisational. They do not change how devices are scanned,
 > monitored or notified, and they do not alter device or lifecycle history.
 
 ---
@@ -481,14 +486,14 @@ page scrolling).
 ### 11.1 Purpose
 
 Provide a chronological, filterable review of recent changes across devices, lifecycles,
-identities, physical devices, notes/history, and infrastructure services.
+identities, device profiles, notes/history, and infrastructure services.
 
 ### 11.2 Controls
 
 - **Period** — **Since last review**, **Last 24 hours**, **Last 7 days**, **Last 30 days**,
   or **Custom range** (start/end, UTC).
 - **Category** — **All categories**, **Device**, **Lifecycle**, **Identity**,
-  **Physical Device**, **Notes / History**, or **Infrastructure**.
+  **Device Profile**, **Notes / History**, or **Infrastructure**.
 - **Refresh** — reload.
 - **Mark reviewed now** — sets the "last reviewed" marker to now (stored in your browser).
   This anchors the **Since last review** period. **Read-only effect on data** (local only).
@@ -737,11 +742,11 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 3. In **Lifecycle History**, choose **Start New Lifecycle** (new identity) or **Relink**
    (restore a previous lifecycle).
 
-### 16.4 Associate several MAC addresses with one physical device
+### 16.4 Associate several MAC addresses with one device profile
 
-1. Open **Services → Device Monitor → Physical Devices**.
-2. Click **Create Device**, enter a name and one of the machine's MAC addresses, then confirm.
-3. Expand the new device and use **Add Identity** to add the machine's other MACs.
+1. Open **Services → Device Monitor → Devices → Device Profiles**.
+2. Click **Create Profile**, enter a name and one of the machine's MAC addresses, then confirm.
+3. Expand the new profile and use **Add Identity** to add the machine's other MACs.
 
 ### 16.5 Review what changed recently
 
@@ -816,14 +821,15 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 
 ## 19. Glossary
 
-- **Device** — a discovered network device, keyed by MAC address.
+- **Network Identity** — a discovered network device, keyed by MAC address (shown on the
+  Network Identities tab).
 - **Hostwatch** — the OPNsense service that observes hosts on firewall interfaces.
 - **Lifecycle** — a period of continuous ownership/use for a MAC address.
 - **Returning device** — a known MAC that reappeared after removal and awaits a decision.
 - **Friendly Name** — your own label for a device (`custom_hostname`), independent of the
   detected hostname.
 - **Hostname** — the hostname Device Monitor detected (with a source tag).
-- **Physical Device** — one real-world piece of equipment, recognised by you, with one or
+- **Device Profile** — one real-world piece of equipment, recognised by you, with one or
   more current or previous network identities.
 - **Identity event** — a detected IP/MAC anomaly or conflict.
 - **Infrastructure service** — a network service (DHCP, DNS, SSH, SMB, …) found on a device.
@@ -840,8 +846,8 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 | Navigation menu | `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/Menu/Menu.xml` |
 | ACL / permissions | `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/ACL/ACL.xml` |
 | Devices page (list, filters, CSV, actions) | `views/.../devices.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
-| Physical Devices | `views/.../physicaldevices.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
-| Device Details (summary, notes, lifecycle, physical device) | `views/.../devicehistory.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
+| Device Profiles | `views/.../physicaldevices.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
+| Device Details (summary, notes, lifecycle, device profile) | `views/.../devicehistory.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | Device Activity | `views/.../activitytimeline.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | IP and MAC Conflicts | `views/.../identityevents.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | Infrastructure Services | `views/.../infrastructureservices.volt`, `Api/DevicesController.php`, `scan_network.py` |

@@ -2,7 +2,6 @@
     <Services>
         <DeviceMonitor cssClass="fa fa-plug fw" VisibleName="Device Monitor">
             <Devices url="/ui/devicemonitor/index/devices" VisibleName="Devices" order="10"/>
-            <PhysicalDevices url="/ui/devicemonitor/index/physicaldevices" VisibleName="Physical Devices" order="11"/>
             <ChangeSummary url="/ui/devicemonitor/index/changesummary" VisibleName="Change Summary" order="12"/>
             <InfrastructureServices url="/ui/devicemonitor/index/infrastructureservices" VisibleName="Infrastructure Services" order="13"/>
             <IdentityEvents url="/ui/devicemonitor/index/identityevents" VisibleName="IP and MAC Conflicts" order="14"/>

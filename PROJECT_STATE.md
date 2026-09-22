@@ -2,7 +2,7 @@
 
 ## Last updated
 
-21 September 2026
+22 September 2026
 
 ## Current version / branch / environment
 
@@ -58,6 +58,53 @@ Workflow state:
 - branch `v2.9-development`; worktree clean and synced with
   `origin/v2.9-development` before this documentation edit
 
+
+## Device navigation and terminology consolidation
+
+Consolidated the Device Monitor submenu and terminology. Implemented, validated
+and deployed to the testbed `192.168.20.23`. Production `192.168.20.254` was
+not touched; no scan, provider, daemon or database behaviour was changed.
+
+- Single **Devices** submenu entry replaces the separate **Devices** and
+  **Physical Devices** entries (`Menu.xml`).
+- Two tab-style views link between the existing routes:
+  - **Network Identities** (`/ui/devicemonitor/index/devices`) — the MAC-level
+    discovered-device table.
+  - **Device Profiles** (`/ui/devicemonitor/index/physicaldevices`) — the
+    user-confirmed real-world device grouping (formerly "Physical Devices").
+- Terminology: "Physical Devices" → "Device Profiles", "Physical Device" →
+  "Device Profile", "Create Device" → "Create Profile", "Device Summary" →
+  "Profile Summary", "All/Current/Archived Devices" → "All/Current/Archived
+  Profiles"; "Current Identities", "Previous Identities", "Add Identity" and
+  "Unlink Identity" retained.
+- All internal routes, URLs, controller actions, API endpoints, model methods,
+  JSON fields and database identifiers remain unchanged (including
+  `index/physicaldevices`, `physicaldevices`, `listphysicaldevices`,
+  `createphysicaldevice`, `linkphysicaldeviceidentity`,
+  `removephysicaldeviceidentity`, `physical_devices` and
+  `physical_device_memberships`). No database migration.
+
+Files changed: `Menu.xml`, `devices.volt`, `physicaldevices.volt`,
+`devicehistory.volt`, `changesummary.volt`, `DeviceMonitor.php` (two
+change-summary description strings), both gettext catalogues, the new
+`tests/test_device_navigation.js`, `.github/workflows/ci.yml`,
+`docs/USER_MANUAL.md`, and `DECISIONS.md` (Decision 27 supersedes the earlier
+"Physical Device is retained" wording).
+
+Validation (local): Python compile, PHP lint, shell syntax, gettext
+(`msgfmt --check`), `git diff --check`, 10 Node (UI) tests, 13 Python tests and
+11 PHP tests — all PASS.
+
+Deployment (`192.168.20.23`, guarded): 8 runtime files (`Menu.xml`, four
+`.volt` views, `DeviceMonitor.php`, both compiled `.mo` catalogues) deployed
+with candidate/pre/post SHA256 parity and timestamped `cp -p` rollback backups.
+Menu cache and Volt template cache invalidated; no service restart; daemon
+unchanged. Unauthenticated route smoke check: HTTP 302 (no PHP fatal) for both
+`/ui/devicemonitor/index/devices` and `/ui/devicemonitor/index/physicaldevices`.
+Read-only DB safety unchanged (`devices.db`, `config.json`, `/conf/config.xml`
+hashes identical to the pre-deployment state).
+
+Next step: confirm the GitHub Actions CI run for this commit passes.
 
 ## v2.9 development — Pi-hole and Unbound experimental opt-in
 

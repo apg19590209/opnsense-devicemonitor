@@ -27,6 +27,18 @@ msgstr "Device Monitor"
 msgid "Devices"
 msgstr "Devices"
 
+#: devices.volt / physicaldevices.volt - navigation tabs
+msgid "Network Identities"
+msgstr "Network Identities"
+
+#: devices.volt - navigation explanatory text
+msgid "Automatically discovered network identities. Each row represents one MAC address."
+msgstr "Automatically discovered network identities. Each row represents one MAC address."
+
+#: physicaldevices.volt - navigation explanatory text
+msgid "Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters."
+msgstr "Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters."
+
 #: Menu.xml - menu item | settings.volt - page title
 msgid "Settings"
 msgstr "Settings"
@@ -651,8 +663,8 @@ msgstr "Lifecycle"
 msgid "Identity"
 msgstr "Identity"
 
-msgid "Physical Device"
-msgstr "Physical Device"
+msgid "Device Profile"
+msgstr "Device Profile"
 
 msgid "Notes / History"
 msgstr "Notes / History"
@@ -714,24 +726,24 @@ msgstr "Loading changes..."
 msgid "Next"
 msgstr "Next"
 
-# [physicaldevices.volt] Physical Devices page
-msgid "Physical Devices"
-msgstr "Physical Devices"
+# [physicaldevices.volt] Device Profiles page
+msgid "Device Profiles"
+msgstr "Device Profiles"
 
 msgid "Archived"
 msgstr "Archived"
 
-msgid "Create Device"
-msgstr "Create Device"
+msgid "Create Profile"
+msgstr "Create Profile"
 
-msgid "All Devices"
-msgstr "All Devices"
+msgid "All Profiles"
+msgstr "All Profiles"
 
-msgid "Current Devices"
-msgstr "Current Devices"
+msgid "Current Profiles"
+msgstr "Current Profiles"
 
-msgid "Archived Devices"
-msgstr "Archived Devices"
+msgid "Archived Profiles"
+msgstr "Archived Profiles"
 
 msgid "Search by name or MAC"
 msgstr "Search by name or MAC"
@@ -739,8 +751,8 @@ msgstr "Search by name or MAC"
 msgid "Showing"
 msgstr "Showing"
 
-msgid "Device name"
-msgstr "Device name"
+msgid "Profile name"
+msgstr "Profile name"
 
 msgid "Create"
 msgstr "Create"
@@ -748,11 +760,11 @@ msgstr "Create"
 msgid "Loading devices..."
 msgstr "Loading devices..."
 
-msgid "Start with one MAC address from this device. It must belong to a currently online device. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
-msgstr "Start with one MAC address from this device. It must belong to a currently online device. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
+msgid "Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
+msgstr "Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
 
-msgid "Loading physical device..."
-msgstr "Loading physical device..."
+msgid "Loading device profile..."
+msgstr "Loading device profile..."
 
 # [devicehistory.volt] Device Details page
 msgid "Device Details"

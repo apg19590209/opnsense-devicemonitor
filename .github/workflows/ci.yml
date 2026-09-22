@@ -811,6 +811,11 @@ jobs:
           set -eu
           node tests/test_devices_page_grouping.js
 
+      - name: Validate device navigation and terminology
+        run: |
+          set -eu
+          node tests/test_device_navigation.js
+
       - name: Validate devices page filtered summary counters
         run: |
           set -eu

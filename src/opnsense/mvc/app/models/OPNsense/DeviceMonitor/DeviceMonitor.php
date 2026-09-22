@@ -2174,7 +2174,7 @@ class DeviceMonitor
                             ),
                             null,
                             $name,
-                            'Physical device group created',
+                            'Device profile created',
                             null,
                             $name
                         );
@@ -2200,7 +2200,7 @@ class DeviceMonitor
                             ),
                             $name,
                             null,
-                            'Physical device group archived',
+                            'Device profile archived',
                             null,
                             $name
                         );

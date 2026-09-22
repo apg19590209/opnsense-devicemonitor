@@ -1,6 +1,23 @@
 <div class="content-box">
     <div class="content-box-main">
 
+        <!-- Device navigation tabs -->
+        <ul class="nav nav-tabs" role="tablist" style="margin:10px 0 0 0;">
+            <li role="presentation" class="active">
+                <a href="/ui/devicemonitor/index/devices">
+                    <i class="fa fa-list"></i> {{ lang._('Network Identities') }}
+                </a>
+            </li>
+            <li role="presentation">
+                <a href="/ui/devicemonitor/index/physicaldevices">
+                    <i class="fa fa-sitemap"></i> {{ lang._('Device Profiles') }}
+                </a>
+            </li>
+        </ul>
+        <p class="text-muted" style="margin:8px 0 0 0;">
+            {{ lang._('Automatically discovered network identities. Each row represents one MAC address.') }}
+        </p>
+
         <!-- Header with statistics -->
         <div id="devices-sticky-summary" class="devices-header">
             <div class="devices-stats">
@@ -69,7 +86,7 @@
 
                     <th class="sortable devices-table-header" data-col="vlan">{{ lang._('VLAN') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable devices-table-header" data-col="status">{{ lang._('Status') }} <i class="fa fa-sort"></i></th>
-                    <th class="devices-table-header">{{ lang._('Physical Device') }}</th>
+                    <th class="devices-table-header">{{ lang._('Device Profile') }}</th>
                     <th class="sortable devices-table-header" data-col="nmap_scan_status">{{ lang._('Scan Status') }} <i class="fa fa-sort"></i></th>
                     <th class="devices-table-header">{{ lang._('First Seen') }}</th>
                     <th class="sortable devices-table-header" data-col="last_seen">{{ lang._('Last Seen') }} <i class="fa fa-sort"></i></th>

@@ -105,8 +105,8 @@ check(
 // Grouping summary remains, but no grouping management controls return.
 [
     'id="physical-device-grouping"',
-    'Open Device',
-    'Add to Device'
+    'Open Profile',
+    'Add to Profile'
 ].forEach(function(value) {
     check(
         history.includes(value),

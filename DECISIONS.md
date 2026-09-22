@@ -702,3 +702,51 @@ experimental and disabled-by-default prevents a previously absent Unbound source
 from silently changing resolved hostnames after an upgrade, keeps the native
 always-on sources (Hostwatch/ISC/Kea/Dnsmasq) as the safe default, and makes the
 opt-in explicit and reversible.
+
+## 27. Device navigation and terminology: Network Identities and Device Profiles
+
+### Decision
+
+This decision supersedes the user-facing terminology introduced by Decision 17
+("Physical-device grouping") and the wording recorded in `PROJECT_STATE.md`
+("the user-facing term **Physical Device** is retained").
+
+The Device Monitor submenu exposes a single **Devices** entry with two
+tab-style views that link between the existing routes:
+
+- **Network Identities** — the MAC-level discovered-device table (formerly the
+  "Devices" view). Explanatory text: "Automatically discovered network
+  identities. Each row represents one MAC address."
+- **Device Profiles** — the user-confirmed real-world device grouping (formerly
+  "Physical Devices"). Explanatory text: "Real-world devices linked to one or
+  more network identities, such as wired and Wi-Fi adapters."
+
+User-facing terminology changes:
+
+- "Physical Devices" → "Device Profiles"
+- "Physical Device" (column/field) → "Device Profile"
+- "Create Device" → "Create Profile"
+- "Device Summary" (profile summary) → "Profile Summary"
+- "All Devices / Current Devices / Archived Devices" → "All Profiles / Current
+  Profiles / Archived Profiles"
+- "Current Identities", "Previous Identities", "Add Identity" and "Unlink
+  Identity" are retained.
+- The term "Device Groups" must not be used for profiles.
+
+### Non-negotiable compatibility
+
+All internal routes, URLs, controller actions, API endpoints, model methods,
+JSON fields and database identifiers remain unchanged, including
+`index/physicaldevices`, `physicaldevices`, `listphysicaldevices`,
+`createphysicaldevice`, `linkphysicaldeviceidentity`,
+`removephysicaldeviceidentity`, `physical_devices` and
+`physical_device_memberships`. Existing bookmarks, API clients and stored data
+continue to work; no database migration is performed.
+
+### Reason
+
+"Devices" versus "Physical Devices" overloaded the word "device" at two
+different abstraction levels and implied the discovered view was somehow
+non-physical. The new labels map each view to its data model (a MAC identity
+versus a user-confirmed real-world profile) while keeping the internal
+identifiers stable so that the rename is purely presentational.
