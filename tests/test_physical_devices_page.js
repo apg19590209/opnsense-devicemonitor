@@ -57,6 +57,16 @@ function check(condition, message) {
     );
 });
 
+// The Device Profiles summary must use the "Profiles" label, not "Devices".
+check(
+    page.includes("{{ lang._('Profiles') }}:"),
+    'Device Profiles summary must use the "Profiles" label'
+);
+check(
+    !page.includes("{{ lang._('Devices') }}:"),
+    'Device Profiles summary must not use the "Devices" label'
+);
+
 // User-facing implementation terminology must not remain.
 [
     'Group ID',

@@ -105,6 +105,20 @@ const model = fs.readFileSync(
     check(model.includes(value), 'model database identifier missing: ' + value);
 });
 
+// The Device Profiles route must render the same standard page heading as the
+// Network Identities view (Services: Device Monitor: Devices).
+const controller = fs.readFileSync(
+    ROOT + '/controllers/OPNsense/DeviceMonitor/IndexController.php',
+    'utf8'
+);
+check(
+    controller.includes('function physicaldevicesAction') &&
+        controller.includes("gettext('Services')") &&
+        controller.includes("gettext('Device Monitor')") &&
+        controller.includes("gettext('Devices')"),
+    'Device Profiles route must set the standard Devices page heading'
+);
+
 // Old affected user-facing terminology must be absent from active UI templates.
 [
     ['devices', devices],
@@ -127,3 +141,4 @@ console.log('DEVICE_NAVIGATION_ACTIVE=PASS');
 console.log('DEVICE_NAVIGATION_EXPLANATORY=PASS');
 console.log('DEVICE_NAVIGATION_COMPAT=PASS');
 console.log('DEVICE_NAVIGATION_TERMINOLOGY=PASS');
+console.log('DEVICE_NAVIGATION_HEADING=PASS');

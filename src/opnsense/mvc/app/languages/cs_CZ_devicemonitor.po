@@ -731,6 +731,10 @@ msgstr "Další"
 msgid "Device Profiles"
 msgstr "Profily zařízení"
 
+#: physicaldevices.volt - summary stat label
+msgid "Profiles"
+msgstr "Profily"
+
 msgid "Archived"
 msgstr "Archivované"
 

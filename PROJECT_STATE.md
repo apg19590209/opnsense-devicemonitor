@@ -106,6 +106,44 @@ hashes identical to the pre-deployment state).
 
 Next step: confirm the GitHub Actions CI run for this commit passes.
 
+## Device navigation visual-acceptance follow-up
+
+Applied a minimal follow-up to `cc7255e` to correct confirmed visual issues on
+the Device Profiles view. Testbed `192.168.20.23` only; production
+`192.168.20.254` was not touched. No routes, APIs, database, scanner, daemon,
+config or existing profile data were changed.
+
+- Device Profiles route now renders the same standard page heading as Network
+  Identities (`Services: Device Monitor: Devices`) by setting `title` and
+  `headTitle` in `IndexController::physicaldevicesAction()`.
+- Device Profiles summary stat label changed from "Devices" to "Profiles"
+  (`physicaldevices.volt`); a new `Profiles` msgid was added to both gettext
+  catalogues (`en_US` → "Profiles", `cs_CZ` → "Profily").
+- Network Identities explanatory text was already present from `cc7255e` and is
+  unchanged.
+
+Files changed: `IndexController.php`, `physicaldevices.volt`, both gettext
+catalogues, `tests/test_device_navigation.js` (new heading check) and
+`tests/test_physical_devices_page.js` (new summary-label checks).
+
+Validation (local): Python compile, PHP lint, shell syntax, gettext
+(`msgfmt --check`), `git diff --check`, 9 Node (UI) tests, 11 Python tests and
+9 PHP tests — all PASS.
+
+Deployment (`192.168.20.23`, guarded): 4 runtime files (`IndexController.php`,
+`physicaldevices.volt`, both compiled `.mo` catalogues) deployed with
+candidate/pre/post SHA256 parity and timestamped `cp -p` rollback backups.
+Volt template cache entry for `physicaldevices.volt` cleared; menu cache not
+affected (no `Menu.xml` change); no service restart. Unauthenticated route
+smoke check: HTTP 302 for both `/ui/devicemonitor/index/devices` and
+`/ui/devicemonitor/index/physicaldevices`. Deployed view verified to contain
+the `Profiles` summary label; deployed controller verified to set the standard
+heading; compiled `.mo` verified to contain `Profiles`/`Profily`. Read-only DB
+safety unchanged (`devices.db`, `config.json`, `/conf/config.xml` hashes
+identical to pre-deployment state).
+
+Next step: commit, push and confirm the GitHub Actions CI run passes.
+
 ## v2.9 development — Pi-hole and Unbound experimental opt-in
 
 Marked Pi-hole and Unbound hostname enrichment as **Experimental** and made Unbound

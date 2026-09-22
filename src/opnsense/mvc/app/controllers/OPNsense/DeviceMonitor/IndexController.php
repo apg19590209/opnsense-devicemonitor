@@ -12,6 +12,8 @@ class IndexController extends \OPNsense\Base\IndexController
     public function physicaldevicesAction()
     {
         $this->view->pick('OPNsense/DeviceMonitor/physicaldevices');
+        $this->view->title = gettext('Services') . ': ' . gettext('Device Monitor') . ': ' . gettext('Devices');
+        $this->view->headTitle = gettext('Devices') . ' | ' . gettext('Device Monitor') . ' | ' . gettext('Services');
     }
     
     public function identityeventsAction()

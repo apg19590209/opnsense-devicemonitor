@@ -22,7 +22,7 @@
             <div class="physical-devices-header">
                 <div class="physical-devices-stats">
                     <span>
-                        {{ lang._('Devices') }}:
+                        {{ lang._('Profiles') }}:
                         <strong id="stat-devices">&mdash;</strong>
                     </span>
                     <span>

@@ -730,6 +730,10 @@ msgstr "Next"
 msgid "Device Profiles"
 msgstr "Device Profiles"
 
+#: physicaldevices.volt - summary stat label
+msgid "Profiles"
+msgstr "Profiles"
+
 msgid "Archived"
 msgstr "Archived"
 
