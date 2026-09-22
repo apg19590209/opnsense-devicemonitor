@@ -804,12 +804,18 @@ counters, the VLAN/status toolbar and the table column headings. The design:
 - gives the title, the wrapper and the headings an opaque background and
   z-index so scrolling rows cannot show through or paint beside the header;
 - switches the device table (`#grid-devices`) to the separated border model
-  (`border-collapse: separate; border-spacing: 0`) and a fixed layout
-  (`table-layout: fixed` with a `<colgroup>`) so each sticky heading owns an
-  opaque, contiguous box, the first body row keeps a single heading separator,
-  and the table can never overflow horizontally around the sticky header.
-  Bootstrap's default `border-collapse: collapse` lets scrolled `tbody` row
-  content paint through the sticky `th` band.
+  (`border-collapse: separate; border-spacing: 0`) so each sticky heading owns
+  an opaque, contiguous box and the first body row keeps a single heading
+  separator. Bootstrap's default `border-collapse: collapse` lets scrolled
+  `tbody` row content paint through the sticky `th` band;
+- keeps the table on natural (auto) column widths and, at narrower widths
+  (below 1200px), hides lower-priority columns (Services, Device Profile, Scan
+  Status, First Seen, Last Seen) through a `devices-col-secondary` class and a
+  media query, so the essential identity/status/action columns remain usable
+  without document-level horizontal overflow. A fixed-percentage `table-layout:
+  fixed` layout was tried and rejected: it squeezed the 13 columns into
+  unusable widths, causing Services badges to overlap VLAN/Status and dates to
+  wrap and concatenate.
 
 Natural DOM order is preserved (page title -> tabs -> explanatory text ->
 counters -> toolbar -> headings -> rows), and VLAN Apply/Clear still preserve
@@ -826,6 +832,6 @@ jumping and tab coverage, but it also let the complete page header and the
 column headings scroll away with a long device list, and the wide table bled
 row content past the right edge of the sticky region. A minimal CSS
 `position: sticky` design — a sticky title, one sticky wrapper plus sticky
-table headings, with the table fixed to the content width — restores the
-complete header without reintroducing the scroll-snap, shield or
+table headings, with lower-priority columns hidden at narrower widths —
+restores the complete header without reintroducing the scroll-snap, shield or
 one-shot-geometry defects.

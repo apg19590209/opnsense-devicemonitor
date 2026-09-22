@@ -7,7 +7,7 @@
         <div id="devices-sticky-header">
 
             <!-- Device navigation tabs -->
-            <ul class="nav nav-tabs" role="tablist" style="margin:10px 0 0 0;">
+            <ul class="nav nav-tabs" role="tablist" style="margin:0;">
                 <li role="presentation" class="active">
                     <a href="/ui/devicemonitor/index/devices">
                         <i class="fa fa-list"></i> {{ lang._('Network Identities') }}
@@ -88,27 +88,21 @@
 
         <!-- Tabulka -->
         <table class="table table-condensed table-hover table-striped devices-table" id="grid-devices">
-            <colgroup>
-                <col style="width:7%"><col style="width:8%"><col style="width:9%">
-                <col style="width:11%"><col style="width:7%"><col style="width:8%">
-                <col style="width:5%"><col style="width:6%"><col style="width:8%">
-                <col style="width:7%"><col style="width:6%"><col style="width:6%">
-                <col style="width:12%">
-            </colgroup>
             <thead>
                 <tr>
                     <th class="sortable devices-table-header" data-col="ip">{{ lang._('IP Address') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable devices-table-header" data-col="custom_hostname">{{ lang._('Friendly Name') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable devices-table-header" data-col="hostname">{{ lang._('Hostname') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable devices-table-header" data-col="mac">{{ lang._('MAC Address') }} <i class="fa fa-sort"></i></th>
-                    <th class="sortable devices-table-header" data-col="vendor">{{ lang._('Vendor') }} <i class="fa fa-sort"></i></th>                    <th class="devices-table-header">{{ lang._('Services') }}</th>
+                    <th class="sortable devices-table-header" data-col="vendor">{{ lang._('Vendor') }} <i class="fa fa-sort"></i></th>
+                    <th class="devices-table-header devices-col-secondary">{{ lang._('Services') }}</th>
 
                     <th class="sortable devices-table-header" data-col="vlan">{{ lang._('VLAN') }} <i class="fa fa-sort"></i></th>
                     <th class="sortable devices-table-header" data-col="status">{{ lang._('Status') }} <i class="fa fa-sort"></i></th>
-                    <th class="devices-table-header">{{ lang._('Device Profile') }}</th>
-                    <th class="sortable devices-table-header" data-col="nmap_scan_status">{{ lang._('Scan Status') }} <i class="fa fa-sort"></i></th>
-                    <th class="devices-table-header">{{ lang._('First Seen') }}</th>
-                    <th class="sortable devices-table-header" data-col="last_seen">{{ lang._('Last Seen') }} <i class="fa fa-sort"></i></th>
+                    <th class="devices-table-header devices-col-secondary">{{ lang._('Device Profile') }}</th>
+                    <th class="sortable devices-table-header devices-col-secondary" data-col="nmap_scan_status">{{ lang._('Scan Status') }} <i class="fa fa-sort"></i></th>
+                    <th class="devices-table-header devices-col-secondary">{{ lang._('First Seen') }}</th>
+                    <th class="sortable devices-table-header devices-col-secondary" data-col="last_seen">{{ lang._('Last Seen') }} <i class="fa fa-sort"></i></th>
                     <th class="devices-table-header">{{ lang._('Actions') }}</th>
                 </tr>
             </thead>
@@ -227,8 +221,6 @@
 #grid-devices {
     border-collapse: separate;
     border-spacing: 0;
-    table-layout: fixed;
-    width: 100%;
 }
 
 /* The OPNsense page title bar joins the persistent header: it sticks beneath
@@ -237,6 +229,24 @@ header.page-content-head {
     position: sticky;
     top: var(--devices-title-top);
     z-index: 30;
+}
+
+/* Remove the redundant vertical spacing so the tabs sit flush beneath the
+   page title (the title's own bottom border is the only separation). */
+.page-content-main {
+    padding-top: 0;
+}
+.content-box-main {
+    padding-top: 0;
+}
+
+/* Responsive: at narrower widths hide lower-priority columns (Services, Device
+   Profile, Scan Status, First Seen, Last Seen) so the table stays within the
+   content box instead of squeezing 13 columns into unusable widths. */
+@media (max-width: 1199px) {
+    .devices-col-secondary {
+        display: none;
+    }
 }
 
 /* With separated borders the thead's bottom border and the first body row's
@@ -753,13 +763,13 @@ $(document).ready(function() {
                 $hostnameCell,
                 $('<td>').text(row.mac||''),
                 $('<td>').text(row.vendor||''),
-                buildServicesCell(row),
+                buildServicesCell(row).addClass('devices-col-secondary'),
                 $('<td>').text(vlanLabel),
                 $('<td>').html(statusHtml),
-                buildGroupingCell(row),
-                buildScanStatusCell(row),
-                $('<td>').text(row.first_seen||''),
-                $('<td>').text(row.last_seen||''),
+                buildGroupingCell(row).addClass('devices-col-secondary'),
+                buildScanStatusCell(row).addClass('devices-col-secondary'),
+                $('<td>').text(row.first_seen||'').addClass('devices-col-secondary'),
+                $('<td>').text(row.last_seen||'').addClass('devices-col-secondary'),
                 $('<td>').html(
                 (row.return_pending === 1 || row.return_pending === '1'
                     ? '<a class="btn btn-xs btn-primary" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+'#lifecycle-history" title="Resolve returning device / lifecycle history" style="margin-right:2px;"><i class="fa fa-history"></i> History</a>'

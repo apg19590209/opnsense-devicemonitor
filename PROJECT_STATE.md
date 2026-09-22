@@ -31,7 +31,7 @@ documentation `97abb98`)
 
 Latest repository commit (HEAD):
 
-`Device Monitor: keep complete identities header visible` (DM-STICKY2C)
+`Device Monitor: correct responsive identities table layout` (DM-STICKY2D)
 
 Workflow state:
 
@@ -190,6 +190,32 @@ away, and device-row content bled at the right edge in the narrow view.
   `sh -n`, `msgfmt`, Volt compile and `git diff --check` PASS.
 - Next step: authenticated testbed visual acceptance (three screenshots: page
   top; desktop scrolled; narrow/resized scrolled).
+
+
+## Device Monitor: correct responsive identities table layout (DM-STICKY2D)
+
+DM-STICKY2C failed visual acceptance: its fixed-percentage `table-layout: fixed`
+layout squeezed the 13 columns, causing Services badges to overlap VLAN/Status,
+VLAN/Status collision, First/Last Seen concatenation, excessive date/vendor
+wrapping and tall rows; a blank gap also remained between the title and tabs.
+
+- Root cause (gap): redundant `page-content-main`/`content-box-main` top
+  padding plus the tabs' `margin-top:10px` stacked below the sticky title.
+- Root cause (table): `table-layout: fixed` plus a percentage `<colgroup>`
+  forced columns narrower than their content.
+- Change: revert to natural (auto) column widths; remove the title-to-tabs gap
+  (`padding-top:0` overrides + tabs `margin:0`); at narrower widths (<1200px)
+  hide lower-priority columns (Services, Device Profile, Scan Status, First
+  Seen, Last Seen) via a `devices-col-secondary` class + media query, keeping
+  IP/Friendly Name/Hostname/MAC/Vendor/VLAN/Status/Actions usable. The sticky
+  header and the DM-STICKY2B separated border model are preserved.
+- Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt`,
+  `tests/test_devices_page_vlan.js`, `DECISIONS.md` (Decision 29),
+  `docs/USER_MANUAL.md`.
+- Tests: 11 Node (UI), 13 Python and 11 PHP tests PASS; `php -l`, `py_compile`,
+  `sh -n`, `msgfmt`, Volt compile and `git diff --check` PASS.
+- Next step: authenticated testbed visual acceptance (four screenshots: desktop
+  page top; desktop scrolled; narrow page top; narrow scrolled).
 
 
 ## Device navigation and terminology consolidation

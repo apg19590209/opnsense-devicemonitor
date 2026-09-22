@@ -179,6 +179,10 @@ the device's Device Activity.
 - The page title, navigation tabs, explanatory text, summary counters, filter
   toolbar and table column headings remain "sticky" while scrolling a long
   list.
+- At narrower window widths, lower-priority columns (Services, Device Profile,
+  Scan Status, First Seen, Last Seen) are hidden so the essential identity,
+  status and action columns remain usable; that information remains available
+  on the Device Details page.
 - **Clear Database** and per-row **Delete** are the only destructive actions on this page.
 
 ---

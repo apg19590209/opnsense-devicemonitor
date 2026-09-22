@@ -216,8 +216,20 @@ check(
     'three sticky offsets must be expressed as CSS custom properties'
 );
 check(
-    view.includes('table-layout: fixed') && view.includes('<colgroup>'),
-    'table must use fixed layout so horizontal overflow cannot bleed past the header'
+    !view.includes('table-layout: fixed') && !view.includes('<colgroup>'),
+    'defective fixed-percentage table layout must be removed'
+);
+check(
+    view.includes('devices-col-secondary') &&
+        view.includes('display: none') &&
+        view.includes('max-width: 1199px'),
+    'priority-based responsive column hiding must exist'
+);
+check(
+    !view.includes('margin:10px 0 0 0') &&
+        view.includes('.page-content-main') &&
+        view.includes('padding-top: 0'),
+    'redundant title-to-tabs gap must be removed'
 );
 check(
     !view.includes('<h1'),
