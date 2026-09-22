@@ -143,6 +143,29 @@ after the previous fragile custom sticky stack was removed.
   count, Apply/Clear single-render without viewport jump, resize behaviour).
 
 
+## Device Monitor: fix row bleed behind sticky column headings (DM-STICKY2B)
+
+Authenticated screenshots confirmed the sticky region works but device-row text
+("DMTEST", First/Last Seen dates) still showed through the column-heading band.
+
+- Root cause: `#grid-devices` inherits Bootstrap's `border-collapse: collapse`;
+  with the collapsed border model, browsers do not clip scrolled `tbody` cell
+  content to the sticky `th` box, so rows bleed through despite the opaque
+  heading background.
+- Change: switch `#grid-devices` to `border-collapse: separate;
+  border-spacing: 0` (each sticky `th` owns an opaque, contiguous box), and
+  suppress the first body row's `border-top` so the single 1px heading
+  separator is preserved. No change to sticky offsets, VLAN behaviour or
+  scroll preservation.
+- Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt`,
+  `tests/test_devices_page_vlan.js`, `DECISIONS.md` (Decision 29 refinement).
+- Tests: 11 Node (UI), 13 Python and 11 PHP tests PASS; `php -l`, `py_compile`,
+  `sh -n`, `msgfmt`, Volt compile and `git diff --check` PASS.
+- Next step: authenticated testbed visual acceptance of the opaque heading band
+  (new screenshots of the page top and of the scrolled heading band with the
+  first visible row).
+
+
 ## Device navigation and terminology consolidation
 
 Consolidated the Device Monitor submenu and terminology. Implemented, validated

@@ -189,6 +189,21 @@ check(
     view.includes('ResizeObserver'),
     'sticky offsets must recalculate on genuine toolbar-height change'
 );
+check(
+    view.includes('border-collapse: separate') &&
+        view.includes('border-spacing: 0'),
+    'sticky heading band must use the separated border model so rows cannot bleed through'
+);
+check(
+    view.includes('#grid-devices > tbody > tr:first-child > td') &&
+        view.includes('border-top: 0'),
+    'first body row border must be suppressed to keep a single heading separator'
+);
+check(
+    view.includes("$thead.css('background-color', theadBg)") &&
+        view.includes("$('#grid-devices thead').css('background-color', theadBg)"),
+    'sticky heading cells and thead must receive an opaque background'
+);
 check(!view.includes('scroll-snap-align'), 'no scroll-snap-align may remain');
 check(!view.includes('scroll-snap-type'), 'no scroll-snap-type may remain');
 check(!view.includes('scroll-padding-top'), 'no scroll-padding-top may remain');

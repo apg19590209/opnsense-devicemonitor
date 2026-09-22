@@ -212,6 +212,22 @@
     overflow-y: auto;
 }
 
+/* The sticky column headings bleed scrolled row content through the band when
+   the table keeps Bootstrap's default `border-collapse: collapse`; with the
+   separated border model each sticky th owns an opaque, contiguous box and
+   border, so rows can no longer show through the heading band. */
+#grid-devices {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+/* With separated borders the thead's bottom border and the first body row's
+   top border no longer collapse, so suppress the first row's top border to
+   keep the single 1px heading separator. */
+#grid-devices > tbody > tr:first-child > td {
+    border-top: 0;
+}
+
 #grid-devices thead th {
     font-size: 12px;
     font-weight: 600;

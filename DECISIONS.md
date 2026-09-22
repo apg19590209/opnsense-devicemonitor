@@ -800,7 +800,13 @@ visible while device rows scroll, in that exact vertical order. The design:
 - gives the sticky wrapper and headings an opaque background and z-index so
   scrolling rows cannot show through, without covering the OPNsense page
   title, the Network Identities / Device Profiles tabs or the explanatory
-  text.
+  text;
+- switches the device table (`#grid-devices`) to the separated border model
+  (`border-collapse: separate; border-spacing: 0`) so each sticky heading owns
+  an opaque, contiguous box and border. Bootstrap's default
+  `border-collapse: collapse` lets scrolled `tbody` row content paint through
+  the sticky `th` band; the first body row's `border-top` is suppressed so the
+  single heading separator is preserved.
 
 Natural DOM order is preserved (page title -> tabs -> explanatory text ->
 counters -> toolbar -> headings -> rows), and VLAN Apply/Clear still preserve
