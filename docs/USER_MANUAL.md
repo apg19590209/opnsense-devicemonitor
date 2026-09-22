@@ -176,8 +176,9 @@ the device's Device Activity.
 ### 4.7 Important notes
 
 - The list and statistics auto-refresh every 30 seconds.
-- The summary counters, filter toolbar and table column headings remain
-  "sticky" (pinned below the page title) while scrolling a long list.
+- The page title, navigation tabs, explanatory text, summary counters, filter
+  toolbar and table column headings remain "sticky" while scrolling a long
+  list.
 - **Clear Database** and per-row **Delete** are the only destructive actions on this page.
 
 ---

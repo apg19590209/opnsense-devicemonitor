@@ -159,11 +159,12 @@ check(
     'thead must precede tbody'
 );
 
-// A single sticky wrapper must pin the summary + toolbar, and the column
-// headings must stick immediately beneath it. Offsets are recalculated from
-// live measurements (load, resize, genuine toolbar-height change) via CSS
-// custom properties, while the fragile scroll-snap, pseudo-element shield and
-// cached one-shot geometry designs remain absent.
+// The complete persistent header (page title + tabs + explanatory text +
+// counters + toolbar) and the column headings must stick beneath the fixed
+// navigation. Offsets are recalculated from live measurements (load, resize,
+// genuine toolbar-height change) via CSS custom properties, while the fragile
+// scroll-snap, pseudo-element shield and cached one-shot geometry designs
+// remain absent.
 check(
     view.includes('id="devices-sticky-header"'),
     'sticky summary/toolbar wrapper missing'
@@ -203,6 +204,29 @@ check(
     view.includes("$thead.css('background-color', theadBg)") &&
         view.includes("$('#grid-devices thead').css('background-color', theadBg)"),
     'sticky heading cells and thead must receive an opaque background'
+);
+check(
+    view.includes('header.page-content-head {') && view.includes('position: sticky'),
+    'OPNsense page title must join the persistent header'
+);
+check(
+    view.includes('--devices-title-top') &&
+        view.includes('--devices-sticky-top') &&
+        view.includes('--devices-sticky-thead-top'),
+    'three sticky offsets must be expressed as CSS custom properties'
+);
+check(
+    view.includes('table-layout: fixed') && view.includes('<colgroup>'),
+    'table must use fixed layout so horizontal overflow cannot bleed past the header'
+);
+check(
+    !view.includes('<h1'),
+    'view must not duplicate the OPNsense page title'
+);
+check(
+    view.indexOf('id="devices-sticky-header"') < view.indexOf('nav nav-tabs') &&
+        view.indexOf('nav nav-tabs') < view.indexOf('id="devices-sticky-summary"'),
+    'tabs must sit inside the persistent header wrapper before the counters'
 );
 check(!view.includes('scroll-snap-align'), 'no scroll-snap-align may remain');
 check(!view.includes('scroll-snap-type'), 'no scroll-snap-type may remain');

@@ -776,37 +776,40 @@ the page title and could cover the tabs. Correct, stable natural layout is
 more important than a sticky header, so the fragile custom implementation was
 removed outright rather than patched with further measured offsets.
 
-## 29. Network Identities view: stable sticky summary/toolbar/headings
+## 29. Network Identities view: stable sticky complete identities header
 
 ### Decision
 
 This decision supersedes Decision 28's prohibition on custom sticky
 positioning in `devices.volt`.
 
-The Network Identities view uses a stable sticky region so the summary
-counters, the VLAN/status filter toolbar and the table column headings remain
-visible while device rows scroll, in that exact vertical order. The design:
+The Network Identities view pins the complete plugin header beneath the fixed
+OPNsense top navigation while device rows scroll, in this exact vertical order:
+the OPNsense page title, the navigation tabs, the explanatory text, the summary
+counters, the VLAN/status toolbar and the table column headings. The design:
 
-- uses one sticky wrapper (`#devices-sticky-header`) containing the summary
-  counters and the filter toolbar, pinned flush beneath the OPNsense fixed top
-  navbar;
+- makes the OPNsense page title (`header.page-content-head`) sticky (z-index
+  30) just beneath the fixed top navigation;
+- uses one sticky wrapper (`#devices-sticky-header`) containing the navigation
+  tabs, the explanatory text, the summary counters and the filter toolbar
+  (z-index 20), pinned flush beneath the sticky title;
 - makes the table column headings (`#grid-devices thead th`) stick immediately
-  below that wrapper;
-- expresses offsets as CSS custom properties (`--devices-sticky-top` and
-  `--devices-sticky-thead-top`) recalculated from live measurements of the
-  fixed navbar height and the sticky block height on initial load, window
-  resize, and genuine toolbar-height changes (via `ResizeObserver`); measuring
-  never triggers a table render;
-- gives the sticky wrapper and headings an opaque background and z-index so
-  scrolling rows cannot show through, without covering the OPNsense page
-  title, the Network Identities / Device Profiles tabs or the explanatory
-  text;
+  below that wrapper (z-index 10);
+- expresses the three offsets as CSS custom properties (`--devices-title-top`,
+  `--devices-sticky-top`, `--devices-sticky-thead-top`) recalculated from live
+  measurements of the fixed navigation height, the page-title height and the
+  header-block height on initial load, window resize, and genuine
+  toolbar/header-height changes (via `ResizeObserver`); measuring never
+  triggers a table render;
+- gives the title, the wrapper and the headings an opaque background and
+  z-index so scrolling rows cannot show through or paint beside the header;
 - switches the device table (`#grid-devices`) to the separated border model
-  (`border-collapse: separate; border-spacing: 0`) so each sticky heading owns
-  an opaque, contiguous box and border. Bootstrap's default
-  `border-collapse: collapse` lets scrolled `tbody` row content paint through
-  the sticky `th` band; the first body row's `border-top` is suppressed so the
-  single heading separator is preserved.
+  (`border-collapse: separate; border-spacing: 0`) and a fixed layout
+  (`table-layout: fixed` with a `<colgroup>`) so each sticky heading owns an
+  opaque, contiguous box, the first body row keeps a single heading separator,
+  and the table can never overflow horizontally around the sticky header.
+  Bootstrap's default `border-collapse: collapse` lets scrolled `tbody` row
+  content paint through the sticky `th` band.
 
 Natural DOM order is preserved (page title -> tabs -> explanatory text ->
 counters -> toolbar -> headings -> rows), and VLAN Apply/Clear still preserve
@@ -819,8 +822,10 @@ one-shot `getBoundingClientRect()` gap geometry.
 ### Reason
 
 Removing the measured-gap sticky stack (Decision 28) fixed the overlap,
-jumping and tab coverage, but it also made the useful column header scroll
-away with a long device list. A minimal CSS `position: sticky` design — one
-sticky wrapper plus sticky table headings, with offsets kept in sync by
-unobtrusive live measurements — restores sticky behaviour without
-reintroducing the scroll-snap, shield or one-shot-geometry defects.
+jumping and tab coverage, but it also let the complete page header and the
+column headings scroll away with a long device list, and the wide table bled
+row content past the right edge of the sticky region. A minimal CSS
+`position: sticky` design — a sticky title, one sticky wrapper plus sticky
+table headings, with the table fixed to the content width — restores the
+complete header without reintroducing the scroll-snap, shield or
+one-shot-geometry defects.

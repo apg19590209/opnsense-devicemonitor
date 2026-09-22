@@ -31,7 +31,7 @@ documentation `97abb98`)
 
 Latest repository commit (HEAD):
 
-`d0fe7af` — `docs: prevent redundant finalisation checks`
+`Device Monitor: keep complete identities header visible` (DM-STICKY2C)
 
 Workflow state:
 
@@ -164,6 +164,32 @@ Authenticated screenshots confirmed the sticky region works but device-row text
 - Next step: authenticated testbed visual acceptance of the opaque heading band
   (new screenshots of the page top and of the scrolled heading band with the
   first visible row).
+
+
+## Device Monitor: keep complete identities header visible (DM-STICKY2C)
+
+DM-STICKY2B's visual acceptance failed: the complete page header still scrolled
+away, and device-row content bled at the right edge in the narrow view.
+
+- Root cause (incomplete header): the OPNsense page title
+  (`header.page-content-head`) and the navigation tabs/explanatory text sat
+  outside the sticky wrapper, so only the counters, toolbar and column
+  headings stayed while scrolling.
+- Root cause (edge bleed): the 13-column table overflowed `.content-box`
+  horizontally, so rows painted beside the content-box-width sticky header.
+- Change: make the OPNsense page title sticky (z-index 30); move the navigation
+  tabs and explanatory text into the `#devices-sticky-header` wrapper; measure
+  three offsets (title, header block, thead) on load/resize/`ResizeObserver`;
+  and fix the table to the content width with `table-layout: fixed` plus a
+  `<colgroup>` so it can no longer overflow around the header. The DM-STICKY2B
+  separated border model is preserved.
+- Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt`,
+  `tests/test_devices_page_vlan.js`, `DECISIONS.md` (Decision 29),
+  `docs/USER_MANUAL.md`.
+- Tests: 11 Node (UI), 13 Python and 11 PHP tests PASS; `php -l`, `py_compile`,
+  `sh -n`, `msgfmt`, Volt compile and `git diff --check` PASS.
+- Next step: authenticated testbed visual acceptance (three screenshots: page
+  top; desktop scrolled; narrow/resized scrolled).
 
 
 ## Device navigation and terminology consolidation

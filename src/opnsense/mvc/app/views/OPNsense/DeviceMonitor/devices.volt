@@ -1,26 +1,27 @@
 <div class="content-box">
     <div class="content-box-main">
 
-        <!-- Device navigation tabs -->
-        <ul class="nav nav-tabs" role="tablist" style="margin:10px 0 0 0;">
-            <li role="presentation" class="active">
-                <a href="/ui/devicemonitor/index/devices">
-                    <i class="fa fa-list"></i> {{ lang._('Network Identities') }}
-                </a>
-            </li>
-            <li role="presentation">
-                <a href="/ui/devicemonitor/index/physicaldevices">
-                    <i class="fa fa-sitemap"></i> {{ lang._('Device Profiles') }}
-                </a>
-            </li>
-        </ul>
-        <p class="text-muted" style="margin:8px 0 0 0;">
-            {{ lang._('Automatically discovered network identities. Each row represents one MAC address.') }}
-        </p>
-
-        <!-- Sticky region: summary counters + VLAN/status toolbar remain pinned
-             while device rows scroll; the column headings stick directly below. -->
+        <!-- Sticky region: navigation tabs, explanatory text, summary counters
+             and VLAN/status toolbar remain pinned while device rows scroll; the
+             column headings stick directly below. -->
         <div id="devices-sticky-header">
+
+            <!-- Device navigation tabs -->
+            <ul class="nav nav-tabs" role="tablist" style="margin:10px 0 0 0;">
+                <li role="presentation" class="active">
+                    <a href="/ui/devicemonitor/index/devices">
+                        <i class="fa fa-list"></i> {{ lang._('Network Identities') }}
+                    </a>
+                </li>
+                <li role="presentation">
+                    <a href="/ui/devicemonitor/index/physicaldevices">
+                        <i class="fa fa-sitemap"></i> {{ lang._('Device Profiles') }}
+                    </a>
+                </li>
+            </ul>
+            <p class="text-muted" style="margin:8px 0 0 0;">
+                {{ lang._('Automatically discovered network identities. Each row represents one MAC address.') }}
+            </p>
 
             <!-- Header with statistics -->
             <div id="devices-sticky-summary" class="devices-header">
@@ -87,6 +88,13 @@
 
         <!-- Tabulka -->
         <table class="table table-condensed table-hover table-striped devices-table" id="grid-devices">
+            <colgroup>
+                <col style="width:7%"><col style="width:8%"><col style="width:9%">
+                <col style="width:11%"><col style="width:7%"><col style="width:8%">
+                <col style="width:5%"><col style="width:6%"><col style="width:8%">
+                <col style="width:7%"><col style="width:6%"><col style="width:6%">
+                <col style="width:12%">
+            </colgroup>
             <thead>
                 <tr>
                     <th class="sortable devices-table-header" data-col="ip">{{ lang._('IP Address') }} <i class="fa fa-sort"></i></th>
@@ -219,6 +227,16 @@
 #grid-devices {
     border-collapse: separate;
     border-spacing: 0;
+    table-layout: fixed;
+    width: 100%;
+}
+
+/* The OPNsense page title bar joins the persistent header: it sticks beneath
+   the fixed top navigation, above the tabs/toolbar wrapper. */
+header.page-content-head {
+    position: sticky;
+    top: var(--devices-title-top);
+    z-index: 30;
 }
 
 /* With separated borders the thead's bottom border and the first body row's
@@ -238,11 +256,11 @@
     z-index: 10;
 }
 
-/* Single sticky block (summary counters + VLAN/status toolbar). Its top offset
-   and opaque background are assigned by syncDevicesStickyHeader() so it sits
-   flush beneath the OPNsense fixed top navbar and never covers the page title,
-   tabs or explanatory text. No scroll-snap, pseudo-element shield or cached
-   one-shot geometry is used. */
+/* Complete plugin header block (navigation tabs + explanatory text + summary
+   counters + VLAN/status toolbar). Its top offset and opaque background are
+   assigned by syncDevicesStickyHeader() so it sits flush beneath the sticky
+   page title. No scroll-snap, pseudo-element shield or cached one-shot
+   geometry is used. */
 #devices-sticky-header {
     position: sticky;
     top: var(--devices-sticky-top);
@@ -978,12 +996,13 @@ $(document).ready(function() {
         });
     });
 
-    // Stable sticky header: pin the summary + toolbar block and the column
-    // headings beneath the OPNsense fixed top navbar. Offsets are derived from
-    // live measurements of the fixed navbar and the sticky block, and are
-    // refreshed on load, resize and genuine toolbar-height changes. No
-    // scroll-snap, pseudo-element shield or cached one-shot geometry is used,
-    // and measuring never triggers a table render.
+    // Stable sticky header: pin the OPNsense page title, the complete plugin
+    // header block (tabs + text + counters + toolbar) and the column headings
+    // beneath the OPNsense fixed top navbar, in that order. Offsets are derived
+    // from live measurements of the fixed navbar, the page title and the header
+    // block, and are refreshed on load, resize and genuine toolbar-height
+    // changes. No scroll-snap, pseudo-element shield or cached one-shot
+    // geometry is used, and measuring never triggers a table render.
     function opaqueDevicesBackground($el) {
         var node = $el;
         var bg = node.css('background-color');
@@ -1007,19 +1026,34 @@ $(document).ready(function() {
 
         var pageHead = document.querySelector('.page-head');
         var navbarHeight = pageHead ? pageHead.offsetHeight : 62;
+
+        var titleEl = document.querySelector('header.page-content-head');
+        var titleHeight = titleEl ? titleEl.offsetHeight : 0;
+
         var headerHeight = header.offsetHeight;
 
         document.documentElement.style.setProperty(
-            '--devices-sticky-top',
+            '--devices-title-top',
             navbarHeight + 'px'
         );
         document.documentElement.style.setProperty(
+            '--devices-sticky-top',
+            (navbarHeight + titleHeight) + 'px'
+        );
+        document.documentElement.style.setProperty(
             '--devices-sticky-thead-top',
-            (navbarHeight + headerHeight) + 'px'
+            (navbarHeight + titleHeight + headerHeight) + 'px'
         );
 
         var $header = $(header);
         $header.css('background-color', opaqueDevicesBackground($header));
+
+        if (titleEl) {
+            $(titleEl).css(
+                'background-color',
+                opaqueDevicesBackground($(titleEl))
+            );
+        }
 
         var $thead = $('#grid-devices thead th');
         var theadBg = opaqueDevicesBackground($thead);
