@@ -18,64 +18,71 @@
             {{ lang._('Automatically discovered network identities. Each row represents one MAC address.') }}
         </p>
 
-        <!-- Header with statistics -->
-        <div id="devices-sticky-summary" class="devices-header">
-            <div class="devices-stats">
-                <span>
-                    {{ lang._('Total Devices') }}:
-                    <strong id="stat-total">—</strong>
-                </span>
-                <span>
-                    {{ lang._('Online') }}:
-                    <strong id="stat-online">—</strong>
-                </span>
-            </div>
-        </div>
-        <!-- Toolbar -->
-        <div id="devices-sticky-toolbar" class="devices-toolbar">
+        <!-- Sticky region: summary counters + VLAN/status toolbar remain pinned
+             while device rows scroll; the column headings stick directly below. -->
+        <div id="devices-sticky-header">
 
-            <!-- Multi-select VLAN dropdown -->
-            <div class="dropdown" id="vlan-filter-wrapper">
-                <button type="button" class="btn btn-default btn-sm dropdown-toggle"
-                        id="vlan-dropdown-toggle" data-toggle="dropdown">
-                    <span id="vlan-filter-label">{{ lang._('All VLANs') }}</span>
-                    <span class="caret"></span>
+            <!-- Header with statistics -->
+            <div id="devices-sticky-summary" class="devices-header">
+                <div class="devices-stats">
+                    <span>
+                        {{ lang._('Total Devices') }}:
+                        <strong id="stat-total">—</strong>
+                    </span>
+                    <span>
+                        {{ lang._('Online') }}:
+                        <strong id="stat-online">—</strong>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Toolbar -->
+            <div id="devices-sticky-toolbar" class="devices-toolbar">
+
+                <!-- Multi-select VLAN dropdown -->
+                <div class="dropdown" id="vlan-filter-wrapper">
+                    <button type="button" class="btn btn-default btn-sm dropdown-toggle"
+                            id="vlan-dropdown-toggle" data-toggle="dropdown">
+                        <span id="vlan-filter-label">{{ lang._('All VLANs') }}</span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" id="vlan-checklist">
+                    </ul>
+                </div>
+
+                <!-- Explicit apply/clear controls for the VLAN multi-select -->
+                <button type="button" id="vlan-apply" class="btn btn-default btn-sm">{{ lang._('Apply') }}</button>
+                <button type="button" id="vlan-clear" class="btn btn-default btn-sm">{{ lang._('Clear') }}</button>
+
+                <!-- Status filtr -->
+                <select id="filter-status"
+                        class="selectpicker"
+                        data-style="btn-default btn-sm"
+                        data-width="130px">
+                    <option value="">{{ lang._('All statuses') }}</option>
+                    <option value="online">🟢 Online</option>
+                    <option value="offline">⚫ Offline</option>
+                </select>
+
+                <button id="btn-refresh" class="btn btn-default btn-sm" title="{{ lang._('Refresh') }}">
+                    <i class="fa fa-refresh"></i>
                 </button>
-                <ul class="dropdown-menu" id="vlan-checklist">
-                </ul>
+
+                <button id="btn-scan-now" class="btn btn-default btn-sm" title="{{ lang._('Run scan now') }}">
+                    <i class="fa fa-search"></i>
+                </button>
+
+                <button id="btn-export" class="btn btn-default btn-sm" title="{{ lang._('Export to CSV') }}">
+                    <i class="fa fa-download"></i>
+                </button>
+
+                <div class="devices-toolbar-spacer"></div>
+
+                <button id="btn-clear" class="btn btn-danger btn-sm">
+                    <i class="fa fa-trash"></i> {{ lang._('Clear Database') }}
+                </button>
             </div>
 
-            <!-- Explicit apply/clear controls for the VLAN multi-select -->
-            <button type="button" id="vlan-apply" class="btn btn-default btn-sm">{{ lang._('Apply') }}</button>
-            <button type="button" id="vlan-clear" class="btn btn-default btn-sm">{{ lang._('Clear') }}</button>
-
-            <!-- Status filtr -->
-            <select id="filter-status"
-                    class="selectpicker"
-                    data-style="btn-default btn-sm"
-                    data-width="130px">
-                <option value="">{{ lang._('All statuses') }}</option>
-                <option value="online">🟢 Online</option>
-                <option value="offline">⚫ Offline</option>
-            </select>
-
-            <button id="btn-refresh" class="btn btn-default btn-sm" title="{{ lang._('Refresh') }}">
-                <i class="fa fa-refresh"></i>
-            </button>
-
-            <button id="btn-scan-now" class="btn btn-default btn-sm" title="{{ lang._('Run scan now') }}">
-                <i class="fa fa-search"></i>
-            </button>
-
-            <button id="btn-export" class="btn btn-default btn-sm" title="{{ lang._('Export to CSV') }}">
-                <i class="fa fa-download"></i>
-            </button>
-
-            <div class="devices-toolbar-spacer"></div>
-
-            <button id="btn-clear" class="btn btn-danger btn-sm">
-                <i class="fa fa-trash"></i> {{ lang._('Clear Database') }}
-            </button>
         </div>
 
         <!-- Tabulka -->
@@ -210,6 +217,20 @@
     font-weight: 600;
     vertical-align: middle;
     white-space: nowrap;
+    position: sticky;
+    top: var(--devices-sticky-thead-top);
+    z-index: 10;
+}
+
+/* Single sticky block (summary counters + VLAN/status toolbar). Its top offset
+   and opaque background are assigned by syncDevicesStickyHeader() so it sits
+   flush beneath the OPNsense fixed top navbar and never covers the page title,
+   tabs or explanatory text. No scroll-snap, pseudo-element shield or cached
+   one-shot geometry is used. */
+#devices-sticky-header {
+    position: sticky;
+    top: var(--devices-sticky-top);
+    z-index: 20;
 }
 #devices-sticky-toolbar {
     padding: 12px 4px 12px 4px;
@@ -941,11 +962,66 @@ $(document).ready(function() {
         });
     });
 
-    // Sticky header/scroll-snap behaviour was removed: the measured-gap sticky
-    // stack caused body rows to overlap the header, reordered the controls
-    // during scroll, and left blank space below the page title. The page now
-    // flows in natural DOM order (tabs -> summary -> toolbar -> thead -> rows)
-    // and filtering preserves scroll position without any sticky offsets.
+    // Stable sticky header: pin the summary + toolbar block and the column
+    // headings beneath the OPNsense fixed top navbar. Offsets are derived from
+    // live measurements of the fixed navbar and the sticky block, and are
+    // refreshed on load, resize and genuine toolbar-height changes. No
+    // scroll-snap, pseudo-element shield or cached one-shot geometry is used,
+    // and measuring never triggers a table render.
+    function opaqueDevicesBackground($el) {
+        var node = $el;
+        var bg = node.css('background-color');
+
+        while (
+            node.length &&
+            (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)')
+        ) {
+            node = node.parent();
+            bg = node.css('background-color');
+        }
+
+        return bg || '#101218';
+    }
+
+    function syncDevicesStickyHeader() {
+        var header = document.getElementById('devices-sticky-header');
+        if (!header) {
+            return;
+        }
+
+        var pageHead = document.querySelector('.page-head');
+        var navbarHeight = pageHead ? pageHead.offsetHeight : 62;
+        var headerHeight = header.offsetHeight;
+
+        document.documentElement.style.setProperty(
+            '--devices-sticky-top',
+            navbarHeight + 'px'
+        );
+        document.documentElement.style.setProperty(
+            '--devices-sticky-thead-top',
+            (navbarHeight + headerHeight) + 'px'
+        );
+
+        var $header = $(header);
+        $header.css('background-color', opaqueDevicesBackground($header));
+
+        var $thead = $('#grid-devices thead th');
+        var theadBg = opaqueDevicesBackground($thead);
+        $thead.css('background-color', theadBg);
+        $('#grid-devices thead').css('background-color', theadBg);
+    }
+
+    $(window).on('resize', syncDevicesStickyHeader);
+    syncDevicesStickyHeader();
+
+    if (window.ResizeObserver) {
+        var dmStickyHeaderEl = document.getElementById('devices-sticky-header');
+        if (dmStickyHeaderEl) {
+            new ResizeObserver(syncDevicesStickyHeader).observe(
+                dmStickyHeaderEl
+            );
+        }
+    }
 
     // Initialise by loading interface labels before devices
 

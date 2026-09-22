@@ -136,7 +136,7 @@ check(
 );
 
 // ---------------------------------------------------------------------------
-// Corrected layout: natural DOM order, no fragile sticky/scroll-snap
+// Natural DOM order plus a stable sticky summary/toolbar/headings region
 // ---------------------------------------------------------------------------
 
 // Document order must be tabs -> summary -> toolbar -> table (thead -> tbody).
@@ -159,18 +159,43 @@ check(
     'thead must precede tbody'
 );
 
-// The fragile custom sticky stack and scroll-snap are removed entirely.
-check(!view.includes('position: sticky'), 'no sticky positioning may remain');
+// A single sticky wrapper must pin the summary + toolbar, and the column
+// headings must stick immediately beneath it. Offsets are recalculated from
+// live measurements (load, resize, genuine toolbar-height change) via CSS
+// custom properties, while the fragile scroll-snap, pseudo-element shield and
+// cached one-shot geometry designs remain absent.
+check(
+    view.includes('id="devices-sticky-header"'),
+    'sticky summary/toolbar wrapper missing'
+);
+check(
+    view.includes('#devices-sticky-header {') && view.includes('position: sticky'),
+    'sticky wrapper must use position: sticky'
+);
+check(
+    view.includes('#grid-devices thead th {') && view.includes('position: sticky'),
+    'sticky column headings must use position: sticky'
+);
+check(
+    view.includes('--devices-sticky-top') &&
+        view.includes('--devices-sticky-thead-top'),
+    'sticky offsets must use CSS custom properties'
+);
+check(
+    view.includes('function syncDevicesStickyHeader'),
+    'sticky offset recalculation helper missing'
+);
+check(
+    view.includes('ResizeObserver'),
+    'sticky offsets must recalculate on genuine toolbar-height change'
+);
 check(!view.includes('scroll-snap-align'), 'no scroll-snap-align may remain');
 check(!view.includes('scroll-snap-type'), 'no scroll-snap-type may remain');
 check(!view.includes('scroll-padding-top'), 'no scroll-padding-top may remain');
-check(!view.includes('devicesStickyGeometry'), 'sticky geometry cache must be removed');
-check(!view.includes('updateStickyOffsets'), 'updateStickyOffsets must be removed');
-check(!view.includes('getBoundingClientRect'), 'measured-gap logic must be removed');
-check(
-    !view.includes('#devices-sticky-summary::before'),
-    'summary shield pseudo-elements must be removed'
-);
+check(!view.includes('devicesStickyGeometry'), 'cached one-shot sticky geometry must be absent');
+check(!view.includes('updateStickyOffsets'), 'fragile updateStickyOffsets must remain absent');
+check(!view.includes('getBoundingClientRect'), 'measured-gap logic must remain absent');
+check(!view.includes('::before'), 'sticky shield pseudo-elements must remain absent');
 
 // ---------------------------------------------------------------------------
 // VLAN count-state: button reflects pending checkbox selection
@@ -297,6 +322,7 @@ console.log('DEVICES_VLAN_CLEAR_RESTORES_ALL=PASS');
 console.log('DEVICES_VLAN_STATE_RETAINED=PASS');
 console.log('DEVICES_VLAN_NO_SCROLL_MOVEMENT=PASS');
 console.log('DEVICES_VLAN_LAYOUT_ORDER=PASS');
+console.log('DEVICES_VLAN_STICKY_REGION=PASS');
 console.log('DEVICES_VLAN_COUNT_STATE=PASS');
 console.log('DEVICES_VLAN_SELECTION_HELPER=PASS');
 console.log('DEVICES_VLAN_SUMMARY_COUNTERS=PASS');

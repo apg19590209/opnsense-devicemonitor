@@ -114,6 +114,35 @@ VLAN filter without regressing the Apply/Clear interaction.
   pending count, Apply, Clear, scroll preservation, tab visibility).
 
 
+## Device Monitor: stable identities table header (DM-STICKY2)
+
+Reintroduced a correct, stable sticky region on the Network Identities page
+after the previous fragile custom sticky stack was removed.
+
+- Root cause: removing the measured-gap sticky stack (`9701d1d`, Decision 28)
+  fixed the overlap/jumping/tab coverage but also let the useful column header
+  scroll away with long device lists. The page relies on normal document
+  scrolling with the OPNsense top navbar fixed at ~62px, and no table ancestor
+  clips the content, so CSS `position: sticky` is safe.
+- Change: one sticky wrapper (`#devices-sticky-header`) now pins the summary
+  counters and the VLAN/status toolbar, and the column headings
+  (`#grid-devices thead th`) stick immediately below it. Offsets use CSS custom
+  properties (`--devices-sticky-top`, `--devices-sticky-thead-top`) recalculated
+  from live measurements on load, resize and genuine toolbar-height changes
+  (`ResizeObserver`); measuring never triggers a table render. No scroll-snap,
+  pseudo-element shield, cached one-shot geometry or `scrollIntoView` is used.
+  Filtering, VLAN pending/applied semantics, Apply/Clear single-render and
+  scroll preservation are unchanged.
+- Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt`,
+  `tests/test_devices_page_vlan.js`, `DECISIONS.md` (Decision 29),
+  `docs/USER_MANUAL.md`.
+- Tests: 11 Node (UI), 13 Python and 11 PHP tests PASS; `php -l`, `py_compile`,
+  `sh -n`, `msgfmt`, Volt compile and `git diff --check` PASS.
+- Next step: authenticated testbed visual acceptance (sticky counters/toolbar/
+  headings while scrolling, no row show-through, tabs not covered, pending VLAN
+  count, Apply/Clear single-render without viewport jump, resize behaviour).
+
+
 ## Device navigation and terminology consolidation
 
 Consolidated the Device Monitor submenu and terminology. Implemented, validated

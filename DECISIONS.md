@@ -775,3 +775,46 @@ reordered during scrolling, and a stale measured gap left blank space below
 the page title and could cover the tabs. Correct, stable natural layout is
 more important than a sticky header, so the fragile custom implementation was
 removed outright rather than patched with further measured offsets.
+
+## 29. Network Identities view: stable sticky summary/toolbar/headings
+
+### Decision
+
+This decision supersedes Decision 28's prohibition on custom sticky
+positioning in `devices.volt`.
+
+The Network Identities view uses a stable sticky region so the summary
+counters, the VLAN/status filter toolbar and the table column headings remain
+visible while device rows scroll, in that exact vertical order. The design:
+
+- uses one sticky wrapper (`#devices-sticky-header`) containing the summary
+  counters and the filter toolbar, pinned flush beneath the OPNsense fixed top
+  navbar;
+- makes the table column headings (`#grid-devices thead th`) stick immediately
+  below that wrapper;
+- expresses offsets as CSS custom properties (`--devices-sticky-top` and
+  `--devices-sticky-thead-top`) recalculated from live measurements of the
+  fixed navbar height and the sticky block height on initial load, window
+  resize, and genuine toolbar-height changes (via `ResizeObserver`); measuring
+  never triggers a table render;
+- gives the sticky wrapper and headings an opaque background and z-index so
+  scrolling rows cannot show through, without covering the OPNsense page
+  title, the Network Identities / Device Profiles tabs or the explanatory
+  text.
+
+Natural DOM order is preserved (page title -> tabs -> explanatory text ->
+counters -> toolbar -> headings -> rows), and VLAN Apply/Clear still preserve
+scroll position via `captureScrollPosition()`/`restoreScrollPosition()`.
+
+The fragile techniques recorded as the reason for Decision 28 remain
+prohibited: global `scroll-snap`, pseudo-element "shield" masking, and cached
+one-shot `getBoundingClientRect()` gap geometry.
+
+### Reason
+
+Removing the measured-gap sticky stack (Decision 28) fixed the overlap,
+jumping and tab coverage, but it also made the useful column header scroll
+away with a long device list. A minimal CSS `position: sticky` design — one
+sticky wrapper plus sticky table headings, with offsets kept in sync by
+unobtrusive live measurements — restores sticky behaviour without
+reintroducing the scroll-snap, shield or one-shot-geometry defects.
