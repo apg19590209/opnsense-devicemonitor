@@ -9,7 +9,7 @@ Branch: `v2.9-development`
 Authoritative development checkout: `/root/src/opnsense-devicemonitor-upstream`
 (FreeBSD 15.1-RELEASE amd64; OPNsense testbed host `192.168.20.23`)
 
-HEAD: `b1383a4` — `Device Monitor: clarify empty VLAN selection and stabilise
+Latest Device Monitor implementation commit: `b1383a4` — `Device Monitor: clarify empty VLAN selection and stabilise
 sticky offsets` (DM-STICKY2F)
 
 Status:
@@ -33,7 +33,7 @@ php, python3); GitHub CLI (`gh`) authenticated as `apg19590209`; SSH via
 
 The dated sections below are historical records of completed work and are
 retained for reference. The "## Current state" section above is authoritative
-for the current branch, HEAD and production/testbed status.
+for the current branch and production/testbed status.
 
 
 ## Device Monitor: stabilise VLAN filtering
