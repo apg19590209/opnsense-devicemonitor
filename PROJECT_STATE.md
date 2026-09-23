@@ -1,62 +1,39 @@
 # Device Monitor — Project State
 
-## Last updated
+## Current state
 
-23 September 2026
+Last updated: 23 September 2026
 
-## Current version / branch / environment
+Branch: `v2.9-development`
 
-Development branch:
+Authoritative development checkout: `/root/src/opnsense-devicemonitor-upstream`
+(FreeBSD 15.1-RELEASE amd64; OPNsense testbed host `192.168.20.23`)
 
-`v2.9-development`
+HEAD: `b1383a4` — `Device Monitor: clarify empty VLAN selection and stabilise
+sticky offsets` (DM-STICKY2F)
 
-Authoritative development checkout (FreeBSD 15.1-RELEASE amd64):
+Status:
 
-`/root/src/opnsense-devicemonitor-upstream`
+- v2.9 was promoted to production; see the historical section
+  "## v2.9 production promotion".
+- The VLAN / sticky-header series after that promotion — the VLAN / sticky-header series from
+  "## Device Monitor: stabilise VLAN filtering" through
+  "## Device Monitor: clarify empty VLAN selection and stabilise sticky offsets
+  (DM-STICKY2F)" — is testbed-only and has not been deployed to production.
+- Current production OS version and runtime settings are not restated here; the
+  historical sections below record what was known when they were written.
 
-Previous Windows checkout (retained as fallback/reference only; no longer
-authoritative):
+Environment: native FreeBSD toolchain (`/bin/sh`, `/usr/local/bin/bash`, git,
+php, python3); GitHub CLI (`gh`) authenticated as `apg19590209`; SSH via
+`ssh opnsense-dm`. Workstation-local access rules remain in the untracked
+`.clinerules/90-local-remote-access.md` (never committed). Production
+`192.168.20.254` is never targeted without explicit authorisation.
 
-`C:\Users\apg19\Downloads\opnsense-devicemonitor-upstream`
+## History
 
-Primary deployment target (final runtime/deployment validation target):
-
-OPNsense 26.7.2_2
-
-Latest completed v2.9 implementation commit:
-
-`d8421ca` — `feat: clarify physical device identity management` (final
-pre-release Physical Devices UX redesign; read-model enrichment `67a476c`,
-documentation `97abb98`)
-
-Latest repository commit (HEAD):
-
-`Device Monitor: clarify empty VLAN selection and stabilise sticky offsets` (DM-STICKY2F)
-
-Workflow state:
-
-- FreeBSD migration complete: development is now performed on the physical
-  OPNsense testbed `192.168.20.23` (FreeBSD 15.1-RELEASE amd64). Normal project
-  commands run on the native FreeBSD toolchain (`/bin/sh`, `/usr/local/bin/bash`,
-  `/usr/local/bin/git`, `/usr/local/bin/php`, `/usr/local/bin/python3`)
-- previous Windows checkout
-  `C:\Users\apg19\Downloads\opnsense-devicemonitor-upstream` is retained as
-  fallback/reference only and is no longer authoritative; Debian WSL remains
-  secondary/fallback only and is not an authoritative Device Monitor checkout
-- repository-local Cline workflow rules (`.clinerules/00-project-control.md`,
-  `.clinerules/10-workflow-and-finalisation.md`) committed as `0b6496a`
-- workstation-local access rules (`.clinerules/90-local-remote-access.md`)
-  exist on this host and are excluded through `.git/info/exclude`; they
-  must remain untracked and must never be added, committed or pushed
-- Git author identity is configured repository-locally
-- GitHub CLI (`gh`) is installed and authenticated as `apg19590209` with default
-  repository `apg19590209/opnsense-devicemonitor`; GitHub/CI operations are
-  available from this checkout
-- unattended OPNsense SSH access is available and validated through
-  `ssh opnsense-dm`; OPNsense remains the final runtime/deployment validation
-  target
-- branch `v2.9-development`; worktree clean and synced with
-  `origin/v2.9-development` before this documentation edit
+The dated sections below are historical records of completed work and are
+retained for reference. The "## Current state" section above is authoritative
+for the current branch, HEAD and production/testbed status.
 
 
 ## Device Monitor: stabilise VLAN filtering
