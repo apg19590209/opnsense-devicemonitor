@@ -68,6 +68,10 @@ msgstr "Apply VLAN Filter"
 msgid "Not applied"
 msgstr "Not applied"
 
+#: devices.volt - VLAN dropdown - empty selection prompt
+msgid "Select a VLAN"
+msgstr "Select a VLAN"
+
 #: devices.volt - status dropdown - all statuses option
 msgid "All statuses"
 msgstr "All statuses"

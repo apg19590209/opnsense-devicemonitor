@@ -2,7 +2,7 @@
 
 ## Last updated
 
-22 September 2026
+23 September 2026
 
 ## Current version / branch / environment
 
@@ -31,7 +31,7 @@ documentation `97abb98`)
 
 Latest repository commit (HEAD):
 
-`Device Monitor: contain identities table and clarify VLAN apply workflow` (DM-STICKY2E)
+`Device Monitor: clarify empty VLAN selection and stabilise sticky offsets` (DM-STICKY2F)
 
 Workflow state:
 
@@ -257,6 +257,44 @@ VLAN Apply workflow.
 - Next step: authenticated testbed visual acceptance (four screenshots: desktop
   top; desktop scrolled; narrow top; narrow scrolled). **VISUAL ACCEPTANCE:
   USER-PENDING** - do not claim the layout is fixed without those screenshots.
+
+## Device Monitor: clarify empty VLAN selection and stabilise sticky offsets (DM-STICKY2F)
+
+Clarified the empty VLAN-filter state and replaced the integer-rounded sticky
+offset with fractional measurement.
+
+- Root cause (VLAN empty state): clearing every VLAN checkbox previously
+  collapsed to the "All VLANs" label, so an empty selection was ambiguous and
+  could read as the unfiltered view. A zero-checked selection is now an
+  incomplete draft rather than the all-VLAN choice.
+- Root cause (sticky offset): the sticky heading offset was measured with
+  integer `offsetHeight`, which rounds away sub-pixel fractions, so a prior
+  `calc(... - 1px)` "tuck" experiment over-corrected the heading band (a
+  +0.73px overlap against the toolbar bottom) and produced a visible 1px jump
+  when scrolling began.
+- Change (VLAN): a zero-checked selection now shows **Select a VLAN**, disables
+  **Apply VLAN Filter** (muted, no pending hint) and keeps the last applied
+  filter. `resolveVlanDraft()` resolves the pending checkboxes into a valid
+  draft or a `{valid: false}` incomplete draft; an unapplied pending selection
+  is preserved across a dropdown rebuild / data refresh (`pendingVlans` +
+  `effectiveCheckedVlans()`). All-VLAN and subset behaviour is unchanged.
+- Change (sticky): the three sticky offsets are now computed from fractional
+  `getBoundingClientRect().height` measurements via `computeStickyOffsets()`;
+  the heading band sticks flush beneath the toolbar with no `-1px` adjustment.
+- Files changed: `devices.volt`, `tests/test_devices_page_vlan.js`, both gettext
+  catalogues, `docs/USER_MANUAL.md`.
+- Tests: 11 Node (UI), 13 Python, 11 PHP PASS; `php -l`, `py_compile`, `sh -n`,
+  `msgfmt`, Volt compile, `git diff --check` PASS.
+- Deployment: testbed `192.168.20.23` files already in parity with the
+  authoritative checkout (`devices.volt` and both compiled `.mo` catalogues
+  SHA256-verified identical); production `192.168.20.254` untouched.
+- Visual acceptance (testbed `192.168.20.23`): VLAN empty state, pending state
+  and the applied RE0 filter all observed working; tab outline stable; no
+  row-text artifacts. Residual: a very minor text movement remains when
+  scrolling begins (including at Firefox 100% zoom). This residual effect is
+  not described as fixed, and no further CSS changes are planned for it.
+- Next step: none for this change.
+
 
 ## Device navigation and terminology consolidation
 

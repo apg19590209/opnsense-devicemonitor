@@ -278,6 +278,10 @@ header.page-content-head {
     vertical-align: middle;
     white-space: nowrap;
     position: sticky;
+    /* The heading band sticks flush beneath the toolbar. A prior 1px tuck
+       (calc(... - 1px)) measured a +0.73px overlap of the toolbar bottom and
+       produced a visible 1px jump when scrolling began, so the offset is used
+       without adjustment. */
     top: var(--devices-sticky-thead-top);
     z-index: 10;
 }
@@ -357,6 +361,40 @@ main.page-content > .row {
         return uniq.sort();
     }
 
+    // Resolve the pending checkbox selection into a draft. Zero checked VLANs
+    // is an incomplete draft (nothing to apply), every VLAN checked is the
+    // unfiltered all-VLAN view, and a subset is a specific VLAN filter.
+    function resolveVlanDraft(checkedVlans, allVlans) {
+        var checked = checkedVlans || [];
+        if (!checked.length) {
+            return { valid: false, filter: [] };
+        }
+        return { valid: true, filter: finalizeVlanSelection(checked, allVlans) };
+    }
+
+    // Determine which VLANs the dropdown should show checked after a rebuild.
+    // An unapplied pending selection is preserved so a data refresh never
+    // discards it; otherwise the applied filter (or the full set when nothing
+    // is filtered) is shown.
+    function effectiveCheckedVlans(pending, active, all) {
+        if (pending !== null) {
+            return pending.slice();
+        }
+        return (active || []).length === 0 ? all.slice() : active.slice();
+    }
+
+    // Compute the three sticky offsets (px) from measured fractional heights.
+    // getBoundingClientRect().height keeps the sub-pixel fractions that
+    // offsetHeight rounds away, so the heading band stays flush with the sticky
+    // header bottom at the top and after sticky activation.
+    function computeStickyOffsets(navbarHeight, titleHeight, headerHeight) {
+        return {
+            titleTop: navbarHeight,
+            stickyTop: navbarHeight + titleHeight,
+            theadTop: navbarHeight + titleHeight + headerHeight
+        };
+    }
+
 $(document).ready(function() {
 
     var translations = {
@@ -370,11 +408,13 @@ $(document).ready(function() {
         confirm_delete: '{{ lang._('Delete device') }}',
         confirm_clear:  '{{ lang._('Really delete all devices from database?') }}',
         all_vlans:      '{{ lang._('All VLANs') }}',
+        select_vlan:    '{{ lang._('Select a VLAN') }}',
         identity:       '{{ lang._('identity') }}',
         identities:     '{{ lang._('identities') }}'
     };
 
     var allRows = [], activeVlans = [], activeStatus = '', vlanNames = {};
+    var pendingVlans = null;
     var sortCol = 'last_seen', sortDir = 'desc';
 
     // Restore saved VLAN filter
@@ -402,7 +442,10 @@ $(document).ready(function() {
     function buildVlanDropdown(vlans) {
         var $list = $('#vlan-checklist').empty();
         if (!vlans.length) return;
-        var allSel = (activeVlans.length === 0);
+        // Preserve an unapplied pending selection across a rebuild so a data
+        // refresh never discards the user's in-progress VLAN choice.
+        var checked = effectiveCheckedVlans(pendingVlans, activeVlans, vlans);
+        var allSel = (checked.length === vlans.length);
 
         $list.append($('<li>').append(
             $('<label>').css({margin:0,cursor:'pointer',display:'flex',alignItems:'center',gap:'6px',padding:'5px 14px'}).append(
@@ -416,7 +459,7 @@ $(document).ready(function() {
         vlans.sort().forEach(function(v) {
             var n = vlanNames[v];
             var label = (n && n !== v) ? (v+' \u2013 '+n) : v;
-            var chk = allSel || (activeVlans.indexOf(v) !== -1);
+            var chk = checked.indexOf(v) !== -1;
             $list.append($('<li>').append(
                 $('<label>').css({margin:0,cursor:'pointer',display:'flex',alignItems:'center',gap:'6px',padding:'4px 14px'}).append(
                     $('<input type="checkbox" class="vlan-cb">').val(v).prop('checked', chk),
@@ -435,6 +478,7 @@ $(document).ready(function() {
     // not filtered or re-rendered until Apply/Clear.
     $(document).on('change','#vlan-all',function(){
         $('#vlan-checklist .vlan-cb').prop('checked',$(this).prop('checked'));
+        pendingVlans = readCheckedVlans();
         updateVlanLabel();
         syncVlanApplyButton();
     });
@@ -442,6 +486,7 @@ $(document).ready(function() {
         var total=$('#vlan-checklist .vlan-cb').length;
         var checked=$('#vlan-checklist .vlan-cb:checked').length;
         $('#vlan-all').prop('checked', total===checked);
+        pendingVlans = readCheckedVlans();
         updateVlanLabel();
         syncVlanApplyButton();
     });
@@ -455,7 +500,14 @@ $(document).ready(function() {
     function commitVlans() {
         var allVlans = [];
         $('#vlan-checklist .vlan-cb').each(function(){ allVlans.push($(this).val()); });
-        activeVlans = finalizeVlanSelection(readCheckedVlans(), allVlans);
+        var draft = resolveVlanDraft(readCheckedVlans(), allVlans);
+        // Never commit an empty selection: it is an incomplete draft, not the
+        // all-VLAN view. Keep the last applied filter until a VLAN is selected.
+        if (!draft.valid) {
+            return;
+        }
+        activeVlans = draft.filter;
+        pendingVlans = null;
         try { localStorage.setItem('dm_vlan_filter', JSON.stringify(activeVlans)); } catch(e) {}
         updateVlanLabel();
         applyFilters();
@@ -470,7 +522,9 @@ $(document).ready(function() {
     function updateVlanLabel() {
         var total = $('#vlan-checklist .vlan-cb').length;
         var checked = $('#vlan-checklist .vlan-cb:checked').length;
-        if (checked === 0 || checked === total) {
+        if (checked === 0) {
+            $('#vlan-filter-label').text(translations.select_vlan);
+        } else if (checked === total) {
             $('#vlan-filter-label').text(translations.all_vlans);
         } else if (checked === 1) {
             $('#vlan-filter-label').text('1 VLAN');
@@ -499,9 +553,16 @@ $(document).ready(function() {
     function syncVlanApplyButton() {
         var allVlans = [];
         $('#vlan-checklist .vlan-cb').each(function(){ allVlans.push($(this).val()); });
-        var pending = finalizeVlanSelection(readCheckedVlans(), allVlans);
-        var same = arraysEqual(pending, activeVlans);
+        var draft = resolveVlanDraft(readCheckedVlans(), allVlans);
         var $btn = $('#vlan-apply');
+        // An empty draft is incomplete: keep the last applied filter, disable
+        // Apply and hide the pending hint until at least one VLAN is selected.
+        if (!draft.valid) {
+            $btn.prop('disabled', true).removeClass('btn-primary').addClass('btn-default');
+            $('#vlan-not-applied').hide();
+            return;
+        }
+        var same = arraysEqual(draft.filter, activeVlans);
         $btn.prop('disabled', same);
         if (same) {
             $btn.removeClass('btn-primary').addClass('btn-default');
@@ -1079,24 +1140,25 @@ $(document).ready(function() {
         }
 
         var pageHead = document.querySelector('.page-head');
-        var navbarHeight = pageHead ? pageHead.offsetHeight : 62;
+        var navbarHeight = pageHead ? pageHead.getBoundingClientRect().height : 62;
 
         var titleEl = document.querySelector('header.page-content-head');
-        var titleHeight = titleEl ? titleEl.offsetHeight : 0;
+        var titleHeight = titleEl ? titleEl.getBoundingClientRect().height : 0;
 
-        var headerHeight = header.offsetHeight;
+        var headerHeight = header.getBoundingClientRect().height;
 
+        var offsets = computeStickyOffsets(navbarHeight, titleHeight, headerHeight);
         document.documentElement.style.setProperty(
             '--devices-title-top',
-            navbarHeight + 'px'
+            offsets.titleTop + 'px'
         );
         document.documentElement.style.setProperty(
             '--devices-sticky-top',
-            (navbarHeight + titleHeight) + 'px'
+            offsets.stickyTop + 'px'
         );
         document.documentElement.style.setProperty(
             '--devices-sticky-thead-top',
-            (navbarHeight + titleHeight + headerHeight) + 'px'
+            offsets.theadTop + 'px'
         );
 
         var $header = $(header);

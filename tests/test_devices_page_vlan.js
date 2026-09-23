@@ -97,8 +97,12 @@ check(
 
 check(view.includes('function commitVlans()'), 'commitVlans helper missing');
 check(
-    view.includes('activeVlans = finalizeVlanSelection(readCheckedVlans(), allVlans);'),
-    'Apply must finalise the checked VLANs into activeVlans'
+    view.includes('resolveVlanDraft(readCheckedVlans(), allVlans)'),
+    'Apply must resolve the checked VLANs through the draft helper'
+);
+check(
+    view.includes('activeVlans = draft.filter'),
+    'Apply must commit the resolved draft filter'
 );
 
 check(
@@ -115,8 +119,8 @@ check(
 // ---------------------------------------------------------------------------
 
 check(
-    view.includes('activeVlans.indexOf(v) !== -1'),
-    'Dropdown rebuild must retain the committed VLAN selection'
+    view.includes('effectiveCheckedVlans(pendingVlans, activeVlans, vlans)'),
+    'Dropdown rebuild must preserve the pending selection via effectiveCheckedVlans'
 );
 check(
     view.includes("localStorage.getItem('dm_vlan_filter')"),
@@ -193,6 +197,11 @@ check(
 check(
     view.includes('#grid-devices thead th {') && view.includes('position: sticky'),
     'sticky column headings must use position: sticky'
+);
+check(
+    view.includes('top: var(--devices-sticky-thead-top)') &&
+        !view.includes('calc(var(--devices-sticky-thead-top) - 1px)'),
+    'sticky column headings must stick flush beneath the toolbar (no -1px overlap)'
 );
 check(
     view.includes('--devices-sticky-top') &&
@@ -276,7 +285,11 @@ check(!view.includes('scroll-snap-type'), 'no scroll-snap-type may remain');
 check(!view.includes('scroll-padding-top'), 'no scroll-padding-top may remain');
 check(!view.includes('devicesStickyGeometry'), 'cached one-shot sticky geometry must be absent');
 check(!view.includes('updateStickyOffsets'), 'fragile updateStickyOffsets must remain absent');
-check(!view.includes('getBoundingClientRect'), 'measured-gap logic must remain absent');
+check(
+    view.includes('getBoundingClientRect().height'),
+    'sticky offsets must use fractional getBoundingClientRect().height'
+);
+check(!view.includes('.offsetHeight'), 'sticky offsets must not use integer .offsetHeight');
 check(!view.includes('::before'), 'sticky shield pseudo-elements must remain absent');
 
 // ---------------------------------------------------------------------------
@@ -288,8 +301,12 @@ check(
     'VLAN label must read the pending checked count'
 );
 check(
-    view.includes('checked === 0 || checked === total'),
-    'All/None selection must display the All VLANs label'
+    view.includes('checked === total'),
+    'all-checked selection must display the All VLANs label'
+);
+check(
+    view.includes('checked === 0') && view.includes('translations.select_vlan'),
+    'zero-checked selection must display the Select a VLAN label'
 );
 check(view.includes("'1 VLAN'"), 'One selected checkbox must display "1 VLAN"');
 check(
@@ -329,6 +346,41 @@ check(
 );
 
 // ---------------------------------------------------------------------------
+// Empty VLAN selection is an incomplete draft, not the all-VLAN view
+// ---------------------------------------------------------------------------
+
+check(
+    view.includes('function resolveVlanDraft'),
+    'resolveVlanDraft draft-resolution helper missing'
+);
+check(
+    view.includes("$('#vlan-filter-label').text(translations.select_vlan)"),
+    'empty selection must set the dropdown label to "Select a VLAN"'
+);
+check(
+    view.includes("$btn.prop('disabled', true)") &&
+        view.includes("$('#vlan-not-applied').hide()"),
+    'empty draft must disable Apply and hide the pending hint'
+);
+
+// ---------------------------------------------------------------------------
+// Pending VLAN selection survives a dropdown rebuild / data refresh
+// ---------------------------------------------------------------------------
+
+check(
+    view.includes('var pendingVlans = null'),
+    'pending VLAN selection must be tracked in a variable'
+);
+check(
+    view.includes('pendingVlans = readCheckedVlans()'),
+    'checkbox changes must capture the pending VLAN selection'
+);
+check(
+    view.includes('pendingVlans = null;'),
+    'commit must clear the pending selection after applying'
+);
+
+// ---------------------------------------------------------------------------
 // Pure helper behaviour (no DOM required)
 // ---------------------------------------------------------------------------
 
@@ -363,6 +415,18 @@ vm.runInNewContext(javascript, sandbox);
 check(
     typeof sandbox.finalizeVlanSelection === 'function',
     'finalizeVlanSelection helper is not exposed'
+);
+check(
+    typeof sandbox.resolveVlanDraft === 'function',
+    'resolveVlanDraft helper is not exposed'
+);
+check(
+    typeof sandbox.effectiveCheckedVlans === 'function',
+    'effectiveCheckedVlans helper is not exposed'
+);
+check(
+    typeof sandbox.computeStickyOffsets === 'function',
+    'computeStickyOffsets helper is not exposed'
 );
 
 function assertSame(actual, expected, label) {
@@ -403,6 +467,56 @@ assertSame(
     'duplicate VLAN selection'
 );
 
+// resolveVlanDraft distinguishes an empty draft from the all-VLAN choice.
+assertSame(
+    sandbox.resolveVlanDraft([], ['VLAN10', 'VLAN50', 'VLAN99']),
+    { valid: false, filter: [] },
+    'zero checked VLANs is an incomplete draft'
+);
+assertSame(
+    sandbox.resolveVlanDraft(['VLAN50'], ['VLAN10', 'VLAN50', 'VLAN99']),
+    { valid: true, filter: ['VLAN50'] },
+    'one checked VLAN is a valid draft filter'
+);
+assertSame(
+    sandbox.resolveVlanDraft(
+        ['VLAN10', 'VLAN50', 'VLAN99'],
+        ['VLAN10', 'VLAN50', 'VLAN99']
+    ),
+    { valid: true, filter: [] },
+    'all checked VLANs is the unfiltered all-VLAN draft'
+);
+
+// effectiveCheckedVlans preserves a pending selection across a rebuild.
+assertSame(
+    sandbox.effectiveCheckedVlans(['RE0'], [], ['RE0', 'VLAN50', 'VTNET0', 'VTNET1']),
+    ['RE0'],
+    'pending subset survives a dropdown rebuild'
+);
+assertSame(
+    sandbox.effectiveCheckedVlans(null, [], ['RE0', 'VLAN50']),
+    ['RE0', 'VLAN50'],
+    'no pending + applied all shows every VLAN'
+);
+assertSame(
+    sandbox.effectiveCheckedVlans(null, ['RE0'], ['RE0', 'VLAN50']),
+    ['RE0'],
+    'no pending + applied subset shows the applied subset'
+);
+assertSame(
+    sandbox.effectiveCheckedVlans([], ['RE0'], ['RE0', 'VLAN50']),
+    [],
+    'pending empty draft survives a dropdown rebuild'
+);
+
+// computeStickyOffsets preserves fractional heights so the heading band stays
+// flush with the sticky header bottom.
+assertSame(
+    sandbox.computeStickyOffsets(62.5, 48.25, 177.75),
+    { titleTop: 62.5, stickyTop: 110.75, theadTop: 288.5 },
+    'fractional heights produce a fractional sticky heading top'
+);
+
 const rows = [
     { mac: 'm1', ip: '192.168.50.180', vlan: 'VLAN50', status: 'online' },
     { mac: 'm2', ip: '192.168.50.1', vlan: 'VLAN50', status: 'online' },
@@ -431,4 +545,8 @@ console.log('DEVICES_VLAN_COUNT_STATE=PASS');
 console.log('DEVICES_VLAN_APPLY_BUTTON=PASS');
 console.log('DEVICES_VLAN_SELECTION_HELPER=PASS');
 console.log('DEVICES_VLAN_SUMMARY_COUNTERS=PASS');
+console.log('DEVICES_VLAN_EMPTY_DRAFT=PASS');
+console.log('DEVICES_VLAN_SEAM_FLUSH=PASS');
+console.log('DEVICES_VLAN_PENDING_REBUILD=PASS');
+console.log('DEVICES_VLAN_FRACTIONAL_STICKY=PASS');
 console.log('DEVICES_VLAN_JAVASCRIPT=PASS');

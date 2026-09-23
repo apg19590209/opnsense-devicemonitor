@@ -69,6 +69,10 @@ msgstr "Použít filtr VLAN"
 msgid "Not applied"
 msgstr "Nepoužito"
 
+#: devices.volt - VLAN dropdown - prázdný výběr
+msgid "Select a VLAN"
+msgstr "Vyberte VLAN"
+
 #: devices.volt - status dropdown - všechny stavy
 msgid "All statuses"
 msgstr "Všechny stavy"

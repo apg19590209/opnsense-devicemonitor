@@ -119,10 +119,12 @@ Devices**). The installed plugin version is shown under **Settings → About**.
 
 - **All VLANs (drop-down)** — a multi-select VLAN filter. Tick one or more VLANs, then
   press **Apply VLAN Filter** to show only devices on those VLANs. Tick **All VLANs**
-  (or clear every tick) and press **Apply VLAN Filter** to return to the unfiltered
-  all-VLAN view. Checkbox changes are not applied to the table until you press the
-  button, which stays muted/disabled until your selection differs from what is applied.
-  **Read-only.**
+  and press **Apply VLAN Filter** to return to the unfiltered all-VLAN view. Clearing
+  every tick leaves an incomplete selection: the drop-down shows **Select a VLAN**,
+  **Apply VLAN Filter** is disabled, and the table keeps its last applied filter until
+  you tick a VLAN or **All VLANs**. Checkbox changes are not applied to the table until
+  you press the button, which stays muted/disabled until your selection differs from what
+  is applied. **Read-only.**
 - **All statuses (drop-down)** — filter by **All statuses**, **Online** or **Offline**.
   **Read-only.**
 - **Refresh** — reload the list and statistics immediately. **Read-only.**
