@@ -149,6 +149,9 @@
                                 <input type="checkbox" id="port-discovery-schedule">
                                 {{ lang._('Scan weekly') }}
                             </label>
+                            <span id="port-discovery-schedule-status"
+                                  class="text-muted" role="status"
+                                  aria-live="polite"></span>
                         </div>
                         <p id="port-discovery-status" class="text-muted"
                            role="status"></p>
@@ -1349,7 +1352,7 @@ $(document).ready(function() {
     $('#services-search').on('input', renderServices);
 
     var portDiscoveryDevices = {};
-    function loadPortDiscovery() {
+    function loadPortDiscovery(scheduleMessage) {
         $.getJSON('/api/devicemonitor/devices/portdiscovery')
             .done(function(data) {
                 var selected = $('#port-discovery-device').val();
@@ -1371,6 +1374,9 @@ $(document).ready(function() {
                 }
                 $select.selectpicker('refresh');
                 $select.trigger('change');
+                if (scheduleMessage) {
+                    $('#port-discovery-schedule-status').text(scheduleMessage);
+                }
                 var $body = $('#port-discovery-results').empty();
                 (data.results || []).forEach(function(row) {
                     var detail = (row.ports || []).map(function(port) {
@@ -1406,6 +1412,7 @@ $(document).ready(function() {
             });
     }
     $('#port-discovery-device').on('change', function() {
+        $('#port-discovery-schedule-status').text('');
         var device = portDiscoveryDevices[$(this).val()];
         $('#port-discovery-schedule')
             .prop('checked', !!(device && device.enabled))
@@ -1419,13 +1426,10 @@ $(document).ready(function() {
         $.post('/api/devicemonitor/devices/portdiscoverytarget',
                {mac: mac, enabled: enabled})
             .done(function(data) {
-                $('#port-discovery-status')
-                    .text(data.message || data.error || data.result);
-                loadPortDiscovery();
+                loadPortDiscovery(data.message || data.error || data.result);
             })
             .fail(function() {
-                $('#port-discovery-status').text('Unable to save schedule.');
-                loadPortDiscovery();
+                loadPortDiscovery('Unable to save schedule.');
             });
     });
     $('#btn-port-discovery-run').on('click', function() {
