@@ -149,10 +149,6 @@
                                 <input type="checkbox" id="port-discovery-schedule">
                                 {{ lang._('Scan weekly') }}
                             </label>
-                            <button type="button" id="btn-port-discovery-refresh"
-                                    class="btn btn-default btn-sm">
-                                {{ lang._('Refresh') }}
-                            </button>
                         </div>
                         <p id="port-discovery-status" class="text-muted"
                            role="status"></p>
@@ -1416,7 +1412,6 @@ $(document).ready(function() {
             .prop('disabled', !device);
         $('#btn-port-discovery-run').prop('disabled', !device);
     });
-    $('#btn-port-discovery-refresh').on('click', loadPortDiscovery);
     $('#port-discovery-schedule').on('change', function() {
         var mac = $('#port-discovery-device').val();
         var enabled = $(this).prop('checked') ? '1' : '0';
