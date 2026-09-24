@@ -28,7 +28,6 @@ const cases = [
     { file: 'devices.volt', id: 'filter-status', style: 'btn-default btn-sm' },
     { file: 'infrastructureservices.volt', id: 'services-type-filter', style: 'btn-default btn-sm' },
     { file: 'infrastructureservices.volt', id: 'services-status-filter', style: 'btn-default btn-sm' },
-    { file: 'infrastructureservices.volt', id: 'port-discovery-device', style: 'btn-default btn-sm' },
     { file: 'identityevents.volt', id: 'identity-events-status', style: 'btn-default btn-xs' },
     { file: 'identityevents.volt', id: 'identity-events-limit', style: 'btn-default btn-xs' },
     { file: 'scanhistory.volt', id: 'scan-history-limit', style: 'btn-default btn-xs' }
@@ -64,6 +63,15 @@ cases.forEach(function(spec) {
             ' still uses native form-control/input-sm classes'
     );
 });
+
+// Port Discovery now uses a searchable per-device table in place of a select.
+const infrastructure = readView('infrastructureservices.volt');
+check(infrastructure.includes('id="port-discovery-search"'),
+    'Port Discovery search is missing');
+check(infrastructure.includes('id="port-discovery-devices"'),
+    'Port Discovery device table is missing');
+check(infrastructure.includes('id="btn-port-discovery-save"'),
+    'Port Discovery bulk save is missing');
 
 // #services-type-filter options are appended asynchronously by populateTypes(),
 // so the view must refresh the selectpicker after appending them.
