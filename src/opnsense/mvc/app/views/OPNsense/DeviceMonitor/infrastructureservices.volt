@@ -135,52 +135,75 @@
                     </div>
                     <div class="panel-body">
                         <p class="text-muted">
-                            {{ lang._('Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear below. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned.') }}
+                            {{ lang._('Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned.') }}
                         </p>
-                        <div class="port-discovery-controls">
-                            <input id="port-discovery-search" type="search"
-                                   class="form-control input-sm"
-                                   placeholder="{{ lang._('Search devices') }}">
-                            <select id="port-discovery-filter"
-                                    class="selectpicker"
-                                    data-style="btn-default btn-sm"
-                                    data-width="180px">
-                                <option value="all">{{ lang._('All devices') }}</option>
-                                <option value="weekly">{{ lang._('Weekly enabled') }}</option>
-                                <option value="never">{{ lang._('Never scanned') }}</option>
-                            </select>
-                            <button type="button" id="btn-port-discovery-save"
-                                    class="btn btn-primary btn-sm" disabled>
-                                {{ lang._('Save weekly selections') }}
-                            </button>
-                            <span id="port-discovery-schedule-status"
-                                  class="text-muted" role="status"
-                                  aria-live="polite"></span>
+                        <ul class="nav nav-tabs port-discovery-tabs" role="tablist">
+                            <li role="presentation" class="active">
+                                <a href="#tab-port-discovery-devices"
+                                   data-toggle="tab" role="tab">
+                                    {{ lang._('Devices') }}
+                                </a>
+                            </li>
+                            <li role="presentation">
+                                <a href="#tab-port-discovery-scans"
+                                   data-toggle="tab" role="tab">
+                                    {{ lang._('Scans') }}
+                                </a>
+                            </li>
+                        </ul>
+                        <div class="tab-content port-discovery-tab-content">
+                            <div id="tab-port-discovery-devices"
+                               class="tab-pane fade in active" role="tabpanel">
+                            <div class="port-discovery-controls">
+                                <input id="port-discovery-search" type="search"
+                                       class="form-control input-sm"
+                                       placeholder="{{ lang._('Search devices') }}">
+                                <select id="port-discovery-filter"
+                                        class="selectpicker"
+                                        data-style="btn-default btn-sm"
+                                        data-width="180px">
+                                    <option value="all">{{ lang._('All devices') }}</option>
+                                    <option value="weekly">{{ lang._('Weekly enabled') }}</option>
+                                    <option value="never">{{ lang._('Never scanned') }}</option>
+                                </select>
+                                <button type="button" id="btn-port-discovery-save"
+                                        class="btn btn-primary btn-sm" disabled>
+                                    {{ lang._('Save weekly selections') }}
+                                </button>
+                                <span id="port-discovery-schedule-status"
+                                      class="text-muted" role="status"
+                                      aria-live="polite"></span>
+                            </div>
+                            <p id="port-discovery-status" class="text-muted"
+                               role="status"></p>
+                            <div class="table-responsive port-discovery-device-scroll">
+                                <table id="port-discovery-device-table"
+                                       class="table table-striped table-condensed">
+                                    <thead><tr>
+                                        <th>{{ lang._('Device') }}</th>
+                                        <th>{{ lang._('Last Scan (local time)') }}</th>
+                                        <th>{{ lang._('Scan weekly') }}</th>
+                                        <th>{{ lang._('Action') }}</th>
+                                    </tr></thead>
+                                    <tbody id="port-discovery-devices"></tbody>
+                                </table>
+                            </div>
+                            </div>
+                            <div id="tab-port-discovery-scans"
+                               class="tab-pane fade" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-condensed">
+                                    <thead><tr>
+                                        <th>{{ lang._('Device') }}</th>
+                                        <th>{{ lang._('Scan Time (local time)') }}</th>
+                                        <th>{{ lang._('Result') }}</th>
+                                        <th>{{ lang._('Open TCP Ports') }}</th>
+                                    </tr></thead>
+                                    <tbody id="port-discovery-results"></tbody>
+                                </table>
+                            </div>
+                            </div>
                         </div>
-                        <p id="port-discovery-status" class="text-muted"
-                           role="status"></p>
-                        <div class="table-responsive">
-                            <table class="table table-striped table-condensed">
-                                <thead><tr>
-                                    <th>{{ lang._('Device') }}</th>
-                                    <th>{{ lang._('Last Scan (local time)') }}</th>
-                                    <th>{{ lang._('Scan weekly') }}</th>
-                                    <th>{{ lang._('Action') }}</th>
-                                </tr></thead>
-                                <tbody id="port-discovery-devices"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-striped table-condensed">
-                            <thead><tr>
-                                <th>{{ lang._('Device') }}</th>
-                                <th>{{ lang._('Scan Time (local time)') }}</th>
-                                <th>{{ lang._('Result') }}</th>
-                                <th>{{ lang._('Open TCP Ports') }}</th>
-                            </tr></thead>
-                            <tbody id="port-discovery-results"></tbody>
-                        </table>
                     </div>
                 </div>
             </div>
@@ -256,12 +279,32 @@
     gap: 8px;
 }
 
+.port-discovery-tab-content {
+    padding-top: 12px;
+}
+
 .port-discovery-controls .checkbox-inline {
     margin: 0;
 }
 
 .port-discovery-controls input[type="search"] {
     width: 230px;
+}
+
+.port-discovery-device-scroll {
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+.port-discovery-device-scroll thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.port-discovery-row-status {
+    margin-left: 8px;
+    white-space: normal;
 }
 
 .infrastructure-recent-changes {
@@ -1416,6 +1459,34 @@ $(document).ready(function() {
     var portDiscoveryPending = {};
     var portDiscoveryBusy = false;
     var portDiscoveryLastScan = {};
+    var portDiscoveryRunningMac = null;
+    var portDiscoveryScanStatus = {};
+    var portDiscoveryStatusTimers = {};
+    var portDiscoveryScheduleTimer = null;
+
+    function setPortDiscoveryRowStatus(mac, message, temporary) {
+        clearTimeout(portDiscoveryStatusTimers[mac]);
+        portDiscoveryScanStatus[mac] = message;
+        renderPortDiscoveryDevices();
+        if (temporary) {
+            portDiscoveryStatusTimers[mac] = setTimeout(function() {
+                delete portDiscoveryScanStatus[mac];
+                delete portDiscoveryStatusTimers[mac];
+                renderPortDiscoveryDevices();
+            }, 20000);
+        }
+    }
+
+    function setPortDiscoveryScheduleStatus(message, temporary) {
+        clearTimeout(portDiscoveryScheduleTimer);
+        $('#port-discovery-schedule-status').text(message);
+        if (temporary) {
+            portDiscoveryScheduleTimer = setTimeout(function() {
+                $('#port-discovery-schedule-status').text('');
+                portDiscoveryScheduleTimer = null;
+            }, 20000);
+        }
+    }
 
     // Port discovery timestamps are stored as UTC without a suffix. Render
     // them in the browser's local timezone and show its abbreviation.
@@ -1466,16 +1537,25 @@ $(document).ready(function() {
                 .attr('aria-label', 'Scan weekly: ' + label)
                 .on('change', function() {
                     portDiscoveryPending[mac] = this.checked;
-                    $('#port-discovery-schedule-status').text('');
+                    setPortDiscoveryScheduleStatus('', false);
                     renderPortDiscoveryDevices();
                 });
             var $button = $('<button type="button">')
                 .addClass('btn btn-primary btn-sm')
                 .text('Run Now')
-                .prop('disabled', portDiscoveryBusy)
+                .prop('disabled', portDiscoveryBusy ||
+                                  !!portDiscoveryRunningMac)
                 .on('click', function() {
-                    runPortDiscovery(mac, $(this));
+                    runPortDiscovery(mac);
                 });
+            var $action = $('<td>').append($button);
+            if (portDiscoveryScanStatus[mac]) {
+                $('<span>').addClass('port-discovery-row-status text-muted')
+                    .attr('role', 'status')
+                    .attr('aria-live', 'polite')
+                    .text(portDiscoveryScanStatus[mac])
+                    .appendTo($action);
+            }
             $('<tr>')
                 .append($('<td>').text(label))
                 .append($('<td>').text(last
@@ -1486,7 +1566,7 @@ $(document).ready(function() {
                        last.error || 'Failed')
                     : 'Never'))
                 .append($('<td>').append($check))
-                .append($('<td>').append($button))
+                .append($action)
                 .appendTo($body);
         });
         $('#btn-port-discovery-save')
@@ -1504,7 +1584,7 @@ $(document).ready(function() {
                 portDiscoveryLastScan = data.last_results || {};
                 renderPortDiscoveryDevices();
                 if (scheduleMessage) {
-                    $('#port-discovery-schedule-status').text(scheduleMessage);
+                    setPortDiscoveryScheduleStatus(scheduleMessage, true);
                 }
                 var $body = $('#port-discovery-results').empty();
                 (data.results || []).forEach(function(row) {
@@ -1576,25 +1656,28 @@ $(document).ready(function() {
         function failed(reason) {
             portDiscoveryBusy = false;
             renderPortDiscoveryDevices();
-            $('#port-discovery-schedule-status').text(
+            setPortDiscoveryScheduleStatus(
                 saved + ' saved; remaining selections were not saved. ' +
-                (reason || 'Unable to save schedule.'));
+                (reason || 'Unable to save schedule.'), false);
         }
         next();
     });
-    function runPortDiscovery(mac, $button) {
-        $button.prop('disabled', true);
-        $('#port-discovery-status').text('Scanning selected device...');
+    function runPortDiscovery(mac) {
+        if (portDiscoveryBusy || portDiscoveryRunningMac) return;
+        portDiscoveryRunningMac = mac;
+        setPortDiscoveryRowStatus(mac, 'Scanning…', false);
         $.ajax({
             url: '/api/devicemonitor/devices/runportdiscovery',
             type: 'POST', data: {mac: mac}, timeout: 135000
         }).done(function(data) {
-            $('#port-discovery-status')
-                .text(data.message || data.error || data.result);
+            setPortDiscoveryRowStatus(mac, data && data.result === 'ok'
+                ? 'Scan complete'
+                : (data && data.error || 'Scan failed'), true);
         }).fail(function() {
-            $('#port-discovery-status').text('Port discovery request failed.');
+            setPortDiscoveryRowStatus(mac, 'Scan request failed', true);
         }).always(function() {
-            $button.prop('disabled', false);
+            portDiscoveryRunningMac = null;
+            renderPortDiscoveryDevices();
             loadPortDiscovery();
         });
     }
@@ -1618,9 +1701,9 @@ $(document).ready(function() {
 
     function applyInfrastructureTableHeaderSticky(headerTop) {
         var $active = $(
-            '.infrastructure-tab-content .tab-pane.active'
+            '.infrastructure-tab-content > .tab-pane.active'
         );
-        var $table = $active.find('table').first();
+        var $table = $active.find('table:visible').first();
         var thead = $table.find('thead th');
 
         if (!thead.length) {
@@ -1629,7 +1712,8 @@ $(document).ready(function() {
 
         var theadBg = opaqueBackground(thead);
 
-        thead.css('top', headerTop + 'px');
+        thead.css('top', $table.is('#port-discovery-device-table')
+            ? '0px' : headerTop + 'px');
         thead.css('background-color', theadBg);
         $table.find('thead').css('background-color', theadBg);
     }
@@ -1691,8 +1775,8 @@ $(document).ready(function() {
     }
 
     $(document).on('shown.bs.tab', 'a[data-toggle="tab"]', function() {
-        var discovery = $(this).attr('href') ===
-            '#tab-infrastructure-port-discovery';
+        var discovery = $('#tab-infrastructure-port-discovery')
+            .hasClass('active');
         $('.infrastructure-toolbar, .infrastructure-stats')
             .toggle(!discovery);
         updateInfrastructureStickyStack();

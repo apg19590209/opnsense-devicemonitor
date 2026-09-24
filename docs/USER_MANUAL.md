@@ -398,12 +398,14 @@ change device records or network state.
 
 ### Port Discovery
 
-The **Port Discovery** tab lists monitored devices in a searchable table.
-Use **Run Now** on a device row to scan that device's TCP ports (1–65535).
+The **Port Discovery** page has **Devices** and **Scans** tabs. Devices lists
+monitored hosts in a searchable table. Use **Run Now** on a device row to scan
+that device's TCP ports (1–65535); results appear under **Scans**.
 Use the weekly checkboxes and **Save weekly selections** to schedule several
 devices in one pass. Filters show all devices, those selected for weekly scans,
-or those never scanned. Weekly scans run while Device Monitor monitoring is
-enabled. At most one due device is
+or those never scanned. The device list scrolls with its column headings
+visible, and **Run Now** progress appears in the device's own row. Weekly scans
+run while Device Monitor monitoring is enabled. At most one due device is
 processed after each normal monitoring cycle; scans for different devices
 never run concurrently through this feature. Each scan has a 120-second
 process limit and records identified open ports and errors separately from

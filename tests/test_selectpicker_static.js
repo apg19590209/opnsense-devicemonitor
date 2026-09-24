@@ -71,6 +71,15 @@ check(infrastructure.includes('id="port-discovery-search"'),
     'Port Discovery search is missing');
 check(infrastructure.includes('id="port-discovery-devices"'),
     'Port Discovery device table is missing');
+check(infrastructure.includes('id="tab-port-discovery-scans"') &&
+      infrastructure.includes('id="port-discovery-results"'),
+    'Port Discovery scans tab is missing');
+check(infrastructure.includes('port-discovery-device-scroll') &&
+      infrastructure.includes("$table.is('#port-discovery-device-table')"),
+    'Port Discovery scrollable sticky header is missing');
+check(infrastructure.includes('portDiscoveryScanStatus[mac]') &&
+      infrastructure.includes('port-discovery-row-status'),
+    'Port Discovery row feedback is missing');
 check(infrastructure.includes('id="btn-port-discovery-save"'),
     'Port Discovery bulk save is missing');
 

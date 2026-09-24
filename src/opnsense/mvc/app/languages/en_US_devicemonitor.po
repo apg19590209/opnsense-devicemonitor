@@ -832,8 +832,11 @@ msgstr "Loading notes..."
 msgid "Port Discovery"
 msgstr "Port Discovery"
 
-msgid "Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear below. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned."
-msgstr "Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear below. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned."
+msgid "Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned."
+msgstr "Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned."
+
+msgid "Scans"
+msgstr "Scans"
 
 msgid "Run Now"
 msgstr "Run Now"
