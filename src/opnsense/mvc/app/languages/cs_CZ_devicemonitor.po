@@ -833,8 +833,8 @@ msgstr "Načítání poznámek..."
 msgid "Port Discovery"
 msgstr "Zjišťování portů"
 
-msgid "Select one monitored device. A full TCP port scan is bounded to 120 seconds. Scheduled scans are opt-in and run at most once a week per selected device, one host at a time. UDP services such as WireGuard require separate authoritative evidence."
-msgstr "Vyberte jedno monitorované zařízení. Úplné skenování portů TCP je omezeno na 120 sekund. Plánované skenování se zapíná pro každé zařízení zvlášť a probíhá nejvýše jednou týdně, vždy pouze pro jedno zařízení. Služby UDP, například WireGuard, vyžadují samostatné autoritativní údaje."
+msgid "Scan one monitored device across TCP ports 1–65535, including standard and nonstandard ports. Open ports and any identified services appear below. Each scan stops after 120 seconds; incomplete scans are marked failed. Weekly scans are optional and run one host at a time. UDP ports, including WireGuard, are not scanned."
+msgstr "Prohledejte porty TCP 1–65535 na jednom monitorovaném zařízení, včetně standardních a nestandardních portů. Otevřené porty a případné rozpoznané služby se zobrazí níže. Skenování se zastaví po 120 sekundách; neúplné skenování se označí jako neúspěšné. Týdenní skenování je volitelné a probíhá vždy pro jedno zařízení. Porty UDP, včetně WireGuardu, se neskenují."
 
 msgid "Run Now"
 msgstr "Spustit nyní"
