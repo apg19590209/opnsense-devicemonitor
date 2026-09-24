@@ -182,6 +182,7 @@
                                     <thead><tr>
                                         <th>{{ lang._('Device') }}</th>
                                         <th>{{ lang._('Last Scan (local time)') }}</th>
+                                        <th>{{ lang._('Status') }}</th>
                                         <th>{{ lang._('Scan weekly') }}</th>
                                         <th>{{ lang._('Action') }}</th>
                                     </tr></thead>
@@ -191,6 +192,26 @@
                             </div>
                             <div id="tab-port-discovery-scans"
                                class="tab-pane fade" role="tabpanel">
+                            <div class="port-discovery-controls port-discovery-scan-filters">
+                                <input id="port-scans-search" type="search"
+                                       class="form-control input-sm"
+                                       placeholder="{{ lang._('Search IP, MAC or name') }}">
+                                <input id="port-scans-port" type="text"
+                                       class="form-control input-sm"
+                                       placeholder="{{ lang._('TCP ports, e.g. 22,443') }}">
+                                <select id="port-scans-result"
+                                        class="selectpicker"
+                                        data-style="btn-default btn-sm"
+                                        data-width="160px">
+                                    <option value="all">{{ lang._('All results') }}</option>
+                                    <option value="complete">{{ lang._('Complete') }}</option>
+                                    <option value="failed">{{ lang._('Failed') }}</option>
+                                    <option value="running">{{ lang._('Running') }}</option>
+                                </select>
+                                <span class="text-muted">
+                                    {{ lang._('Filtering the 50 most recent scans') }}
+                                </span>
+                            </div>
                             <div class="table-responsive">
                                 <table class="table table-striped table-condensed">
                                     <thead><tr>
@@ -296,6 +317,31 @@
     overflow-y: auto;
 }
 
+#port-discovery-device-table {
+    width: 100%;
+    min-width: 850px;
+    table-layout: fixed;
+}
+
+#port-discovery-device-table th:nth-child(1) { width: 38%; }
+#port-discovery-device-table th:nth-child(2) { width: 24%; }
+#port-discovery-device-table th:nth-child(3) { width: 17%; }
+#port-discovery-device-table th:nth-child(4) { width: 9%; }
+#port-discovery-device-table th:nth-child(5) { width: 12%; }
+
+#port-discovery-device-table td {
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+}
+
+.port-discovery-scan-filters {
+    margin-bottom: 12px;
+}
+
+#port-scans-port {
+    width: 190px;
+}
+
 .port-discovery-device-scroll thead th {
     position: sticky;
     top: 0;
@@ -303,7 +349,6 @@
 }
 
 .port-discovery-row-status {
-    margin-left: 8px;
     white-space: normal;
 }
 
@@ -1459,6 +1504,7 @@ $(document).ready(function() {
     var portDiscoveryPending = {};
     var portDiscoveryBusy = false;
     var portDiscoveryLastScan = {};
+    var portDiscoveryResults = [];
     var portDiscoveryRunningMac = null;
     var portDiscoveryScanStatus = {};
     var portDiscoveryStatusTimers = {};
@@ -1548,30 +1594,82 @@ $(document).ready(function() {
                 .on('click', function() {
                     runPortDiscovery(mac);
                 });
-            var $action = $('<td>').append($button);
-            if (portDiscoveryScanStatus[mac]) {
-                $('<span>').addClass('port-discovery-row-status text-muted')
-                    .attr('role', 'status')
-                    .attr('aria-live', 'polite')
-                    .text(portDiscoveryScanStatus[mac])
-                    .appendTo($action);
-            }
+            var lastStatus = last
+                ? (last.success === null ? 'Running' :
+                   last.success == 1 ? 'Complete' :
+                   last.error || 'Failed')
+                : 'Not scanned';
+            var $status = $('<td>')
+                .addClass('port-discovery-row-status')
+                .attr('role', 'status')
+                .attr('aria-live', 'polite')
+                .text(portDiscoveryScanStatus[mac] || lastStatus);
             $('<tr>')
                 .append($('<td>').text(label))
                 .append($('<td>').text(last
                     ? portDiscoveryLocalTime(last.finished_at ||
-                                              last.started_at) + ' — ' +
-                      (last.success === null ? 'Running' :
-                       last.success == 1 ? 'Complete' :
-                       last.error || 'Failed')
-                    : 'Never'))
+                                              last.started_at)
+                    : '—'))
+                .append($status)
                 .append($('<td>').append($check))
-                .append($action)
+                .append($('<td>').append($button))
                 .appendTo($body);
         });
         $('#btn-port-discovery-save')
             .prop('disabled', portDiscoveryBusy || !changed)
             .text('Save weekly selections' + (changed ? ' (' + changed + ')' : ''));
+    }
+
+    function renderPortDiscoveryResults() {
+        var search = ($('#port-scans-search').val() || '')
+            .toLowerCase().trim();
+        var portText = ($('#port-scans-port').val() || '').trim();
+        var ports = portText.split(',').map(function(value) {
+            return Number(value.trim());
+        });
+        var validPorts = !portText ||
+            (/^\d{1,5}(\s*,\s*\d{1,5})*$/.test(portText) &&
+             ports.every(function(value) {
+                 return value >= 1 && value <= 65535;
+             }));
+        var result = $('#port-scans-result').val();
+        var $body = $('#port-discovery-results').empty();
+        portDiscoveryResults.filter(function(row) {
+            var device = portDiscoveryDevices[row.mac] || {};
+            if (search && [row.ip, row.mac, device.hostname,
+                           device.custom_hostname].join(' ')
+                .toLowerCase().indexOf(search) === -1) return false;
+            if (!validPorts) return false;
+            if (portText && !(row.ports || []).some(function(item) {
+                return ports.indexOf(Number(item.port)) !== -1;
+            })) return false;
+            if (result === 'complete' && row.success != 1) return false;
+            if (result === 'failed' && row.success != 0) return false;
+            if (result === 'running' && row.success !== null) return false;
+            return true;
+        }).forEach(function(row) {
+            var detail = (row.ports || []).map(function(item) {
+                var name = [item.service, item.product,
+                            item.version].filter(Boolean).join(' ');
+                return item.port + '/' + item.protocol +
+                    (name ? ' (' + name + ')' : ' (unknown)');
+            }).join(', ');
+            $('<tr>')
+                .append($('<td>').text(row.ip + ' (' + row.mac + ')'))
+                .append($('<td>').text(portDiscoveryLocalTime(
+                    row.finished_at || row.started_at)))
+                .append($('<td>').text(row.success === null
+                    ? 'Running' : row.success == 1
+                      ? 'Complete' : row.error || 'Failed'))
+                .append($('<td>').text(detail || '—'))
+                .appendTo($body);
+        });
+        if (!$body.children().length) {
+            $('<tr>').append($('<td colspan="4">')
+                .addClass('text-muted')
+                .text('No scans match the current filters.'))
+                .appendTo($body);
+        }
     }
 
     function loadPortDiscovery(scheduleMessage) {
@@ -1586,26 +1684,8 @@ $(document).ready(function() {
                 if (scheduleMessage) {
                     setPortDiscoveryScheduleStatus(scheduleMessage, true);
                 }
-                var $body = $('#port-discovery-results').empty();
-                (data.results || []).forEach(function(row) {
-                    var detail = (row.ports || []).map(function(port) {
-                        var name = [port.service, port.product,
-                                    port.version].filter(Boolean).join(' ');
-                        return port.port + '/' + port.protocol +
-                            (name ? ' (' + name + ')' : ' (unknown)');
-                    }).join(', ');
-                    $('<tr>')
-                        .append($('<td>').text(row.ip + ' (' + row.mac + ')'))
-                        .append($('<td>').text(portDiscoveryLocalTime(
-                            row.finished_at || row.started_at)))
-                        .append($('<td>').text(
-                            row.success === null
-                                ? 'Running'
-                                : row.success == 1 ? 'Complete' :
-                                  row.error || 'Failed'))
-                        .append($('<td>').text(detail || '—'))
-                        .appendTo($body);
-                });
+                portDiscoveryResults = data.results || [];
+                renderPortDiscoveryResults();
                 if (data.error) {
                     $('#port-discovery-status').text(data.error);
                 } else if (!data.devices || !data.devices.length) {
@@ -1622,6 +1702,9 @@ $(document).ready(function() {
     }
     $('#port-discovery-search').on('input', renderPortDiscoveryDevices);
     $('#port-discovery-filter').on('change', renderPortDiscoveryDevices);
+    $('#port-scans-search, #port-scans-port')
+        .on('input', renderPortDiscoveryResults);
+    $('#port-scans-result').on('change', renderPortDiscoveryResults);
     $('#btn-port-discovery-save').on('click', function() {
         var changes = Object.keys(portDiscoveryPending).filter(function(mac) {
             return portDiscoveryDevices[mac] &&

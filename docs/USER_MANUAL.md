@@ -404,7 +404,10 @@ that device's TCP ports (1–65535); results appear under **Scans**.
 Use the weekly checkboxes and **Save weekly selections** to schedule several
 devices in one pass. Filters show all devices, those selected for weekly scans,
 or those never scanned. The device list scrolls with its column headings
-visible, and **Run Now** progress appears in the device's own row. Weekly scans
+visible, and **Run Now** progress appears in the device's own **Status** column,
+so messages do not resize the device table.
+The **Scans** tab filters its 50 most recent records by IP/MAC/name, one or
+more exact TCP ports (comma separated), and result status. Weekly scans
 run while Device Monitor monitoring is enabled. At most one due device is
 processed after each normal monitoring cycle; scans for different devices
 never run concurrently through this feature. Each scan has a 120-second

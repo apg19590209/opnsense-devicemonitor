@@ -859,3 +859,21 @@ msgstr "Výsledek"
 
 msgid "Open TCP Ports"
 msgstr "Otevřené porty TCP"
+
+msgid "Search IP, MAC or name"
+msgstr "Hledat IP, MAC nebo název"
+
+msgid "TCP ports, e.g. 22,443"
+msgstr "Porty TCP, např. 22,443"
+
+msgid "All results"
+msgstr "Všechny výsledky"
+
+msgid "Complete"
+msgstr "Dokončeno"
+
+msgid "Running"
+msgstr "Probíhá"
+
+msgid "Filtering the 50 most recent scans"
+msgstr "Filtrování 50 nejnovějších skenování"

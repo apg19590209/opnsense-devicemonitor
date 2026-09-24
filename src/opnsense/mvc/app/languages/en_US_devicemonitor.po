@@ -858,3 +858,21 @@ msgstr "Result"
 
 msgid "Open TCP Ports"
 msgstr "Open TCP Ports"
+
+msgid "Search IP, MAC or name"
+msgstr "Search IP, MAC or name"
+
+msgid "TCP ports, e.g. 22,443"
+msgstr "TCP ports, e.g. 22,443"
+
+msgid "All results"
+msgstr "All results"
+
+msgid "Complete"
+msgstr "Complete"
+
+msgid "Running"
+msgstr "Running"
+
+msgid "Filtering the 50 most recent scans"
+msgstr "Filtering the 50 most recent scans"
