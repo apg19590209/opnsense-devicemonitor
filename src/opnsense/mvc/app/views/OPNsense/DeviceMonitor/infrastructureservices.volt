@@ -133,13 +133,14 @@
                         <p class="text-muted">
                             {{ lang._('Select one monitored device. A full TCP port scan is bounded to 120 seconds. Scheduled scans are opt-in and run at most once a week per selected device, one host at a time. UDP services such as WireGuard require separate authoritative evidence.') }}
                         </p>
-                        <div class="form-inline">
+                        <div class="port-discovery-controls">
                             <label for="port-discovery-device">
                                 {{ lang._('Device') }}
                             </label>
                             <select id="port-discovery-device"
-                                    class="form-control input-sm"
-                                    style="max-width:360px"></select>
+                                    class="selectpicker"
+                                    data-style="btn-default btn-sm"
+                                    data-width="360px"></select>
                             <button type="button" id="btn-port-discovery-run"
                                     class="btn btn-primary btn-sm">
                                 {{ lang._('Run Now') }}
@@ -232,6 +233,17 @@
 
 .infrastructure-toolbar input {
     width: 230px;
+}
+
+.port-discovery-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.port-discovery-controls .checkbox-inline {
+    margin: 0;
 }
 
 .infrastructure-recent-changes {
@@ -1361,6 +1373,7 @@ $(document).ready(function() {
                 if (selected && portDiscoveryDevices[selected]) {
                     $select.val(selected);
                 }
+                $select.selectpicker('refresh');
                 $select.trigger('change');
                 var $body = $('#port-discovery-results').empty();
                 (data.results || []).forEach(function(row) {
