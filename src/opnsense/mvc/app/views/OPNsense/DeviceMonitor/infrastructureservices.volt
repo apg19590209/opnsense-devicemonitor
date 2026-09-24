@@ -444,7 +444,11 @@
 }
 
 .infrastructure-tab-content {
-    padding: 6px 4px 0 4px;
+    padding: 0 4px;
+}
+
+.infrastructure-tab-content > .tab-pane > .panel {
+    border-top: 0;
 }
 
 /* Sticky stack: OPNsense page title bar, then the unified controls block
