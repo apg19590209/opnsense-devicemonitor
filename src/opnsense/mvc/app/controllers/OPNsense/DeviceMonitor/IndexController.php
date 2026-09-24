@@ -59,6 +59,15 @@ class IndexController extends \OPNsense\Base\IndexController
 
     public function infrastructureservicesAction()
     {
+        $this->view->portDiscoveryPage = false;
+        $this->view->pick(
+            'OPNsense/DeviceMonitor/infrastructureservices'
+        );
+    }
+
+    public function portdiscoveryAction()
+    {
+        $this->view->portDiscoveryPage = true;
         $this->view->pick(
             'OPNsense/DeviceMonitor/infrastructureservices'
         );

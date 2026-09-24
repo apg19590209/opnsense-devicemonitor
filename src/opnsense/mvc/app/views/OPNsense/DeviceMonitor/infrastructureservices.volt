@@ -1,6 +1,9 @@
 <div class="content-box">
     <div class="content-box-main">
 
+        {% if portDiscoveryPage %}
+        <div id="port-discovery-page"></div>
+        {% else %}
         <div id="infrastructure-sticky-controls" class="infrastructure-sticky-controls">
             <div class="infrastructure-header">
                 <div class="infrastructure-stats">
@@ -100,17 +103,12 @@
                         {{ lang._('Recent Service Changes') }}
                     </a>
                 </li>
-                <li role="presentation">
-                    <a href="#tab-infrastructure-port-discovery"
-                       data-toggle="tab" role="tab"
-                       aria-controls="tab-infrastructure-port-discovery">
-                        {{ lang._('Port Discovery') }}
-                    </a>
-                </li>
             </ul>
         </div>
+        {% endif %}
 
         <div id="infrastructure-tab-content" class="tab-content infrastructure-tab-content">
+            {% if not portDiscoveryPage %}
             <div id="tab-infrastructure-recent-changes"
                  class="tab-pane fade in active"
                  role="tabpanel">
@@ -127,8 +125,9 @@
                     </div>
                 </div>
             </div>
+            {% else %}
             <div id="tab-infrastructure-port-discovery"
-                 class="tab-pane fade" role="tabpanel">
+                 class="tab-pane active" role="tabpanel">
                 <div class="panel panel-default infrastructure-recent-changes">
                     <div class="panel-heading">
                         {{ lang._('Port Discovery') }}
@@ -181,7 +180,7 @@
                                        class="table table-striped table-condensed">
                                     <thead><tr>
                                         <th>{{ lang._('Device') }}</th>
-                                        <th>{{ lang._('Last Scan (local time)') }}</th>
+                                        <th>{{ lang._('Last Scan') }}</th>
                                         <th>{{ lang._('Status') }}</th>
                                         <th>{{ lang._('Scan weekly') }}</th>
                                         <th>{{ lang._('Action') }}</th>
@@ -216,7 +215,7 @@
                                 <table class="table table-striped table-condensed">
                                     <thead><tr>
                                         <th>{{ lang._('Device') }}</th>
-                                        <th>{{ lang._('Scan Time (local time)') }}</th>
+                                        <th>{{ lang._('Scan Time') }}</th>
                                         <th>{{ lang._('Result') }}</th>
                                         <th>{{ lang._('Open TCP Ports') }}</th>
                                     </tr></thead>
@@ -228,6 +227,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
 
     </div>
@@ -1858,16 +1858,15 @@ $(document).ready(function() {
     }
 
     $(document).on('shown.bs.tab', 'a[data-toggle="tab"]', function() {
-        var discovery = $('#tab-infrastructure-port-discovery')
-            .hasClass('active');
-        $('.infrastructure-toolbar, .infrastructure-stats')
-            .toggle(!discovery);
         updateInfrastructureStickyStack();
     });
 
     $(window).on('resize', updateInfrastructureStickyStack);
 
-    loadServices();
-    loadPortDiscovery();
+    if ($('#port-discovery-page').length) {
+        loadPortDiscovery();
+    } else {
+        loadServices();
+    }
 });
 </script>

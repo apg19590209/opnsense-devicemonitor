@@ -4,8 +4,9 @@
             <Devices url="/ui/devicemonitor/index/devices" VisibleName="Devices" order="10"/>
             <ChangeSummary url="/ui/devicemonitor/index/changesummary" VisibleName="Change Summary" order="12"/>
             <InfrastructureServices url="/ui/devicemonitor/index/infrastructureservices" VisibleName="Infrastructure Services" order="13"/>
-            <IdentityEvents url="/ui/devicemonitor/index/identityevents" VisibleName="IP and MAC Conflicts" order="14"/>
-            <NmapScanHistory url="/ui/devicemonitor/index/scanhistory" VisibleName="Nmap Scan History" order="15"/>
+            <PortDiscovery url="/ui/devicemonitor/index/portdiscovery" VisibleName="Port Discovery" order="14"/>
+            <IdentityEvents url="/ui/devicemonitor/index/identityevents" VisibleName="IP and MAC Conflicts" order="15"/>
+            <NmapScanHistory url="/ui/devicemonitor/index/scanhistory" VisibleName="Nmap Scan History" order="16"/>
             <Settings url="/ui/devicemonitor/index/settings" VisibleName="Settings" order="20"/>
         </DeviceMonitor>
     </Services>

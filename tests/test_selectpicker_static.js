@@ -83,6 +83,15 @@ check(infrastructure.includes('portDiscoveryScanStatus[mac]') &&
     'Port Discovery row feedback is missing');
 check(infrastructure.includes('id="btn-port-discovery-save"'),
     'Port Discovery bulk save is missing');
+check(infrastructure.includes('{% if portDiscoveryPage %}') &&
+      infrastructure.includes('{% if not portDiscoveryPage %}') &&
+      infrastructure.includes("if ($('#port-discovery-page').length)"),
+    'Port Discovery must render separately from Infrastructure Services');
+check(infrastructure.includes("{{ lang._('Last Scan') }}") &&
+      infrastructure.includes("{{ lang._('Scan Time') }}") &&
+      !infrastructure.includes("{{ lang._('Last Scan (local time)') }}") &&
+      !infrastructure.includes("{{ lang._('Scan Time (local time)') }}"),
+    'Port Discovery time headings should be concise');
 
 // #services-type-filter options are appended asynchronously by populateTypes(),
 // so the view must refresh the selectpicker after appending them.
