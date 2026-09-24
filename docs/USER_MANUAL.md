@@ -409,6 +409,9 @@ never run concurrently through this feature. Each scan has a 120-second
 process limit and records identified open ports and errors separately from
 the existing Nmap Scan History. A timed-out or incomplete scan is reported
 as a failure, rather than a complete list of ports.
+The **Last Scan** and **Scan Time** columns display the browser's local time
+and timezone label. Devices without a hostname show their IP once, alongside
+their MAC address.
 
 Port names are Nmap identification evidence, not proof of the application
 protocol. UDP ports are outside this TCP scan; in particular, WireGuard

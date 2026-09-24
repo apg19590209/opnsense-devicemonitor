@@ -845,6 +845,12 @@ msgstr "Skenovat týdně"
 msgid "Scan Time"
 msgstr "Čas skenování"
 
+msgid "Scan Time (local time)"
+msgstr "Čas skenování (místní čas)"
+
+msgid "Last Scan (local time)"
+msgstr "Poslední skenování (místní čas)"
+
 msgid "Result"
 msgstr "Výsledek"
 

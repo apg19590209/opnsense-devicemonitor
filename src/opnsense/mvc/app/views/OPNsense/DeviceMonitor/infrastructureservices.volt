@@ -142,7 +142,9 @@
                                    class="form-control input-sm"
                                    placeholder="{{ lang._('Search devices') }}">
                             <select id="port-discovery-filter"
-                                    class="form-control input-sm">
+                                    class="selectpicker"
+                                    data-style="btn-default btn-sm"
+                                    data-width="180px">
                                 <option value="all">{{ lang._('All devices') }}</option>
                                 <option value="weekly">{{ lang._('Weekly enabled') }}</option>
                                 <option value="never">{{ lang._('Never scanned') }}</option>
@@ -161,7 +163,7 @@
                             <table class="table table-striped table-condensed">
                                 <thead><tr>
                                     <th>{{ lang._('Device') }}</th>
-                                    <th>{{ lang._('Last Scan') }}</th>
+                                    <th>{{ lang._('Last Scan (local time)') }}</th>
                                     <th>{{ lang._('Scan weekly') }}</th>
                                     <th>{{ lang._('Action') }}</th>
                                 </tr></thead>
@@ -173,7 +175,7 @@
                         <table class="table table-striped table-condensed">
                             <thead><tr>
                                 <th>{{ lang._('Device') }}</th>
-                                <th>{{ lang._('Scan Time') }}</th>
+                                <th>{{ lang._('Scan Time (local time)') }}</th>
                                 <th>{{ lang._('Result') }}</th>
                                 <th>{{ lang._('Open TCP Ports') }}</th>
                             </tr></thead>
@@ -260,10 +262,6 @@
 
 .port-discovery-controls input[type="search"] {
     width: 230px;
-}
-
-.port-discovery-controls select {
-    width: 180px;
 }
 
 .infrastructure-recent-changes {
@@ -1419,6 +1417,24 @@ $(document).ready(function() {
     var portDiscoveryBusy = false;
     var portDiscoveryLastScan = {};
 
+    // Port discovery timestamps are stored as UTC without a suffix. Render
+    // them in the browser's local timezone and show its abbreviation.
+    function portDiscoveryLocalTime(value) {
+        if (!value) return '—';
+        var date = new Date(String(value).trim().replace(' ', 'T') + 'Z');
+        if (isNaN(date.getTime())) return value;
+        var pad = function(n) { return ('0' + n).slice(-2); };
+        var zone = new Intl.DateTimeFormat(undefined, {
+            timeZoneName: 'short'
+        }).formatToParts(date).filter(function(part) {
+            return part.type === 'timeZoneName';
+        }).map(function(part) { return part.value; })[0] || '';
+        return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' +
+            pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' +
+            pad(date.getMinutes()) + ':' + pad(date.getSeconds()) +
+            (zone ? ' ' + zone : '');
+    }
+
     function renderPortDiscoveryDevices() {
         var search = ($('#port-discovery-search').val() || '')
             .toLowerCase().trim();
@@ -1438,7 +1454,9 @@ $(document).ready(function() {
             if (enabled !== !!device.enabled) changed++;
             var name = device.custom_hostname || device.hostname ||
                 device.ip;
-            var label = name + ' (' + device.ip + ', ' + mac + ')';
+            var label = name === device.ip
+                ? device.ip + ' (' + mac + ')'
+                : name + ' (' + device.ip + ', ' + mac + ')';
             if ((search && label.toLowerCase().indexOf(search) === -1) ||
                 (filter === 'weekly' && !enabled) ||
                 (filter === 'never' && last)) return;
@@ -1461,7 +1479,8 @@ $(document).ready(function() {
             $('<tr>')
                 .append($('<td>').text(label))
                 .append($('<td>').text(last
-                    ? (last.finished_at || last.started_at) + ' — ' +
+                    ? portDiscoveryLocalTime(last.finished_at ||
+                                              last.started_at) + ' — ' +
                       (last.success === null ? 'Running' :
                        last.success == 1 ? 'Complete' :
                        last.error || 'Failed')
@@ -1497,8 +1516,8 @@ $(document).ready(function() {
                     }).join(', ');
                     $('<tr>')
                         .append($('<td>').text(row.ip + ' (' + row.mac + ')'))
-                        .append($('<td>').text(row.finished_at ||
-                                                 row.started_at))
+                        .append($('<td>').text(portDiscoveryLocalTime(
+                            row.finished_at || row.started_at)))
                         .append($('<td>').text(
                             row.success === null
                                 ? 'Running'

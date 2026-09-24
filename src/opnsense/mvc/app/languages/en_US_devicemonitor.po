@@ -844,6 +844,12 @@ msgstr "Scan weekly"
 msgid "Scan Time"
 msgstr "Scan Time"
 
+msgid "Scan Time (local time)"
+msgstr "Scan Time (local time)"
+
+msgid "Last Scan (local time)"
+msgstr "Last Scan (local time)"
+
 msgid "Result"
 msgstr "Result"
 

@@ -28,6 +28,7 @@ const cases = [
     { file: 'devices.volt', id: 'filter-status', style: 'btn-default btn-sm' },
     { file: 'infrastructureservices.volt', id: 'services-type-filter', style: 'btn-default btn-sm' },
     { file: 'infrastructureservices.volt', id: 'services-status-filter', style: 'btn-default btn-sm' },
+    { file: 'infrastructureservices.volt', id: 'port-discovery-filter', style: 'btn-default btn-sm' },
     { file: 'identityevents.volt', id: 'identity-events-status', style: 'btn-default btn-xs' },
     { file: 'identityevents.volt', id: 'identity-events-limit', style: 'btn-default btn-xs' },
     { file: 'scanhistory.volt', id: 'scan-history-limit', style: 'btn-default btn-xs' }
