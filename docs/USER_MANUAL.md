@@ -398,9 +398,12 @@ change device records or network state.
 
 ### Port Discovery
 
-The **Port Discovery** tab scans one selected device's TCP ports (1–65535)
-when you click **Run Now**. **Scan weekly** opts that device into a scheduled
-scan while Device Monitor monitoring is enabled. At most one due device is
+The **Port Discovery** tab lists monitored devices in a searchable table.
+Use **Run Now** on a device row to scan that device's TCP ports (1–65535).
+Use the weekly checkboxes and **Save weekly selections** to schedule several
+devices in one pass. Filters show all devices, those selected for weekly scans,
+or those never scanned. Weekly scans run while Device Monitor monitoring is
+enabled. At most one due device is
 processed after each normal monitoring cycle; scans for different devices
 never run concurrently through this feature. Each scan has a 120-second
 process limit and records identified open ports and errors separately from
@@ -429,7 +432,13 @@ services.
 - **All Services** (type filter) — filter by service type.
 - **All Statuses** (status filter) — filter by **Available** / **Unavailable** / **Stale**.
 - **Search services** — free-text filter.
+- **Show archived** — include services hidden with **Archive**.
 - **Showing n** — number of services currently displayed.
+
+Each service row has **Archive** (or **Restore** when archived). Archive hides
+the endpoint from the normal tabs without deleting its discovery or activity
+history. A later successful verification returns an archived endpoint to the
+normal list. Restore returns it immediately.
 
 ### 9.4 Tabs and table columns
 

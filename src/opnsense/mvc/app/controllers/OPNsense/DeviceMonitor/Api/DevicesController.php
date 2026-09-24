@@ -1365,7 +1365,7 @@ class DevicesController extends ApiControllerBase
      */
     public function portdiscoveryAction()
     {
-        $result = ['devices' => [], 'results' => []];
+        $result = ['devices' => [], 'results' => [], 'last_results' => []];
         try {
             $paths = $this->getPaths();
             if (!isset($paths['dbFile'], $paths['scanScript']) ||
@@ -1421,6 +1421,15 @@ class DevicesController extends ApiControllerBase
                 $result['devices'][] = $row;
             }
             if (isset($tables['port_discovery_results'])) {
+                $latest = $db->query(
+                    'SELECT r.mac, r.started_at, r.finished_at, ' .
+                    'r.success, r.error FROM port_discovery_results r ' .
+                    'WHERE r.id = (SELECT MAX(x.id) FROM ' .
+                    'port_discovery_results x WHERE x.mac=r.mac)'
+                );
+                while ($row = $latest->fetchArray(SQLITE3_ASSOC)) {
+                    $result['last_results'][$row['mac']] = $row;
+                }
                 $query = $db->query(
                     'SELECT id, mac, ip, started_at, finished_at, ' .
                     'success, error FROM port_discovery_results ' .
@@ -1505,10 +1514,60 @@ class DevicesController extends ApiControllerBase
                    'Port discovery failed'];
     }
 
-    /**
-     * Return discovered infrastructure services.
-     * GET /api/devicemonitor/devices/services
-     */
+    /** Archive or restore one service endpoint without deleting its history. */
+    public function archiveserviceAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed', 'error' => 'POST required'];
+        }
+        $id = filter_var($this->request->getPost('id'), FILTER_VALIDATE_INT);
+        $archive = (string)$this->request->getPost('archive', 'string', '');
+        if (!$id || $id < 1 || !in_array($archive, ['0', '1'], true)) {
+            return ['result' => 'failed', 'error' => 'Invalid service selection'];
+        }
+        try {
+            $paths = $this->getPaths();
+            $db = new \SQLite3($paths['dbFile'], SQLITE3_OPEN_READWRITE);
+            $db->busyTimeout(2000);
+            $db->exec('CREATE TABLE IF NOT EXISTS archived_service_endpoints (' .
+                'ip TEXT NOT NULL, service_type TEXT NOT NULL, ' .
+                'port INTEGER NOT NULL, protocol TEXT NOT NULL, ' .
+                'archived_at TEXT NOT NULL, ' .
+                'PRIMARY KEY (ip, service_type, port, protocol))');
+            $lookup = $db->prepare('SELECT ip, service_type, port, protocol ' .
+                'FROM device_services WHERE id = :id');
+            $lookup->bindValue(':id', $id, SQLITE3_INTEGER);
+            $row = $lookup->execute()->fetchArray(SQLITE3_ASSOC);
+            if (!$row) {
+                $db->close();
+                return ['result' => 'failed', 'error' => 'Service not found'];
+            }
+            $sql = $archive === '1'
+                ? "INSERT INTO archived_service_endpoints " .
+                  "(ip, service_type, port, protocol, archived_at) " .
+                  "VALUES (:ip, :type, :port, :protocol, " .
+                  "strftime('%Y-%m-%d %H:%M:%S', 'now')) " .
+                  "ON CONFLICT(ip, service_type, port, protocol) " .
+                  "DO UPDATE SET archived_at=excluded.archived_at"
+                : 'DELETE FROM archived_service_endpoints WHERE ' .
+                  'ip=:ip AND service_type=:type AND port=:port ' .
+                  'AND protocol=:protocol';
+            $statement = $db->prepare($sql);
+            $statement->bindValue(':ip', $row['ip'], SQLITE3_TEXT);
+            $statement->bindValue(':type', $row['service_type'], SQLITE3_TEXT);
+            $statement->bindValue(':port', (int)$row['port'], SQLITE3_INTEGER);
+            $statement->bindValue(':protocol', $row['protocol'], SQLITE3_TEXT);
+            $ok = $statement->execute();
+            $db->close();
+            return $ok
+                ? ['result' => 'ok']
+                : ['result' => 'failed', 'error' => 'Unable to save service'];
+        } catch (\Throwable $e) {
+            error_log('DeviceMonitor service archive: ' . $e->getMessage());
+            return ['result' => 'failed', 'error' => 'Unable to save service'];
+        }
+    }
+
     /**
      * Run infrastructure-service discovery now.
      * POST /api/devicemonitor/devices/discoverservices
@@ -1564,6 +1623,10 @@ class DevicesController extends ApiControllerBase
         }
     }
 
+    /**
+     * Return discovered infrastructure services.
+     * GET /api/devicemonitor/devices/services
+     */
     public function servicesAction()
     {
         $result = [
@@ -1625,12 +1688,27 @@ class DevicesController extends ApiControllerBase
                 }
             }
 
+            $archiveExists = (int)$db->querySingle(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' " .
+                "AND name='archived_service_endpoints'"
+            ) === 1;
             $query = $db->query(
-                'SELECT id, mac, ip, interface, service_type, port, ' .
-                'protocol, status, detection_method, confidence, ' .
-                'product, version, first_detected, last_verified ' .
-                'FROM device_services ' .
-                'ORDER BY service_type, ip, port, protocol'
+                'SELECT s.id, s.mac, s.ip, s.interface, s.service_type, s.port, ' .
+                's.protocol, s.status, s.detection_method, s.confidence, ' .
+                's.product, s.version, s.first_detected, s.last_verified, ' .
+                ($archiveExists
+                    ? "CASE WHEN a.archived_at >= (SELECT MAX(v.last_verified) " .
+                      "FROM device_services v WHERE v.ip=s.ip AND " .
+                      "v.service_type=s.service_type AND v.port=s.port AND " .
+                      "v.protocol=s.protocol) THEN 1 ELSE 0 END AS archived "
+                    : '0 AS archived ') .
+                'FROM device_services s ' .
+                ($archiveExists
+                    ? 'LEFT JOIN archived_service_endpoints a ON ' .
+                      'a.ip=s.ip AND a.service_type=s.service_type AND ' .
+                      'a.port=s.port AND a.protocol=s.protocol '
+                    : '') .
+                'ORDER BY s.service_type, s.ip, s.port, s.protocol'
             );
 
             $types = [];
