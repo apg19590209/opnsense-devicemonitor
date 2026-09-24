@@ -135,7 +135,7 @@
                     </div>
                     <div class="panel-body">
                         <p class="text-muted">
-                            {{ lang._('Scan one monitored device across TCP ports 1–65535, including standard and nonstandard ports. Open ports and any identified services appear below. Each scan stops after 120 seconds; incomplete scans are marked failed. Weekly scans are optional and run one host at a time. UDP ports, including WireGuard, are not scanned.') }}
+                            {{ lang._('Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear below. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned.') }}
                         </p>
                         <div class="port-discovery-controls">
                             <input id="port-discovery-search" type="search"
