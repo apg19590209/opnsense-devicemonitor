@@ -146,6 +146,20 @@ def run_scan():
         log(f"Scan error: {e}", level='INFO')
         return False
 
+def run_due_port_discovery():
+    """Run at most one scheduled, explicitly enabled host after a normal scan."""
+    try:
+        result = subprocess.run(
+            ['/usr/local/bin/python3', SCAN_SCRIPT, '--port-discovery-due'],
+            capture_output=True, text=True, timeout=130
+        )
+        if result.returncode != 0:
+            log(f"Port discovery failed: {result.stderr[:200]}", level='INFO')
+    except subprocess.TimeoutExpired:
+        log("Port discovery exceeded 130 seconds", level='INFO')
+    except Exception as e:
+        log(f"Port discovery error: {e}", level='INFO')
+
 def main():
     """Main daemon loop"""
     global running
@@ -194,6 +208,7 @@ def main():
                 if current_time - last_scan >= interval:
                     log(f"Running scheduled scan", level='INFO')
                     run_scan()
+                    run_due_port_discovery()
                     last_scan = current_time
             
             # Sleep 10 seconds before the next check

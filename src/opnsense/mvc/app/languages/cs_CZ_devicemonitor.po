@@ -828,3 +828,25 @@ msgstr "Zadejte novou poznámku..."
 
 msgid "Loading notes..."
 msgstr "Načítání poznámek..."
+
+# [infrastructureservices.volt] Volitelné cílené zjišťování portů
+msgid "Port Discovery"
+msgstr "Zjišťování portů"
+
+msgid "Select one monitored device. A full TCP port scan is bounded to 120 seconds. Scheduled scans are opt-in and run at most once a week per selected device, one host at a time. UDP services such as WireGuard require separate authoritative evidence."
+msgstr "Vyberte jedno monitorované zařízení. Úplné skenování portů TCP je omezeno na 120 sekund. Plánované skenování se zapíná pro každé zařízení zvlášť a probíhá nejvýše jednou týdně, vždy pouze pro jedno zařízení. Služby UDP, například WireGuard, vyžadují samostatné autoritativní údaje."
+
+msgid "Run Now"
+msgstr "Spustit nyní"
+
+msgid "Scan weekly"
+msgstr "Skenovat týdně"
+
+msgid "Scan Time"
+msgstr "Čas skenování"
+
+msgid "Result"
+msgstr "Výsledek"
+
+msgid "Open TCP Ports"
+msgstr "Otevřené porty TCP"

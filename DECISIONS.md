@@ -844,3 +844,24 @@ row content past the right edge of the sticky region. A minimal CSS
 table headings, with lower-priority columns hidden at narrower widths —
 restores the complete header without reintroducing the scroll-snap, shield or
 one-shot-geometry defects.
+
+## 30. Port discovery is opt-in and single-host
+
+### Decision
+
+The Infrastructure Services Port Discovery tab may run a bounded full TCP
+port scan only for one explicitly selected, currently in-scope device.
+Weekly scheduling is disabled by default and enabled separately for each
+device. At most one due device is scanned after a monitoring cycle, and a
+process lock prevents overlapping manual and scheduled port discovery.
+Timed-out scans are recorded as incomplete and do not replace prior results.
+
+The port scan does not identify UDP services. An Nmap port or service name
+is identification evidence; WireGuard identification still requires
+authoritative runtime or configuration evidence under Decisions 9 and 10.
+
+### Reason
+
+The normal top-ports scan can miss nonstandard TCP ports. A separately
+opted-in, single-host scan provides wider coverage without turning automatic
+infrastructure discovery into a network-wide Nmap sweep.

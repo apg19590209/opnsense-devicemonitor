@@ -15,6 +15,7 @@ import time
 import select
 import struct
 import ipaddress
+import fcntl
 import base64
 import urllib.error
 import urllib.parse
@@ -47,6 +48,7 @@ HOSTWATCH_DB = PATHS['hostwatchDb']
 CONFIG_FILE = PATHS['configFile']
 DB_FILE = PATHS['dbFile']
 DEFAULT_CONFIG = _defaults['config']
+PORT_DISCOVERY_LOCK = '/var/run/devicemonitor-port-discovery.lock'
 # ================================================================
 
 
@@ -533,6 +535,34 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_nmap_scan_ports_history
         ON nmap_scan_ports(scan_history_id)
     ''')
+
+    # Opt-in, single-host TCP discovery. Existing scan history remains intact.
+    c.execute('''CREATE TABLE IF NOT EXISTS port_discovery_targets (
+        mac TEXT PRIMARY KEY,
+        enabled INTEGER NOT NULL DEFAULT 0,
+        next_scan_at TEXT,
+        last_scan_at TEXT,
+        last_error TEXT
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS port_discovery_results (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mac TEXT NOT NULL,
+        ip TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        finished_at TEXT,
+        success INTEGER,
+        error TEXT
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS port_discovery_ports (
+        result_id INTEGER NOT NULL,
+        port INTEGER NOT NULL,
+        protocol TEXT NOT NULL,
+        service TEXT,
+        product TEXT,
+        version TEXT,
+        PRIMARY KEY(result_id, port, protocol),
+        FOREIGN KEY(result_id) REFERENCES port_discovery_results(id)
+    )''')
 
     # Persistent infrastructure-service inventory.
     #
@@ -7257,6 +7287,158 @@ def manual_targeted_scan(mac):
     return 1
 
 
+def port_discovery_target(mac, enabled):
+    """Change the opt-in schedule for one existing, in-scope device."""
+    mac = (mac or '').strip().lower()
+    if not re.fullmatch(r'(?:[0-9a-f]{2}:){5}[0-9a-f]{2}', mac):
+        print('ERROR: Invalid MAC address', file=sys.stderr)
+        return 2
+    networks, error = resolve_monitored_networks(load_config())
+    if error:
+        print(f'ERROR: {error}', file=sys.stderr)
+        return 2
+    init_db()
+    with sqlite3.connect(DB_FILE) as conn:
+        row = conn.execute(
+            'SELECT ip FROM devices WHERE lower(mac) = ?', (mac,)
+        ).fetchone()
+        if row is None or (enabled and not ip_is_in_scope(row[0], networks)):
+            print('ERROR: Device is missing or outside monitored interfaces',
+                  file=sys.stderr)
+            return 2
+        conn.execute('''
+            INSERT INTO port_discovery_targets(mac, enabled, next_scan_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(mac) DO UPDATE SET enabled=excluded.enabled,
+                next_scan_at=excluded.next_scan_at
+        ''', (mac, int(enabled),
+              datetime.now().strftime('%Y-%m-%d %H:%M:%S') if enabled else None))
+    print('Port discovery schedule ' + ('enabled' if enabled else 'disabled'))
+    return 0
+
+
+def run_port_discovery(mac=None):
+    """Scan one selected IPv4 device, or at most one due opt-in target."""
+    if mac is not None:
+        mac = (mac or '').strip().lower()
+        if not re.fullmatch(r'(?:[0-9a-f]{2}:){5}[0-9a-f]{2}', mac):
+            print('ERROR: Invalid MAC address', file=sys.stderr)
+            return 2
+    networks, error = resolve_monitored_networks(load_config())
+    if error:
+        print(f'ERROR: {error}', file=sys.stderr)
+        return 2
+    init_db()
+    lock_fd = os.open(PORT_DISCOVERY_LOCK,
+                      os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print('ERROR: Port discovery is already running', file=sys.stderr)
+            return 1
+        with sqlite3.connect(DB_FILE) as conn:
+            if mac is None:
+                rows = conn.execute('''
+                    SELECT d.mac, d.ip FROM port_discovery_targets t
+                    JOIN devices d ON lower(d.mac) = t.mac
+                    WHERE t.enabled = 1 AND t.next_scan_at <= ?
+                    ORDER BY t.next_scan_at, t.mac
+                ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'),))
+                row = next(
+                    (candidate for candidate in rows
+                     if ip_is_in_scope(candidate[1], networks)),
+                    None,
+                )
+            else:
+                row = conn.execute(
+                    'SELECT mac, ip FROM devices WHERE lower(mac) = ?', (mac,)
+                ).fetchone()
+            if row is None:
+                if mac is not None:
+                    print('ERROR: Device not found', file=sys.stderr)
+                    return 2
+                return 0
+            target_mac, ip = row
+            # Fail closed on changed device IP or removed interface selection.
+            if not ip_is_in_scope(ip, networks):
+                print('ERROR: Target outside monitored interfaces',
+                      file=sys.stderr)
+                return 2
+            try:
+                if ipaddress.ip_address(ip).version != 4:
+                    raise ValueError('IPv4 required')
+            except ValueError:
+                print('ERROR: Invalid literal IPv4 target', file=sys.stderr)
+                return 2
+            started = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            result_id = conn.execute('''
+                INSERT INTO port_discovery_results(mac, ip, started_at)
+                VALUES (?, ?, ?)
+            ''', (target_mac, ip, started)).lastrowid
+            # A failed attempt is not retried on every daemon cycle.
+            conn.execute('''
+                UPDATE port_discovery_targets
+                SET next_scan_at = ? WHERE mac = ?
+            ''', ((datetime.now() + timedelta(days=7))
+                  .strftime('%Y-%m-%d %H:%M:%S'), target_mac))
+
+        command = [
+            '/usr/local/bin/nmap', '-sT', '-sV', '--version-light',
+            '-Pn', '-T3', '--max-rate', '1000', '--max-retries', '1',
+            '--host-timeout', '110s', '-p', '1-65535', '-oX', '-', ip
+        ]
+        ports = []
+        scan_error = None
+        try:
+            scan = subprocess.run(command, capture_output=True, text=True,
+                                  timeout=120)
+            if scan.returncode != 0:
+                raise RuntimeError(scan.stderr[:300] or 'Nmap failed')
+            root = ET.fromstring(scan.stdout)
+            finished = root.find('./runstats/finished')
+            if finished is None or finished.get('exit') != 'success':
+                raise RuntimeError('Nmap scan timed out or was incomplete')
+            for port in root.findall('.//port'):
+                state = port.find('state')
+                if state is None or state.get('state') != 'open':
+                    continue
+                service = port.find('service')
+                ports.append((
+                    int(port.get('portid')), port.get('protocol') or 'tcp',
+                    service.get('name', '') if service is not None else '',
+                    service.get('product', '') if service is not None else '',
+                    service.get('version', '') if service is not None else ''
+                ))
+        except (subprocess.TimeoutExpired, OSError, ValueError,
+                RuntimeError, ET.ParseError) as exc:
+            scan_error = str(exc)[:500]
+
+        with sqlite3.connect(DB_FILE) as conn:
+            conn.execute('''
+                UPDATE port_discovery_results
+                SET finished_at = ?, success = ?, error = ? WHERE id = ?
+            ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                  int(scan_error is None), scan_error, result_id))
+            if scan_error is None:
+                conn.executemany('''
+                    INSERT INTO port_discovery_ports
+                    (result_id, port, protocol, service, product, version)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', ((result_id, *port) for port in ports))
+            conn.execute('''
+                UPDATE port_discovery_targets
+                SET last_scan_at = ?, last_error = ? WHERE mac = ?
+            ''', (started, scan_error, target_mac))
+        if scan_error:
+            print(f'ERROR: {scan_error}', file=sys.stderr)
+            return 1
+        print(f'Port discovery complete: {ip}, {len(ports)} open TCP ports')
+        return 0
+    finally:
+        os.close(lock_fd)
+
+
 def list_targets():
     """Resolve and print configured monitored interfaces, then exit.
 
@@ -7306,6 +7488,10 @@ Examples:
         metavar='MAC',
         help='Run one targeted Nmap scan for an existing device'
     )
+    parser.add_argument('--port-discovery-target', metavar='MAC')
+    parser.add_argument('--port-discovery-enable', choices=('0', '1'))
+    parser.add_argument('--port-discovery-run', metavar='MAC')
+    parser.add_argument('--port-discovery-due', action='store_true')
 
     parser.add_argument(
         '--verbose', '-v',
@@ -7350,6 +7536,15 @@ Examples:
 
     try:
         # Dispatch according to mode
+        if args.port_discovery_target:
+            if args.port_discovery_enable is None:
+                parser.error('--port-discovery-target requires --port-discovery-enable')
+            return port_discovery_target(args.port_discovery_target,
+                                         args.port_discovery_enable == '1')
+        if args.port_discovery_run:
+            return run_port_discovery(args.port_discovery_run)
+        if args.port_discovery_due:
+            return run_port_discovery()
         if args.scan_mac:
             return manual_targeted_scan(args.scan_mac)
         if args.update_only:

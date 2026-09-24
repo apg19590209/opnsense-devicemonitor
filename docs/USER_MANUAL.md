@@ -396,6 +396,21 @@ change device records or network state.
 
 **Path:** Services → Device Monitor → Infrastructure Services
 
+### Port Discovery
+
+The **Port Discovery** tab scans one selected device's TCP ports (1–65535)
+when you click **Run Now**. **Scan weekly** opts that device into a scheduled
+scan while Device Monitor monitoring is enabled. At most one due device is
+processed after each normal monitoring cycle; scans for different devices
+never run concurrently through this feature. Each scan has a 120-second
+process limit and records identified open ports and errors separately from
+the existing Nmap Scan History. A timed-out or incomplete scan is reported
+as a failure, rather than a complete list of ports.
+
+Port names are Nmap identification evidence, not proof of the application
+protocol. UDP ports are outside this TCP scan; in particular, WireGuard
+requires authoritative configuration or host runtime evidence.
+
 ### 9.1 Purpose
 
 Show the network services discovered on your devices, organised into tabs by service

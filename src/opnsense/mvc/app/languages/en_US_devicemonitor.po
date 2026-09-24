@@ -827,3 +827,25 @@ msgstr "Enter a new note..."
 
 msgid "Loading notes..."
 msgstr "Loading notes..."
+
+# [infrastructureservices.volt] Opt-in targeted port discovery
+msgid "Port Discovery"
+msgstr "Port Discovery"
+
+msgid "Select one monitored device. A full TCP port scan is bounded to 120 seconds. Scheduled scans are opt-in and run at most once a week per selected device, one host at a time. UDP services such as WireGuard require separate authoritative evidence."
+msgstr "Select one monitored device. A full TCP port scan is bounded to 120 seconds. Scheduled scans are opt-in and run at most once a week per selected device, one host at a time. UDP services such as WireGuard require separate authoritative evidence."
+
+msgid "Run Now"
+msgstr "Run Now"
+
+msgid "Scan weekly"
+msgstr "Scan weekly"
+
+msgid "Scan Time"
+msgstr "Scan Time"
+
+msgid "Result"
+msgstr "Result"
+
+msgid "Open TCP Ports"
+msgstr "Open TCP Ports"

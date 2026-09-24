@@ -96,6 +96,13 @@
                         {{ lang._('Recent Service Changes') }}
                     </a>
                 </li>
+                <li role="presentation">
+                    <a href="#tab-infrastructure-port-discovery"
+                       data-toggle="tab" role="tab"
+                       aria-controls="tab-infrastructure-port-discovery">
+                        {{ lang._('Port Discovery') }}
+                    </a>
+                </li>
             </ul>
         </div>
 
@@ -113,6 +120,52 @@
                         <div class="text-muted">
                             {{ lang._('Loading recent service changes') }}...
                         </div>
+                    </div>
+                </div>
+            </div>
+            <div id="tab-infrastructure-port-discovery"
+                 class="tab-pane fade" role="tabpanel">
+                <div class="panel panel-default infrastructure-recent-changes">
+                    <div class="panel-heading">
+                        {{ lang._('Port Discovery') }}
+                    </div>
+                    <div class="panel-body">
+                        <p class="text-muted">
+                            {{ lang._('Select one monitored device. A full TCP port scan is bounded to 120 seconds. Scheduled scans are opt-in and run at most once a week per selected device, one host at a time. UDP services such as WireGuard require separate authoritative evidence.') }}
+                        </p>
+                        <div class="form-inline">
+                            <label for="port-discovery-device">
+                                {{ lang._('Device') }}
+                            </label>
+                            <select id="port-discovery-device"
+                                    class="form-control input-sm"
+                                    style="max-width:360px"></select>
+                            <button type="button" id="btn-port-discovery-run"
+                                    class="btn btn-primary btn-sm">
+                                {{ lang._('Run Now') }}
+                            </button>
+                            <label class="checkbox-inline">
+                                <input type="checkbox" id="port-discovery-schedule">
+                                {{ lang._('Scan weekly') }}
+                            </label>
+                            <button type="button" id="btn-port-discovery-refresh"
+                                    class="btn btn-default btn-sm">
+                                {{ lang._('Refresh') }}
+                            </button>
+                        </div>
+                        <p id="port-discovery-status" class="text-muted"
+                           role="status"></p>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-condensed">
+                            <thead><tr>
+                                <th>{{ lang._('Device') }}</th>
+                                <th>{{ lang._('Scan Time') }}</th>
+                                <th>{{ lang._('Result') }}</th>
+                                <th>{{ lang._('Open TCP Ports') }}</th>
+                            </tr></thead>
+                            <tbody id="port-discovery-results"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -1287,6 +1340,96 @@ $(document).ready(function() {
 
     $('#services-search').on('input', renderServices);
 
+    var portDiscoveryDevices = {};
+    function loadPortDiscovery() {
+        $.getJSON('/api/devicemonitor/devices/portdiscovery')
+            .done(function(data) {
+                var selected = $('#port-discovery-device').val();
+                var $select = $('#port-discovery-device').empty();
+                portDiscoveryDevices = {};
+                (data.devices || []).forEach(function(device) {
+                    portDiscoveryDevices[device.mac] = device;
+                    $('<option>').val(device.mac)
+                        .text((device.custom_hostname ||
+                               device.hostname || device.ip) +
+                              ' (' + device.ip + ', ' + device.mac + ')')
+                        .appendTo($select);
+                });
+                if (selected && portDiscoveryDevices[selected]) {
+                    $select.val(selected);
+                }
+                $select.trigger('change');
+                var $body = $('#port-discovery-results').empty();
+                (data.results || []).forEach(function(row) {
+                    var detail = (row.ports || []).map(function(port) {
+                        var name = [port.service, port.product,
+                                    port.version].filter(Boolean).join(' ');
+                        return port.port + '/' + port.protocol +
+                            (name ? ' (' + name + ')' : ' (unknown)');
+                    }).join(', ');
+                    $('<tr>')
+                        .append($('<td>').text(row.ip + ' (' + row.mac + ')'))
+                        .append($('<td>').text(row.finished_at ||
+                                                 row.started_at))
+                        .append($('<td>').text(
+                            row.success === null
+                                ? 'Running'
+                                : row.success == 1 ? 'Complete' :
+                                  row.error || 'Failed'))
+                        .append($('<td>').text(detail || '—'))
+                        .appendTo($body);
+                });
+                if (data.error) {
+                    $('#port-discovery-status').text(data.error);
+                }
+            })
+            .fail(function() {
+                $('#port-discovery-status')
+                    .text('Unable to load port discovery.');
+            });
+    }
+    $('#port-discovery-device').on('change', function() {
+        var device = portDiscoveryDevices[$(this).val()];
+        $('#port-discovery-schedule')
+            .prop('checked', !!(device && device.enabled));
+        $('#btn-port-discovery-run').prop('disabled', !device);
+    });
+    $('#btn-port-discovery-refresh').on('click', loadPortDiscovery);
+    $('#port-discovery-schedule').on('change', function() {
+        var mac = $('#port-discovery-device').val();
+        var enabled = $(this).prop('checked') ? '1' : '0';
+        if (!mac) return;
+        $.post('/api/devicemonitor/devices/portdiscoverytarget',
+               {mac: mac, enabled: enabled})
+            .done(function(data) {
+                $('#port-discovery-status')
+                    .text(data.message || data.error || data.result);
+                loadPortDiscovery();
+            })
+            .fail(function() {
+                $('#port-discovery-status').text('Unable to save schedule.');
+                loadPortDiscovery();
+            });
+    });
+    $('#btn-port-discovery-run').on('click', function() {
+        var mac = $('#port-discovery-device').val();
+        if (!mac) return;
+        var $button = $(this).prop('disabled', true);
+        $('#port-discovery-status').text('Scanning selected device...');
+        $.ajax({
+            url: '/api/devicemonitor/devices/runportdiscovery',
+            type: 'POST', data: {mac: mac}, timeout: 135000
+        }).done(function(data) {
+            $('#port-discovery-status')
+                .text(data.message || data.error || data.result);
+        }).fail(function() {
+            $('#port-discovery-status').text('Port discovery request failed.');
+        }).always(function() {
+            $button.prop('disabled', false);
+            loadPortDiscovery();
+        });
+    });
+
     var infrastructureStickyGeometry = null;
 
     function opaqueBackground($el) {
@@ -1379,11 +1522,16 @@ $(document).ready(function() {
     }
 
     $(document).on('shown.bs.tab', 'a[data-toggle="tab"]', function() {
+        var discovery = $(this).attr('href') ===
+            '#tab-infrastructure-port-discovery';
+        $('.infrastructure-toolbar, .infrastructure-stats')
+            .toggle(!discovery);
         updateInfrastructureStickyStack();
     });
 
     $(window).on('resize', updateInfrastructureStickyStack);
 
     loadServices();
+    loadPortDiscovery();
 });
 </script>

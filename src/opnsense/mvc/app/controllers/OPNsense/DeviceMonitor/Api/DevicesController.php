@@ -1360,6 +1360,136 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
+     * Port discovery candidates, opt-in schedules and recent results.
+     * GET /api/devicemonitor/devices/portdiscovery
+     */
+    public function portdiscoveryAction()
+    {
+        $result = ['devices' => [], 'results' => []];
+        try {
+            $paths = $this->getPaths();
+            if (!isset($paths['dbFile']) || !is_file($paths['dbFile'])) {
+                return $result;
+            }
+            $db = new \SQLite3($paths['dbFile'], SQLITE3_OPEN_READONLY);
+            $db->busyTimeout(2000);
+            $tables = [];
+            $check = $db->query(
+                "SELECT name FROM sqlite_master WHERE type='table' AND " .
+                "name IN ('devices','port_discovery_targets'," .
+                "'port_discovery_results','port_discovery_ports')"
+            );
+            while ($row = $check->fetchArray(SQLITE3_ASSOC)) {
+                $tables[$row['name']] = true;
+            }
+            if (!isset($tables['devices'])) {
+                $db->close();
+                return $result;
+            }
+            $hasTargets = isset($tables['port_discovery_targets']);
+            $deviceSql = 'SELECT d.mac, d.ip, d.hostname, d.custom_hostname, ' .
+                ($hasTargets
+                    ? 'COALESCE(t.enabled,0) AS enabled, t.next_scan_at, ' .
+                      't.last_scan_at, t.last_error '
+                    : '0 AS enabled, NULL AS next_scan_at, ' .
+                      'NULL AS last_scan_at, NULL AS last_error ') .
+                'FROM devices d ' .
+                ($hasTargets
+                    ? 'LEFT JOIN port_discovery_targets t ON lower(d.mac)=t.mac '
+                    : '') .
+                "WHERE d.ip IS NOT NULL AND d.ip != '' " .
+                'ORDER BY d.ip, d.mac LIMIT 500';
+            $query = $db->query($deviceSql);
+            while ($row = $query->fetchArray(SQLITE3_ASSOC)) {
+                $row['enabled'] = (int)$row['enabled'];
+                $result['devices'][] = $row;
+            }
+            if (isset($tables['port_discovery_results'])) {
+                $query = $db->query(
+                    'SELECT id, mac, ip, started_at, finished_at, ' .
+                    'success, error FROM port_discovery_results ' .
+                    'ORDER BY id DESC LIMIT 50'
+                );
+                while ($row = $query->fetchArray(SQLITE3_ASSOC)) {
+                    $row['id'] = (int)$row['id'];
+                    $row['ports'] = [];
+                    if (isset($tables['port_discovery_ports'])) {
+                        $ports = $db->query(
+                            'SELECT port, protocol, service, product, version ' .
+                            'FROM port_discovery_ports WHERE result_id = ' .
+                            $row['id'] . ' ORDER BY port'
+                        );
+                        while ($port = $ports->fetchArray(SQLITE3_ASSOC)) {
+                            $row['ports'][] = $port;
+                        }
+                    }
+                    $result['results'][] = $row;
+                }
+            }
+            $db->close();
+        } catch (\Throwable $e) {
+            error_log('DeviceMonitor port discovery: ' . $e->getMessage());
+            return ['devices' => [], 'results' => [],
+                    'error' => 'Unable to load port discovery'];
+        }
+        return $result;
+    }
+
+    /**
+     * POST /api/devicemonitor/devices/portdiscoverytarget
+     */
+    public function portdiscoverytargetAction()
+    {
+        return $this->portDiscoveryCommand('target');
+    }
+
+    /**
+     * POST /api/devicemonitor/devices/runportdiscovery
+     */
+    public function runportdiscoveryAction()
+    {
+        return $this->portDiscoveryCommand('run');
+    }
+
+    private function portDiscoveryCommand($operation)
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed', 'error' => 'POST required'];
+        }
+        $mac = strtolower(trim(
+            (string)$this->request->getPost('mac', 'string', '')
+        ));
+        if (!preg_match('/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/', $mac)) {
+            return ['result' => 'failed', 'error' => 'Invalid MAC address'];
+        }
+        $paths = $this->getPaths();
+        if (!isset($paths['scanScript']) ||
+            !is_file($paths['scanScript'])) {
+            return ['result' => 'failed', 'error' => 'Scanner unavailable'];
+        }
+        $args = $operation === 'run'
+            ? ' --port-discovery-run ' . escapeshellarg($mac)
+            : ' --port-discovery-target ' . escapeshellarg($mac);
+        if ($operation !== 'run') {
+            $enabled = (string)$this->request->getPost('enabled', 'string', '');
+            if (!in_array($enabled, ['0', '1'], true)) {
+                return ['result' => 'failed', 'error' => 'Invalid schedule'];
+            }
+            $args .= ' --port-discovery-enable ' .
+                escapeshellarg($enabled);
+        }
+        $output = [];
+        $code = 1;
+        exec(escapeshellarg($paths['scanScript']) . $args . ' 2>&1',
+             $output, $code);
+        return $code === 0
+            ? ['result' => 'ok', 'message' => trim(implode("\n", $output))]
+            : ['result' => 'failed',
+               'error' => trim(implode("\n", $output)) ?:
+                   'Port discovery failed'];
+    }
+
+    /**
      * Return discovered infrastructure services.
      * GET /api/devicemonitor/devices/services
      */
