@@ -16,10 +16,7 @@ Status:
 
 - v2.9 was promoted to production; see the historical section
   "## v2.9 production promotion".
-- The VLAN / sticky-header series after that promotion — the VLAN / sticky-header series from
-  "## Device Monitor: stabilise VLAN filtering" through
-  "## Device Monitor: clarify empty VLAN selection and stabilise sticky offsets
-  (DM-STICKY2F)" — is testbed-only and has not been deployed to production.
+- The post-v2.9 changes through DM-STICKY2F were promoted to production on 24 September 2026. The installed scope includes the guarded interface scoping and loopback exclusions as well as the UI changes.
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
 
@@ -28,6 +25,21 @@ php, python3); GitHub CLI (`gh`) authenticated as `apg19590209`; SSH via
 `ssh opnsense-dm`. Workstation-local access rules remain in the untracked
 `.clinerules/90-local-remote-access.md` (never committed). Production
 `192.168.20.254` is never targeted without explicit authorisation.
+
+## 24 September 2026 production promotion
+
+- Candidate: `58b5782439f52ab8e3ab6227716bfc86bb9b60a6`.
+- Nine runtime files and two compiled gettext catalogues installed on
+  `OPNsense.home.arpa` (`192.168.20.254`), with pre/post SHA256 and mode checks.
+  `ConfigController.php` and `settings.volt` already matched the candidate.
+- Rollback copies: `/tmp/dm_backup.lwMIW0/preinstall-20260924092941.i9OijB`.
+  Plugin-tree, locale and online SQLite backups are retained in
+  `/tmp/dm_backup.lwMIW0`.
+- Menu cache invalidated. No daemon restart or database migration.
+- Post-checks: 11 file hashes, PHP syntax, daemon presence and SQLite
+  `quick_check` passed. Production Devices, Device Details, Physical Devices,
+  Change Summary and Settings GUI checks passed by the user.
+- Next step: retain backups while observing normal monitoring.
 
 ## History
 
