@@ -1347,7 +1347,10 @@ $(document).ready(function() {
                 var selected = $('#port-discovery-device').val();
                 var $select = $('#port-discovery-device').empty();
                 portDiscoveryDevices = {};
-                (data.devices || []).forEach(function(device) {
+                (data.devices || []).slice().sort(function(a, b) {
+                    return ipCompare(a.ip, b.ip) ||
+                        String(a.mac).localeCompare(String(b.mac));
+                }).forEach(function(device) {
                     portDiscoveryDevices[device.mac] = device;
                     $('<option>').val(device.mac)
                         .text((device.custom_hostname ||
@@ -1381,6 +1384,11 @@ $(document).ready(function() {
                 });
                 if (data.error) {
                     $('#port-discovery-status').text(data.error);
+                } else if (!data.devices || !data.devices.length) {
+                    $('#port-discovery-status')
+                        .text('No devices on the selected monitored interfaces.');
+                } else {
+                    $('#port-discovery-status').text('');
                 }
             })
             .fail(function() {
@@ -1391,7 +1399,8 @@ $(document).ready(function() {
     $('#port-discovery-device').on('change', function() {
         var device = portDiscoveryDevices[$(this).val()];
         $('#port-discovery-schedule')
-            .prop('checked', !!(device && device.enabled));
+            .prop('checked', !!(device && device.enabled))
+            .prop('disabled', !device);
         $('#btn-port-discovery-run').prop('disabled', !device);
     });
     $('#btn-port-discovery-refresh').on('click', loadPortDiscovery);

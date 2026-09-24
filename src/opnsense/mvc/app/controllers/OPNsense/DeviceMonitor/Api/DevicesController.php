@@ -1368,9 +1368,22 @@ class DevicesController extends ApiControllerBase
         $result = ['devices' => [], 'results' => []];
         try {
             $paths = $this->getPaths();
-            if (!isset($paths['dbFile']) || !is_file($paths['dbFile'])) {
+            if (!isset($paths['dbFile'], $paths['scanScript']) ||
+                !is_file($paths['dbFile']) ||
+                !is_file($paths['scanScript'])) {
                 return $result;
             }
+            $scopeOutput = [];
+            $scopeCode = 1;
+            exec(escapeshellarg($paths['scanScript']) .
+                ' --port-discovery-list 2>&1', $scopeOutput, $scopeCode);
+            $scope = json_decode(implode("\n", $scopeOutput), true);
+            if ($scopeCode !== 0 || !is_array($scope) ||
+                !isset($scope['macs']) || !is_array($scope['macs'])) {
+                return ['devices' => [], 'results' => [],
+                    'error' => 'Unable to resolve monitored devices'];
+            }
+            $allowedMacs = array_fill_keys($scope['macs'], true);
             $db = new \SQLite3($paths['dbFile'], SQLITE3_OPEN_READONLY);
             $db->busyTimeout(2000);
             $tables = [];
@@ -1401,6 +1414,9 @@ class DevicesController extends ApiControllerBase
                 'ORDER BY d.ip, d.mac LIMIT 500';
             $query = $db->query($deviceSql);
             while ($row = $query->fetchArray(SQLITE3_ASSOC)) {
+                if (!isset($allowedMacs[strtolower($row['mac'])])) {
+                    continue;
+                }
                 $row['enabled'] = (int)$row['enabled'];
                 $result['devices'][] = $row;
             }

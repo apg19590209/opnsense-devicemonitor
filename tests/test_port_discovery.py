@@ -1,7 +1,10 @@
 """Opt-in port discovery must stay single-host and fail closed."""
 import builtins
+import contextlib
 import importlib.util
+import io
 import ipaddress
+import json
 import sqlite3
 import tempfile
 from pathlib import Path
@@ -80,6 +83,13 @@ def test_selected_host_and_schedule():
                 </nmaprun>''')
 
         module.subprocess.run = fake_run
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            assert module.list_port_discovery_targets() == 0
+        assert json.loads(output.getvalue()) == {
+            'macs': ['aa:bb:cc:dd:ee:01']
+        }
+        assert calls == [], 'candidate listing must not scan'
         assert module.port_discovery_target('aa:bb:cc:dd:ee:02', True) == 2
         assert module.port_discovery_target('aa:bb:cc:dd:ee:01', True) == 0
         with sqlite3.connect(module.DB_FILE) as conn:

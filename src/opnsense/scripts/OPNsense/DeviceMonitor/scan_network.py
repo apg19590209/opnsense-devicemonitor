@@ -7317,6 +7317,28 @@ def port_discovery_target(mac, enabled):
     return 0
 
 
+def list_port_discovery_targets():
+    """Read-only eligible device list using the same scope guard as scans."""
+    networks, error = resolve_monitored_networks(load_config())
+    if error:
+        print(f'ERROR: {error}', file=sys.stderr)
+        return 2
+    try:
+        conn = sqlite3.connect(f'file:{DB_FILE}?mode=ro', uri=True)
+        try:
+            rows = conn.execute('SELECT mac, ip FROM devices').fetchall()
+        finally:
+            conn.close()
+    except sqlite3.Error as exc:
+        print(f'ERROR: Unable to read devices: {exc}', file=sys.stderr)
+        return 2
+    print(json.dumps({
+        'macs': [str(mac).lower() for mac, ip in rows
+                 if ip_is_in_scope(ip, networks)]
+    }))
+    return 0
+
+
 def run_port_discovery(mac=None):
     """Scan one selected IPv4 device, or at most one due opt-in target."""
     if mac is not None:
@@ -7492,6 +7514,7 @@ Examples:
     parser.add_argument('--port-discovery-enable', choices=('0', '1'))
     parser.add_argument('--port-discovery-run', metavar='MAC')
     parser.add_argument('--port-discovery-due', action='store_true')
+    parser.add_argument('--port-discovery-list', action='store_true')
 
     parser.add_argument(
         '--verbose', '-v',
@@ -7541,6 +7564,8 @@ Examples:
                 parser.error('--port-discovery-target requires --port-discovery-enable')
             return port_discovery_target(args.port_discovery_target,
                                          args.port_discovery_enable == '1')
+        if args.port_discovery_list:
+            return list_port_discovery_targets()
         if args.port_discovery_run:
             return run_port_discovery(args.port_discovery_run)
         if args.port_discovery_due:
