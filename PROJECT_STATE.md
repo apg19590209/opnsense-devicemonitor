@@ -9,7 +9,7 @@ Branch: `v2.9-development`
 Authoritative development checkout: `/root/src/opnsense-devicemonitor-upstream`
 (FreeBSD 15.1-RELEASE amd64; OPNsense testbed host `192.168.20.23`)
 
-Latest Device Monitor implementation commit: `9fe0265` — `Device Monitor: preserve keyboard focus across device refresh` on `feature/targeted-port-discovery`.
+Latest Device Monitor implementation commit: `4ef94e4` — `Device Monitor: keep port table header opaque and height responsive` on `feature/targeted-port-discovery`.
 
 Status:
 
@@ -32,7 +32,8 @@ php, python3); GitHub CLI (`gh`) authenticated as `apg19590209`; SSH via
 - Installed nine runtime files and two compiled gettext catalogues on `OPNsense.home.arpa` (`192.168.20.254`): Port Discovery, service archiving, responsive Infrastructure Services/Change Summary/IP & MAC Conflicts tables, and the Devices keyboard-focus fix.
 - Guarded predecessor and candidate hashes, retained file and online SQLite rollback backup at `/var/backups/devicemonitor/prod-port.SGfYgq` (`devices.db` SHA256 `08fdb066c24ec7875374e00256be2d0d7ec4c843b809cc7cd7bd6e61a27f8592`). Menu and affected Volt caches invalidated. Existing Device Monitor daemon restarted to load opt-in scheduled scanning; no scan was requested by the deployment.
 - Post-install: 11 file hashes, PHP/Python syntax, daemon presence and SQLite `quick_check` passed. Authenticated Firefox smoke checks at 1280 px passed for Devices, Change Summary, IP & MAC Conflicts, Infrastructure Services and Port Discovery (HTTP 200, no page overflow or JavaScript errors). The 1024/1280 Change Summary scroll and sticky checks had passed on the testbed.
-- Next step: retain rollback backups while observing normal monitoring and complete authenticated production visual acceptance.
+- Follow-up: fixed transparent Port Discovery device-table header overlap and changed the fixed 420 px list limit to a viewport-relative 65vh limit. Committed as `4ef94e4`; 1024/1280 testbed browser scroll/layering checks passed. One production view deployed with rollback at `/var/backups/devicemonitor/port-table-prod.8Sx07f`; no daemon restart. The user visually accepted the production Devices and Scans tabs.
+- Next step: retain rollback backups while observing normal monitoring.
 
 ## 24 September 2026 production promotion
 
