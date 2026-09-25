@@ -396,34 +396,6 @@ change device records or network state.
 
 **Path:** Services → Device Monitor → Infrastructure Services
 
-## Port Discovery
-
-**Path:** Services → Device Monitor → Port Discovery
-
-The **Port Discovery** page has **Devices** and **Scans** tabs. Devices lists
-monitored hosts in a searchable table. Use **Run Now** on a device row to scan
-that device's TCP ports (1–65535); results appear under **Scans**.
-Use the weekly checkboxes and **Save weekly selections** to schedule several
-devices in one pass. Filters show all devices, those selected for weekly scans,
-or those never scanned. The device list scrolls with its column headings
-visible, and **Run Now** progress appears in the device's own **Status** column,
-so messages do not resize the device table.
-The **Scans** tab filters its 50 most recent records by IP/MAC/name, one or
-more exact TCP ports (comma separated), and result status. Weekly scans
-run while Device Monitor monitoring is enabled. At most one due device is
-processed after each normal monitoring cycle; scans for different devices
-never run concurrently through this feature. Each scan has a 120-second
-process limit and records identified open ports and errors separately from
-the existing Nmap Scan History. A timed-out or incomplete scan is reported
-as a failure, rather than a complete list of ports.
-The **Last Scan** and **Scan Time** columns display the browser's local time
-and timezone abbreviation. Devices without a hostname show their IP once, alongside
-their MAC address.
-
-Port names are Nmap identification evidence, not proof of the application
-protocol. UDP ports are outside this TCP scan; in particular, WireGuard
-requires authoritative configuration or host runtime evidence.
-
 ### 9.1 Purpose
 
 Show the network services discovered on your devices, organised into tabs by service
@@ -487,6 +459,36 @@ Each service row shows:
 The first tab shows a feed of the latest service events with columns: **Date / Time**,
 **Change** (discovered / unavailable / recovered / changed), **Service**, **Device**,
 **Endpoint**, **Evidence**, and **History**. **Read-only.**
+
+---
+
+## Port Discovery
+
+**Path:** Services → Device Monitor → Port Discovery
+
+The **Port Discovery** page has **Devices** and **Scans** tabs. Devices lists
+monitored hosts in a searchable table. Use **Run Now** on a device row to scan
+that device's TCP ports (1–65535); results appear under **Scans**.
+Use the weekly checkboxes and **Save weekly selections** to schedule several
+devices in one pass. Filters show all devices, those selected for weekly scans,
+or those never scanned. The device list grows with the browser height and
+scrolls with its column headings visible; **Run Now** progress appears in the device's own **Status** column,
+so messages do not resize the device table.
+The **Scans** tab filters its 50 most recent records by IP/MAC/name, one or
+more exact TCP ports (comma separated), and result status. Weekly scans
+run while Device Monitor monitoring is enabled. At most one due device is
+processed after each normal monitoring cycle; scans for different devices
+never run concurrently through this feature. Each scan has a 120-second
+process limit and records identified open ports and errors separately from
+the existing Nmap Scan History. A timed-out or incomplete scan is reported
+as a failure, rather than a complete list of ports.
+The **Last Scan** and **Scan Time** columns display the browser's local time
+and timezone abbreviation. Devices without a hostname show their IP once, alongside
+their MAC address.
+
+Port names are Nmap identification evidence, not proof of the application
+protocol. UDP ports are outside this TCP scan; in particular, WireGuard
+requires authoritative configuration or host runtime evidence.
 
 ---
 
