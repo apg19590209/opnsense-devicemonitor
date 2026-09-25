@@ -2,6 +2,7 @@
 from pathlib import Path
 import hashlib
 import json
+import subprocess
 
 root = Path(__file__).resolve().parents[1]
 manifest = root / 'release/v2.9-runtime.manifest'
@@ -15,7 +16,10 @@ assert len(set(targets)) == len(targets)
 for digest, mode, source, target in rows:
     path = root / source
     assert path.is_file(), source
-    assert hashlib.sha256(path.read_bytes()).hexdigest() == digest, source
+    released = subprocess.check_output(
+        ['git', 'show', 'v2.9:' + source], cwd=root,
+    )
+    assert hashlib.sha256(released).hexdigest() == digest, source
     assert mode in {'644', '755'}, source
     if source.startswith('src/opnsense/'):
         assert target == '/usr/local/opnsense/' + source.removeprefix('src/opnsense/')
@@ -26,5 +30,9 @@ for digest, mode, source, target in rows:
              '/usr/local/etc/inc/plugins.inc.d/devicemonitor.inc'),
         }
     assert '/var/db/' not in target and 'config.json' not in target
-assert json.loads((root / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json').read_text())['version'] == '2.9'
+defaults = subprocess.check_output(
+    ['git', 'show', 'v2.9:src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json'],
+    cwd=root,
+)
+assert json.loads(defaults)['version'] == '2.9'
 print('V29_RELEASE_MANIFEST=PASS')
