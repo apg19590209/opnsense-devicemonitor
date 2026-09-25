@@ -40,7 +40,8 @@ check(
 
 // Lifecycle History table leads with Lifecycle/Status, then IP Address
 // before Friendly Name.
-const thead = history.match(/<thead>([\s\S]*?)<\/thead>/);
+const historyTable = history.slice(history.indexOf('id="grid-device-history"'));
+const thead = historyTable.match(/<thead>([\s\S]*?)<\/thead>/);
 
 check(
     thead && thead.length > 0,
@@ -68,6 +69,21 @@ check(
 );
 
 // Notes panel is placed after Lifecycle History.
+check(
+    history.indexOf('id="device-service-alerts"') >
+        history.indexOf('id="summary-mac"') &&
+        history.indexOf('id="device-service-alerts"') <
+        history.indexOf('id="lifecycle-history"'),
+    'Service alert controls must follow the summary before history'
+);
+
+check(
+    ['service_new', 'service_unavailable', 'service_recovered'].every(
+        field => history.includes('data-alert-field="' + field + '"')
+    ) && history.includes('/api/devicemonitor/devices/savealertpreferences'),
+    'Service alert controls or save endpoint missing'
+);
+
 check(
     history.indexOf('id="lifecycle-history"') <
         history.indexOf('id="device-notes"'),

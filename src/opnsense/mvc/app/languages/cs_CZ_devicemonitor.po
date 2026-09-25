@@ -880,3 +880,61 @@ msgstr "Probíhá"
 
 msgid "Filtering the 50 most recent scans"
 msgstr "Filtrování 50 nejnovějších skenování"
+
+# [devicehistory.volt] Nastavení e-mailových upozornění pro zařízení
+msgid "Service email alerts"
+msgstr "E-mailová upozornění na služby"
+
+msgid "Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings."
+msgstr "Zvolte, zda tato síťová identita odesílá e-mailová upozornění na služby. Volba Použít globální nastavení zachová výchozí hodnoty z Nastavení. Odesílání e-mailů musí být v Nastavení povoleno."
+
+msgid "Service event"
+msgstr "Událost služby"
+
+msgid "Preference"
+msgstr "Předvolba"
+
+msgid "Effective"
+msgstr "Výsledný stav"
+
+msgid "New service"
+msgstr "Nová služba"
+
+msgid "Service unavailable"
+msgstr "Služba nedostupná"
+
+msgid "Service recovered"
+msgstr "Služba opět dostupná"
+
+msgid "New service email preference"
+msgstr "E-mailové upozornění na novou službu"
+
+msgid "Service unavailable email preference"
+msgstr "E-mailové upozornění na nedostupnou službu"
+
+msgid "Service recovered email preference"
+msgstr "E-mailové upozornění na obnovenou službu"
+
+msgid "Use global setting"
+msgstr "Použít globální nastavení"
+
+msgid "On"
+msgstr "Zapnuto"
+
+msgid "Off"
+msgstr "Vypnuto"
+
+msgid "Save alert preferences"
+msgstr "Uložit předvolby upozornění"
+
+msgid "Email delivery is disabled in Settings."
+msgstr "Odesílání e-mailů je v Nastavení vypnuto."
+
+msgid "Unable to load alert preferences"
+msgstr "Předvolby upozornění nelze načíst"
+
+msgid "Unable to save alert preferences"
+msgstr "Předvolby upozornění nelze uložit"
+
+msgid "Alert preferences saved"
+msgstr "Předvolby upozornění byly uloženy"

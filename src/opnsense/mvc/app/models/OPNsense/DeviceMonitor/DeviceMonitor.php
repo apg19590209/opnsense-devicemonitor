@@ -2466,6 +2466,126 @@ class DeviceMonitor
         ];
     }
 
+    private static function serviceAlertFields()
+    {
+        return ['service_new', 'service_unavailable', 'service_recovered'];
+    }
+
+    public function getDeviceAlertPreferences($mac)
+    {
+        $mac = strtolower(trim((string)$mac));
+        if (!preg_match('/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/', $mac)) {
+            return null;
+        }
+
+        $db = $this->getDb();
+        $stmt = $db->prepare('SELECT mac FROM devices WHERE lower(mac) = :mac LIMIT 1');
+        $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        $result = $stmt->execute();
+        if (!$result || !$result->fetchArray(SQLITE3_ASSOC)) {
+            $db->close();
+            return null;
+        }
+
+        $stmt = $db->prepare('SELECT service_new, service_unavailable, service_recovered ' .
+            'FROM device_alert_preferences WHERE mac = :mac');
+        $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+        $result = $stmt->execute();
+        $saved = $result ? $result->fetchArray(SQLITE3_ASSOC) : false;
+        $db->close();
+
+        $config = self::getConfig();
+        $defaults = [
+            'service_new' => 'service_email_new',
+            'service_unavailable' => 'service_email_unavailable',
+            'service_recovered' => 'service_email_recovered',
+        ];
+        $master = ($config['enabled'] ?? '0') == '1' &&
+            ($config['email_enabled'] ?? '0') == '1' &&
+            trim((string)($config['email_to'] ?? '')) !== '';
+        $preferences = [];
+        $effective = [];
+        foreach ($defaults as $field => $globalField) {
+            $choice = $saved[$field] ?? 'inherit';
+            $preferences[$field] = $choice;
+            $effective[$field] = $master && (
+                $choice === 'on' ||
+                ($choice === 'inherit' &&
+                    ($config['service_email_enabled'] ?? '0') == '1' &&
+                    ($config[$globalField] ?? '1') == '1')
+            );
+        }
+        return [
+            'preferences' => $preferences,
+            'effective' => $effective,
+            'email_available' => $master,
+        ];
+    }
+
+    public function saveDeviceAlertPreferences($mac, array $values)
+    {
+        $mac = strtolower(trim((string)$mac));
+        if (!preg_match('/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/', $mac)) {
+            return false;
+        }
+        foreach (self::serviceAlertFields() as $field) {
+            if (!isset($values[$field]) ||
+                !in_array($values[$field], ['inherit', 'on', 'off'], true)) {
+                return false;
+            }
+        }
+
+        $db = $this->getDb();
+        if (!$db->exec('BEGIN IMMEDIATE TRANSACTION')) {
+            $db->close();
+            return false;
+        }
+        try {
+            $stmt = $db->prepare('SELECT lifecycle_id FROM devices WHERE lower(mac) = :mac LIMIT 1');
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+            $result = $stmt->execute();
+            $device = $result ? $result->fetchArray(SQLITE3_ASSOC) : false;
+            if (!$device) {
+                throw new \RuntimeException('Device not found');
+            }
+
+            $stmt = $db->prepare('SELECT service_new, service_unavailable, service_recovered ' .
+                'FROM device_alert_preferences WHERE mac = :mac');
+            $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+            $result = $stmt->execute();
+            $old = $result ? $result->fetchArray(SQLITE3_ASSOC) : false;
+            $previous = $old ?: array_fill_keys(self::serviceAlertFields(), 'inherit');
+            if ($previous !== $values) {
+                $stmt = $db->prepare('INSERT INTO device_alert_preferences ' .
+                    '(mac, service_new, service_unavailable, service_recovered, updated_at) ' .
+                    'VALUES (:mac, :new, :unavailable, :recovered, CURRENT_TIMESTAMP) ' .
+                    'ON CONFLICT(mac) DO UPDATE SET service_new=excluded.service_new, ' .
+                    'service_unavailable=excluded.service_unavailable, ' .
+                    'service_recovered=excluded.service_recovered, updated_at=CURRENT_TIMESTAMP');
+                $stmt->bindValue(':mac', $mac, SQLITE3_TEXT);
+                $stmt->bindValue(':new', $values['service_new'], SQLITE3_TEXT);
+                $stmt->bindValue(':unavailable', $values['service_unavailable'], SQLITE3_TEXT);
+                $stmt->bindValue(':recovered', $values['service_recovered'], SQLITE3_TEXT);
+                if (!$stmt->execute() || !$this->recordTimelineActivityEvent(
+                    $db, $mac, $device['lifecycle_id'] ?? null,
+                    'ALERT_PREFERENCES_CHANGED',
+                    json_encode($previous), json_encode($values)
+                )) {
+                    throw new \RuntimeException('Preference update failed');
+                }
+            }
+            if (!$db->exec('COMMIT')) {
+                throw new \RuntimeException('Preference commit failed');
+            }
+            $db->close();
+            return true;
+        } catch (\Exception $e) {
+            $db->exec('ROLLBACK');
+            $db->close();
+            return false;
+        }
+    }
+
     /**
      * Derive physical-device grouping eligibility for one MAC address.
      *
@@ -3354,6 +3474,17 @@ class DeviceMonitor
             new_value TEXT DEFAULT NULL,
             details TEXT DEFAULT NULL
         )');
+
+        $db->exec("CREATE TABLE IF NOT EXISTS device_alert_preferences (
+            mac TEXT PRIMARY KEY,
+            service_new TEXT NOT NULL DEFAULT 'inherit'
+                CHECK(service_new IN ('inherit', 'on', 'off')),
+            service_unavailable TEXT NOT NULL DEFAULT 'inherit'
+                CHECK(service_unavailable IN ('inherit', 'on', 'off')),
+            service_recovered TEXT NOT NULL DEFAULT 'inherit'
+                CHECK(service_recovered IN ('inherit', 'on', 'off')),
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )");
 
         $db->exec('CREATE INDEX IF NOT EXISTS idx_device_activity_events_mac_occurred
             ON device_activity_events(mac, occurred_at DESC)');

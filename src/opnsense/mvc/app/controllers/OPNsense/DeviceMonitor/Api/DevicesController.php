@@ -559,6 +559,47 @@ class DevicesController extends ApiControllerBase
         ];
     }
 
+    public function alertpreferencesAction()
+    {
+        $mac = strtolower(trim((string)$this->request->get('mac', 'string', '')));
+        if (!preg_match('/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/', $mac)) {
+            return ['result' => 'failed', 'error' => 'Valid MAC address required'];
+        }
+
+        $data = (new DeviceMonitor())->getDeviceAlertPreferences($mac);
+        return $data === null
+            ? ['result' => 'failed', 'error' => 'Device not found']
+            : array_merge(['result' => 'ok'], $data);
+    }
+
+    public function savealertpreferencesAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed', 'error' => 'POST required'];
+        }
+        $mac = strtolower(trim((string)$this->request->getPost('mac', 'string', '')));
+        if (!preg_match('/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/', $mac)) {
+            return ['result' => 'failed', 'error' => 'Valid MAC address required'];
+        }
+        $fields = ['service_new', 'service_unavailable', 'service_recovered'];
+        $values = [];
+        foreach ($fields as $field) {
+            $value = (string)$this->request->getPost($field, 'string', '');
+            if (!in_array($value, ['inherit', 'on', 'off'], true)) {
+                return ['result' => 'failed', 'error' => 'Invalid preference'];
+            }
+            $values[$field] = $value;
+        }
+        $model = new DeviceMonitor();
+        if (!$model->saveDeviceAlertPreferences($mac, $values)) {
+            return ['result' => 'failed', 'error' => 'Unable to save preferences'];
+        }
+        return array_merge(
+            ['result' => 'saved'],
+            $model->getDeviceAlertPreferences($mac)
+        );
+    }
+
     /**
      * Add a comment to an active device lifecycle
      * POST /api/devicemonitor/devices/addcomment

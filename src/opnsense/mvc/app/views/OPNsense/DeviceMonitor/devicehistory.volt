@@ -8,6 +8,18 @@
     vertical-align: middle;
     display: inline-block;
 }
+#service-alert-preferences select {
+    width: 190px;
+    max-width: 100%;
+    height: 30px;
+    padding: 4px 8px;
+}
+#service-alert-preferences td {
+    vertical-align: middle;
+}
+#service-alert-feedback:not(:empty) {
+    margin-bottom: 10px;
+}
 </style>
 
 <div class="content-box">
@@ -66,6 +78,59 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default" id="device-service-alerts">
+            <div class="panel-heading">
+                <strong><i class="fa fa-bell-o"></i> {{ lang._('Service email alerts') }}</strong>
+            </div>
+            <div class="panel-body">
+                <p class="text-muted">
+                    {{ lang._('Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings.') }}
+                </p>
+                <div id="service-alert-feedback" role="status" aria-live="polite"></div>
+                <div class="table-responsive">
+                    <table class="table table-condensed" id="service-alert-preferences">
+                        <thead><tr>
+                            <th>{{ lang._('Service event') }}</th>
+                            <th>{{ lang._('Preference') }}</th>
+                            <th>{{ lang._('Effective') }}</th>
+                        </tr></thead>
+                        <tbody>
+                            <tr data-alert-field="service_new">
+                                <td>{{ lang._('New service') }}</td>
+                                <td><select class="form-control input-sm" aria-label="{{ lang._('New service email preference') }}">
+                                    <option value="inherit">{{ lang._('Use global setting') }}</option>
+                                    <option value="on">{{ lang._('On') }}</option>
+                                    <option value="off">{{ lang._('Off') }}</option>
+                                </select></td>
+                                <td class="alert-effective">&mdash;</td>
+                            </tr>
+                            <tr data-alert-field="service_unavailable">
+                                <td>{{ lang._('Service unavailable') }}</td>
+                                <td><select class="form-control input-sm" aria-label="{{ lang._('Service unavailable email preference') }}">
+                                    <option value="inherit">{{ lang._('Use global setting') }}</option>
+                                    <option value="on">{{ lang._('On') }}</option>
+                                    <option value="off">{{ lang._('Off') }}</option>
+                                </select></td>
+                                <td class="alert-effective">&mdash;</td>
+                            </tr>
+                            <tr data-alert-field="service_recovered">
+                                <td>{{ lang._('Service recovered') }}</td>
+                                <td><select class="form-control input-sm" aria-label="{{ lang._('Service recovered email preference') }}">
+                                    <option value="inherit">{{ lang._('Use global setting') }}</option>
+                                    <option value="on">{{ lang._('On') }}</option>
+                                    <option value="off">{{ lang._('Off') }}</option>
+                                </select></td>
+                                <td class="alert-effective">&mdash;</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" id="save-service-alerts" class="btn btn-primary btn-sm" disabled>
+                    {{ lang._('Save alert preferences') }}
+                </button>
             </div>
         </div>
 
@@ -188,6 +253,74 @@
 $(document).ready(function() {
     var params = new URLSearchParams(window.location.search);
     var mac = (params.get('mac') || '').trim().toLowerCase();
+
+    function renderServiceAlertPreferences(response) {
+        $('#service-alert-preferences tbody tr').each(function() {
+            var field = $(this).attr('data-alert-field');
+            $(this).find('select').val(response.preferences[field]);
+            $(this).find('.alert-effective').text(
+                response.effective[field]
+                    ? "{{ lang._('Enabled') }}"
+                    : "{{ lang._('Disabled') }}"
+            );
+        });
+        $('#save-service-alerts').prop('disabled', false);
+        $('#service-alert-feedback').text(
+            response.email_available
+                ? ''
+                : "{{ lang._('Email delivery is disabled in Settings.') }}"
+        );
+    }
+
+    function loadServiceAlertPreferences() {
+        $.getJSON('/api/devicemonitor/devices/alertpreferences', {mac: mac})
+            .done(function(response) {
+                if (response && response.result === 'ok') {
+                    renderServiceAlertPreferences(response);
+                } else {
+                    $('#service-alert-feedback').text(
+                        "{{ lang._('Unable to load alert preferences') }}"
+                    );
+                }
+            }).fail(function() {
+                $('#service-alert-feedback').text(
+                    "{{ lang._('Unable to load alert preferences') }}"
+                );
+            });
+    }
+
+    $('#save-service-alerts').on('click', function() {
+        var $button = $(this).prop('disabled', true);
+        var values = {mac: mac};
+        $('#service-alert-preferences tbody tr').each(function() {
+            values[$(this).attr('data-alert-field')] = $(this).find('select').val();
+        });
+        $.post('/api/devicemonitor/devices/savealertpreferences', values)
+            .done(function(response) {
+                if (response && response.result === 'saved') {
+                    renderServiceAlertPreferences(response);
+                    $('#service-alert-feedback').text(
+                        "{{ lang._('Alert preferences saved') }}"
+                    );
+                } else {
+                    $('#service-alert-feedback').text(
+                        response && response.error
+                            ? response.error
+                            : "{{ lang._('Unable to save alert preferences') }}"
+                    );
+                }
+            }).fail(function() {
+                $('#service-alert-feedback').text(
+                    "{{ lang._('Unable to save alert preferences') }}"
+                );
+            }).always(function() {
+                $button.prop('disabled', false);
+            });
+    });
+
+    if (mac) {
+        loadServiceAlertPreferences();
+    }
     var returnPending = false;
     var activeLifecycleId = 0;
 

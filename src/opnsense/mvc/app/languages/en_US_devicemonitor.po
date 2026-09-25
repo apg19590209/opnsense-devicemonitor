@@ -879,3 +879,61 @@ msgstr "Running"
 
 msgid "Filtering the 50 most recent scans"
 msgstr "Filtering the 50 most recent scans"
+
+# [devicehistory.volt] Per-device service alert controls
+msgid "Service email alerts"
+msgstr "Service email alerts"
+
+msgid "Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings."
+msgstr "Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings."
+
+msgid "Service event"
+msgstr "Service event"
+
+msgid "Preference"
+msgstr "Preference"
+
+msgid "Effective"
+msgstr "Effective"
+
+msgid "New service"
+msgstr "New service"
+
+msgid "Service unavailable"
+msgstr "Service unavailable"
+
+msgid "Service recovered"
+msgstr "Service recovered"
+
+msgid "New service email preference"
+msgstr "New service email preference"
+
+msgid "Service unavailable email preference"
+msgstr "Service unavailable email preference"
+
+msgid "Service recovered email preference"
+msgstr "Service recovered email preference"
+
+msgid "Use global setting"
+msgstr "Use global setting"
+
+msgid "On"
+msgstr "On"
+
+msgid "Off"
+msgstr "Off"
+
+msgid "Save alert preferences"
+msgstr "Save alert preferences"
+
+msgid "Email delivery is disabled in Settings."
+msgstr "Email delivery is disabled in Settings."
+
+msgid "Unable to load alert preferences"
+msgstr "Unable to load alert preferences"
+
+msgid "Unable to save alert preferences"
+msgstr "Unable to save alert preferences"
+
+msgid "Alert preferences saved"
+msgstr "Alert preferences saved"

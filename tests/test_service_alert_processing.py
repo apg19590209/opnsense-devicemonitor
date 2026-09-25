@@ -76,6 +76,51 @@ def alert_config(**overrides):
     return config
 
 
+def test_per_device_service_alert_preferences():
+    module = load_module()
+    events = [
+        {'event_type': 'SERVICE_DISCOVERED', 'mac': 'aa:bb:cc:dd:ee:01',
+         'alert_eligible': True, 'in_scope': True, 'record_id': 1,
+         'source': 'device_services'},
+        {'event_type': 'SERVICE_UNAVAILABLE', 'mac': 'aa:bb:cc:dd:ee:02',
+         'alert_eligible': True, 'in_scope': True, 'record_id': 2,
+         'source': 'device_activity_events'},
+        {'event_type': 'SERVICE_AVAILABLE', 'mac': 'aa:bb:cc:dd:ee:03',
+         'alert_eligible': True, 'in_scope': True, 'record_id': 3,
+         'source': 'device_activity_events'},
+    ]
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / 'devices.db')
+        module.init_db()
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            conn.executemany(
+                'INSERT INTO device_alert_preferences '
+                '(mac, service_new, service_unavailable, service_recovered) '
+                'VALUES (?, ?, ?, ?)',
+                [('aa:bb:cc:dd:ee:01', 'off', 'inherit', 'inherit'),
+                 ('aa:bb:cc:dd:ee:02', 'inherit', 'on', 'inherit')],
+            )
+            conn.commit()
+            preferences = module.load_service_alert_preferences(conn, events)
+
+        selected = module.select_service_alert_events(
+            alert_config(service_email_enabled=False), events, preferences,
+        )
+        assert [e['record_id'] for e in selected] == [2]
+        assert module.select_service_alert_events(
+            alert_config(email_enabled=False), events, preferences,
+        ) == []
+        selected = module.select_service_alert_events(
+            alert_config(), events, preferences,
+        )
+        assert [e['record_id'] for e in selected] == [2, 3]
+        plan = module.plan_service_alert_cursor_advance(
+            events, selected, delivery_succeeded=False,
+        )
+        assert plan['device_services'] == 1  # suppressed event is consumed
+    print('SERVICE_DEVICE_PREFERENCES=PASS')
+
+
 def networks_fixture():
     return [{
         "name": "opt1",
@@ -577,6 +622,7 @@ def test_out_of_scope_events_do_not_starve_in_scope_alerts():
 
 
 def main():
+    test_per_device_service_alert_preferences()
     test_reader_filtering_and_global_gates()
     test_helper_invocation_contract()
     test_failure_retry_success_and_disabled_cursor_behavior()

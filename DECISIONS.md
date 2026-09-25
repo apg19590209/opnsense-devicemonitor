@@ -865,3 +865,23 @@ authoritative runtime or configuration evidence under Decisions 9 and 10.
 The normal top-ports scan can miss nonstandard TCP ports. A separately
 opted-in, single-host scan provides wider coverage without turning automatic
 infrastructure discovery into a network-wide Nmap sweep.
+
+## 31. Per-device service email preferences
+
+### Decision
+
+Device Details may save `inherit`, `on`, or `off` for each service email event
+type, keyed to the normalized MAC address. Existing devices inherit the
+global service category and event settings. Explicit `on` overrides the
+service category default, but never the global monitoring/email master
+switches or missing recipient. Explicit `off` suppresses that MAC's event.
+Events with no MAC use global defaults. Suppressed events still advance the
+service alert cursor, while selected events remain pending after failed
+delivery. Preferences survive lifecycle archival and are never inferred from
+Device Profile membership.
+
+### Reason
+
+An administrator can tune alerts for a known identity without changing
+alerts for every device. Global delivery and scoping remain authoritative,
+and suppressed history cannot unexpectedly replay when preferences change.

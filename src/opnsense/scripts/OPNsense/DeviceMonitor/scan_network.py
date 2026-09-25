@@ -423,6 +423,19 @@ def init_db():
         details TEXT DEFAULT NULL
     )''')
 
+    # Per-MAC service email preferences. Existing devices inherit the global
+    # category defaults until an administrator explicitly changes a value.
+    c.execute('''CREATE TABLE IF NOT EXISTS device_alert_preferences (
+        mac TEXT PRIMARY KEY,
+        service_new TEXT NOT NULL DEFAULT 'inherit'
+            CHECK(service_new IN ('inherit', 'on', 'off')),
+        service_unavailable TEXT NOT NULL DEFAULT 'inherit'
+            CHECK(service_unavailable IN ('inherit', 'on', 'off')),
+        service_recovered TEXT NOT NULL DEFAULT 'inherit'
+            CHECK(service_recovered IN ('inherit', 'on', 'off')),
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )''')
+
     c.execute('''
         CREATE INDEX IF NOT EXISTS idx_device_activity_events_mac_occurred
         ON device_activity_events(mac, occurred_at DESC)
@@ -5271,7 +5284,24 @@ def get_pending_service_alert_events(conn, networks, limit_per_source=200):
 
     return events
 
-def select_service_alert_events(config, events):
+def load_service_alert_preferences(conn, events):
+    """Fetch only preferences for MACs in this bounded event batch."""
+    macs = sorted({str(e.get('mac') or '').strip().lower()
+                   for e in events if e.get('mac')})
+    if not macs:
+        return {}
+    placeholders = ','.join('?' for _ in macs)
+    rows = conn.execute(
+        'SELECT mac, service_new, service_unavailable, service_recovered '
+        'FROM device_alert_preferences WHERE mac IN (' + placeholders + ')',
+        macs,
+    ).fetchall()
+    return {row[0]: dict(zip(
+        ('service_new', 'service_unavailable', 'service_recovered'), row[1:]
+    )) for row in rows}
+
+
+def select_service_alert_events(config, events, preferences=None):
     """
     Return trusted infrastructure-service events enabled for email delivery.
 
@@ -5281,29 +5311,33 @@ def select_service_alert_events(config, events):
     if not (
         config_bool(config.get('enabled', False))
         and config_bool(config.get('email_enabled', False))
-        and config_bool(config.get('service_email_enabled', False))
         and str(config.get('email_to') or '').strip()
     ):
         return []
 
-    enabled_types = {
-        'SERVICE_DISCOVERED': config_bool(
-            config.get('service_email_new', '1')
-        ),
-        'SERVICE_UNAVAILABLE': config_bool(
-            config.get('service_email_unavailable', '1')
-        ),
-        'SERVICE_AVAILABLE': config_bool(
-            config.get('service_email_recovered', '1')
-        ),
+    event_fields = {
+        'SERVICE_DISCOVERED': ('service_new', 'service_email_new'),
+        'SERVICE_UNAVAILABLE': ('service_unavailable', 'service_email_unavailable'),
+        'SERVICE_AVAILABLE': ('service_recovered', 'service_email_recovered'),
     }
-
-    return [
-        event for event in events
-        if event.get('alert_eligible')
-        and event.get('in_scope')
-        and enabled_types.get(event.get('event_type'), False)
-    ]
+    preferences = preferences or {}
+    selected = []
+    for event in events:
+        fields = event_fields.get(event.get('event_type'))
+        if not fields or not event.get('alert_eligible') or not event.get('in_scope'):
+            continue
+        field, global_field = fields
+        mac = str(event.get('mac') or '').strip().lower()
+        choice = preferences.get(mac, {}).get(field, 'inherit')
+        if choice == 'off':
+            continue
+        if choice == 'on' or (
+            choice == 'inherit'
+            and config_bool(config.get('service_email_enabled', False))
+            and config_bool(config.get(global_field, '1'))
+        ):
+            selected.append(event)
+    return selected
 
 
 def plan_service_alert_cursor_advance(
@@ -5566,13 +5600,14 @@ def process_service_alerts(config, networks):
         conn = sqlite3.connect(DB_FILE)
         try:
             events = get_pending_service_alert_events(conn, networks)
+            preferences = load_service_alert_preferences(conn, events)
         finally:
             conn.close()
 
         if not events:
             return True
 
-        selected = select_service_alert_events(config, events)
+        selected = select_service_alert_events(config, events, preferences)
         delivery_succeeded = False
 
         if selected:
