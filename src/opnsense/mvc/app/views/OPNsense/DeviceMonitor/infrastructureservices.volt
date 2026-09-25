@@ -313,7 +313,7 @@
 }
 
 .port-discovery-device-scroll {
-    max-height: 420px;
+    max-height: 65vh;
     overflow-y: auto;
 }
 
@@ -346,6 +346,7 @@
     position: sticky;
     top: 0;
     z-index: 2;
+    background-color: #fff;
 }
 
 .port-discovery-row-status {
