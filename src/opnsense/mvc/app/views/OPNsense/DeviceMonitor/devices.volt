@@ -888,15 +888,38 @@ $(document).ready(function() {
     }
 
     // Load data
-    function loadDevices() {
+    function loadDevices(preserveKeyboardFocus) {
         $.ajax({url:'/api/devicemonitor/devices/search',type:'POST',
             data:{rowCount:-1,current:1,searchPhrase:''},
             success:function(data){
+                // Only the timer restores focus. User-initiated filtering must
+                // never move it, but replacing a focused row during a refresh
+                // would otherwise strand keyboard users at the page body.
+                var focused = preserveKeyboardFocus
+                    ? document.activeElement : null;
+                var focusedHref = focused && focused.closest('#grid-devices tbody') &&
+                    focused.matches('a[href]')
+                    ? focused.getAttribute('href') : null;
+                var focusedMac = focused && focused.closest('#grid-devices tbody') &&
+                    focused.matches('button[data-row-mac]')
+                    ? focused.getAttribute('data-row-mac') : null;
+                var focusedClass = focusedMac &&
+                    ['command-check', 'command-nmap', 'command-delete']
+                        .filter(function(name){ return focused.classList.contains(name); })[0];
                 allRows = data.rows||[];
                 var vlans={};
                 allRows.forEach(function(r){ if(r.vlan) vlans[r.vlan]=1; });
                 buildVlanDropdown(Object.keys(vlans));
                 applyFilters();
+                var replacement = focusedHref
+                    ? $('#grid-devices tbody a[href]').filter(function(){
+                        return this.getAttribute('href') === focusedHref;
+                    })[0]
+                    : focusedClass
+                    ? $('#grid-devices tbody button.' + focusedClass).filter(function(){
+                        return this.getAttribute('data-row-mac') === focusedMac;
+                    })[0] : null;
+                if (replacement) replacement.focus({preventScroll:true});
             }
         });
     }
@@ -1234,6 +1257,6 @@ $(document).ready(function() {
         success:function(data){ vlanNames=data||{}; loadDevices(); },
         error:function(){ loadDevices(); }
     });
-    setInterval(function(){ loadDevices(); },30000);
+    setInterval(function(){ loadDevices(true); },30000);
 });
 </script>
