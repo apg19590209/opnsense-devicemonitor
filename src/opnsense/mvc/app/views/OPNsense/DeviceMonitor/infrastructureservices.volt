@@ -565,6 +565,24 @@ header.page-content-head {
     position: sticky;
     z-index: 10;
 }
+
+@media (max-width: 1100px) {
+    #infrastructure-recent-changes {
+        overflow: auto;
+        max-height: min(65vh, 620px);
+    }
+
+    .infrastructure-recent-table {
+        min-width: 1050px;
+    }
+
+    .infrastructure-recent-table thead th {
+        position: sticky;
+        top: 0 !important;
+        z-index: 3;
+        background: #fff;
+    }
+}
 </style>
 
 <script>

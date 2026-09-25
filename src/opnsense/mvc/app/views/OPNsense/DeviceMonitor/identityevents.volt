@@ -172,6 +172,24 @@
     overflow: visible;
 }
 
+@media (max-width: 1100px) {
+    #identity-events-scroll {
+        overflow: auto;
+        max-height: min(65vh, 620px);
+    }
+
+    #grid-identity-events {
+        min-width: 1000px;
+    }
+
+    #grid-identity-events thead th {
+        position: sticky;
+        top: 0 !important;
+        z-index: 3;
+        background: #fff;
+    }
+}
+
 #grid-identity-events {
     margin-bottom: 0;
 }

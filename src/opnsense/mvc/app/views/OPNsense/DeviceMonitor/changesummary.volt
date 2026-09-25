@@ -245,6 +245,24 @@
     overflow: visible;
 }
 
+@media (max-width: 1100px) {
+    .table-responsive.change-summary-table-wrap {
+        overflow: auto;
+        max-height: min(65vh, 620px);
+    }
+
+    #grid-change-summary {
+        min-width: 1050px;
+    }
+
+    #grid-change-summary thead th {
+        position: sticky;
+        top: 0 !important;
+        z-index: 3;
+        background: #fff;
+    }
+}
+
 /* Unified opaque sticky controls block (panel title + toolbar + custom-range +
    fallback notice + summary counters). Its top and opaque background are
    assigned by updateChangeSummaryStickyStack(). */
