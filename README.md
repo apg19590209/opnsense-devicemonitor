@@ -728,25 +728,3 @@ service configd restart
 ## Licence
 
 BSD 2-Clause License — see [LICENSE](LICENSE)
-
-# ============================================
-# [scanhistory.volt] Nmap scan history page
-# ============================================
-
-msgid "Nmap Scan History"
-msgstr "Nmap Scan History"
-
-msgid "Refresh scan history"
-msgstr "Refresh scan history"
-
-msgid "Rows"
-msgstr "Rows"
-
-msgid "Started"
-msgstr "Started"
-
-msgid "Finished"
-msgstr "Finished"
-
-msgid "Error"
-msgstr "Error"
