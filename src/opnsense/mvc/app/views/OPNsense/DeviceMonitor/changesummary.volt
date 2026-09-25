@@ -252,7 +252,21 @@
     }
 
     #grid-change-summary {
-        min-width: 1050px;
+        min-width: 1200px;
+    }
+
+    #grid-change-summary th:nth-child(7),
+    #grid-change-summary td:nth-child(7) {
+        min-width: 110px;
+        white-space: nowrap;
+    }
+
+    .change-summary-sticky-controls {
+        position: static !important;
+    }
+
+    .change-summary-sticky-controls::before {
+        display: none;
     }
 
     #grid-change-summary thead th {
