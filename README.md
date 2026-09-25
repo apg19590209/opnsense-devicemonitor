@@ -40,6 +40,9 @@ The plugin automatically monitors the network and alerts you about:
 
 ### v2.9 (September 2026) — Fail-closed monitored-interface scoping
 
+- Adds opt-in, single-host full TCP Port Discovery (1–65535) with bounded scans, per-device weekly selection, searchable scan history and service archiving. UDP ports are not scanned.
+- Keeps table headers readable and scrollable at narrow widths, and preserves keyboard focus during Devices refresh.
+
 - Adds **Monitored Interfaces**: discovery, priming, status counters, notifications and targeted scans are scoped to the explicitly selected interfaces; an empty selection fails closed (nothing is scanned).
 - Supersedes LAN-only Hostwatch priming with selected-interface/subnet priming.
 - Prevents targeted-scan starvation: out-of-scope queued scans no longer consume the in-scope batch limit.
@@ -302,32 +305,37 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 
 ## Installation
 
-### Method 1: Download release ZIP + WinSCP
+### Method 1: Download runtime package + WinSCP
 
-1. Download the **v2.8 source code (zip)** from:
-   https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.8.zip
+1. Download the **v2.9 runtime package** from the v2.9 GitHub release assets.
 2. Enable SSH in OPNsense: **System -> Settings -> Administration -> Secure Shell -> Enable**.
-3. Upload the ZIP to `/tmp/` using WinSCP.
+3. Upload `dm-v2.9-runtime.tar.gz` to `/tmp/` using WinSCP.
 4. Connect by SSH and install:
 
 ```sh
 cd /tmp
-unzip opnsense-devicemonitor-2.8.zip
-cd opnsense-devicemonitor-2.8
-sh install.sh
+mkdir dm-v2.9
+tar -xzf dm-v2.9-runtime.tar.gz -C dm-v2.9
+cd dm-v2.9
+sh install.sh --host YOUR-FIREWALL-HOSTNAME
 ```
 
-No reboot is normally required.
+Replace `YOUR-FIREWALL-HOSTNAME` with the exact output of `/bin/hostname`. The
+installer checks the host, source, dependencies and predecessor before changing
+installed files. For a dry run, add `--check`. No reboot is normally required; installation restarts
+`configd` and restarts Device Monitor only if it was already running (a fresh
+installation starts the daemon with monitoring disabled by default).
 
 ### Method 2: Direct SSH
 
 ```sh
 ssh root@your.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.8.zip
-unzip v2.8.zip
-cd opnsense-devicemonitor-2.8
-sh install.sh
+fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.9/dm-v2.9-runtime.tar.gz
+mkdir dm-v2.9
+tar -xzf dm-v2.9-runtime.tar.gz -C dm-v2.9
+cd dm-v2.9
+sh install.sh --host YOUR-FIREWALL-HOSTNAME
 ```
 
 ### Upgrading an existing installation
@@ -338,7 +346,9 @@ Before upgrading, back up the runtime data:
 tar -czf /root/devicemonitor-backup.tgz /var/db/devicemonitor
 ```
 
-Then install v2.8 using either method above.
+Then install v2.9 using either method above. The installer validates the host,
+source and dependencies before modifying files, and retains a rollback backup.
+It aborts on failed checks instead of continuing with a partial installation.
 
 Existing configuration and device data are preserved during the upgrade.
 
@@ -679,7 +689,7 @@ This removes all files, stops the daemon, disables autostart, and clears caches.
 sh uninstall.sh --silent
 ```
 
-Used internally by `install.sh` during upgrades. Removes all files but keeps the database.
+The v2.9 installer upgrades files in place and does not invoke the uninstaller.
 
 ### Method 3: Manual
 

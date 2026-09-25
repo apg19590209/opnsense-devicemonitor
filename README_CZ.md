@@ -45,6 +45,9 @@ Plugin automaticky sleduje síť a upozorňuje na:
 - Zabraňuje hladovění cílených skenů: fronta mimo rozsah už nespotřebovává limit dávky v rozsahu.
 - Opravuje čítače v hlavičce stránky Devices, aby **Total Devices** a **Online** odpovídaly filtrovaným řádkům.
 
+- Přidáno volitelné skenování všech TCP portů vybraného zařízení, týdenní plán, historie skenů a archivace služeb. UDP porty se neskenují.
+- Opraveno zobrazení tabulek na užších obrazovkách a zachování zaměření klávesnice při obnovení stránky Zařízení.
+
 ### v2.8 (září 2026) — Infrastrukturní služby a vylepšení identity zařízení
 
 - Přidává samostatný inventář **Infrastructure Services** s ověřenou detekcí služeb DHCP, DNS, NTP, SSH, Web/Admin, SMB/NFS, vzdáleného přístupu, SNMP, adresářových/autentizačních služeb a VPN.
@@ -303,24 +306,25 @@ Také odstraněno rozbité `configctl webgui restart` a `service php-fpm restart
 
 ### Metoda 1: WinSCP + SSH (doporučeno)
 
-**Krok 1:** Stáhni zdrojový ZIP **v2.8** z `https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.8.zip`.
+**Krok 1:** Stáhni balíček `dm-v2.9-runtime.tar.gz` z příloh vydání v2.9 na GitHubu.
 
 **Krok 2:** Povol SSH na OPNsense:
 ```
 System → Settings → Administration → Secure Shell → Enable
 ```
 
-**Krok 3:** Nahraj přes WinSCP do `/tmp/` na OPNsense.
+**Krok 3:** Nahraj balíček přes WinSCP do `/tmp/` na OPNsense.
 
 **Krok 4:** Připoj se přes SSH a nainstaluj:
 ```bash
 cd /tmp
-unzip opnsense-devicemonitor-2.8.zip
-cd opnsense-devicemonitor-2.8
-sh install.sh
+mkdir dm-v2.9
+tar -xzf dm-v2.9-runtime.tar.gz -C dm-v2.9
+cd dm-v2.9
+sh install.sh --host NAZEV-VASEHO-FIREWALLU
 ```
 
-Restart není potřeba. Instalační skript se postará o vše.
+Restart firewallu není potřeba. Instalátor restartuje `configd` a již běžící daemon Device Monitor.
 
 ---
 
@@ -329,26 +333,24 @@ Restart není potřeba. Instalační skript se postará o vše.
 ```bash
 ssh root@tvoje.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/archive/refs/tags/v2.8.zip
-unzip v2.8.zip
-cd opnsense-devicemonitor-2.8
-sh install.sh
+fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.9/dm-v2.9-runtime.tar.gz
+mkdir dm-v2.9
+tar -xzf dm-v2.9-runtime.tar.gz -C dm-v2.9
+cd dm-v2.9
+sh install.sh --host NAZEV-VASEHO-FIREWALLU
 ```
 
 ---
 
 ### Co dělá install.sh
 
-1. Zkontroluje verzi OPNsense (minimum 26.1.5)
-2. Spustí `uninstall.sh --silent` pokud je detekována stará instalace (zachová databázi)
-3. Vytvoří všechny potřebné adresáře
-4. Zkopíruje RC skript a zaregistruje službu v `plugins.inc.d`
-5. Nainstaluje dashboard widget
-6. Zkompiluje překladové soubory
-7. Zkopíruje MVC controllery, modely, views
-8. Zkopíruje Python, shell a PHP skripty
-9. Zkopíruje configd akce
-10. Zabije zombie procesy daemona, spustí čerstvou instanci přes `configctl devicemonitor start`
+Zadej přesný výstup `/bin/hostname` místo `NAZEV-VASEHO-FIREWALLU`.
+`--check` provede kontrolu bez změny instalace. Skript ověří hostitele,
+verzi, závislosti, zdrojové soubory a stávající data; vytvoří trvalou zálohu
+souborů a SQLite databáze, ověřuje kontrolní součty a při chybě vrací
+původní soubory. Neodinstaluje předchozí verzi a nemaže data.
+Restartuje `configd`; již běžící daemon Device Monitor restartuje.
+Při nové instalaci daemon spustí, ale monitorování je ve výchozím stavu vypnuté.
 
 ---
 
@@ -647,7 +649,7 @@ Odstraní všechny soubory, zastaví daemon, vypne autostart a vyčistí cache. 
 sh uninstall.sh --silent
 ```
 
-Používá interně `install.sh` při upgrade. Odstraní všechny soubory, ale zachová databázi.
+Instalační program v2.9 aktualizuje soubory na místě a nevolá odinstalační program.
 
 ### Metoda 3: Ruční
 

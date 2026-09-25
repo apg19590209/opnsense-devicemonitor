@@ -48,6 +48,8 @@ jobs:
         run: |
           set -eu
           sh -n install.sh
+          sh -n install-unattended.sh
+          python3 tests/test_release_manifest.py
           sh -n uninstall.sh
           sh -n src/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
 

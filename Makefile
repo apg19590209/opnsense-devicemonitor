@@ -21,9 +21,9 @@ help:
 	@echo "$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
 	@echo ""
 	@echo "$(GREEN)Installation:$(NC)"
-	@echo "  make install      - Install plugin"
+	@echo "  make install TARGET_HOST=firewall.example - Guarded installation"
 	@echo "  make uninstall    - Uninstall plugin"
-	@echo "  make reinstall    - Reinstall plugin (uninstall + install)"
+	@echo "  make reinstall TARGET_HOST=firewall.example - Guarded installation"
 	@echo ""
 	@echo "$(GREEN)Daemon:$(NC)"
 	@echo "  make start        - Start daemon"
@@ -46,15 +46,9 @@ help:
 install:
 	@echo "$(GREEN)Installing Device Monitor...$(NC)"
 	@test -f install.sh || { echo "$(RED)ERROR: install.sh not found!$(NC)"; exit 1; }
-	@chmod +x install.sh
-	@./install.sh
+	@test -n "$(TARGET_HOST)" || { echo "ERROR: TARGET_HOST required"; exit 1; }
+	@/bin/sh install.sh --host '$(TARGET_HOST)'
 	@echo "$(GREEN)Installation complete$(NC)"
-
-	# Helper scripts for configd
-	install -m 0755 src/opnsense/scripts/OPNsense/DeviceMonitor/notify_email.php \
-		$(DESTDIR)/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/
-	install -m 0755 src/opnsense/scripts/OPNsense/DeviceMonitor/notify_webhook.php \
-		$(DESTDIR)/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/
 
 uninstall:
 	@echo "$(YELLOW)Uninstalling Device Monitor...$(NC)"
@@ -63,10 +57,7 @@ uninstall:
 	@./uninstall.sh
 	@echo "$(YELLOW)Uninstall complete$(NC)"
 
-reinstall: uninstall
-	@echo "$(BLUE)Waiting 3 seconds...$(NC)"
-	@sleep 3
-	@$(MAKE) install
+reinstall: install
 
 start:
 	@echo "$(GREEN)Starting daemon...$(NC)"
