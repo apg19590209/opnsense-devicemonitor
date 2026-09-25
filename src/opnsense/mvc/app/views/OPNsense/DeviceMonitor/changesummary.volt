@@ -245,7 +245,7 @@
     overflow: visible;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1400px) {
     .table-responsive.change-summary-table-wrap {
         overflow: auto;
         max-height: min(65vh, 620px);
