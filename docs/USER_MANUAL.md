@@ -2,7 +2,7 @@
 
 This manual describes every user-facing function in the Device Monitor plugin for OPNsense.
 It is written for an OPNsense administrator and describes only functionality that is
-actually implemented in the current release (`v2.9-development`). Internal details are
+actually implemented in the current release (`v2.9`). Internal details are
 included only where they help explain observable behaviour.
 
 > **Conventions.** Actions that only *view* data are marked **Read-only**. Actions that

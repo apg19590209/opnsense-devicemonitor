@@ -9,16 +9,26 @@ Branch: `v2.9-development`
 Authoritative development checkout: `/root/src/opnsense-devicemonitor-upstream`
 (FreeBSD 15.1-RELEASE amd64; OPNsense testbed host `192.168.20.23`)
 
-Latest Device Monitor implementation commit: `4ef94e4` — `Device Monitor: keep port table header opaque and height responsive` on `feature/targeted-port-discovery`.
+Latest released implementation commit: `96cdd464640af6449afb1aa75c4aa193bc93f2ee` — `Release Device Monitor v2.9 with guarded installer`.
 
 Status:
 
+- GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
+- The final v2.9 runtime package was installed and hash-verified on the testbed on 25 September 2026; the authoritative source checkout was fast-forwarded to the released development commit.
+- Production has the previously accepted feature/runtime changes but has not been installed or verified against the final v2.9 package and metadata.
 - v2.9 was promoted to production; see the historical section
-  "## v2.9 production promotion".
+  "## v2.9 production promotion" for the earlier release-candidate promotion.
 - The post-v2.9 changes through DM-STICKY2F were promoted to production on 24 September 2026. The installed scope includes the guarded interface scoping and loopback exclusions as well as the UI changes.
 - Targeted TCP Port Discovery, service archiving, responsive tables and the Devices refresh focus fix were promoted to production on 25 September 2026 (see below).
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
+
+## 25 September 2026 v2.9 GitHub release
+
+- Annotated tag `v2.9` points to `96cdd464640af6449afb1aa75c4aa193bc93f2ee`; feature and development CI runs succeeded.
+- The release asset contains 37 allowlisted runtime sources, two installer scripts and a SHA256 manifest; gettext `.mo` files are compiled during installation. It excludes the live database, configuration, credentials and backups.
+- Final package: testbed preflight and guarded install passed, with 39 target hashes verified and a rollback backup retained on the testbed. `configd` and the Device Monitor daemon restarted. The gettext catalogues compiled without warnings.
+- Production was not contacted during this release preparation. Its final-package parity and installation remain outstanding.
 
 Environment: native FreeBSD toolchain (`/bin/sh`, `/usr/local/bin/bash`, git,
 php, python3); GitHub CLI (`gh`) authenticated as `apg19590209`; SSH via
