@@ -2,21 +2,21 @@
 
 ## Current state
 
-Last updated: 23 September 2026
+Last updated: 25 September 2026
 
 Branch: `v2.9-development`
 
 Authoritative development checkout: `/root/src/opnsense-devicemonitor-upstream`
 (FreeBSD 15.1-RELEASE amd64; OPNsense testbed host `192.168.20.23`)
 
-Latest Device Monitor implementation commit: `b1383a4` — `Device Monitor: clarify empty VLAN selection and stabilise
-sticky offsets` (DM-STICKY2F)
+Latest Device Monitor implementation commit: `9fe0265` — `Device Monitor: preserve keyboard focus across device refresh` on `feature/targeted-port-discovery`.
 
 Status:
 
 - v2.9 was promoted to production; see the historical section
   "## v2.9 production promotion".
 - The post-v2.9 changes through DM-STICKY2F were promoted to production on 24 September 2026. The installed scope includes the guarded interface scoping and loopback exclusions as well as the UI changes.
+- Targeted TCP Port Discovery, service archiving, responsive tables and the Devices refresh focus fix were promoted to production on 25 September 2026 (see below).
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
 
@@ -25,6 +25,14 @@ php, python3); GitHub CLI (`gh`) authenticated as `apg19590209`; SSH via
 `ssh opnsense-dm`. Workstation-local access rules remain in the untracked
 `.clinerules/90-local-remote-access.md` (never committed). Production
 `192.168.20.254` is never targeted without explicit authorisation.
+
+## 25 September 2026 production promotion
+
+- Feature branch: `feature/targeted-port-discovery` at `9fe0265863beb5ebe1d9c9516a29afb75b011985`.
+- Installed nine runtime files and two compiled gettext catalogues on `OPNsense.home.arpa` (`192.168.20.254`): Port Discovery, service archiving, responsive Infrastructure Services/Change Summary/IP & MAC Conflicts tables, and the Devices keyboard-focus fix.
+- Guarded predecessor and candidate hashes, retained file and online SQLite rollback backup at `/var/backups/devicemonitor/prod-port.SGfYgq` (`devices.db` SHA256 `08fdb066c24ec7875374e00256be2d0d7ec4c843b809cc7cd7bd6e61a27f8592`). Menu and affected Volt caches invalidated. Existing Device Monitor daemon restarted to load opt-in scheduled scanning; no scan was requested by the deployment.
+- Post-install: 11 file hashes, PHP/Python syntax, daemon presence and SQLite `quick_check` passed. Authenticated Firefox smoke checks at 1280 px passed for Devices, Change Summary, IP & MAC Conflicts, Infrastructure Services and Port Discovery (HTTP 200, no page overflow or JavaScript errors). The 1024/1280 Change Summary scroll and sticky checks had passed on the testbed.
+- Next step: retain rollback backups while observing normal monitoring and complete authenticated production visual acceptance.
 
 ## 24 September 2026 production promotion
 
