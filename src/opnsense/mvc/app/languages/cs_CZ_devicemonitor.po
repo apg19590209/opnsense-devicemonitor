@@ -7,7 +7,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Device Monitor 2.9\n"
+"Project-Id-Version: Device Monitor 2.10\n"
 "POT-Creation-Date: 2026-04-10 00:00+0000\n"
 "PO-Revision-Date: 2026-04-10 00:00+0100\n"
 "Last-Translator: Device Monitor contributors\n"
@@ -324,9 +324,9 @@ msgstr "Autor"
 msgid "GitHub Repository"
 msgstr "GitHub repozitář"
 
-#: settings.volt - v2.9 features heading
-msgid "v2.9 Features and Enhancements"
-msgstr "Funkce a vylepšení v2.9"
+#: settings.volt - v2.10 features heading
+msgid "v2.10 Features and Enhancements"
+msgstr "Funkce a vylepšení v2.10"
 
 #: settings.volt - tab 4: tabulka info - položka
 msgid "Licence"

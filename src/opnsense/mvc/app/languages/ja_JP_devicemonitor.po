@@ -1,4 +1,5 @@
-# Device Monitor Plugin - Translations en_US
+# Device Monitor Plugin - Translations ja_JP
+# NOTE: Machine-translated by an LLM; native-speaker review and corrections are welcome.
 # Copyright (C) 2026 Hacesoft
 #
 # NOTE: #: comments show where the text is used in code.
@@ -11,8 +12,8 @@ msgstr ""
 "POT-Creation-Date: 2026-04-10 00:00+0000\n"
 "PO-Revision-Date: 2026-04-10 00:00+0000\n"
 "Last-Translator: Device Monitor contributors\n"
-"Language-Team: English\n"
-"Language: en_US\n"
+"Language-Team: Japanese\n"
+"Language: ja_JP\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -24,27 +25,27 @@ msgstr ""
 
 #: Menu.xml - plugin menu name
 msgid "Device Monitor"
-msgstr "Device Monitor"
+msgstr "デバイス監視"
 
 #: Menu.xml - menu item
 msgid "Devices"
-msgstr "Devices"
+msgstr "デバイス"
 
 #: devices.volt / physicaldevices.volt - navigation tabs
 msgid "Network Identities"
-msgstr "Network Identities"
+msgstr "ネットワークID"
 
 #: devices.volt - navigation explanatory text
 msgid "Automatically discovered network identities. Each row represents one MAC address."
-msgstr "Automatically discovered network identities. Each row represents one MAC address."
+msgstr "自動検出されたネットワークID。各行は1つのMACアドレスを表します。"
 
 #: physicaldevices.volt - navigation explanatory text
 msgid "Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters."
-msgstr "Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters."
+msgstr "有線およびWi-Fiアダプターなど、1つ以上のネットワークIDにリンクされた実デバイス。"
 
 #: Menu.xml - menu item | settings.volt - page title
 msgid "Settings"
-msgstr "Settings"
+msgstr "設定"
 
 
 # ============================================
@@ -53,55 +54,55 @@ msgstr "Settings"
 
 #: devices.volt - header stats
 msgid "Total Identities"
-msgstr "Total Identities"
+msgstr "IDの合計"
 
 #: devices.volt - header stats (green)
 msgid "Online"
-msgstr "Online"
+msgstr "オンライン"
 
 #: devices.volt - VLAN dropdown - all VLANs option
 msgid "All VLANs"
-msgstr "All VLANs"
+msgstr "すべてのVLAN"
 
 #: devices.volt - VLAN filter apply button
 msgid "Apply VLAN Filter"
-msgstr "Apply VLAN Filter"
+msgstr "VLANフィルターを適用"
 
 #: devices.volt - VLAN filter pending indicator
 msgid "Not applied"
-msgstr "Not applied"
+msgstr "未適用"
 
 #: devices.volt - VLAN dropdown - empty selection prompt
 msgid "Select a VLAN"
-msgstr "Select a VLAN"
+msgstr "VLANを選択"
 
 #: devices.volt - status dropdown - all statuses option
 msgid "All statuses"
-msgstr "All statuses"
+msgstr "すべての状態"
 
 #: devices.volt - refresh button title
 msgid "Refresh"
-msgstr "Refresh"
+msgstr "更新"
 
 #: devices.volt - clear database button
 msgid "Clear Database"
-msgstr "Clear Database"
+msgstr "データベースを消去"
 
 #: devices.volt - table column header
 msgid "MAC Address"
-msgstr "MAC Address"
+msgstr "MACアドレス"
 
 #: devices.volt - table column header
 msgid "IP Address"
-msgstr "IP Address"
+msgstr "IPアドレス"
 
 #: devices.volt - table column header
 msgid "Hostname"
-msgstr "Hostname"
+msgstr "ホスト名"
 
 #: devices.volt - table column header
 msgid "Vendor"
-msgstr "Vendor"
+msgstr "ベンダー"
 
 #: devices.volt - table column header
 msgid "VLAN"
@@ -109,47 +110,47 @@ msgstr "VLAN"
 
 #: devices.volt - table column header
 msgid "Last Seen"
-msgstr "Last Seen"
+msgstr "最終確認"
 
 #: devices.volt - table column header
 msgid "Actions"
-msgstr "Actions"
+msgstr "操作"
 
 #: devices.volt - confirm dialogue when deleting a device
 msgid "Delete device"
-msgstr "Delete device"
+msgstr "デバイスを削除"
 
 #: devices.volt - confirm dialogue when clearing entire DB
 msgid "Really delete all devices from database?"
-msgstr "Really delete all devices from database?"
+msgstr "データベースからすべてのデバイスを本当に削除しますか?"
 
 #: devices.volt - toast message after device deletion
 msgid "Device deleted"
-msgstr "Device deleted"
+msgstr "デバイスを削除しました"
 
 #: devices.volt - toast message on deletion error
 msgid "Error deleting device"
-msgstr "Error deleting device"
+msgstr "デバイスの削除エラー"
 
 #: devices.volt - toast message after clearing DB
 msgid "Database cleared"
-msgstr "Database cleared"
+msgstr "データベースを消去しました"
 
 #: devices.volt - toast message on clear DB error
 msgid "Error clearing database"
-msgstr "Error clearing database"
+msgstr "データベースの消去エラー"
 
 #: devices.volt - friendly-name column
 msgid "Friendly Name"
-msgstr "Friendly Name"
+msgstr "表示名"
 
 #: devices.volt - toast after successful friendly-name save
 msgid "Friendly name saved"
-msgstr "Friendly name saved"
+msgstr "表示名を保存しました"
 
 #: devices.volt - toast on friendly-name save error
 msgid "Error saving friendly name"
-msgstr "Error saving friendly name"
+msgstr "表示名の保存エラー"
 
 
 # ============================================
@@ -159,67 +160,67 @@ msgstr "Error saving friendly name"
 
 #: settings.volt - tab 1 label
 msgid "Email Notifications"
-msgstr "Email Notifications"
+msgstr "メール通知"
 
 #: settings.volt - tab 2 label
 msgid "Webhook Notifications"
-msgstr "Webhook Notifications"
+msgstr "Webhook通知"
 
 #: settings.volt - tab 3 label
 msgid "Other Settings"
-msgstr "Other Settings"
+msgstr "その他の設定"
 
 #: settings.volt - tab 4 label
 msgid "About"
-msgstr "About"
+msgstr "情報"
 
 #: settings.volt - tab 1 info text (localized)
 msgid "Configure email notifications for new devices on the network"
-msgstr "Configure email notifications for new devices on the network"
+msgstr "ネットワーク上の新しいデバイスに対するメール通知を設定"
 
 #: settings.volt - tab 2 info text
 msgid "Configure webhook notifications for new devices on the network"
-msgstr "Configure webhook notifications for new devices on the network"
+msgstr "ネットワーク上の新しいデバイスに対するWebhook通知を設定"
 
 #: settings.volt - tab 1: checkbox label
 msgid "Enable Email"
-msgstr "Enable Email"
+msgstr "メールを有効化"
 
 #: settings.volt - tab 1: email recipient label
 msgid "Email Recipient"
-msgstr "Email Recipient"
+msgstr "メール受信者"
 
 #: settings.volt - tab 1: help text below email recipient field
 msgid "Where to send notifications"
-msgstr "Where to send notifications"
+msgstr "通知の送信先"
 
 #: settings.volt - tab 1: email sender label
 msgid "Email Sender"
-msgstr "Email Sender"
+msgstr "メール送信者"
 
 #: settings.volt - tab 1: help text below email sender field
 msgid "From address"
-msgstr "From address"
+msgstr "差出人アドレス"
 
 #: settings.volt - tab 1: SMTP warning heading
 msgid "Important - SMTP Configuration"
-msgstr "Important - SMTP Configuration"
+msgstr "重要 - SMTP設定"
 
 #: settings.volt - tab 1: SMTP warning text (with HTML tag)
 msgid "Plugin uses <strong>sendmail (Postfix)</strong> to send emails"
-msgstr "Plugin uses <strong>sendmail (Postfix)</strong> to send emails"
+msgstr "プラグインは<strong>sendmail (Postfix)</strong>を使用してメールを送信します"
 
 #: settings.volt - tab 1: SMTP warning text (with HTML and path)
 msgid "Must be configured in: <strong>System > Settings > Notifications > SMTP</strong>"
-msgstr "Must be configured in: <strong>System > Settings > Notifications > SMTP</strong>"
+msgstr "設定が必要: <strong>システム > 設定 > 通知 > SMTP</strong>"
 
 #: settings.volt - tab 1: test email button
 msgid "Test Email"
-msgstr "Test Email"
+msgstr "テストメール"
 
 #: settings.volt - tab 2: checkbox label
 msgid "Enable Webhook"
-msgstr "Enable Webhook"
+msgstr "Webhookを有効化"
 
 #: settings.volt - tab 2: webhook URL label
 msgid "Webhook URL"
@@ -227,788 +228,788 @@ msgstr "Webhook URL"
 
 #: settings.volt - tab 2: test webhook button
 msgid "Send Test"
-msgstr "Send Test"
+msgstr "テストを送信"
 
 #: settings.volt - tab 1+2: VLAN notification filter label
 msgid "Notify for interfaces"
-msgstr "Notify for interfaces"
+msgstr "通知するインターフェース"
 
 #: settings.volt - tab 1+2: help text below VLAN filter
 msgid "Leave empty to receive notifications from all interfaces"
-msgstr "Leave empty to receive notifications from all interfaces"
+msgstr "すべてのインターフェースから通知を受け取るには空のままにします"
 
 #: settings.volt - tab 1+2: shown when no interfaces loaded
 msgid "No interfaces found"
-msgstr "No interfaces found"
+msgstr "インターフェースが見つかりません"
 
 #: settings.volt - tab 3: checkbox label
 msgid "Enable Monitoring"
-msgstr "Enable Monitoring"
+msgstr "監視を有効化"
 
 #: settings.volt - tab 3: help text next to monitoring checkbox
 msgid "Enable automatic network monitoring"
-msgstr "Enable automatic network monitoring"
+msgstr "自動ネットワーク監視を有効化"
 
 #: settings.volt - tab 3: scan interval label
 msgid "Scan Interval"
-msgstr "Scan Interval"
+msgstr "スキャン間隔"
 
 #: settings.volt - tab 3: unit label after interval input
 msgid "seconds"
-msgstr "seconds"
+msgstr "秒"
 
 #: settings.volt - tab 3: help text below interval input
 msgid "Seconds between scans (60-3600)"
-msgstr "Seconds between scans (60-3600)"
+msgstr "スキャン間隔の秒数 (60-3600)"
 
 #: settings.volt - tab 3: monitored interfaces label
 msgid "Monitored Interfaces"
-msgstr "Monitored Interfaces"
+msgstr "監視対象インターフェース"
 
 #: settings.volt - tab 3: monitored interfaces help
 msgid "Only devices on selected interfaces are scanned. With no selection, scanning is refused."
-msgstr "Only devices on selected interfaces are scanned. With no selection, scanning is refused."
+msgstr "選択したインターフェース上のデバイスのみがスキャンされます。選択がない場合、スキャンは拒否されます。"
 
 #: settings.volt - tab 3: monitored interfaces fail-closed warning
 msgid "Monitoring is enabled but no interface is selected. Scans will be refused."
-msgstr "Monitoring is enabled but no interface is selected. Scans will be refused."
+msgstr "監視は有効ですが、インターフェースが選択されていません。スキャンは拒否されます。"
 
 #: settings.volt - tab 3: shown when no enabled IPv4 interfaces
 msgid "No enabled IPv4 interfaces found"
-msgstr "No enabled IPv4 interfaces found"
+msgstr "有効なIPv4インターフェースが見つかりません"
 
 #: settings.volt - Monitoring: hostname enrichment providers (Pi-hole / Unbound)
 msgid "Pi-hole Hostnames"
-msgstr "Pi-hole Hostnames"
+msgstr "Pi-holeホスト名"
 
 msgid "Unbound Hostnames"
-msgstr "Unbound Hostnames"
+msgstr "Unboundホスト名"
 
 msgid "Experimental"
-msgstr "Experimental"
+msgstr "実験的"
 
 msgid "Enable Pi-hole hostname enrichment"
-msgstr "Enable Pi-hole hostname enrichment"
+msgstr "Pi-holeホスト名エンリッチメントを有効化"
 
 msgid "Enable Unbound hostname enrichment"
-msgstr "Enable Unbound hostname enrichment"
+msgstr "Unboundホスト名エンリッチメントを有効化"
 
 msgid "Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default."
-msgstr "Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default."
+msgstr "Pi-hole v6 DHCPリースをホスト名ソースとして使用します。Pi-hole v6、HTTPS、アプリパスワードが必要です。デフォルトでは無効です。"
 
 msgid "Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default."
-msgstr "Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default."
+msgstr "ローカルOPNsense Unboundのホストオーバーライドとホストエイリアスのみを読み取ります。ネットワーククエリは実行されません。デフォルトでは無効です。"
 
 msgid "Pi-hole URL"
 msgstr "Pi-hole URL"
 
 msgid "HTTPS base URL of your Pi-hole server"
-msgstr "HTTPS base URL of your Pi-hole server"
+msgstr "Pi-holeサーバーのHTTPSベースURL"
 
 msgid "App password"
-msgstr "App password"
+msgstr "アプリパスワード"
 
 msgid "Pi-hole app password generated in the Pi-hole web interface"
-msgstr "Pi-hole app password generated in the Pi-hole web interface"
+msgstr "Pi-hole Webインターフェースで生成されたPi-holeアプリパスワード"
 
 #: settings.volt - tab 4: plugin description
 msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
-msgstr "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
+msgstr "ネットワークデバイスの監視、IP/MACアドレス競合の検出、インフラサービスの発見、標的型セキュリティスキャンの実行、ネイティブhostwatchデータを使用した設定可能なアラート送信を行うOPNsenseプラグイン。"
 
 #: settings.volt - tab 4: info table row
 msgid "Author"
-msgstr "Author"
+msgstr "作者"
 
 #: settings.volt - tab 4: info table row
 msgid "GitHub Repository"
-msgstr "GitHub Repository"
+msgstr "GitHubリポジトリ"
 
 #: settings.volt - v2.10 features heading
 msgid "v2.10 Features and Enhancements"
-msgstr "v2.10 Features and Enhancements"
+msgstr "v2.10の機能と改善点"
 
 #: settings.volt - tab 4: info table row
 msgid "Licence"
-msgstr "Licence"
+msgstr "ライセンス"
 
 #: settings.volt - tab 4: minimum OPNsense version
 msgid "Requires OPNsense"
-msgstr "Requires OPNsense"
+msgstr "OPNsenseが必要"
 
 #: settings.volt - Apply button on each tab
 msgid "Apply"
-msgstr "Apply"
+msgstr "適用"
 
 #: settings.volt - spinner text on Apply button while saving
 msgid "Saving..."
-msgstr "Saving..."
+msgstr "保存中..."
 
 #: settings.volt - toast after successful config save
 msgid "Configuration saved"
-msgstr "Configuration saved"
+msgstr "設定を保存しました"
 
 #: settings.volt - toast on config save error
 msgid "Error saving configuration"
-msgstr "Error saving configuration"
+msgstr "設定の保存エラー"
 
 #: settings.volt - toast after test email sent
 msgid "Test email sent to"
-msgstr "Test email sent to"
+msgstr "テストメールを送信しました:"
 
 #: settings.volt - toast on test email error
 msgid "Failed to send email"
-msgstr "Failed to send email"
+msgstr "メールの送信に失敗しました"
 
 #: settings.volt - alert: user didn't fill email before test
 msgid "Please enter and save recipient email first"
-msgstr "Please enter and save recipient email first"
+msgstr "最初に受信者メールを入力して保存してください"
 
 #: settings.volt - alert: user didn't fill webhook URL
 msgid "Enter webhook URL first"
-msgstr "Enter webhook URL first"
+msgstr "最初にWebhook URLを入力してください"
 
 #: settings.volt - inline status while sending webhook test
 msgid "Sending..."
-msgstr "Sending..."
+msgstr "送信中..."
 
 #: settings.volt - inline status after webhook test sent
 msgid "Test sent!"
-msgstr "Test sent!"
+msgstr "テストを送信しました!"
 
 #: settings.volt - inline status on webhook test error
 msgid "Failed"
-msgstr "Failed"
+msgstr "失敗"
 
 #: settings.volt - version subtitle (after plugin name)
 msgid "Using OPNsense hostwatch database"
-msgstr "Using OPNsense hostwatch database"
+msgstr "OPNsense hostwatchデータベースを使用中"
 
 #: settings.volt - Status column value / general status label
 msgid "Status"
-msgstr "Status"
+msgstr "状態"
 # ============================================
 # [settings.volt] Email transport
 # ============================================
 
 #: settings.volt - email transport
 msgid "Email delivery method"
-msgstr "Email delivery method"
+msgstr "メール配信方法"
 
 #: settings.volt - email transport
 msgid "Local Sendmail / Postfix"
-msgstr "Local Sendmail / Postfix"
+msgstr "ローカルSendmail / Postfix"
 
 #: settings.volt - email transport
 msgid "Direct SMTP (built into Device Monitor)"
-msgstr "Direct SMTP (built into Device Monitor)"
+msgstr "直接SMTP (デバイス監視に内蔵)"
 
 #: settings.volt - email transport
 msgid "Choose the mail transport that matches your OPNsense installation"
-msgstr "Choose the mail transport that matches your OPNsense installation"
+msgstr "OPNsenseインストールに一致するメールトランスポートを選択してください"
 
 #: settings.volt - email transport
 msgid "Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured."
-msgstr "Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured."
+msgstr "/usr/local/sbin/sendmailを使用します。os-postfixプラグインなどのローカルメーラーがインストール・設定されている場合に適しています。"
 
 #: settings.volt - email transport
 msgid "Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit."
-msgstr "Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit."
+msgstr "直接SMTPはPython標準ライブラリを使用し、Postfix、sendmail、Monitを必要としません。"
 
 #: settings.volt - email transport
 msgid "SMTP Server"
-msgstr "SMTP Server"
+msgstr "SMTPサーバー"
 
 #: settings.volt - email transport
 msgid "SMTP Port"
-msgstr "SMTP Port"
+msgstr "SMTPポート"
 
 #: settings.volt - email transport
 msgid "Encryption"
-msgstr "Encryption"
+msgstr "暗号化"
 
 #: settings.volt - email transport
 msgid "None"
-msgstr "None"
+msgstr "なし"
 
 #: settings.volt - email transport
 msgid "SMTP Username"
-msgstr "SMTP Username"
+msgstr "SMTPユーザー名"
 
 #: settings.volt - email transport
 msgid "Leave empty if the SMTP server does not require authentication"
-msgstr "Leave empty if the SMTP server does not require authentication"
+msgstr "SMTPサーバーが認証を必要としない場合は空のままにします"
 
 #: settings.volt - email transport
 msgid "SMTP Password"
-msgstr "SMTP Password"
+msgstr "SMTPパスワード"
 
 #: settings.volt - email transport
 msgid "The current email settings are saved before the test is sent"
-msgstr "The current email settings are saved before the test is sent"
+msgstr "テスト送信前に現在のメール設定が保存されます"
 
 #: settings.volt - email transport
 msgid "Please enter recipient email first"
-msgstr "Please enter recipient email first"
+msgstr "最初に受信者メールを入力してください"
 
 # ============================================
 # [scanhistory.volt] Nmap scan history page
 # ============================================
 
 msgid "Nmap Scan History"
-msgstr "Nmap Scan History"
+msgstr "Nmapスキャン履歴"
 
 msgid "Refresh scan history"
-msgstr "Refresh scan history"
+msgstr "スキャン履歴を更新"
 
 msgid "Rows"
-msgstr "Rows"
+msgstr "行"
 
 msgid "Started"
-msgstr "Started"
+msgstr "開始"
 
 msgid "Finished"
-msgstr "Finished"
+msgstr "完了"
 
 msgid "Error"
-msgstr "Error"
+msgstr "エラー"
 
 msgid "Email sent"
-msgstr "Email sent"
+msgstr "メール送信済み"
 
 msgid "Email failed"
-msgstr "Email failed"
+msgstr "メール失敗"
 
 msgid "Sent"
-msgstr "Sent"
+msgstr "送信済み"
 
 msgid "Success"
-msgstr "Success"
+msgstr "成功"
 
 msgid "Incomplete"
-msgstr "Incomplete"
+msgstr "不完全"
 
 msgid "Manual"
-msgstr "Manual"
+msgstr "手動"
 
 msgid "Automatic"
-msgstr "Automatic"
+msgstr "自動"
 
 msgid "Port"
-msgstr "Port"
+msgstr "ポート"
 
 msgid "Protocol"
-msgstr "Protocol"
+msgstr "プロトコル"
 
 msgid "Service"
-msgstr "Service"
+msgstr "サービス"
 
 msgid "Product"
-msgstr "Product"
+msgstr "製品"
 
 msgid "Version"
-msgstr "Version"
+msgstr "バージョン"
 
 msgid "Extra info"
-msgstr "Extra info"
+msgstr "追加情報"
 
 msgid "No open ports recorded"
-msgstr "No open ports recorded"
+msgstr "記録された開いているポートはありません"
 
 msgid "Enabled"
-msgstr "Enabled"
+msgstr "有効"
 
 msgid "Disabled"
-msgstr "Disabled"
+msgstr "無効"
 
 msgid "Top ports"
-msgstr "Top ports"
+msgstr "主要ポート"
 
 msgid "Timing"
-msgstr "Timing"
+msgstr "タイミング"
 
 msgid "Host timeout"
-msgstr "Host timeout"
+msgstr "ホストタイムアウト"
 
 msgid "Version detection"
-msgstr "Version detection"
+msgstr "バージョン検出"
 
 msgid "Nmap version"
-msgstr "Nmap version"
+msgstr "Nmapバージョン"
 
 msgid "Nmap elapsed"
-msgstr "Nmap elapsed"
+msgstr "Nmap経過時間"
 
 msgid "OS hint"
-msgstr "OS hint"
+msgstr "OSヒント"
 
 msgid "Open ports"
-msgstr "Open ports"
+msgstr "開いているポート"
 
 msgid "Scan error"
-msgstr "Scan error"
+msgstr "スキャンエラー"
 
 msgid "Email error"
-msgstr "Email error"
+msgstr "メールエラー"
 
 msgid "Open port details"
-msgstr "Open port details"
+msgstr "開いているポートの詳細"
 
 msgid "No targeted Nmap scan history recorded"
-msgstr "No targeted Nmap scan history recorded"
+msgstr "標的型Nmapスキャン履歴は記録されていません"
 
 msgid "Show scan details"
-msgstr "Show scan details"
+msgstr "スキャン詳細を表示"
 
 msgid "Hide scan details"
-msgstr "Hide scan details"
+msgstr "スキャン詳細を非表示"
 msgid "Resolve event"
-msgstr "Resolve event"
+msgstr "イベントを解決"
 
 msgid "Reopen event"
-msgstr "Reopen event"
+msgstr "イベントを再オープン"
 
 msgid "Unable to update IP and MAC conflict"
-msgstr "Unable to update IP and MAC conflict"
+msgstr "IP/MAC競合を更新できません"
 
 msgid "All"
-msgstr "All"
+msgstr "すべて"
 
 msgid "Unresolved"
-msgstr "Unresolved"
+msgstr "未解決"
 
 msgid "Resolved"
-msgstr "Resolved"
+msgstr "解決済み"
 
 #: settings.volt - IP and MAC conflict email alerts
 msgid "Email high-severity conflict alerts"
-msgstr "Email high-severity conflict alerts"
+msgstr "高重大度の競合メールアラート"
 
 #: settings.volt - IP and MAC conflict email alerts
 msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
-msgstr "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
+msgstr "高重大度の新しいIPv4またはIPv6アドレス競合が検出されたときにメールを送信します。"
 
 msgid "IP and MAC Conflicts"
-msgstr "IP and MAC Conflicts"
+msgstr "IP/MAC競合"
 
 msgid "Refresh IP and MAC conflicts"
-msgstr "Refresh IP and MAC conflicts"
+msgstr "IP/MAC競合を更新"
 
 msgid "Loading IP and MAC conflicts..."
-msgstr "Loading IP and MAC conflicts..."
+msgstr "IP/MAC競合を読み込み中..."
 
 msgid "No IP and MAC conflicts recorded"
-msgstr "No IP and MAC conflicts recorded"
+msgstr "記録されたIP/MAC競合はありません"
 
 msgid "Unable to load IP and MAC conflicts"
-msgstr "Unable to load IP and MAC conflicts"
+msgstr "IP/MAC競合を読み込めません"
 
 msgid "Show conflict details"
-msgstr "Show conflict details"
+msgstr "競合の詳細を表示"
 
 msgid "Hide conflict details"
-msgstr "Hide conflict details"
+msgstr "競合の詳細を非表示"
 
 msgid "Resolve conflict"
-msgstr "Resolve conflict"
+msgstr "競合を解決"
 
 msgid "Reopen conflict"
-msgstr "Reopen conflict"
+msgstr "競合を再オープン"
 
 msgid "IPv4 address used by another device"
-msgstr "IPv4 address used by another device"
+msgstr "別のデバイスが使用中のIPv4アドレス"
 
 msgid "IPv6 address used by another device"
-msgstr "IPv6 address used by another device"
+msgstr "別のデバイスが使用中のIPv6アドレス"
 
 msgid "Device using multiple IPv4 addresses"
-msgstr "Device using multiple IPv4 addresses"
+msgstr "複数のIPv4アドレスを使用するデバイス"
 
 msgid "Device seen on multiple interfaces"
-msgstr "Device seen on multiple interfaces"
+msgstr "複数のインターフェースで確認されたデバイス"
 
 #: activitytimeline.volt - page and section heading
 msgid "Device Activity"
-msgstr "Device Activity"
+msgstr "デバイスアクティビティ"
 
 msgid "Services"
-msgstr "Services"
+msgstr "サービス"
 
 #: devices.volt - first-seen column
 msgid "First Seen"
-msgstr "First Seen"
+msgstr "初回確認"
 
 #: devices.volt - toast after clearing friendly name
 msgid "Friendly name cleared"
-msgstr "Friendly name cleared"
+msgstr "表示名をクリアしました"
 
 #: changesummary.volt - menu entry and page title
 msgid "Change Summary"
-msgstr "Change Summary"
+msgstr "変更サマリー"
 
 msgid "Period"
-msgstr "Period"
+msgstr "期間"
 
 msgid "Since last review"
-msgstr "Since last review"
+msgstr "前回のレビュー以降"
 
 msgid "Last 24 hours"
-msgstr "Last 24 hours"
+msgstr "過去24時間"
 
 msgid "Last 7 days"
-msgstr "Last 7 days"
+msgstr "過去7日間"
 
 msgid "Last 30 days"
-msgstr "Last 30 days"
+msgstr "過去30日間"
 
 msgid "Custom range"
-msgstr "Custom range"
+msgstr "カスタム範囲"
 
 msgid "Category"
-msgstr "Category"
+msgstr "カテゴリ"
 
 msgid "All categories"
-msgstr "All categories"
+msgstr "すべてのカテゴリ"
 
 msgid "Device"
-msgstr "Device"
+msgstr "デバイス"
 
 msgid "Lifecycle"
-msgstr "Lifecycle"
+msgstr "ライフサイクル"
 
 msgid "Identity"
-msgstr "Identity"
+msgstr "ID"
 
 msgid "Device Profile"
-msgstr "Device Profile"
+msgstr "デバイスプロファイル"
 
 msgid "Notes / History"
-msgstr "Notes / History"
+msgstr "メモ / 履歴"
 
 msgid "Infrastructure"
-msgstr "Infrastructure"
+msgstr "インフラ"
 
 msgid "Mark reviewed now"
-msgstr "Mark reviewed now"
+msgstr "今すぐ確認済みにする"
 
 msgid "Start"
-msgstr "Start"
+msgstr "開始"
 
 msgid "End"
-msgstr "End"
+msgstr "終了"
 
 msgid "No previous review marker; showing the last 24 hours."
-msgstr "No previous review marker; showing the last 24 hours."
+msgstr "前回のレビューマーカーがありません。過去24時間を表示します。"
 
 msgid "Total Changes"
-msgstr "Total Changes"
+msgstr "変更の合計"
 
 msgid "New Devices"
-msgstr "New Devices"
+msgstr "新しいデバイス"
 
 msgid "Returned Devices"
-msgstr "Returned Devices"
+msgstr "戻ってきたデバイス"
 
 msgid "Identity Changes"
-msgstr "Identity Changes"
+msgstr "IDの変更"
 
 msgid "Infrastructure Changes"
-msgstr "Infrastructure Changes"
+msgstr "インフラの変更"
 
 msgid "Lifecycle Changes"
-msgstr "Lifecycle Changes"
+msgstr "ライフサイクルの変更"
 
 msgid "Time"
-msgstr "Time"
+msgstr "時刻"
 
 msgid "Device / Subject"
-msgstr "Device / Subject"
+msgstr "デバイス / 件名"
 
 msgid "Change"
-msgstr "Change"
+msgstr "変更"
 
 msgid "Previous"
-msgstr "Previous"
+msgstr "前"
 
 msgid "Current"
-msgstr "Current"
+msgstr "現在"
 
 msgid "Action"
-msgstr "Action"
+msgstr "操作"
 
 msgid "Loading changes..."
-msgstr "Loading changes..."
+msgstr "変更を読み込み中..."
 
 msgid "Next"
-msgstr "Next"
+msgstr "次へ"
 
 # [physicaldevices.volt] Device Profiles page
 msgid "Device Profiles"
-msgstr "Device Profiles"
+msgstr "デバイスプロファイル"
 
 #: physicaldevices.volt - summary stat label
 msgid "Profiles"
-msgstr "Profiles"
+msgstr "プロファイル"
 
 msgid "Archived"
-msgstr "Archived"
+msgstr "アーカイブ済み"
 
 msgid "Create Profile"
-msgstr "Create Profile"
+msgstr "プロファイルを作成"
 
 msgid "All Profiles"
-msgstr "All Profiles"
+msgstr "すべてのプロファイル"
 
 msgid "Current Profiles"
-msgstr "Current Profiles"
+msgstr "現在のプロファイル"
 
 msgid "Archived Profiles"
-msgstr "Archived Profiles"
+msgstr "アーカイブ済みプロファイル"
 
 msgid "Search by name or MAC"
-msgstr "Search by name or MAC"
+msgstr "名前またはMACで検索"
 
 msgid "Showing"
-msgstr "Showing"
+msgstr "表示中"
 
 msgid "Profile name"
-msgstr "Profile name"
+msgstr "プロファイル名"
 
 msgid "Create"
-msgstr "Create"
+msgstr "作成"
 
 msgid "Loading devices..."
-msgstr "Loading devices..."
+msgstr "デバイスを読み込み中..."
 
 msgid "Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
-msgstr "Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
+msgstr "このプロファイルに1つのMACアドレスから始めます。現在オンラインのネットワークIDに属する必要があります。IDの追加は明示的であり、デバイス、ライフサイクル、IDの履歴を結合または書き換えることはありません。"
 
 msgid "Loading device profile..."
-msgstr "Loading device profile..."
+msgstr "デバイスプロファイルを読み込み中..."
 
 # [devicehistory.volt] Device Details page
 msgid "Network Identity Details"
-msgstr "Network Identity Details"
+msgstr "ネットワークIDの詳細"
 
 msgid "Network Identity Summary"
-msgstr "Network Identity Summary"
+msgstr "ネットワークIDのサマリー"
 
 msgid "Back to Devices"
-msgstr "Back to Devices"
+msgstr "デバイスに戻る"
 
 msgid "Current Lifecycle"
-msgstr "Current Lifecycle"
+msgstr "現在のライフサイクル"
 
 msgid "Lifecycle History"
-msgstr "Lifecycle History"
+msgstr "ライフサイクル履歴"
 
 msgid "MAC address"
-msgstr "MAC address"
+msgstr "MACアドレス"
 
 msgid "A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below."
-msgstr "A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below."
+msgstr "ライフサイクルとは、このMACアドレスが同じ既知のデバイスとして扱われる1つの連続期間です。以前のライフサイクルは削除されずにアーカイブされ、以下で引き続き利用できます。"
 
 msgid "Start New Lifecycle"
-msgstr "Start New Lifecycle"
+msgstr "新しいライフサイクルを開始"
 
 msgid "Use this when the returning device should be treated as new."
-msgstr "Use this when the returning device should be treated as new."
+msgstr "戻ってきたデバイスを新しいものとして扱う場合に使用します。"
 
 msgid "Loading device history..."
-msgstr "Loading device history..."
+msgstr "デバイス履歴を読み込み中..."
 
 msgid "Notes"
-msgstr "Notes"
+msgstr "メモ"
 
 msgid "There is no active lifecycle. Resolve the returning device in Lifecycle History before adding notes."
-msgstr "There is no active lifecycle. Resolve the returning device in Lifecycle History before adding notes."
+msgstr "アクティブなライフサイクルがありません。メモを追加する前に、ライフサイクル履歴で戻ってきたデバイスを解決してください。"
 
 msgid "Add Note"
-msgstr "Add Note"
+msgstr "メモを追加"
 
 msgid "Enter a new note..."
-msgstr "Enter a new note..."
+msgstr "新しいメモを入力..."
 
 msgid "Loading notes..."
-msgstr "Loading notes..."
+msgstr "メモを読み込み中..."
 
 # [infrastructureservices.volt] Opt-in targeted port discovery
 msgid "Port Discovery"
-msgstr "Port Discovery"
+msgstr "ポート検出"
 
 msgid "Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned."
-msgstr "Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned."
+msgstr "デバイス行の「今すぐ実行」を使用して、標準および非標準ポートを含むTCPポート1-65535をスキャンします。開いているポートと識別されたサービスは「スキャン」タブに表示されます。オプションの週次スキャンには複数のデバイスを選択して保存します。スキャンは一度に1ホストずつ実行され、120秒後に停止します。不完全なスキャンは失敗としてマークされます。WireGuardを含むUDPポートはスキャンされません。"
 
 msgid "Scans"
-msgstr "Scans"
+msgstr "スキャン"
 
 msgid "Run Now"
-msgstr "Run Now"
+msgstr "今すぐ実行"
 
 msgid "Scan weekly"
-msgstr "Scan weekly"
+msgstr "毎週スキャン"
 
 msgid "Scan Time"
-msgstr "Scan Time"
+msgstr "スキャン時刻"
 
 msgid "Scan Time (local time)"
-msgstr "Scan Time (local time)"
+msgstr "スキャン時刻 (現地時間)"
 
 msgid "Last Scan (local time)"
-msgstr "Last Scan (local time)"
+msgstr "最終スキャン (現地時間)"
 
 msgid "Result"
-msgstr "Result"
+msgstr "結果"
 
 msgid "Open TCP Ports"
-msgstr "Open TCP Ports"
+msgstr "開いているTCPポート"
 
 msgid "Search IP, MAC or name"
-msgstr "Search IP, MAC or name"
+msgstr "IP、MAC、または名前で検索"
 
 msgid "TCP ports, e.g. 22,443"
-msgstr "TCP ports, e.g. 22,443"
+msgstr "TCPポート (例: 22,443)"
 
 msgid "All results"
-msgstr "All results"
+msgstr "すべての結果"
 
 msgid "Complete"
-msgstr "Complete"
+msgstr "完了"
 
 msgid "Running"
-msgstr "Running"
+msgstr "実行中"
 
 msgid "Filtering the 50 most recent scans"
-msgstr "Filtering the 50 most recent scans"
+msgstr "直近50件のスキャンをフィルタリング中"
 
 # [devicehistory.volt] Per-device service alert controls
 msgid "Service Email Alerts"
-msgstr "Service Email Alerts"
+msgstr "サービスメールアラート"
 
 msgid "Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings."
-msgstr "Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings."
+msgstr "このネットワークIDがサービスメールアラートを送信するかどうかを選択します。「グローバル設定を使用」は設定のデフォルトを維持します。メール配信は設定で有効にする必要があります。"
 
 msgid "Service event"
-msgstr "Service event"
+msgstr "サービスイベント"
 
 msgid "Preference"
-msgstr "Preference"
+msgstr "設定"
 
 msgid "Effective"
-msgstr "Effective"
+msgstr "有効"
 
 msgid "New service"
-msgstr "New service"
+msgstr "新しいサービス"
 
 msgid "Service unavailable"
-msgstr "Service unavailable"
+msgstr "サービス利用不可"
 
 msgid "Service recovered"
-msgstr "Service recovered"
+msgstr "サービス復旧"
 
 msgid "New service email preference"
-msgstr "New service email preference"
+msgstr "新しいサービスのメール設定"
 
 msgid "Service unavailable email preference"
-msgstr "Service unavailable email preference"
+msgstr "サービス利用不可のメール設定"
 
 msgid "Service recovered email preference"
-msgstr "Service recovered email preference"
+msgstr "サービス復旧のメール設定"
 
 msgid "Use global setting"
-msgstr "Use global setting"
+msgstr "グローバル設定を使用"
 
 msgid "On"
-msgstr "On"
+msgstr "オン"
 
 msgid "Off"
-msgstr "Off"
+msgstr "オフ"
 
 msgid "Save alert preferences"
-msgstr "Save alert preferences"
+msgstr "アラート設定を保存"
 
 msgid "Email delivery is disabled in Settings."
-msgstr "Email delivery is disabled in Settings."
+msgstr "メール配信は設定で無効になっています。"
 
 msgid "These preferences are saved, but service alert emails will not be sent."
-msgstr "These preferences are saved, but service alert emails will not be sent."
+msgstr "これらの設定は保存されますが、サービスアラートメールは送信されません。"
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
-msgstr "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
+msgstr "これらの設定は保存されますが、グローバルメール通知がオフのため、このネットワークIDのサービスアラートメールは送信されません。"
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because monitoring is turned off."
-msgstr "These preferences are saved, but this network identity’s service alert emails will not be sent because monitoring is turned off."
+msgstr "これらの設定は保存されますが、監視がオフのため、このネットワークIDのサービスアラートメールは送信されません。"
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because no email recipient is configured in Settings."
-msgstr "These preferences are saved, but this network identity’s service alert emails will not be sent because no email recipient is configured in Settings."
+msgstr "これらの設定は保存されますが、設定にメール受信者が構成されていないため、このネットワークIDのサービスアラートメールは送信されません。"
 
 msgid "These preferences are saved, but service alert email delivery is unavailable."
-msgstr "These preferences are saved, but service alert email delivery is unavailable."
+msgstr "これらの設定は保存されますが、サービスアラートメールの配信は利用できません。"
 
 msgid "Go to Email Notifications"
-msgstr "Go to Email Notifications"
+msgstr "メール通知へ移動"
 
 msgid "Back to Network Identity Details"
-msgstr "Back to Network Identity Details"
+msgstr "ネットワークIDの詳細に戻る"
 
 msgid "Open Network Identity Details"
-msgstr "Open Network Identity Details"
+msgstr "ネットワークIDの詳細を開く"
 
 msgid "View Network Identity Details"
-msgstr "View Network Identity Details"
+msgstr "ネットワークIDの詳細を表示"
 
 msgid "Unable to load alert preferences"
-msgstr "Unable to load alert preferences"
+msgstr "アラート設定を読み込めません"
 
 msgid "Unable to save alert preferences"
-msgstr "Unable to save alert preferences"
+msgstr "アラート設定を保存できません"
 
 msgid "Alert preferences saved"
-msgstr "Alert preferences saved"
+msgstr "アラート設定を保存しました"
 
 msgid "More information"
-msgstr "More information"
+msgstr "詳細情報"
 
 msgid "About Service Email Alerts"
-msgstr "About Service Email Alerts"
+msgstr "サービスメールアラートについて"
 
 msgid "About Lifecycle History"
-msgstr "About Lifecycle History"
+msgstr "ライフサイクル履歴について"
 
 msgid "About Network Identities"
-msgstr "About Network Identities"
+msgstr "ネットワークIDについて"
 
 msgid "About Device Profiles"
-msgstr "About Device Profiles"
+msgstr "デバイスプロファイルについて"
 
 msgid "About Creating Profiles"
-msgstr "About Creating Profiles"
+msgstr "プロファイルの作成について"
 
 msgid "About Port Discovery"
-msgstr "About Port Discovery"
+msgstr "ポート検出について"
 
 msgid "TCP only · 120-second limit per host"
-msgstr "TCP only · 120-second limit per host"
+msgstr "TCPのみ · ホストあたり120秒の制限"
 
 msgid "About Email Delivery"
-msgstr "About Email Delivery"
+msgstr "メール配信について"
 
 msgid "About Direct SMTP"
-msgstr "About Direct SMTP"
+msgstr "直接SMTPについて"
 
 msgid "About SMTP Username"
-msgstr "About SMTP Username"
+msgstr "SMTPユーザー名について"
 
 msgid "About Test Email"
-msgstr "About Test Email"
+msgstr "テストメールについて"
 
 msgid "About Conflict Alerts"
-msgstr "About Conflict Alerts"
+msgstr "競合アラートについて"
 
 msgid "About Infrastructure Service Alerts"
-msgstr "About Infrastructure Service Alerts"
+msgstr "インフラサービスアラートについて"
 
 msgid "About Notification Interfaces"
-msgstr "About Notification Interfaces"
+msgstr "通知インターフェースについて"
 
 msgid "About Webhook Notifications"
-msgstr "About Webhook Notifications"
+msgstr "Webhook通知について"

@@ -1,4 +1,5 @@
-# Device Monitor Plugin - Translations en_US
+# Device Monitor Plugin - Translations zh_CN
+# NOTE: Machine-translated by an LLM; native-speaker review and corrections are welcome.
 # Copyright (C) 2026 Hacesoft
 #
 # NOTE: #: comments show where the text is used in code.
@@ -11,8 +12,8 @@ msgstr ""
 "POT-Creation-Date: 2026-04-10 00:00+0000\n"
 "PO-Revision-Date: 2026-04-10 00:00+0000\n"
 "Last-Translator: Device Monitor contributors\n"
-"Language-Team: English\n"
-"Language: en_US\n"
+"Language-Team: Chinese\n"
+"Language: zh_CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -24,27 +25,27 @@ msgstr ""
 
 #: Menu.xml - plugin menu name
 msgid "Device Monitor"
-msgstr "Device Monitor"
+msgstr "设备监控"
 
 #: Menu.xml - menu item
 msgid "Devices"
-msgstr "Devices"
+msgstr "设备"
 
 #: devices.volt / physicaldevices.volt - navigation tabs
 msgid "Network Identities"
-msgstr "Network Identities"
+msgstr "网络标识"
 
 #: devices.volt - navigation explanatory text
 msgid "Automatically discovered network identities. Each row represents one MAC address."
-msgstr "Automatically discovered network identities. Each row represents one MAC address."
+msgstr "自动发现的网络标识。每行代表一个 MAC 地址。"
 
 #: physicaldevices.volt - navigation explanatory text
 msgid "Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters."
-msgstr "Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters."
+msgstr "关联到一个或多个网络标识的真实设备，例如有线和 Wi-Fi 适配器。"
 
 #: Menu.xml - menu item | settings.volt - page title
 msgid "Settings"
-msgstr "Settings"
+msgstr "设置"
 
 
 # ============================================
@@ -53,55 +54,55 @@ msgstr "Settings"
 
 #: devices.volt - header stats
 msgid "Total Identities"
-msgstr "Total Identities"
+msgstr "标识总数"
 
 #: devices.volt - header stats (green)
 msgid "Online"
-msgstr "Online"
+msgstr "在线"
 
 #: devices.volt - VLAN dropdown - all VLANs option
 msgid "All VLANs"
-msgstr "All VLANs"
+msgstr "所有 VLAN"
 
 #: devices.volt - VLAN filter apply button
 msgid "Apply VLAN Filter"
-msgstr "Apply VLAN Filter"
+msgstr "应用 VLAN 过滤器"
 
 #: devices.volt - VLAN filter pending indicator
 msgid "Not applied"
-msgstr "Not applied"
+msgstr "未应用"
 
 #: devices.volt - VLAN dropdown - empty selection prompt
 msgid "Select a VLAN"
-msgstr "Select a VLAN"
+msgstr "选择一个 VLAN"
 
 #: devices.volt - status dropdown - all statuses option
 msgid "All statuses"
-msgstr "All statuses"
+msgstr "所有状态"
 
 #: devices.volt - refresh button title
 msgid "Refresh"
-msgstr "Refresh"
+msgstr "刷新"
 
 #: devices.volt - clear database button
 msgid "Clear Database"
-msgstr "Clear Database"
+msgstr "清空数据库"
 
 #: devices.volt - table column header
 msgid "MAC Address"
-msgstr "MAC Address"
+msgstr "MAC 地址"
 
 #: devices.volt - table column header
 msgid "IP Address"
-msgstr "IP Address"
+msgstr "IP 地址"
 
 #: devices.volt - table column header
 msgid "Hostname"
-msgstr "Hostname"
+msgstr "主机名"
 
 #: devices.volt - table column header
 msgid "Vendor"
-msgstr "Vendor"
+msgstr "厂商"
 
 #: devices.volt - table column header
 msgid "VLAN"
@@ -109,47 +110,47 @@ msgstr "VLAN"
 
 #: devices.volt - table column header
 msgid "Last Seen"
-msgstr "Last Seen"
+msgstr "最后出现"
 
 #: devices.volt - table column header
 msgid "Actions"
-msgstr "Actions"
+msgstr "操作"
 
 #: devices.volt - confirm dialogue when deleting a device
 msgid "Delete device"
-msgstr "Delete device"
+msgstr "删除设备"
 
 #: devices.volt - confirm dialogue when clearing entire DB
 msgid "Really delete all devices from database?"
-msgstr "Really delete all devices from database?"
+msgstr "确实要从数据库中删除所有设备吗？"
 
 #: devices.volt - toast message after device deletion
 msgid "Device deleted"
-msgstr "Device deleted"
+msgstr "设备已删除"
 
 #: devices.volt - toast message on deletion error
 msgid "Error deleting device"
-msgstr "Error deleting device"
+msgstr "删除设备时出错"
 
 #: devices.volt - toast message after clearing DB
 msgid "Database cleared"
-msgstr "Database cleared"
+msgstr "数据库已清空"
 
 #: devices.volt - toast message on clear DB error
 msgid "Error clearing database"
-msgstr "Error clearing database"
+msgstr "清空数据库时出错"
 
 #: devices.volt - friendly-name column
 msgid "Friendly Name"
-msgstr "Friendly Name"
+msgstr "友好名称"
 
 #: devices.volt - toast after successful friendly-name save
 msgid "Friendly name saved"
-msgstr "Friendly name saved"
+msgstr "友好名称已保存"
 
 #: devices.volt - toast on friendly-name save error
 msgid "Error saving friendly name"
-msgstr "Error saving friendly name"
+msgstr "保存友好名称时出错"
 
 
 # ============================================
@@ -159,67 +160,67 @@ msgstr "Error saving friendly name"
 
 #: settings.volt - tab 1 label
 msgid "Email Notifications"
-msgstr "Email Notifications"
+msgstr "电子邮件通知"
 
 #: settings.volt - tab 2 label
 msgid "Webhook Notifications"
-msgstr "Webhook Notifications"
+msgstr "Webhook 通知"
 
 #: settings.volt - tab 3 label
 msgid "Other Settings"
-msgstr "Other Settings"
+msgstr "其他设置"
 
 #: settings.volt - tab 4 label
 msgid "About"
-msgstr "About"
+msgstr "关于"
 
 #: settings.volt - tab 1 info text (localized)
 msgid "Configure email notifications for new devices on the network"
-msgstr "Configure email notifications for new devices on the network"
+msgstr "为网络上的新设备配置电子邮件通知"
 
 #: settings.volt - tab 2 info text
 msgid "Configure webhook notifications for new devices on the network"
-msgstr "Configure webhook notifications for new devices on the network"
+msgstr "为网络上的新设备配置 Webhook 通知"
 
 #: settings.volt - tab 1: checkbox label
 msgid "Enable Email"
-msgstr "Enable Email"
+msgstr "启用电子邮件"
 
 #: settings.volt - tab 1: email recipient label
 msgid "Email Recipient"
-msgstr "Email Recipient"
+msgstr "邮件收件人"
 
 #: settings.volt - tab 1: help text below email recipient field
 msgid "Where to send notifications"
-msgstr "Where to send notifications"
+msgstr "通知发送到哪里"
 
 #: settings.volt - tab 1: email sender label
 msgid "Email Sender"
-msgstr "Email Sender"
+msgstr "邮件发件人"
 
 #: settings.volt - tab 1: help text below email sender field
 msgid "From address"
-msgstr "From address"
+msgstr "发件地址"
 
 #: settings.volt - tab 1: SMTP warning heading
 msgid "Important - SMTP Configuration"
-msgstr "Important - SMTP Configuration"
+msgstr "重要 - SMTP 配置"
 
 #: settings.volt - tab 1: SMTP warning text (with HTML tag)
 msgid "Plugin uses <strong>sendmail (Postfix)</strong> to send emails"
-msgstr "Plugin uses <strong>sendmail (Postfix)</strong> to send emails"
+msgstr "插件使用 <strong>sendmail (Postfix)</strong> 发送电子邮件"
 
 #: settings.volt - tab 1: SMTP warning text (with HTML and path)
 msgid "Must be configured in: <strong>System > Settings > Notifications > SMTP</strong>"
-msgstr "Must be configured in: <strong>System > Settings > Notifications > SMTP</strong>"
+msgstr "必须在以下位置配置：<strong>系统 > 设置 > 通知 > SMTP</strong>"
 
 #: settings.volt - tab 1: test email button
 msgid "Test Email"
-msgstr "Test Email"
+msgstr "测试邮件"
 
 #: settings.volt - tab 2: checkbox label
 msgid "Enable Webhook"
-msgstr "Enable Webhook"
+msgstr "启用 Webhook"
 
 #: settings.volt - tab 2: webhook URL label
 msgid "Webhook URL"
@@ -227,788 +228,788 @@ msgstr "Webhook URL"
 
 #: settings.volt - tab 2: test webhook button
 msgid "Send Test"
-msgstr "Send Test"
+msgstr "发送测试"
 
 #: settings.volt - tab 1+2: VLAN notification filter label
 msgid "Notify for interfaces"
-msgstr "Notify for interfaces"
+msgstr "针对接口通知"
 
 #: settings.volt - tab 1+2: help text below VLAN filter
 msgid "Leave empty to receive notifications from all interfaces"
-msgstr "Leave empty to receive notifications from all interfaces"
+msgstr "留空以接收来自所有接口的通知"
 
 #: settings.volt - tab 1+2: shown when no interfaces loaded
 msgid "No interfaces found"
-msgstr "No interfaces found"
+msgstr "未找到接口"
 
 #: settings.volt - tab 3: checkbox label
 msgid "Enable Monitoring"
-msgstr "Enable Monitoring"
+msgstr "启用监控"
 
 #: settings.volt - tab 3: help text next to monitoring checkbox
 msgid "Enable automatic network monitoring"
-msgstr "Enable automatic network monitoring"
+msgstr "启用自动网络监控"
 
 #: settings.volt - tab 3: scan interval label
 msgid "Scan Interval"
-msgstr "Scan Interval"
+msgstr "扫描间隔"
 
 #: settings.volt - tab 3: unit label after interval input
 msgid "seconds"
-msgstr "seconds"
+msgstr "秒"
 
 #: settings.volt - tab 3: help text below interval input
 msgid "Seconds between scans (60-3600)"
-msgstr "Seconds between scans (60-3600)"
+msgstr "扫描间隔秒数 (60-3600)"
 
 #: settings.volt - tab 3: monitored interfaces label
 msgid "Monitored Interfaces"
-msgstr "Monitored Interfaces"
+msgstr "受监控的接口"
 
 #: settings.volt - tab 3: monitored interfaces help
 msgid "Only devices on selected interfaces are scanned. With no selection, scanning is refused."
-msgstr "Only devices on selected interfaces are scanned. With no selection, scanning is refused."
+msgstr "仅扫描所选接口上的设备。未选择时，将拒绝扫描。"
 
 #: settings.volt - tab 3: monitored interfaces fail-closed warning
 msgid "Monitoring is enabled but no interface is selected. Scans will be refused."
-msgstr "Monitoring is enabled but no interface is selected. Scans will be refused."
+msgstr "监控已启用，但未选择接口。将拒绝扫描。"
 
 #: settings.volt - tab 3: shown when no enabled IPv4 interfaces
 msgid "No enabled IPv4 interfaces found"
-msgstr "No enabled IPv4 interfaces found"
+msgstr "未找到已启用的 IPv4 接口"
 
 #: settings.volt - Monitoring: hostname enrichment providers (Pi-hole / Unbound)
 msgid "Pi-hole Hostnames"
-msgstr "Pi-hole Hostnames"
+msgstr "Pi-hole 主机名"
 
 msgid "Unbound Hostnames"
-msgstr "Unbound Hostnames"
+msgstr "Unbound 主机名"
 
 msgid "Experimental"
-msgstr "Experimental"
+msgstr "实验性"
 
 msgid "Enable Pi-hole hostname enrichment"
-msgstr "Enable Pi-hole hostname enrichment"
+msgstr "启用 Pi-hole 主机名补充"
 
 msgid "Enable Unbound hostname enrichment"
-msgstr "Enable Unbound hostname enrichment"
+msgstr "启用 Unbound 主机名补充"
 
 msgid "Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default."
-msgstr "Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default."
+msgstr "使用 Pi-hole v6 DHCP 租约作为主机名来源。需要 Pi-hole v6、HTTPS 和应用密码。默认禁用。"
 
 msgid "Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default."
-msgstr "Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default."
+msgstr "仅读取本地 OPNsense Unbound 主机覆盖和主机别名。不执行网络查询。默认禁用。"
 
 msgid "Pi-hole URL"
 msgstr "Pi-hole URL"
 
 msgid "HTTPS base URL of your Pi-hole server"
-msgstr "HTTPS base URL of your Pi-hole server"
+msgstr "Pi-hole 服务器的 HTTPS 基础 URL"
 
 msgid "App password"
-msgstr "App password"
+msgstr "应用密码"
 
 msgid "Pi-hole app password generated in the Pi-hole web interface"
-msgstr "Pi-hole app password generated in the Pi-hole web interface"
+msgstr "在 Pi-hole Web 界面中生成的 Pi-hole 应用密码"
 
 #: settings.volt - tab 4: plugin description
 msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
-msgstr "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
+msgstr "用于监控网络设备、检测 IP 和 MAC 地址冲突、发现基础设施服务、执行定向安全扫描，并使用原生 hostwatch 数据发送可配置警报的 OPNsense 插件。"
 
 #: settings.volt - tab 4: info table row
 msgid "Author"
-msgstr "Author"
+msgstr "作者"
 
 #: settings.volt - tab 4: info table row
 msgid "GitHub Repository"
-msgstr "GitHub Repository"
+msgstr "GitHub 仓库"
 
 #: settings.volt - v2.10 features heading
 msgid "v2.10 Features and Enhancements"
-msgstr "v2.10 Features and Enhancements"
+msgstr "v2.10 功能与增强"
 
 #: settings.volt - tab 4: info table row
 msgid "Licence"
-msgstr "Licence"
+msgstr "许可证"
 
 #: settings.volt - tab 4: minimum OPNsense version
 msgid "Requires OPNsense"
-msgstr "Requires OPNsense"
+msgstr "需要 OPNsense"
 
 #: settings.volt - Apply button on each tab
 msgid "Apply"
-msgstr "Apply"
+msgstr "应用"
 
 #: settings.volt - spinner text on Apply button while saving
 msgid "Saving..."
-msgstr "Saving..."
+msgstr "正在保存..."
 
 #: settings.volt - toast after successful config save
 msgid "Configuration saved"
-msgstr "Configuration saved"
+msgstr "配置已保存"
 
 #: settings.volt - toast on config save error
 msgid "Error saving configuration"
-msgstr "Error saving configuration"
+msgstr "保存配置时出错"
 
 #: settings.volt - toast after test email sent
 msgid "Test email sent to"
-msgstr "Test email sent to"
+msgstr "测试邮件已发送至"
 
 #: settings.volt - toast on test email error
 msgid "Failed to send email"
-msgstr "Failed to send email"
+msgstr "发送邮件失败"
 
 #: settings.volt - alert: user didn't fill email before test
 msgid "Please enter and save recipient email first"
-msgstr "Please enter and save recipient email first"
+msgstr "请先输入并保存收件人电子邮件"
 
 #: settings.volt - alert: user didn't fill webhook URL
 msgid "Enter webhook URL first"
-msgstr "Enter webhook URL first"
+msgstr "请先输入 Webhook URL"
 
 #: settings.volt - inline status while sending webhook test
 msgid "Sending..."
-msgstr "Sending..."
+msgstr "正在发送..."
 
 #: settings.volt - inline status after webhook test sent
 msgid "Test sent!"
-msgstr "Test sent!"
+msgstr "测试已发送！"
 
 #: settings.volt - inline status on webhook test error
 msgid "Failed"
-msgstr "Failed"
+msgstr "失败"
 
 #: settings.volt - version subtitle (after plugin name)
 msgid "Using OPNsense hostwatch database"
-msgstr "Using OPNsense hostwatch database"
+msgstr "正在使用 OPNsense hostwatch 数据库"
 
 #: settings.volt - Status column value / general status label
 msgid "Status"
-msgstr "Status"
+msgstr "状态"
 # ============================================
 # [settings.volt] Email transport
 # ============================================
 
 #: settings.volt - email transport
 msgid "Email delivery method"
-msgstr "Email delivery method"
+msgstr "邮件投递方式"
 
 #: settings.volt - email transport
 msgid "Local Sendmail / Postfix"
-msgstr "Local Sendmail / Postfix"
+msgstr "本地 Sendmail / Postfix"
 
 #: settings.volt - email transport
 msgid "Direct SMTP (built into Device Monitor)"
-msgstr "Direct SMTP (built into Device Monitor)"
+msgstr "直接 SMTP（内置于设备监控）"
 
 #: settings.volt - email transport
 msgid "Choose the mail transport that matches your OPNsense installation"
-msgstr "Choose the mail transport that matches your OPNsense installation"
+msgstr "选择与您的 OPNsense 安装相匹配的邮件传输方式"
 
 #: settings.volt - email transport
 msgid "Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured."
-msgstr "Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured."
+msgstr "使用 /usr/local/sbin/sendmail。适用于已安装并配置 os-postfix 插件等本地邮件程序的场景。"
 
 #: settings.volt - email transport
 msgid "Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit."
-msgstr "Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit."
+msgstr "直接 SMTP 使用 Python 标准库，不需要 Postfix、sendmail 或 Monit。"
 
 #: settings.volt - email transport
 msgid "SMTP Server"
-msgstr "SMTP Server"
+msgstr "SMTP 服务器"
 
 #: settings.volt - email transport
 msgid "SMTP Port"
-msgstr "SMTP Port"
+msgstr "SMTP 端口"
 
 #: settings.volt - email transport
 msgid "Encryption"
-msgstr "Encryption"
+msgstr "加密"
 
 #: settings.volt - email transport
 msgid "None"
-msgstr "None"
+msgstr "无"
 
 #: settings.volt - email transport
 msgid "SMTP Username"
-msgstr "SMTP Username"
+msgstr "SMTP 用户名"
 
 #: settings.volt - email transport
 msgid "Leave empty if the SMTP server does not require authentication"
-msgstr "Leave empty if the SMTP server does not require authentication"
+msgstr "如果 SMTP 服务器不需要身份验证，请留空"
 
 #: settings.volt - email transport
 msgid "SMTP Password"
-msgstr "SMTP Password"
+msgstr "SMTP 密码"
 
 #: settings.volt - email transport
 msgid "The current email settings are saved before the test is sent"
-msgstr "The current email settings are saved before the test is sent"
+msgstr "发送测试前会保存当前的电子邮件设置"
 
 #: settings.volt - email transport
 msgid "Please enter recipient email first"
-msgstr "Please enter recipient email first"
+msgstr "请先输入收件人电子邮件"
 
 # ============================================
 # [scanhistory.volt] Nmap scan history page
 # ============================================
 
 msgid "Nmap Scan History"
-msgstr "Nmap Scan History"
+msgstr "Nmap 扫描历史"
 
 msgid "Refresh scan history"
-msgstr "Refresh scan history"
+msgstr "刷新扫描历史"
 
 msgid "Rows"
-msgstr "Rows"
+msgstr "行"
 
 msgid "Started"
-msgstr "Started"
+msgstr "已开始"
 
 msgid "Finished"
-msgstr "Finished"
+msgstr "已完成"
 
 msgid "Error"
-msgstr "Error"
+msgstr "错误"
 
 msgid "Email sent"
-msgstr "Email sent"
+msgstr "邮件已发送"
 
 msgid "Email failed"
-msgstr "Email failed"
+msgstr "邮件失败"
 
 msgid "Sent"
-msgstr "Sent"
+msgstr "已发送"
 
 msgid "Success"
-msgstr "Success"
+msgstr "成功"
 
 msgid "Incomplete"
-msgstr "Incomplete"
+msgstr "未完成"
 
 msgid "Manual"
-msgstr "Manual"
+msgstr "手动"
 
 msgid "Automatic"
-msgstr "Automatic"
+msgstr "自动"
 
 msgid "Port"
-msgstr "Port"
+msgstr "端口"
 
 msgid "Protocol"
-msgstr "Protocol"
+msgstr "协议"
 
 msgid "Service"
-msgstr "Service"
+msgstr "服务"
 
 msgid "Product"
-msgstr "Product"
+msgstr "产品"
 
 msgid "Version"
-msgstr "Version"
+msgstr "版本"
 
 msgid "Extra info"
-msgstr "Extra info"
+msgstr "额外信息"
 
 msgid "No open ports recorded"
-msgstr "No open ports recorded"
+msgstr "未记录开放的端口"
 
 msgid "Enabled"
-msgstr "Enabled"
+msgstr "已启用"
 
 msgid "Disabled"
-msgstr "Disabled"
+msgstr "已禁用"
 
 msgid "Top ports"
-msgstr "Top ports"
+msgstr "常用端口"
 
 msgid "Timing"
-msgstr "Timing"
+msgstr "计时"
 
 msgid "Host timeout"
-msgstr "Host timeout"
+msgstr "主机超时"
 
 msgid "Version detection"
-msgstr "Version detection"
+msgstr "版本检测"
 
 msgid "Nmap version"
-msgstr "Nmap version"
+msgstr "Nmap 版本"
 
 msgid "Nmap elapsed"
-msgstr "Nmap elapsed"
+msgstr "Nmap 耗时"
 
 msgid "OS hint"
-msgstr "OS hint"
+msgstr "操作系统提示"
 
 msgid "Open ports"
-msgstr "Open ports"
+msgstr "开放的端口"
 
 msgid "Scan error"
-msgstr "Scan error"
+msgstr "扫描错误"
 
 msgid "Email error"
-msgstr "Email error"
+msgstr "邮件错误"
 
 msgid "Open port details"
-msgstr "Open port details"
+msgstr "开放端口详情"
 
 msgid "No targeted Nmap scan history recorded"
-msgstr "No targeted Nmap scan history recorded"
+msgstr "未记录定向 Nmap 扫描历史"
 
 msgid "Show scan details"
-msgstr "Show scan details"
+msgstr "显示扫描详情"
 
 msgid "Hide scan details"
-msgstr "Hide scan details"
+msgstr "隐藏扫描详情"
 msgid "Resolve event"
-msgstr "Resolve event"
+msgstr "解决事件"
 
 msgid "Reopen event"
-msgstr "Reopen event"
+msgstr "重新打开事件"
 
 msgid "Unable to update IP and MAC conflict"
-msgstr "Unable to update IP and MAC conflict"
+msgstr "无法更新 IP 和 MAC 冲突"
 
 msgid "All"
-msgstr "All"
+msgstr "全部"
 
 msgid "Unresolved"
-msgstr "Unresolved"
+msgstr "未解决"
 
 msgid "Resolved"
-msgstr "Resolved"
+msgstr "已解决"
 
 #: settings.volt - IP and MAC conflict email alerts
 msgid "Email high-severity conflict alerts"
-msgstr "Email high-severity conflict alerts"
+msgstr "高严重性冲突邮件警报"
 
 #: settings.volt - IP and MAC conflict email alerts
 msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
-msgstr "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
+msgstr "当检测到新的高严重性 IPv4 或 IPv6 地址冲突时发送电子邮件。"
 
 msgid "IP and MAC Conflicts"
-msgstr "IP and MAC Conflicts"
+msgstr "IP 和 MAC 冲突"
 
 msgid "Refresh IP and MAC conflicts"
-msgstr "Refresh IP and MAC conflicts"
+msgstr "刷新 IP 和 MAC 冲突"
 
 msgid "Loading IP and MAC conflicts..."
-msgstr "Loading IP and MAC conflicts..."
+msgstr "正在加载 IP 和 MAC 冲突..."
 
 msgid "No IP and MAC conflicts recorded"
-msgstr "No IP and MAC conflicts recorded"
+msgstr "未记录 IP 和 MAC 冲突"
 
 msgid "Unable to load IP and MAC conflicts"
-msgstr "Unable to load IP and MAC conflicts"
+msgstr "无法加载 IP 和 MAC 冲突"
 
 msgid "Show conflict details"
-msgstr "Show conflict details"
+msgstr "显示冲突详情"
 
 msgid "Hide conflict details"
-msgstr "Hide conflict details"
+msgstr "隐藏冲突详情"
 
 msgid "Resolve conflict"
-msgstr "Resolve conflict"
+msgstr "解决冲突"
 
 msgid "Reopen conflict"
-msgstr "Reopen conflict"
+msgstr "重新打开冲突"
 
 msgid "IPv4 address used by another device"
-msgstr "IPv4 address used by another device"
+msgstr "IPv4 地址被另一个设备使用"
 
 msgid "IPv6 address used by another device"
-msgstr "IPv6 address used by another device"
+msgstr "IPv6 地址被另一个设备使用"
 
 msgid "Device using multiple IPv4 addresses"
-msgstr "Device using multiple IPv4 addresses"
+msgstr "设备使用多个 IPv4 地址"
 
 msgid "Device seen on multiple interfaces"
-msgstr "Device seen on multiple interfaces"
+msgstr "在多个接口上发现的设备"
 
 #: activitytimeline.volt - page and section heading
 msgid "Device Activity"
-msgstr "Device Activity"
+msgstr "设备活动"
 
 msgid "Services"
-msgstr "Services"
+msgstr "服务"
 
 #: devices.volt - first-seen column
 msgid "First Seen"
-msgstr "First Seen"
+msgstr "首次出现"
 
 #: devices.volt - toast after clearing friendly name
 msgid "Friendly name cleared"
-msgstr "Friendly name cleared"
+msgstr "友好名称已清除"
 
 #: changesummary.volt - menu entry and page title
 msgid "Change Summary"
-msgstr "Change Summary"
+msgstr "变更摘要"
 
 msgid "Period"
-msgstr "Period"
+msgstr "时间段"
 
 msgid "Since last review"
-msgstr "Since last review"
+msgstr "自上次审查以来"
 
 msgid "Last 24 hours"
-msgstr "Last 24 hours"
+msgstr "最近 24 小时"
 
 msgid "Last 7 days"
-msgstr "Last 7 days"
+msgstr "最近 7 天"
 
 msgid "Last 30 days"
-msgstr "Last 30 days"
+msgstr "最近 30 天"
 
 msgid "Custom range"
-msgstr "Custom range"
+msgstr "自定义范围"
 
 msgid "Category"
-msgstr "Category"
+msgstr "类别"
 
 msgid "All categories"
-msgstr "All categories"
+msgstr "所有类别"
 
 msgid "Device"
-msgstr "Device"
+msgstr "设备"
 
 msgid "Lifecycle"
-msgstr "Lifecycle"
+msgstr "生命周期"
 
 msgid "Identity"
-msgstr "Identity"
+msgstr "标识"
 
 msgid "Device Profile"
-msgstr "Device Profile"
+msgstr "设备配置文件"
 
 msgid "Notes / History"
-msgstr "Notes / History"
+msgstr "备注 / 历史"
 
 msgid "Infrastructure"
-msgstr "Infrastructure"
+msgstr "基础设施"
 
 msgid "Mark reviewed now"
-msgstr "Mark reviewed now"
+msgstr "立即标记为已审查"
 
 msgid "Start"
-msgstr "Start"
+msgstr "开始"
 
 msgid "End"
-msgstr "End"
+msgstr "结束"
 
 msgid "No previous review marker; showing the last 24 hours."
-msgstr "No previous review marker; showing the last 24 hours."
+msgstr "没有先前的审查标记；显示最近 24 小时。"
 
 msgid "Total Changes"
-msgstr "Total Changes"
+msgstr "变更总数"
 
 msgid "New Devices"
-msgstr "New Devices"
+msgstr "新设备"
 
 msgid "Returned Devices"
-msgstr "Returned Devices"
+msgstr "返回的设备"
 
 msgid "Identity Changes"
-msgstr "Identity Changes"
+msgstr "标识变更"
 
 msgid "Infrastructure Changes"
-msgstr "Infrastructure Changes"
+msgstr "基础设施变更"
 
 msgid "Lifecycle Changes"
-msgstr "Lifecycle Changes"
+msgstr "生命周期变更"
 
 msgid "Time"
-msgstr "Time"
+msgstr "时间"
 
 msgid "Device / Subject"
-msgstr "Device / Subject"
+msgstr "设备 / 主题"
 
 msgid "Change"
-msgstr "Change"
+msgstr "变更"
 
 msgid "Previous"
-msgstr "Previous"
+msgstr "之前"
 
 msgid "Current"
-msgstr "Current"
+msgstr "当前"
 
 msgid "Action"
-msgstr "Action"
+msgstr "操作"
 
 msgid "Loading changes..."
-msgstr "Loading changes..."
+msgstr "正在加载变更..."
 
 msgid "Next"
-msgstr "Next"
+msgstr "下一步"
 
 # [physicaldevices.volt] Device Profiles page
 msgid "Device Profiles"
-msgstr "Device Profiles"
+msgstr "设备配置文件"
 
 #: physicaldevices.volt - summary stat label
 msgid "Profiles"
-msgstr "Profiles"
+msgstr "配置文件"
 
 msgid "Archived"
-msgstr "Archived"
+msgstr "已归档"
 
 msgid "Create Profile"
-msgstr "Create Profile"
+msgstr "创建配置文件"
 
 msgid "All Profiles"
-msgstr "All Profiles"
+msgstr "所有配置文件"
 
 msgid "Current Profiles"
-msgstr "Current Profiles"
+msgstr "当前配置文件"
 
 msgid "Archived Profiles"
-msgstr "Archived Profiles"
+msgstr "已归档的配置文件"
 
 msgid "Search by name or MAC"
-msgstr "Search by name or MAC"
+msgstr "按名称或 MAC 搜索"
 
 msgid "Showing"
-msgstr "Showing"
+msgstr "显示"
 
 msgid "Profile name"
-msgstr "Profile name"
+msgstr "配置文件名称"
 
 msgid "Create"
-msgstr "Create"
+msgstr "创建"
 
 msgid "Loading devices..."
-msgstr "Loading devices..."
+msgstr "正在加载设备..."
 
 msgid "Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
-msgstr "Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
+msgstr "此配置文件从一个 MAC 地址开始。它必须属于当前在线的网络标识。添加标识是显式操作，绝不会合并或重写设备、生命周期或标识历史。"
 
 msgid "Loading device profile..."
-msgstr "Loading device profile..."
+msgstr "正在加载设备配置文件..."
 
 # [devicehistory.volt] Device Details page
 msgid "Network Identity Details"
-msgstr "Network Identity Details"
+msgstr "网络标识详情"
 
 msgid "Network Identity Summary"
-msgstr "Network Identity Summary"
+msgstr "网络标识摘要"
 
 msgid "Back to Devices"
-msgstr "Back to Devices"
+msgstr "返回设备"
 
 msgid "Current Lifecycle"
-msgstr "Current Lifecycle"
+msgstr "当前生命周期"
 
 msgid "Lifecycle History"
-msgstr "Lifecycle History"
+msgstr "生命周期历史"
 
 msgid "MAC address"
-msgstr "MAC address"
+msgstr "MAC 地址"
 
 msgid "A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below."
-msgstr "A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below."
+msgstr "生命周期是指将此 MAC 地址视为同一已知设备的一个连续时段。较早的生命周期会被归档（而非删除），并在下方保持可用。"
 
 msgid "Start New Lifecycle"
-msgstr "Start New Lifecycle"
+msgstr "开始新的生命周期"
 
 msgid "Use this when the returning device should be treated as new."
-msgstr "Use this when the returning device should be treated as new."
+msgstr "当返回的设备应被视为新设备时使用此选项。"
 
 msgid "Loading device history..."
-msgstr "Loading device history..."
+msgstr "正在加载设备历史..."
 
 msgid "Notes"
-msgstr "Notes"
+msgstr "备注"
 
 msgid "There is no active lifecycle. Resolve the returning device in Lifecycle History before adding notes."
-msgstr "There is no active lifecycle. Resolve the returning device in Lifecycle History before adding notes."
+msgstr "没有活动的生命周期。添加备注前，请在生命周期历史中解决返回的设备。"
 
 msgid "Add Note"
-msgstr "Add Note"
+msgstr "添加备注"
 
 msgid "Enter a new note..."
-msgstr "Enter a new note..."
+msgstr "输入新备注..."
 
 msgid "Loading notes..."
-msgstr "Loading notes..."
+msgstr "正在加载备注..."
 
 # [infrastructureservices.volt] Opt-in targeted port discovery
 msgid "Port Discovery"
-msgstr "Port Discovery"
+msgstr "端口发现"
 
 msgid "Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned."
-msgstr "Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned."
+msgstr "在设备行使用“立即运行”来扫描 TCP 端口 1-65535，包括标准和非标准端口。开放的端口和已识别的服务会显示在“扫描”选项卡中。选择多个设备进行可选的每周扫描，然后保存。扫描一次运行一个主机，并在 120 秒后停止；未完成的扫描会标记为失败。UDP 端口（包括 WireGuard）不会被扫描。"
 
 msgid "Scans"
-msgstr "Scans"
+msgstr "扫描"
 
 msgid "Run Now"
-msgstr "Run Now"
+msgstr "立即运行"
 
 msgid "Scan weekly"
-msgstr "Scan weekly"
+msgstr "每周扫描"
 
 msgid "Scan Time"
-msgstr "Scan Time"
+msgstr "扫描时间"
 
 msgid "Scan Time (local time)"
-msgstr "Scan Time (local time)"
+msgstr "扫描时间（本地时间）"
 
 msgid "Last Scan (local time)"
-msgstr "Last Scan (local time)"
+msgstr "上次扫描（本地时间）"
 
 msgid "Result"
-msgstr "Result"
+msgstr "结果"
 
 msgid "Open TCP Ports"
-msgstr "Open TCP Ports"
+msgstr "开放的 TCP 端口"
 
 msgid "Search IP, MAC or name"
-msgstr "Search IP, MAC or name"
+msgstr "搜索 IP、MAC 或名称"
 
 msgid "TCP ports, e.g. 22,443"
-msgstr "TCP ports, e.g. 22,443"
+msgstr "TCP 端口，例如 22,443"
 
 msgid "All results"
-msgstr "All results"
+msgstr "所有结果"
 
 msgid "Complete"
-msgstr "Complete"
+msgstr "完成"
 
 msgid "Running"
-msgstr "Running"
+msgstr "运行中"
 
 msgid "Filtering the 50 most recent scans"
-msgstr "Filtering the 50 most recent scans"
+msgstr "正在筛选最近 50 次扫描"
 
 # [devicehistory.volt] Per-device service alert controls
 msgid "Service Email Alerts"
-msgstr "Service Email Alerts"
+msgstr "服务邮件警报"
 
 msgid "Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings."
-msgstr "Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings."
+msgstr "选择此网络标识是否发送服务邮件警报。“使用全局设置”会保留“设置”中的默认值。必须在“设置”中启用邮件投递。"
 
 msgid "Service event"
-msgstr "Service event"
+msgstr "服务事件"
 
 msgid "Preference"
-msgstr "Preference"
+msgstr "偏好设置"
 
 msgid "Effective"
-msgstr "Effective"
+msgstr "生效"
 
 msgid "New service"
-msgstr "New service"
+msgstr "新服务"
 
 msgid "Service unavailable"
-msgstr "Service unavailable"
+msgstr "服务不可用"
 
 msgid "Service recovered"
-msgstr "Service recovered"
+msgstr "服务已恢复"
 
 msgid "New service email preference"
-msgstr "New service email preference"
+msgstr "新服务的邮件偏好设置"
 
 msgid "Service unavailable email preference"
-msgstr "Service unavailable email preference"
+msgstr "服务不可用的邮件偏好设置"
 
 msgid "Service recovered email preference"
-msgstr "Service recovered email preference"
+msgstr "服务恢复的邮件偏好设置"
 
 msgid "Use global setting"
-msgstr "Use global setting"
+msgstr "使用全局设置"
 
 msgid "On"
-msgstr "On"
+msgstr "开"
 
 msgid "Off"
-msgstr "Off"
+msgstr "关"
 
 msgid "Save alert preferences"
-msgstr "Save alert preferences"
+msgstr "保存警报偏好设置"
 
 msgid "Email delivery is disabled in Settings."
-msgstr "Email delivery is disabled in Settings."
+msgstr "“设置”中已禁用邮件投递。"
 
 msgid "These preferences are saved, but service alert emails will not be sent."
-msgstr "These preferences are saved, but service alert emails will not be sent."
+msgstr "这些偏好设置已保存，但不会发送服务警报邮件。"
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
-msgstr "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
+msgstr "这些偏好设置已保存，但由于全局电子邮件通知已关闭，此网络标识的服务警报邮件不会被发送。"
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because monitoring is turned off."
-msgstr "These preferences are saved, but this network identity’s service alert emails will not be sent because monitoring is turned off."
+msgstr "这些偏好设置已保存，但由于监控已关闭，此网络标识的服务警报邮件不会被发送。"
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because no email recipient is configured in Settings."
-msgstr "These preferences are saved, but this network identity’s service alert emails will not be sent because no email recipient is configured in Settings."
+msgstr "这些偏好设置已保存，但由于“设置”中未配置邮件收件人，此网络标识的服务警报邮件不会被发送。"
 
 msgid "These preferences are saved, but service alert email delivery is unavailable."
-msgstr "These preferences are saved, but service alert email delivery is unavailable."
+msgstr "这些偏好设置已保存，但服务警报邮件投递不可用。"
 
 msgid "Go to Email Notifications"
-msgstr "Go to Email Notifications"
+msgstr "前往电子邮件通知"
 
 msgid "Back to Network Identity Details"
-msgstr "Back to Network Identity Details"
+msgstr "返回网络标识详情"
 
 msgid "Open Network Identity Details"
-msgstr "Open Network Identity Details"
+msgstr "打开网络标识详情"
 
 msgid "View Network Identity Details"
-msgstr "View Network Identity Details"
+msgstr "查看网络标识详情"
 
 msgid "Unable to load alert preferences"
-msgstr "Unable to load alert preferences"
+msgstr "无法加载警报偏好设置"
 
 msgid "Unable to save alert preferences"
-msgstr "Unable to save alert preferences"
+msgstr "无法保存警报偏好设置"
 
 msgid "Alert preferences saved"
-msgstr "Alert preferences saved"
+msgstr "警报偏好设置已保存"
 
 msgid "More information"
-msgstr "More information"
+msgstr "更多信息"
 
 msgid "About Service Email Alerts"
-msgstr "About Service Email Alerts"
+msgstr "关于服务邮件警报"
 
 msgid "About Lifecycle History"
-msgstr "About Lifecycle History"
+msgstr "关于生命周期历史"
 
 msgid "About Network Identities"
-msgstr "About Network Identities"
+msgstr "关于网络标识"
 
 msgid "About Device Profiles"
-msgstr "About Device Profiles"
+msgstr "关于设备配置文件"
 
 msgid "About Creating Profiles"
-msgstr "About Creating Profiles"
+msgstr "关于创建配置文件"
 
 msgid "About Port Discovery"
-msgstr "About Port Discovery"
+msgstr "关于端口发现"
 
 msgid "TCP only · 120-second limit per host"
-msgstr "TCP only · 120-second limit per host"
+msgstr "仅 TCP · 每台主机 120 秒限制"
 
 msgid "About Email Delivery"
-msgstr "About Email Delivery"
+msgstr "关于邮件投递"
 
 msgid "About Direct SMTP"
-msgstr "About Direct SMTP"
+msgstr "关于直接 SMTP"
 
 msgid "About SMTP Username"
-msgstr "About SMTP Username"
+msgstr "关于 SMTP 用户名"
 
 msgid "About Test Email"
-msgstr "About Test Email"
+msgstr "关于测试邮件"
 
 msgid "About Conflict Alerts"
-msgstr "About Conflict Alerts"
+msgstr "关于冲突警报"
 
 msgid "About Infrastructure Service Alerts"
-msgstr "About Infrastructure Service Alerts"
+msgstr "关于基础设施服务警报"
 
 msgid "About Notification Interfaces"
-msgstr "About Notification Interfaces"
+msgstr "关于通知接口"
 
 msgid "About Webhook Notifications"
-msgstr "About Webhook Notifications"
+msgstr "关于 Webhook 通知"

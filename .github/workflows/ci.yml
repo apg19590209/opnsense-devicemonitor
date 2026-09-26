@@ -61,12 +61,11 @@ jobs:
         run: |
           set -eu
           mkdir -p /tmp/devicemonitor-mo
-          msgfmt \
-            src/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po \
-            -o /tmp/devicemonitor-mo/cs_CZ_devicemonitor.mo
-          msgfmt \
-            src/opnsense/mvc/app/languages/en_US_devicemonitor.po \
-            -o /tmp/devicemonitor-mo/en_US_devicemonitor.mo
+          for lang in en_US cs_CZ de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN; do
+            msgfmt \
+              "src/opnsense/mvc/app/languages/${lang}_devicemonitor.po" \
+              -o "/tmp/devicemonitor-mo/${lang}_devicemonitor.mo"
+          done
 
       - name: Validate Device Monitor database migrations
         run: |

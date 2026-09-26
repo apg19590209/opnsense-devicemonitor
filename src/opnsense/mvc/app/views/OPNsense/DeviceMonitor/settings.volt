@@ -448,7 +448,7 @@
                         </tr>
 
                         <tr>
-                            <th colspan="2" style="padding-top:18px;">{{ lang._('v2.9 Features and Enhancements') }}</th>
+                            <th colspan="2" style="padding-top:18px;">{{ lang._('v2.10 Features and Enhancements') }}</th>
                         </tr>
                         <tr>
                             <td style="color:#888;">{{ lang._('Developer') }}</td>

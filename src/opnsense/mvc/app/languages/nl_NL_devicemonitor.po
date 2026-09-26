@@ -1,4 +1,5 @@
-# Device Monitor Plugin - Translations en_US
+# Device Monitor Plugin - Translations nl_NL
+# NOTE: Machine-translated by an LLM; native-speaker review and corrections are welcome.
 # Copyright (C) 2026 Hacesoft
 #
 # NOTE: #: comments show where the text is used in code.
@@ -11,8 +12,8 @@ msgstr ""
 "POT-Creation-Date: 2026-04-10 00:00+0000\n"
 "PO-Revision-Date: 2026-04-10 00:00+0000\n"
 "Last-Translator: Device Monitor contributors\n"
-"Language-Team: English\n"
-"Language: en_US\n"
+"Language-Team: Dutch\n"
+"Language: nl_NL\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -24,27 +25,27 @@ msgstr ""
 
 #: Menu.xml - plugin menu name
 msgid "Device Monitor"
-msgstr "Device Monitor"
+msgstr "Apparaatbewaking"
 
 #: Menu.xml - menu item
 msgid "Devices"
-msgstr "Devices"
+msgstr "Apparaten"
 
 #: devices.volt / physicaldevices.volt - navigation tabs
 msgid "Network Identities"
-msgstr "Network Identities"
+msgstr "Netwerkidentiteiten"
 
 #: devices.volt - navigation explanatory text
 msgid "Automatically discovered network identities. Each row represents one MAC address."
-msgstr "Automatically discovered network identities. Each row represents one MAC address."
+msgstr "Automatisch ontdekte netwerkidentiteiten. Elke rij vertegenwoordigt één MAC-adres."
 
 #: physicaldevices.volt - navigation explanatory text
 msgid "Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters."
-msgstr "Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters."
+msgstr "Echte apparaten die zijn gekoppeld aan een of meer netwerkidentiteiten, zoals bekabelde en Wi-Fi-adapters."
 
 #: Menu.xml - menu item | settings.volt - page title
 msgid "Settings"
-msgstr "Settings"
+msgstr "Instellingen"
 
 
 # ============================================
@@ -53,7 +54,7 @@ msgstr "Settings"
 
 #: devices.volt - header stats
 msgid "Total Identities"
-msgstr "Total Identities"
+msgstr "Totaal identiteiten"
 
 #: devices.volt - header stats (green)
 msgid "Online"
@@ -61,47 +62,47 @@ msgstr "Online"
 
 #: devices.volt - VLAN dropdown - all VLANs option
 msgid "All VLANs"
-msgstr "All VLANs"
+msgstr "Alle VLAN's"
 
 #: devices.volt - VLAN filter apply button
 msgid "Apply VLAN Filter"
-msgstr "Apply VLAN Filter"
+msgstr "VLAN-filter toepassen"
 
 #: devices.volt - VLAN filter pending indicator
 msgid "Not applied"
-msgstr "Not applied"
+msgstr "Niet toegepast"
 
 #: devices.volt - VLAN dropdown - empty selection prompt
 msgid "Select a VLAN"
-msgstr "Select a VLAN"
+msgstr "Selecteer een VLAN"
 
 #: devices.volt - status dropdown - all statuses option
 msgid "All statuses"
-msgstr "All statuses"
+msgstr "Alle statussen"
 
 #: devices.volt - refresh button title
 msgid "Refresh"
-msgstr "Refresh"
+msgstr "Vernieuwen"
 
 #: devices.volt - clear database button
 msgid "Clear Database"
-msgstr "Clear Database"
+msgstr "Database wissen"
 
 #: devices.volt - table column header
 msgid "MAC Address"
-msgstr "MAC Address"
+msgstr "MAC-adres"
 
 #: devices.volt - table column header
 msgid "IP Address"
-msgstr "IP Address"
+msgstr "IP-adres"
 
 #: devices.volt - table column header
 msgid "Hostname"
-msgstr "Hostname"
+msgstr "Hostnaam"
 
 #: devices.volt - table column header
 msgid "Vendor"
-msgstr "Vendor"
+msgstr "Leverancier"
 
 #: devices.volt - table column header
 msgid "VLAN"
@@ -109,47 +110,47 @@ msgstr "VLAN"
 
 #: devices.volt - table column header
 msgid "Last Seen"
-msgstr "Last Seen"
+msgstr "Laatst gezien"
 
 #: devices.volt - table column header
 msgid "Actions"
-msgstr "Actions"
+msgstr "Acties"
 
 #: devices.volt - confirm dialogue when deleting a device
 msgid "Delete device"
-msgstr "Delete device"
+msgstr "Apparaat verwijderen"
 
 #: devices.volt - confirm dialogue when clearing entire DB
 msgid "Really delete all devices from database?"
-msgstr "Really delete all devices from database?"
+msgstr "Echt alle apparaten uit de database verwijderen?"
 
 #: devices.volt - toast message after device deletion
 msgid "Device deleted"
-msgstr "Device deleted"
+msgstr "Apparaat verwijderd"
 
 #: devices.volt - toast message on deletion error
 msgid "Error deleting device"
-msgstr "Error deleting device"
+msgstr "Fout bij het verwijderen van het apparaat"
 
 #: devices.volt - toast message after clearing DB
 msgid "Database cleared"
-msgstr "Database cleared"
+msgstr "Database gewist"
 
 #: devices.volt - toast message on clear DB error
 msgid "Error clearing database"
-msgstr "Error clearing database"
+msgstr "Fout bij het wissen van de database"
 
 #: devices.volt - friendly-name column
 msgid "Friendly Name"
-msgstr "Friendly Name"
+msgstr "Vriendelijke naam"
 
 #: devices.volt - toast after successful friendly-name save
 msgid "Friendly name saved"
-msgstr "Friendly name saved"
+msgstr "Vriendelijke naam opgeslagen"
 
 #: devices.volt - toast on friendly-name save error
 msgid "Error saving friendly name"
-msgstr "Error saving friendly name"
+msgstr "Fout bij het opslaan van de vriendelijke naam"
 
 
 # ============================================
@@ -159,229 +160,229 @@ msgstr "Error saving friendly name"
 
 #: settings.volt - tab 1 label
 msgid "Email Notifications"
-msgstr "Email Notifications"
+msgstr "E-mailmeldingen"
 
 #: settings.volt - tab 2 label
 msgid "Webhook Notifications"
-msgstr "Webhook Notifications"
+msgstr "Webhookmeldingen"
 
 #: settings.volt - tab 3 label
 msgid "Other Settings"
-msgstr "Other Settings"
+msgstr "Overige instellingen"
 
 #: settings.volt - tab 4 label
 msgid "About"
-msgstr "About"
+msgstr "Over"
 
 #: settings.volt - tab 1 info text (localized)
 msgid "Configure email notifications for new devices on the network"
-msgstr "Configure email notifications for new devices on the network"
+msgstr "Configureer e-mailmeldingen voor nieuwe apparaten op het netwerk"
 
 #: settings.volt - tab 2 info text
 msgid "Configure webhook notifications for new devices on the network"
-msgstr "Configure webhook notifications for new devices on the network"
+msgstr "Configureer webhookmeldingen voor nieuwe apparaten op het netwerk"
 
 #: settings.volt - tab 1: checkbox label
 msgid "Enable Email"
-msgstr "Enable Email"
+msgstr "E-mail inschakelen"
 
 #: settings.volt - tab 1: email recipient label
 msgid "Email Recipient"
-msgstr "Email Recipient"
+msgstr "E-mailontvanger"
 
 #: settings.volt - tab 1: help text below email recipient field
 msgid "Where to send notifications"
-msgstr "Where to send notifications"
+msgstr "Waar meldingen naartoe sturen"
 
 #: settings.volt - tab 1: email sender label
 msgid "Email Sender"
-msgstr "Email Sender"
+msgstr "E-mailafzender"
 
 #: settings.volt - tab 1: help text below email sender field
 msgid "From address"
-msgstr "From address"
+msgstr "Afzenderadres"
 
 #: settings.volt - tab 1: SMTP warning heading
 msgid "Important - SMTP Configuration"
-msgstr "Important - SMTP Configuration"
+msgstr "Belangrijk - SMTP-configuratie"
 
 #: settings.volt - tab 1: SMTP warning text (with HTML tag)
 msgid "Plugin uses <strong>sendmail (Postfix)</strong> to send emails"
-msgstr "Plugin uses <strong>sendmail (Postfix)</strong> to send emails"
+msgstr "De plugin gebruikt <strong>sendmail (Postfix)</strong> om e-mails te verzenden"
 
 #: settings.volt - tab 1: SMTP warning text (with HTML and path)
 msgid "Must be configured in: <strong>System > Settings > Notifications > SMTP</strong>"
-msgstr "Must be configured in: <strong>System > Settings > Notifications > SMTP</strong>"
+msgstr "Moet worden geconfigureerd in: <strong>Systeem > Instellingen > Meldingen > SMTP</strong>"
 
 #: settings.volt - tab 1: test email button
 msgid "Test Email"
-msgstr "Test Email"
+msgstr "Test-e-mail"
 
 #: settings.volt - tab 2: checkbox label
 msgid "Enable Webhook"
-msgstr "Enable Webhook"
+msgstr "Webhook inschakelen"
 
 #: settings.volt - tab 2: webhook URL label
 msgid "Webhook URL"
-msgstr "Webhook URL"
+msgstr "Webhook-URL"
 
 #: settings.volt - tab 2: test webhook button
 msgid "Send Test"
-msgstr "Send Test"
+msgstr "Test verzenden"
 
 #: settings.volt - tab 1+2: VLAN notification filter label
 msgid "Notify for interfaces"
-msgstr "Notify for interfaces"
+msgstr "Melden voor interfaces"
 
 #: settings.volt - tab 1+2: help text below VLAN filter
 msgid "Leave empty to receive notifications from all interfaces"
-msgstr "Leave empty to receive notifications from all interfaces"
+msgstr "Laat leeg om meldingen van alle interfaces te ontvangen"
 
 #: settings.volt - tab 1+2: shown when no interfaces loaded
 msgid "No interfaces found"
-msgstr "No interfaces found"
+msgstr "Geen interfaces gevonden"
 
 #: settings.volt - tab 3: checkbox label
 msgid "Enable Monitoring"
-msgstr "Enable Monitoring"
+msgstr "Bewaking inschakelen"
 
 #: settings.volt - tab 3: help text next to monitoring checkbox
 msgid "Enable automatic network monitoring"
-msgstr "Enable automatic network monitoring"
+msgstr "Automatische netwerkbewaking inschakelen"
 
 #: settings.volt - tab 3: scan interval label
 msgid "Scan Interval"
-msgstr "Scan Interval"
+msgstr "Scan-interval"
 
 #: settings.volt - tab 3: unit label after interval input
 msgid "seconds"
-msgstr "seconds"
+msgstr "seconden"
 
 #: settings.volt - tab 3: help text below interval input
 msgid "Seconds between scans (60-3600)"
-msgstr "Seconds between scans (60-3600)"
+msgstr "Seconden tussen scans (60-3600)"
 
 #: settings.volt - tab 3: monitored interfaces label
 msgid "Monitored Interfaces"
-msgstr "Monitored Interfaces"
+msgstr "Bewaakte interfaces"
 
 #: settings.volt - tab 3: monitored interfaces help
 msgid "Only devices on selected interfaces are scanned. With no selection, scanning is refused."
-msgstr "Only devices on selected interfaces are scanned. With no selection, scanning is refused."
+msgstr "Alleen apparaten op geselecteerde interfaces worden gescand. Zonder selectie wordt scannen geweigerd."
 
 #: settings.volt - tab 3: monitored interfaces fail-closed warning
 msgid "Monitoring is enabled but no interface is selected. Scans will be refused."
-msgstr "Monitoring is enabled but no interface is selected. Scans will be refused."
+msgstr "Bewaking is ingeschakeld maar er is geen interface geselecteerd. Scans worden geweigerd."
 
 #: settings.volt - tab 3: shown when no enabled IPv4 interfaces
 msgid "No enabled IPv4 interfaces found"
-msgstr "No enabled IPv4 interfaces found"
+msgstr "Geen ingeschakelde IPv4-interfaces gevonden"
 
 #: settings.volt - Monitoring: hostname enrichment providers (Pi-hole / Unbound)
 msgid "Pi-hole Hostnames"
-msgstr "Pi-hole Hostnames"
+msgstr "Pi-hole-hostnamen"
 
 msgid "Unbound Hostnames"
-msgstr "Unbound Hostnames"
+msgstr "Unbound-hostnamen"
 
 msgid "Experimental"
-msgstr "Experimental"
+msgstr "Experimenteel"
 
 msgid "Enable Pi-hole hostname enrichment"
-msgstr "Enable Pi-hole hostname enrichment"
+msgstr "Pi-hole-hostnaamverrijking inschakelen"
 
 msgid "Enable Unbound hostname enrichment"
-msgstr "Enable Unbound hostname enrichment"
+msgstr "Unbound-hostnaamverrijking inschakelen"
 
 msgid "Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default."
-msgstr "Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default."
+msgstr "Gebruikt Pi-hole v6 DHCP-leases als hostnaambron. Vereist Pi-hole v6, HTTPS en een app-wachtwoord. Standaard uitgeschakeld."
 
 msgid "Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default."
-msgstr "Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default."
+msgstr "Leest alleen lokale OPNsense Unbound-hostoverrides en hostaliassen. Er worden geen netwerkquery's uitgevoerd. Standaard uitgeschakeld."
 
 msgid "Pi-hole URL"
-msgstr "Pi-hole URL"
+msgstr "Pi-hole-URL"
 
 msgid "HTTPS base URL of your Pi-hole server"
-msgstr "HTTPS base URL of your Pi-hole server"
+msgstr "HTTPS-basis-URL van uw Pi-hole-server"
 
 msgid "App password"
-msgstr "App password"
+msgstr "App-wachtwoord"
 
 msgid "Pi-hole app password generated in the Pi-hole web interface"
-msgstr "Pi-hole app password generated in the Pi-hole web interface"
+msgstr "Pi-hole-app-wachtwoord gegenereerd in de Pi-hole-webinterface"
 
 #: settings.volt - tab 4: plugin description
 msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
-msgstr "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
+msgstr "OPNsense-plugin voor het bewaken van netwerkapparaten, het detecteren van IP- en MAC-adresconflicten, het ontdekken van infrastructuurdiensten, het uitvoeren van gerichte beveiligingsscans en het verzenden van configureerbare meldingen met behulp van native hostwatch-gegevens."
 
 #: settings.volt - tab 4: info table row
 msgid "Author"
-msgstr "Author"
+msgstr "Auteur"
 
 #: settings.volt - tab 4: info table row
 msgid "GitHub Repository"
-msgstr "GitHub Repository"
+msgstr "GitHub-repository"
 
 #: settings.volt - v2.10 features heading
 msgid "v2.10 Features and Enhancements"
-msgstr "v2.10 Features and Enhancements"
+msgstr "Functies en verbeteringen v2.10"
 
 #: settings.volt - tab 4: info table row
 msgid "Licence"
-msgstr "Licence"
+msgstr "Licentie"
 
 #: settings.volt - tab 4: minimum OPNsense version
 msgid "Requires OPNsense"
-msgstr "Requires OPNsense"
+msgstr "Vereist OPNsense"
 
 #: settings.volt - Apply button on each tab
 msgid "Apply"
-msgstr "Apply"
+msgstr "Toepassen"
 
 #: settings.volt - spinner text on Apply button while saving
 msgid "Saving..."
-msgstr "Saving..."
+msgstr "Opslaan..."
 
 #: settings.volt - toast after successful config save
 msgid "Configuration saved"
-msgstr "Configuration saved"
+msgstr "Configuratie opgeslagen"
 
 #: settings.volt - toast on config save error
 msgid "Error saving configuration"
-msgstr "Error saving configuration"
+msgstr "Fout bij het opslaan van de configuratie"
 
 #: settings.volt - toast after test email sent
 msgid "Test email sent to"
-msgstr "Test email sent to"
+msgstr "Test-e-mail verzonden naar"
 
 #: settings.volt - toast on test email error
 msgid "Failed to send email"
-msgstr "Failed to send email"
+msgstr "E-mail verzenden mislukt"
 
 #: settings.volt - alert: user didn't fill email before test
 msgid "Please enter and save recipient email first"
-msgstr "Please enter and save recipient email first"
+msgstr "Voer eerst het e-mailadres van de ontvanger in en sla dit op"
 
 #: settings.volt - alert: user didn't fill webhook URL
 msgid "Enter webhook URL first"
-msgstr "Enter webhook URL first"
+msgstr "Voer eerst de webhook-URL in"
 
 #: settings.volt - inline status while sending webhook test
 msgid "Sending..."
-msgstr "Sending..."
+msgstr "Verzenden..."
 
 #: settings.volt - inline status after webhook test sent
 msgid "Test sent!"
-msgstr "Test sent!"
+msgstr "Test verzonden!"
 
 #: settings.volt - inline status on webhook test error
 msgid "Failed"
-msgstr "Failed"
+msgstr "Mislukt"
 
 #: settings.volt - version subtitle (after plugin name)
 msgid "Using OPNsense hostwatch database"
-msgstr "Using OPNsense hostwatch database"
+msgstr "Gebruik van de OPNsense hostwatch-database"
 
 #: settings.volt - Status column value / general status label
 msgid "Status"
@@ -392,109 +393,109 @@ msgstr "Status"
 
 #: settings.volt - email transport
 msgid "Email delivery method"
-msgstr "Email delivery method"
+msgstr "E-mailbezorgmethode"
 
 #: settings.volt - email transport
 msgid "Local Sendmail / Postfix"
-msgstr "Local Sendmail / Postfix"
+msgstr "Lokale Sendmail / Postfix"
 
 #: settings.volt - email transport
 msgid "Direct SMTP (built into Device Monitor)"
-msgstr "Direct SMTP (built into Device Monitor)"
+msgstr "Directe SMTP (ingebouwd in Apparaatbewaking)"
 
 #: settings.volt - email transport
 msgid "Choose the mail transport that matches your OPNsense installation"
-msgstr "Choose the mail transport that matches your OPNsense installation"
+msgstr "Kies het mailtransport dat overeenkomt met uw OPNsense-installatie"
 
 #: settings.volt - email transport
 msgid "Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured."
-msgstr "Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured."
+msgstr "Gebruikt /usr/local/sbin/sendmail. Geschikt wanneer een lokale mailer zoals de os-postfix-plugin is geïnstalleerd en geconfigureerd."
 
 #: settings.volt - email transport
 msgid "Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit."
-msgstr "Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit."
+msgstr "Directe SMTP gebruikt de Python-standaardbibliotheek en vereist geen Postfix, sendmail of Monit."
 
 #: settings.volt - email transport
 msgid "SMTP Server"
-msgstr "SMTP Server"
+msgstr "SMTP-server"
 
 #: settings.volt - email transport
 msgid "SMTP Port"
-msgstr "SMTP Port"
+msgstr "SMTP-poort"
 
 #: settings.volt - email transport
 msgid "Encryption"
-msgstr "Encryption"
+msgstr "Versleuteling"
 
 #: settings.volt - email transport
 msgid "None"
-msgstr "None"
+msgstr "Geen"
 
 #: settings.volt - email transport
 msgid "SMTP Username"
-msgstr "SMTP Username"
+msgstr "SMTP-gebruikersnaam"
 
 #: settings.volt - email transport
 msgid "Leave empty if the SMTP server does not require authentication"
-msgstr "Leave empty if the SMTP server does not require authentication"
+msgstr "Laat leeg als de SMTP-server geen authenticatie vereist"
 
 #: settings.volt - email transport
 msgid "SMTP Password"
-msgstr "SMTP Password"
+msgstr "SMTP-wachtwoord"
 
 #: settings.volt - email transport
 msgid "The current email settings are saved before the test is sent"
-msgstr "The current email settings are saved before the test is sent"
+msgstr "De huidige e-mailinstellingen worden opgeslagen voordat de test wordt verzonden"
 
 #: settings.volt - email transport
 msgid "Please enter recipient email first"
-msgstr "Please enter recipient email first"
+msgstr "Voer eerst het e-mailadres van de ontvanger in"
 
 # ============================================
 # [scanhistory.volt] Nmap scan history page
 # ============================================
 
 msgid "Nmap Scan History"
-msgstr "Nmap Scan History"
+msgstr "Nmap-scangeschiedenis"
 
 msgid "Refresh scan history"
-msgstr "Refresh scan history"
+msgstr "Scangeschiedenis vernieuwen"
 
 msgid "Rows"
-msgstr "Rows"
+msgstr "Rijen"
 
 msgid "Started"
-msgstr "Started"
+msgstr "Gestart"
 
 msgid "Finished"
-msgstr "Finished"
+msgstr "Voltooid"
 
 msgid "Error"
-msgstr "Error"
+msgstr "Fout"
 
 msgid "Email sent"
-msgstr "Email sent"
+msgstr "E-mail verzonden"
 
 msgid "Email failed"
-msgstr "Email failed"
+msgstr "E-mail mislukt"
 
 msgid "Sent"
-msgstr "Sent"
+msgstr "Verzonden"
 
 msgid "Success"
-msgstr "Success"
+msgstr "Succes"
 
 msgid "Incomplete"
-msgstr "Incomplete"
+msgstr "Onvolledig"
 
 msgid "Manual"
-msgstr "Manual"
+msgstr "Handmatig"
 
 msgid "Automatic"
-msgstr "Automatic"
+msgstr "Automatisch"
 
 msgid "Port"
-msgstr "Port"
+msgstr "Poort"
 
 msgid "Protocol"
 msgstr "Protocol"
@@ -506,509 +507,509 @@ msgid "Product"
 msgstr "Product"
 
 msgid "Version"
-msgstr "Version"
+msgstr "Versie"
 
 msgid "Extra info"
-msgstr "Extra info"
+msgstr "Extra informatie"
 
 msgid "No open ports recorded"
-msgstr "No open ports recorded"
+msgstr "Geen open poorten vastgelegd"
 
 msgid "Enabled"
-msgstr "Enabled"
+msgstr "Ingeschakeld"
 
 msgid "Disabled"
-msgstr "Disabled"
+msgstr "Uitgeschakeld"
 
 msgid "Top ports"
-msgstr "Top ports"
+msgstr "Belangrijkste poorten"
 
 msgid "Timing"
 msgstr "Timing"
 
 msgid "Host timeout"
-msgstr "Host timeout"
+msgstr "Host-timeout"
 
 msgid "Version detection"
-msgstr "Version detection"
+msgstr "Versiedetectie"
 
 msgid "Nmap version"
-msgstr "Nmap version"
+msgstr "Nmap-versie"
 
 msgid "Nmap elapsed"
-msgstr "Nmap elapsed"
+msgstr "Nmap verstreken tijd"
 
 msgid "OS hint"
-msgstr "OS hint"
+msgstr "OS-hint"
 
 msgid "Open ports"
-msgstr "Open ports"
+msgstr "Open poorten"
 
 msgid "Scan error"
-msgstr "Scan error"
+msgstr "Scanfout"
 
 msgid "Email error"
-msgstr "Email error"
+msgstr "E-mailfout"
 
 msgid "Open port details"
-msgstr "Open port details"
+msgstr "Details open poorten"
 
 msgid "No targeted Nmap scan history recorded"
-msgstr "No targeted Nmap scan history recorded"
+msgstr "Geen gerichte Nmap-scangeschiedenis vastgelegd"
 
 msgid "Show scan details"
-msgstr "Show scan details"
+msgstr "Scandetails weergeven"
 
 msgid "Hide scan details"
-msgstr "Hide scan details"
+msgstr "Scandetails verbergen"
 msgid "Resolve event"
-msgstr "Resolve event"
+msgstr "Gebeurtenis oplossen"
 
 msgid "Reopen event"
-msgstr "Reopen event"
+msgstr "Gebeurtenis heropenen"
 
 msgid "Unable to update IP and MAC conflict"
-msgstr "Unable to update IP and MAC conflict"
+msgstr "Kan IP- en MAC-conflict niet bijwerken"
 
 msgid "All"
-msgstr "All"
+msgstr "Alle"
 
 msgid "Unresolved"
-msgstr "Unresolved"
+msgstr "Onopgelost"
 
 msgid "Resolved"
-msgstr "Resolved"
+msgstr "Opgelost"
 
 #: settings.volt - IP and MAC conflict email alerts
 msgid "Email high-severity conflict alerts"
-msgstr "Email high-severity conflict alerts"
+msgstr "E-mailmeldingen voor conflicten met hoge ernst"
 
 #: settings.volt - IP and MAC conflict email alerts
 msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
-msgstr "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
+msgstr "Stuur een e-mail wanneer een nieuw IPv4- of IPv6-adresconflict met hoge ernst wordt gedetecteerd."
 
 msgid "IP and MAC Conflicts"
-msgstr "IP and MAC Conflicts"
+msgstr "IP- en MAC-conflicten"
 
 msgid "Refresh IP and MAC conflicts"
-msgstr "Refresh IP and MAC conflicts"
+msgstr "IP- en MAC-conflicten vernieuwen"
 
 msgid "Loading IP and MAC conflicts..."
-msgstr "Loading IP and MAC conflicts..."
+msgstr "IP- en MAC-conflicten laden..."
 
 msgid "No IP and MAC conflicts recorded"
-msgstr "No IP and MAC conflicts recorded"
+msgstr "Geen IP- en MAC-conflicten vastgelegd"
 
 msgid "Unable to load IP and MAC conflicts"
-msgstr "Unable to load IP and MAC conflicts"
+msgstr "Kan IP- en MAC-conflicten niet laden"
 
 msgid "Show conflict details"
-msgstr "Show conflict details"
+msgstr "Conflictdetails weergeven"
 
 msgid "Hide conflict details"
-msgstr "Hide conflict details"
+msgstr "Conflictdetails verbergen"
 
 msgid "Resolve conflict"
-msgstr "Resolve conflict"
+msgstr "Conflict oplossen"
 
 msgid "Reopen conflict"
-msgstr "Reopen conflict"
+msgstr "Conflict heropenen"
 
 msgid "IPv4 address used by another device"
-msgstr "IPv4 address used by another device"
+msgstr "IPv4-adres gebruikt door een ander apparaat"
 
 msgid "IPv6 address used by another device"
-msgstr "IPv6 address used by another device"
+msgstr "IPv6-adres gebruikt door een ander apparaat"
 
 msgid "Device using multiple IPv4 addresses"
-msgstr "Device using multiple IPv4 addresses"
+msgstr "Apparaat dat meerdere IPv4-adressen gebruikt"
 
 msgid "Device seen on multiple interfaces"
-msgstr "Device seen on multiple interfaces"
+msgstr "Apparaat gezien op meerdere interfaces"
 
 #: activitytimeline.volt - page and section heading
 msgid "Device Activity"
-msgstr "Device Activity"
+msgstr "Apparaatactiviteit"
 
 msgid "Services"
 msgstr "Services"
 
 #: devices.volt - first-seen column
 msgid "First Seen"
-msgstr "First Seen"
+msgstr "Voor het eerst gezien"
 
 #: devices.volt - toast after clearing friendly name
 msgid "Friendly name cleared"
-msgstr "Friendly name cleared"
+msgstr "Vriendelijke naam gewist"
 
 #: changesummary.volt - menu entry and page title
 msgid "Change Summary"
-msgstr "Change Summary"
+msgstr "Wijzigingsoverzicht"
 
 msgid "Period"
-msgstr "Period"
+msgstr "Periode"
 
 msgid "Since last review"
-msgstr "Since last review"
+msgstr "Sinds laatste beoordeling"
 
 msgid "Last 24 hours"
-msgstr "Last 24 hours"
+msgstr "Laatste 24 uur"
 
 msgid "Last 7 days"
-msgstr "Last 7 days"
+msgstr "Laatste 7 dagen"
 
 msgid "Last 30 days"
-msgstr "Last 30 days"
+msgstr "Laatste 30 dagen"
 
 msgid "Custom range"
-msgstr "Custom range"
+msgstr "Aangepast bereik"
 
 msgid "Category"
-msgstr "Category"
+msgstr "Categorie"
 
 msgid "All categories"
-msgstr "All categories"
+msgstr "Alle categorieën"
 
 msgid "Device"
-msgstr "Device"
+msgstr "Apparaat"
 
 msgid "Lifecycle"
-msgstr "Lifecycle"
+msgstr "Levenscyclus"
 
 msgid "Identity"
-msgstr "Identity"
+msgstr "Identiteit"
 
 msgid "Device Profile"
-msgstr "Device Profile"
+msgstr "Apparaatprofiel"
 
 msgid "Notes / History"
-msgstr "Notes / History"
+msgstr "Notities / Geschiedenis"
 
 msgid "Infrastructure"
-msgstr "Infrastructure"
+msgstr "Infrastructuur"
 
 msgid "Mark reviewed now"
-msgstr "Mark reviewed now"
+msgstr "Nu als beoordeeld markeren"
 
 msgid "Start"
 msgstr "Start"
 
 msgid "End"
-msgstr "End"
+msgstr "Einde"
 
 msgid "No previous review marker; showing the last 24 hours."
-msgstr "No previous review marker; showing the last 24 hours."
+msgstr "Geen eerdere beoordelingsmarkering; de laatste 24 uur worden weergegeven."
 
 msgid "Total Changes"
-msgstr "Total Changes"
+msgstr "Totaal wijzigingen"
 
 msgid "New Devices"
-msgstr "New Devices"
+msgstr "Nieuwe apparaten"
 
 msgid "Returned Devices"
-msgstr "Returned Devices"
+msgstr "Teruggekeerde apparaten"
 
 msgid "Identity Changes"
-msgstr "Identity Changes"
+msgstr "Identiteitswijzigingen"
 
 msgid "Infrastructure Changes"
-msgstr "Infrastructure Changes"
+msgstr "Infrastructuurwijzigingen"
 
 msgid "Lifecycle Changes"
-msgstr "Lifecycle Changes"
+msgstr "Levenscycluswijzigingen"
 
 msgid "Time"
-msgstr "Time"
+msgstr "Tijd"
 
 msgid "Device / Subject"
-msgstr "Device / Subject"
+msgstr "Apparaat / Onderwerp"
 
 msgid "Change"
-msgstr "Change"
+msgstr "Wijziging"
 
 msgid "Previous"
-msgstr "Previous"
+msgstr "Vorige"
 
 msgid "Current"
-msgstr "Current"
+msgstr "Huidige"
 
 msgid "Action"
-msgstr "Action"
+msgstr "Actie"
 
 msgid "Loading changes..."
-msgstr "Loading changes..."
+msgstr "Wijzigingen laden..."
 
 msgid "Next"
-msgstr "Next"
+msgstr "Volgende"
 
 # [physicaldevices.volt] Device Profiles page
 msgid "Device Profiles"
-msgstr "Device Profiles"
+msgstr "Apparaatprofielen"
 
 #: physicaldevices.volt - summary stat label
 msgid "Profiles"
-msgstr "Profiles"
+msgstr "Profielen"
 
 msgid "Archived"
-msgstr "Archived"
+msgstr "Gearchiveerd"
 
 msgid "Create Profile"
-msgstr "Create Profile"
+msgstr "Profiel aanmaken"
 
 msgid "All Profiles"
-msgstr "All Profiles"
+msgstr "Alle profielen"
 
 msgid "Current Profiles"
-msgstr "Current Profiles"
+msgstr "Huidige profielen"
 
 msgid "Archived Profiles"
-msgstr "Archived Profiles"
+msgstr "Gearchiveerde profielen"
 
 msgid "Search by name or MAC"
-msgstr "Search by name or MAC"
+msgstr "Zoeken op naam of MAC"
 
 msgid "Showing"
-msgstr "Showing"
+msgstr "Weergeven"
 
 msgid "Profile name"
-msgstr "Profile name"
+msgstr "Profielnaam"
 
 msgid "Create"
-msgstr "Create"
+msgstr "Aanmaken"
 
 msgid "Loading devices..."
-msgstr "Loading devices..."
+msgstr "Apparaten laden..."
 
 msgid "Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
-msgstr "Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
+msgstr "Begin met één MAC-adres voor dit profiel. Het moet behoren tot een momenteel online netwerkidentiteit. Het toevoegen van identiteiten is expliciet en voegt nooit apparaat-, levenscyclus- of identiteitsgeschiedenis samen of herschrijft deze."
 
 msgid "Loading device profile..."
-msgstr "Loading device profile..."
+msgstr "Apparaatprofiel laden..."
 
 # [devicehistory.volt] Device Details page
 msgid "Network Identity Details"
-msgstr "Network Identity Details"
+msgstr "Details netwerkidentiteit"
 
 msgid "Network Identity Summary"
-msgstr "Network Identity Summary"
+msgstr "Samenvatting netwerkidentiteit"
 
 msgid "Back to Devices"
-msgstr "Back to Devices"
+msgstr "Terug naar apparaten"
 
 msgid "Current Lifecycle"
-msgstr "Current Lifecycle"
+msgstr "Huidige levenscyclus"
 
 msgid "Lifecycle History"
-msgstr "Lifecycle History"
+msgstr "Levenscyclusgeschiedenis"
 
 msgid "MAC address"
-msgstr "MAC address"
+msgstr "MAC-adres"
 
 msgid "A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below."
-msgstr "A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below."
+msgstr "Een levenscyclus is een aaneengesloten periode waarin dit MAC-adres als hetzelfde bekende apparaat wordt behandeld. Eerdere levenscycli worden gearchiveerd, niet verwijderd, en blijven hieronder beschikbaar."
 
 msgid "Start New Lifecycle"
-msgstr "Start New Lifecycle"
+msgstr "Nieuwe levenscyclus starten"
 
 msgid "Use this when the returning device should be treated as new."
-msgstr "Use this when the returning device should be treated as new."
+msgstr "Gebruik dit wanneer het terugkerende apparaat als nieuw moet worden behandeld."
 
 msgid "Loading device history..."
-msgstr "Loading device history..."
+msgstr "Apparaatgeschiedenis laden..."
 
 msgid "Notes"
-msgstr "Notes"
+msgstr "Notities"
 
 msgid "There is no active lifecycle. Resolve the returning device in Lifecycle History before adding notes."
-msgstr "There is no active lifecycle. Resolve the returning device in Lifecycle History before adding notes."
+msgstr "Er is geen actieve levenscyclus. Los het terugkerende apparaat op in de levenscyclusgeschiedenis voordat u notities toevoegt."
 
 msgid "Add Note"
-msgstr "Add Note"
+msgstr "Notitie toevoegen"
 
 msgid "Enter a new note..."
-msgstr "Enter a new note..."
+msgstr "Voer een nieuwe notitie in..."
 
 msgid "Loading notes..."
-msgstr "Loading notes..."
+msgstr "Notities laden..."
 
 # [infrastructureservices.volt] Opt-in targeted port discovery
 msgid "Port Discovery"
-msgstr "Port Discovery"
+msgstr "Poortdetectie"
 
 msgid "Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned."
-msgstr "Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned."
+msgstr "Gebruik «Nu uitvoeren» op een apparaatrij om TCP-poorten 1-65535 te scannen, inclusief standaard- en niet-standaardpoorten. Open poorten en geïdentificeerde services verschijnen op het tabblad Scans. Selecteer meerdere apparaten voor optionele wekelijkse scans en sla op. Scans worden één host tegelijk uitgevoerd en stoppen na 120 seconden; onvolledige scans worden als mislukt gemarkeerd. UDP-poorten, inclusief WireGuard, worden niet gescand."
 
 msgid "Scans"
 msgstr "Scans"
 
 msgid "Run Now"
-msgstr "Run Now"
+msgstr "Nu uitvoeren"
 
 msgid "Scan weekly"
-msgstr "Scan weekly"
+msgstr "Wekelijks scannen"
 
 msgid "Scan Time"
-msgstr "Scan Time"
+msgstr "Scantijd"
 
 msgid "Scan Time (local time)"
-msgstr "Scan Time (local time)"
+msgstr "Scantijd (lokale tijd)"
 
 msgid "Last Scan (local time)"
-msgstr "Last Scan (local time)"
+msgstr "Laatste scan (lokale tijd)"
 
 msgid "Result"
-msgstr "Result"
+msgstr "Resultaat"
 
 msgid "Open TCP Ports"
-msgstr "Open TCP Ports"
+msgstr "Open TCP-poorten"
 
 msgid "Search IP, MAC or name"
-msgstr "Search IP, MAC or name"
+msgstr "Zoeken op IP, MAC of naam"
 
 msgid "TCP ports, e.g. 22,443"
-msgstr "TCP ports, e.g. 22,443"
+msgstr "TCP-poorten, bijv. 22,443"
 
 msgid "All results"
-msgstr "All results"
+msgstr "Alle resultaten"
 
 msgid "Complete"
-msgstr "Complete"
+msgstr "Voltooid"
 
 msgid "Running"
-msgstr "Running"
+msgstr "Wordt uitgevoerd"
 
 msgid "Filtering the 50 most recent scans"
-msgstr "Filtering the 50 most recent scans"
+msgstr "De 50 meest recente scans filteren"
 
 # [devicehistory.volt] Per-device service alert controls
 msgid "Service Email Alerts"
-msgstr "Service Email Alerts"
+msgstr "Service-e-mailmeldingen"
 
 msgid "Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings."
-msgstr "Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings."
+msgstr "Kies of deze netwerkidentiteit service-e-mailmeldingen verzendt. «Globale instelling gebruiken» behoudt de standaardwaarden van Instellingen. E-mailbezorging moet zijn ingeschakeld in Instellingen."
 
 msgid "Service event"
-msgstr "Service event"
+msgstr "Servicegebeurtenis"
 
 msgid "Preference"
-msgstr "Preference"
+msgstr "Voorkeur"
 
 msgid "Effective"
-msgstr "Effective"
+msgstr "Effectief"
 
 msgid "New service"
-msgstr "New service"
+msgstr "Nieuwe service"
 
 msgid "Service unavailable"
-msgstr "Service unavailable"
+msgstr "Service niet beschikbaar"
 
 msgid "Service recovered"
-msgstr "Service recovered"
+msgstr "Service hersteld"
 
 msgid "New service email preference"
-msgstr "New service email preference"
+msgstr "E-mailvoorkeur nieuwe service"
 
 msgid "Service unavailable email preference"
-msgstr "Service unavailable email preference"
+msgstr "E-mailvoorkeur service niet beschikbaar"
 
 msgid "Service recovered email preference"
-msgstr "Service recovered email preference"
+msgstr "E-mailvoorkeur service hersteld"
 
 msgid "Use global setting"
-msgstr "Use global setting"
+msgstr "Globale instelling gebruiken"
 
 msgid "On"
-msgstr "On"
+msgstr "Aan"
 
 msgid "Off"
-msgstr "Off"
+msgstr "Uit"
 
 msgid "Save alert preferences"
-msgstr "Save alert preferences"
+msgstr "Meldingsvoorkeuren opslaan"
 
 msgid "Email delivery is disabled in Settings."
-msgstr "Email delivery is disabled in Settings."
+msgstr "E-mailbezorging is uitgeschakeld in Instellingen."
 
 msgid "These preferences are saved, but service alert emails will not be sent."
-msgstr "These preferences are saved, but service alert emails will not be sent."
+msgstr "Deze voorkeuren worden opgeslagen, maar service-meldingsmails worden niet verzonden."
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
-msgstr "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
+msgstr "Deze voorkeuren worden opgeslagen, maar de service-meldingsmails van deze netwerkidentiteit worden niet verzonden omdat globale e-mailmeldingen zijn uitgeschakeld."
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because monitoring is turned off."
-msgstr "These preferences are saved, but this network identity’s service alert emails will not be sent because monitoring is turned off."
+msgstr "Deze voorkeuren worden opgeslagen, maar de service-meldingsmails van deze netwerkidentiteit worden niet verzonden omdat bewaking is uitgeschakeld."
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because no email recipient is configured in Settings."
-msgstr "These preferences are saved, but this network identity’s service alert emails will not be sent because no email recipient is configured in Settings."
+msgstr "Deze voorkeuren worden opgeslagen, maar de service-meldingsmails van deze netwerkidentiteit worden niet verzonden omdat er geen e-mailontvanger is geconfigureerd in Instellingen."
 
 msgid "These preferences are saved, but service alert email delivery is unavailable."
-msgstr "These preferences are saved, but service alert email delivery is unavailable."
+msgstr "Deze voorkeuren worden opgeslagen, maar de bezorging van service-meldingsmails is niet beschikbaar."
 
 msgid "Go to Email Notifications"
-msgstr "Go to Email Notifications"
+msgstr "Naar e-mailmeldingen"
 
 msgid "Back to Network Identity Details"
-msgstr "Back to Network Identity Details"
+msgstr "Terug naar details netwerkidentiteit"
 
 msgid "Open Network Identity Details"
-msgstr "Open Network Identity Details"
+msgstr "Details netwerkidentiteit openen"
 
 msgid "View Network Identity Details"
-msgstr "View Network Identity Details"
+msgstr "Details netwerkidentiteit bekijken"
 
 msgid "Unable to load alert preferences"
-msgstr "Unable to load alert preferences"
+msgstr "Kan meldingsvoorkeuren niet laden"
 
 msgid "Unable to save alert preferences"
-msgstr "Unable to save alert preferences"
+msgstr "Kan meldingsvoorkeuren niet opslaan"
 
 msgid "Alert preferences saved"
-msgstr "Alert preferences saved"
+msgstr "Meldingsvoorkeuren opgeslagen"
 
 msgid "More information"
-msgstr "More information"
+msgstr "Meer informatie"
 
 msgid "About Service Email Alerts"
-msgstr "About Service Email Alerts"
+msgstr "Over service-e-mailmeldingen"
 
 msgid "About Lifecycle History"
-msgstr "About Lifecycle History"
+msgstr "Over levenscyclusgeschiedenis"
 
 msgid "About Network Identities"
-msgstr "About Network Identities"
+msgstr "Over netwerkidentiteiten"
 
 msgid "About Device Profiles"
-msgstr "About Device Profiles"
+msgstr "Over apparaatprofielen"
 
 msgid "About Creating Profiles"
-msgstr "About Creating Profiles"
+msgstr "Over het aanmaken van profielen"
 
 msgid "About Port Discovery"
-msgstr "About Port Discovery"
+msgstr "Over poortdetectie"
 
 msgid "TCP only · 120-second limit per host"
-msgstr "TCP only · 120-second limit per host"
+msgstr "Alleen TCP · Limiet van 120 seconden per host"
 
 msgid "About Email Delivery"
-msgstr "About Email Delivery"
+msgstr "Over e-mailbezorging"
 
 msgid "About Direct SMTP"
-msgstr "About Direct SMTP"
+msgstr "Over directe SMTP"
 
 msgid "About SMTP Username"
-msgstr "About SMTP Username"
+msgstr "Over SMTP-gebruikersnaam"
 
 msgid "About Test Email"
-msgstr "About Test Email"
+msgstr "Over test-e-mail"
 
 msgid "About Conflict Alerts"
-msgstr "About Conflict Alerts"
+msgstr "Over conflictmeldingen"
 
 msgid "About Infrastructure Service Alerts"
-msgstr "About Infrastructure Service Alerts"
+msgstr "Over infrastructuurservice-meldingen"
 
 msgid "About Notification Interfaces"
-msgstr "About Notification Interfaces"
+msgstr "Over meldingsinterfaces"
 
 msgid "About Webhook Notifications"
-msgstr "About Webhook Notifications"
+msgstr "Over webhookmeldingen"

@@ -24,6 +24,33 @@ Status:
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
 
+## 26 September 2026 — major language UI translations (DM-BL-008)
+
+Description: added gettext catalogues for nine major UI languages so the
+Device Monitor is fully translatable beyond English and Czech.
+
+Completed implementation:
+
+- Created `<locale>_devicemonitor.po` for `de_DE`, `fr_FR`, `es_ES`, `it_IT`,
+  `pt_BR`, `nl_NL`, `ru_RU`, `ja_JP`, `zh_CN` — 289 strings translated per
+  catalogue from `en_US_devicemonitor.po`.
+
+Changed areas: `src/opnsense/mvc/app/languages/` (nine new catalogues).
+
+Validation: each catalogue passes `msgfmt --check --check-format`; 290 msgids
+identical to `en_US`; 289/289 strings translated (0 missing).
+
+Deployment (testbed `192.168.20.23`): all 11 catalogues compiled with
+`msgfmt --check --check-format` (en_US, cs_CZ + the nine new locales) and
+installed to `/usr/local/opnsense/mvc/app/languages/` (`.po` and `.mo`,
+root:wheel 644, hash-parity verified against the staged compile). Rollback
+backups retained at `/root/devicemonitor_backup/*.pre-dmbl008-20260926-111132`.
+Unauthenticated route smoke check: HTTP 301→302, no PHP fatal.
+
+Next step: human GUI acceptance — select each of the nine new languages in
+System → Settings → General → Language and confirm the Device Monitor pages
+render translated strings.
+
 ## 26 September 2026 v2.10 development and service email verification
 
 Description: per-network-identity Service Email Alerts with clearer delivery

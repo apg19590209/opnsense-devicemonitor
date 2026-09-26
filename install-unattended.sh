@@ -91,7 +91,7 @@ while read -r hash mode source target; do
     [ ! -L "$target" ] || { echo "ABORT: target symlink $target" >&2; exit 1; }
     printf '%s %s %s %s\n' "$hash" "$mode" "$source" "$target" >> "$STAGE/items"
 done < "$MANIFEST"
-for lang in en_US cs_CZ; do
+for lang in en_US cs_CZ de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN; do
     source=src/opnsense/mvc/app/languages/${lang}_devicemonitor.po
     output=$STAGE/${lang}_devicemonitor.mo
     msgfmt --check -o "$output" "$source" >/dev/null || { echo "ABORT: gettext $lang" >&2; exit 1; }
@@ -134,8 +134,8 @@ while read -r hash mode source target; do
     id=$((id + 1))
 done < "$STAGE/items"
 count=$id
-expected=39
-[ "$FRESH" = 0 ] || expected=40
+expected=48
+[ "$FRESH" = 0 ] || expected=49
 [ "$count" = "$expected" ] || { echo 'ABORT: target count' >&2; exit 1; }
 printf 'CHECK_OK version=2.9 predecessor=%s files=%s daemon_running=%s host=%s\n' "$installed" "$count" "$WAS_RUNNING" "$EXPECTED_HOST"
 [ "$CHECK_ONLY" = 0 ] || exit 0

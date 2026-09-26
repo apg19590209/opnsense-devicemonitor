@@ -1,0 +1,1015 @@
+# Device Monitor Plugin - Translations ru_RU
+# NOTE: Machine-translated by an LLM; native-speaker review and corrections are welcome.
+# Copyright (C) 2026 Hacesoft
+#
+# NOTE: #: comments show where the text is used in code.
+# Comments are ignored during compilation (.po → .mo) - for development only.
+# If OPNsense cannot find a msgid in .po, it displays the msgid text directly.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Device Monitor 2.10\n"
+"POT-Creation-Date: 2026-04-10 00:00+0000\n"
+"PO-Revision-Date: 2026-04-10 00:00+0000\n"
+"Last-Translator: Device Monitor contributors\n"
+"Language-Team: Russian\n"
+"Language: ru_RU\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+
+# ============================================
+# [Menu.xml] Main menu items
+# ============================================
+
+#: Menu.xml - plugin menu name
+msgid "Device Monitor"
+msgstr "Мониторинг устройств"
+
+#: Menu.xml - menu item
+msgid "Devices"
+msgstr "Устройства"
+
+#: devices.volt / physicaldevices.volt - navigation tabs
+msgid "Network Identities"
+msgstr "Сетевые идентификаторы"
+
+#: devices.volt - navigation explanatory text
+msgid "Automatically discovered network identities. Each row represents one MAC address."
+msgstr "Автоматически обнаруженные сетевые идентификаторы. Каждая строка соответствует одному MAC-адресу."
+
+#: physicaldevices.volt - navigation explanatory text
+msgid "Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters."
+msgstr "Реальные устройства, связанные с одним или несколькими сетевыми идентификаторами, например проводными и Wi-Fi адаптерами."
+
+#: Menu.xml - menu item | settings.volt - page title
+msgid "Settings"
+msgstr "Настройки"
+
+
+# ============================================
+# [devices.volt] Devices list page
+# ============================================
+
+#: devices.volt - header stats
+msgid "Total Identities"
+msgstr "Всего идентификаторов"
+
+#: devices.volt - header stats (green)
+msgid "Online"
+msgstr "В сети"
+
+#: devices.volt - VLAN dropdown - all VLANs option
+msgid "All VLANs"
+msgstr "Все VLAN"
+
+#: devices.volt - VLAN filter apply button
+msgid "Apply VLAN Filter"
+msgstr "Применить фильтр VLAN"
+
+#: devices.volt - VLAN filter pending indicator
+msgid "Not applied"
+msgstr "Не применено"
+
+#: devices.volt - VLAN dropdown - empty selection prompt
+msgid "Select a VLAN"
+msgstr "Выбрать VLAN"
+
+#: devices.volt - status dropdown - all statuses option
+msgid "All statuses"
+msgstr "Все статусы"
+
+#: devices.volt - refresh button title
+msgid "Refresh"
+msgstr "Обновить"
+
+#: devices.volt - clear database button
+msgid "Clear Database"
+msgstr "Очистить базу данных"
+
+#: devices.volt - table column header
+msgid "MAC Address"
+msgstr "MAC-адрес"
+
+#: devices.volt - table column header
+msgid "IP Address"
+msgstr "IP-адрес"
+
+#: devices.volt - table column header
+msgid "Hostname"
+msgstr "Имя хоста"
+
+#: devices.volt - table column header
+msgid "Vendor"
+msgstr "Производитель"
+
+#: devices.volt - table column header
+msgid "VLAN"
+msgstr "VLAN"
+
+#: devices.volt - table column header
+msgid "Last Seen"
+msgstr "Последняя активность"
+
+#: devices.volt - table column header
+msgid "Actions"
+msgstr "Действия"
+
+#: devices.volt - confirm dialogue when deleting a device
+msgid "Delete device"
+msgstr "Удалить устройство"
+
+#: devices.volt - confirm dialogue when clearing entire DB
+msgid "Really delete all devices from database?"
+msgstr "Действительно удалить все устройства из базы данных?"
+
+#: devices.volt - toast message after device deletion
+msgid "Device deleted"
+msgstr "Устройство удалено"
+
+#: devices.volt - toast message on deletion error
+msgid "Error deleting device"
+msgstr "Ошибка удаления устройства"
+
+#: devices.volt - toast message after clearing DB
+msgid "Database cleared"
+msgstr "База данных очищена"
+
+#: devices.volt - toast message on clear DB error
+msgid "Error clearing database"
+msgstr "Ошибка очистки базы данных"
+
+#: devices.volt - friendly-name column
+msgid "Friendly Name"
+msgstr "Понятное имя"
+
+#: devices.volt - toast after successful friendly-name save
+msgid "Friendly name saved"
+msgstr "Понятное имя сохранено"
+
+#: devices.volt - toast on friendly-name save error
+msgid "Error saving friendly name"
+msgstr "Ошибка сохранения понятного имени"
+
+
+# ============================================
+# [settings.volt] Settings - 4 tabs
+# ============================================
+
+
+#: settings.volt - tab 1 label
+msgid "Email Notifications"
+msgstr "Уведомления по электронной почте"
+
+#: settings.volt - tab 2 label
+msgid "Webhook Notifications"
+msgstr "Уведомления Webhook"
+
+#: settings.volt - tab 3 label
+msgid "Other Settings"
+msgstr "Прочие настройки"
+
+#: settings.volt - tab 4 label
+msgid "About"
+msgstr "О программе"
+
+#: settings.volt - tab 1 info text (localized)
+msgid "Configure email notifications for new devices on the network"
+msgstr "Настроить уведомления по электронной почте для новых устройств в сети"
+
+#: settings.volt - tab 2 info text
+msgid "Configure webhook notifications for new devices on the network"
+msgstr "Настроить уведомления Webhook для новых устройств в сети"
+
+#: settings.volt - tab 1: checkbox label
+msgid "Enable Email"
+msgstr "Включить электронную почту"
+
+#: settings.volt - tab 1: email recipient label
+msgid "Email Recipient"
+msgstr "Получатель писем"
+
+#: settings.volt - tab 1: help text below email recipient field
+msgid "Where to send notifications"
+msgstr "Куда отправлять уведомления"
+
+#: settings.volt - tab 1: email sender label
+msgid "Email Sender"
+msgstr "Отправитель писем"
+
+#: settings.volt - tab 1: help text below email sender field
+msgid "From address"
+msgstr "Адрес отправителя"
+
+#: settings.volt - tab 1: SMTP warning heading
+msgid "Important - SMTP Configuration"
+msgstr "Важно — настройка SMTP"
+
+#: settings.volt - tab 1: SMTP warning text (with HTML tag)
+msgid "Plugin uses <strong>sendmail (Postfix)</strong> to send emails"
+msgstr "Плагин использует <strong>sendmail (Postfix)</strong> для отправки писем"
+
+#: settings.volt - tab 1: SMTP warning text (with HTML and path)
+msgid "Must be configured in: <strong>System > Settings > Notifications > SMTP</strong>"
+msgstr "Должно быть настроено в: <strong>Система > Настройки > Уведомления > SMTP</strong>"
+
+#: settings.volt - tab 1: test email button
+msgid "Test Email"
+msgstr "Тестовое письмо"
+
+#: settings.volt - tab 2: checkbox label
+msgid "Enable Webhook"
+msgstr "Включить Webhook"
+
+#: settings.volt - tab 2: webhook URL label
+msgid "Webhook URL"
+msgstr "URL Webhook"
+
+#: settings.volt - tab 2: test webhook button
+msgid "Send Test"
+msgstr "Отправить тест"
+
+#: settings.volt - tab 1+2: VLAN notification filter label
+msgid "Notify for interfaces"
+msgstr "Уведомлять для интерфейсов"
+
+#: settings.volt - tab 1+2: help text below VLAN filter
+msgid "Leave empty to receive notifications from all interfaces"
+msgstr "Оставьте пустым, чтобы получать уведомления со всех интерфейсов"
+
+#: settings.volt - tab 1+2: shown when no interfaces loaded
+msgid "No interfaces found"
+msgstr "Интерфейсы не найдены"
+
+#: settings.volt - tab 3: checkbox label
+msgid "Enable Monitoring"
+msgstr "Включить мониторинг"
+
+#: settings.volt - tab 3: help text next to monitoring checkbox
+msgid "Enable automatic network monitoring"
+msgstr "Включить автоматический мониторинг сети"
+
+#: settings.volt - tab 3: scan interval label
+msgid "Scan Interval"
+msgstr "Интервал сканирования"
+
+#: settings.volt - tab 3: unit label after interval input
+msgid "seconds"
+msgstr "секунд"
+
+#: settings.volt - tab 3: help text below interval input
+msgid "Seconds between scans (60-3600)"
+msgstr "Секунды между сканированиями (60-3600)"
+
+#: settings.volt - tab 3: monitored interfaces label
+msgid "Monitored Interfaces"
+msgstr "Отслеживаемые интерфейсы"
+
+#: settings.volt - tab 3: monitored interfaces help
+msgid "Only devices on selected interfaces are scanned. With no selection, scanning is refused."
+msgstr "Сканируются только устройства на выбранных интерфейсах. Без выбора сканирование отклоняется."
+
+#: settings.volt - tab 3: monitored interfaces fail-closed warning
+msgid "Monitoring is enabled but no interface is selected. Scans will be refused."
+msgstr "Мониторинг включён, но интерфейс не выбран. Сканирование будет отклонено."
+
+#: settings.volt - tab 3: shown when no enabled IPv4 interfaces
+msgid "No enabled IPv4 interfaces found"
+msgstr "Включённые интерфейсы IPv4 не найдены"
+
+#: settings.volt - Monitoring: hostname enrichment providers (Pi-hole / Unbound)
+msgid "Pi-hole Hostnames"
+msgstr "Имена хостов Pi-hole"
+
+msgid "Unbound Hostnames"
+msgstr "Имена хостов Unbound"
+
+msgid "Experimental"
+msgstr "Экспериментально"
+
+msgid "Enable Pi-hole hostname enrichment"
+msgstr "Включить обогащение имён хостов Pi-hole"
+
+msgid "Enable Unbound hostname enrichment"
+msgstr "Включить обогащение имён хостов Unbound"
+
+msgid "Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default."
+msgstr "Использует аренды DHCP Pi-hole v6 как источник имён хостов. Требует Pi-hole v6, HTTPS и пароль приложения. По умолчанию отключено."
+
+msgid "Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default."
+msgstr "Читает только локальные переопределения хостов и псевдонимы хостов Unbound в OPNsense. Сетевые запросы не выполняются. По умолчанию отключено."
+
+msgid "Pi-hole URL"
+msgstr "URL Pi-hole"
+
+msgid "HTTPS base URL of your Pi-hole server"
+msgstr "Базовый HTTPS-URL вашего сервера Pi-hole"
+
+msgid "App password"
+msgstr "Пароль приложения"
+
+msgid "Pi-hole app password generated in the Pi-hole web interface"
+msgstr "Пароль приложения Pi-hole, созданный в веб-интерфейсе Pi-hole"
+
+#: settings.volt - tab 4: plugin description
+msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
+msgstr "Плагин OPNsense для мониторинга сетевых устройств, обнаружения конфликтов IP- и MAC-адресов, выявления служб инфраструктуры, выполнения целевых проверок безопасности и отправки настраиваемых уведомлений с использованием нативных данных hostwatch."
+
+#: settings.volt - tab 4: info table row
+msgid "Author"
+msgstr "Автор"
+
+#: settings.volt - tab 4: info table row
+msgid "GitHub Repository"
+msgstr "Репозиторий GitHub"
+
+#: settings.volt - v2.10 features heading
+msgid "v2.10 Features and Enhancements"
+msgstr "Функции и улучшения v2.10"
+
+#: settings.volt - tab 4: info table row
+msgid "Licence"
+msgstr "Лицензия"
+
+#: settings.volt - tab 4: minimum OPNsense version
+msgid "Requires OPNsense"
+msgstr "Требуется OPNsense"
+
+#: settings.volt - Apply button on each tab
+msgid "Apply"
+msgstr "Применить"
+
+#: settings.volt - spinner text on Apply button while saving
+msgid "Saving..."
+msgstr "Сохранение..."
+
+#: settings.volt - toast after successful config save
+msgid "Configuration saved"
+msgstr "Конфигурация сохранена"
+
+#: settings.volt - toast on config save error
+msgid "Error saving configuration"
+msgstr "Ошибка сохранения конфигурации"
+
+#: settings.volt - toast after test email sent
+msgid "Test email sent to"
+msgstr "Тестовое письмо отправлено на"
+
+#: settings.volt - toast on test email error
+msgid "Failed to send email"
+msgstr "Не удалось отправить письмо"
+
+#: settings.volt - alert: user didn't fill email before test
+msgid "Please enter and save recipient email first"
+msgstr "Сначала введите и сохраните адрес получателя"
+
+#: settings.volt - alert: user didn't fill webhook URL
+msgid "Enter webhook URL first"
+msgstr "Сначала введите URL Webhook"
+
+#: settings.volt - inline status while sending webhook test
+msgid "Sending..."
+msgstr "Отправка..."
+
+#: settings.volt - inline status after webhook test sent
+msgid "Test sent!"
+msgstr "Тест отправлен!"
+
+#: settings.volt - inline status on webhook test error
+msgid "Failed"
+msgstr "Не удалось"
+
+#: settings.volt - version subtitle (after plugin name)
+msgid "Using OPNsense hostwatch database"
+msgstr "Использование базы данных hostwatch OPNsense"
+
+#: settings.volt - Status column value / general status label
+msgid "Status"
+msgstr "Статус"
+# ============================================
+# [settings.volt] Email transport
+# ============================================
+
+#: settings.volt - email transport
+msgid "Email delivery method"
+msgstr "Способ доставки писем"
+
+#: settings.volt - email transport
+msgid "Local Sendmail / Postfix"
+msgstr "Локальный Sendmail / Postfix"
+
+#: settings.volt - email transport
+msgid "Direct SMTP (built into Device Monitor)"
+msgstr "Прямой SMTP (встроен в Мониторинг устройств)"
+
+#: settings.volt - email transport
+msgid "Choose the mail transport that matches your OPNsense installation"
+msgstr "Выберите транспорт почты, соответствующий вашей установке OPNsense"
+
+#: settings.volt - email transport
+msgid "Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured."
+msgstr "Использует /usr/local/sbin/sendmail. Подходит, если установлен и настроен локальный почтовый агент, например плагин os-postfix."
+
+#: settings.volt - email transport
+msgid "Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit."
+msgstr "Прямой SMTP использует стандартную библиотеку Python и не требует Postfix, sendmail или Monit."
+
+#: settings.volt - email transport
+msgid "SMTP Server"
+msgstr "SMTP-сервер"
+
+#: settings.volt - email transport
+msgid "SMTP Port"
+msgstr "SMTP-порт"
+
+#: settings.volt - email transport
+msgid "Encryption"
+msgstr "Шифрование"
+
+#: settings.volt - email transport
+msgid "None"
+msgstr "Нет"
+
+#: settings.volt - email transport
+msgid "SMTP Username"
+msgstr "Имя пользователя SMTP"
+
+#: settings.volt - email transport
+msgid "Leave empty if the SMTP server does not require authentication"
+msgstr "Оставьте пустым, если SMTP-сервер не требует аутентификации"
+
+#: settings.volt - email transport
+msgid "SMTP Password"
+msgstr "Пароль SMTP"
+
+#: settings.volt - email transport
+msgid "The current email settings are saved before the test is sent"
+msgstr "Текущие настройки почты сохраняются перед отправкой теста"
+
+#: settings.volt - email transport
+msgid "Please enter recipient email first"
+msgstr "Сначала введите адрес получателя"
+
+# ============================================
+# [scanhistory.volt] Nmap scan history page
+# ============================================
+
+msgid "Nmap Scan History"
+msgstr "История сканирований Nmap"
+
+msgid "Refresh scan history"
+msgstr "Обновить историю сканирований"
+
+msgid "Rows"
+msgstr "Строки"
+
+msgid "Started"
+msgstr "Начато"
+
+msgid "Finished"
+msgstr "Завершено"
+
+msgid "Error"
+msgstr "Ошибка"
+
+msgid "Email sent"
+msgstr "Письмо отправлено"
+
+msgid "Email failed"
+msgstr "Письмо не отправлено"
+
+msgid "Sent"
+msgstr "Отправлено"
+
+msgid "Success"
+msgstr "Успешно"
+
+msgid "Incomplete"
+msgstr "Не завершено"
+
+msgid "Manual"
+msgstr "Вручную"
+
+msgid "Automatic"
+msgstr "Автоматически"
+
+msgid "Port"
+msgstr "Порт"
+
+msgid "Protocol"
+msgstr "Протокол"
+
+msgid "Service"
+msgstr "Служба"
+
+msgid "Product"
+msgstr "Продукт"
+
+msgid "Version"
+msgstr "Версия"
+
+msgid "Extra info"
+msgstr "Дополнительная информация"
+
+msgid "No open ports recorded"
+msgstr "Открытые порты не записаны"
+
+msgid "Enabled"
+msgstr "Включено"
+
+msgid "Disabled"
+msgstr "Отключено"
+
+msgid "Top ports"
+msgstr "Основные порты"
+
+msgid "Timing"
+msgstr "Тайминг"
+
+msgid "Host timeout"
+msgstr "Тайм-аут хоста"
+
+msgid "Version detection"
+msgstr "Определение версии"
+
+msgid "Nmap version"
+msgstr "Версия Nmap"
+
+msgid "Nmap elapsed"
+msgstr "Время выполнения Nmap"
+
+msgid "OS hint"
+msgstr "Подсказка об ОС"
+
+msgid "Open ports"
+msgstr "Открытые порты"
+
+msgid "Scan error"
+msgstr "Ошибка сканирования"
+
+msgid "Email error"
+msgstr "Ошибка почты"
+
+msgid "Open port details"
+msgstr "Сведения об открытых портах"
+
+msgid "No targeted Nmap scan history recorded"
+msgstr "История целевых сканирований Nmap не записана"
+
+msgid "Show scan details"
+msgstr "Показать сведения о сканировании"
+
+msgid "Hide scan details"
+msgstr "Скрыть сведения о сканировании"
+msgid "Resolve event"
+msgstr "Разрешить событие"
+
+msgid "Reopen event"
+msgstr "Открыть событие заново"
+
+msgid "Unable to update IP and MAC conflict"
+msgstr "Не удалось обновить конфликт IP и MAC"
+
+msgid "All"
+msgstr "Все"
+
+msgid "Unresolved"
+msgstr "Не разрешено"
+
+msgid "Resolved"
+msgstr "Разрешено"
+
+#: settings.volt - IP and MAC conflict email alerts
+msgid "Email high-severity conflict alerts"
+msgstr "Уведомления о конфликтах высокой серьёзности по почте"
+
+#: settings.volt - IP and MAC conflict email alerts
+msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
+msgstr "Отправить письмо при обнаружении нового конфликта адресов IPv4 или IPv6 высокой серьёзности."
+
+msgid "IP and MAC Conflicts"
+msgstr "Конфликты IP и MAC"
+
+msgid "Refresh IP and MAC conflicts"
+msgstr "Обновить конфликты IP и MAC"
+
+msgid "Loading IP and MAC conflicts..."
+msgstr "Загрузка конфликтов IP и MAC..."
+
+msgid "No IP and MAC conflicts recorded"
+msgstr "Конфликты IP и MAC не записаны"
+
+msgid "Unable to load IP and MAC conflicts"
+msgstr "Не удалось загрузить конфликты IP и MAC"
+
+msgid "Show conflict details"
+msgstr "Показать сведения о конфликте"
+
+msgid "Hide conflict details"
+msgstr "Скрыть сведения о конфликте"
+
+msgid "Resolve conflict"
+msgstr "Разрешить конфликт"
+
+msgid "Reopen conflict"
+msgstr "Открыть конфликт заново"
+
+msgid "IPv4 address used by another device"
+msgstr "IPv4-адрес используется другим устройством"
+
+msgid "IPv6 address used by another device"
+msgstr "IPv6-адрес используется другим устройством"
+
+msgid "Device using multiple IPv4 addresses"
+msgstr "Устройство использует несколько IPv4-адресов"
+
+msgid "Device seen on multiple interfaces"
+msgstr "Устройство замечено на нескольких интерфейсах"
+
+#: activitytimeline.volt - page and section heading
+msgid "Device Activity"
+msgstr "Активность устройства"
+
+msgid "Services"
+msgstr "Службы"
+
+#: devices.volt - first-seen column
+msgid "First Seen"
+msgstr "Впервые замечено"
+
+#: devices.volt - toast after clearing friendly name
+msgid "Friendly name cleared"
+msgstr "Понятное имя очищено"
+
+#: changesummary.volt - menu entry and page title
+msgid "Change Summary"
+msgstr "Сводка изменений"
+
+msgid "Period"
+msgstr "Период"
+
+msgid "Since last review"
+msgstr "С последней проверки"
+
+msgid "Last 24 hours"
+msgstr "Последние 24 часа"
+
+msgid "Last 7 days"
+msgstr "Последние 7 дней"
+
+msgid "Last 30 days"
+msgstr "Последние 30 дней"
+
+msgid "Custom range"
+msgstr "Пользовательский диапазон"
+
+msgid "Category"
+msgstr "Категория"
+
+msgid "All categories"
+msgstr "Все категории"
+
+msgid "Device"
+msgstr "Устройство"
+
+msgid "Lifecycle"
+msgstr "Жизненный цикл"
+
+msgid "Identity"
+msgstr "Идентификатор"
+
+msgid "Device Profile"
+msgstr "Профиль устройства"
+
+msgid "Notes / History"
+msgstr "Заметки / История"
+
+msgid "Infrastructure"
+msgstr "Инфраструктура"
+
+msgid "Mark reviewed now"
+msgstr "Отметить как проверенное сейчас"
+
+msgid "Start"
+msgstr "Начало"
+
+msgid "End"
+msgstr "Конец"
+
+msgid "No previous review marker; showing the last 24 hours."
+msgstr "Нет предыдущей отметки проверки; показаны последние 24 часа."
+
+msgid "Total Changes"
+msgstr "Всего изменений"
+
+msgid "New Devices"
+msgstr "Новые устройства"
+
+msgid "Returned Devices"
+msgstr "Вернувшиеся устройства"
+
+msgid "Identity Changes"
+msgstr "Изменения идентификаторов"
+
+msgid "Infrastructure Changes"
+msgstr "Изменения инфраструктуры"
+
+msgid "Lifecycle Changes"
+msgstr "Изменения жизненного цикла"
+
+msgid "Time"
+msgstr "Время"
+
+msgid "Device / Subject"
+msgstr "Устройство / Тема"
+
+msgid "Change"
+msgstr "Изменение"
+
+msgid "Previous"
+msgstr "Предыдущее"
+
+msgid "Current"
+msgstr "Текущее"
+
+msgid "Action"
+msgstr "Действие"
+
+msgid "Loading changes..."
+msgstr "Загрузка изменений..."
+
+msgid "Next"
+msgstr "Далее"
+
+# [physicaldevices.volt] Device Profiles page
+msgid "Device Profiles"
+msgstr "Профили устройств"
+
+#: physicaldevices.volt - summary stat label
+msgid "Profiles"
+msgstr "Профили"
+
+msgid "Archived"
+msgstr "Архивировано"
+
+msgid "Create Profile"
+msgstr "Создать профиль"
+
+msgid "All Profiles"
+msgstr "Все профили"
+
+msgid "Current Profiles"
+msgstr "Текущие профили"
+
+msgid "Archived Profiles"
+msgstr "Архивные профили"
+
+msgid "Search by name or MAC"
+msgstr "Поиск по имени или MAC"
+
+msgid "Showing"
+msgstr "Показано"
+
+msgid "Profile name"
+msgstr "Имя профиля"
+
+msgid "Create"
+msgstr "Создать"
+
+msgid "Loading devices..."
+msgstr "Загрузка устройств..."
+
+msgid "Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history."
+msgstr "Начните с одного MAC-адреса для этого профиля. Он должен принадлежать сетевому идентификатору, который сейчас в сети. Добавление идентификаторов выполняется явно и никогда не объединяет и не перезаписывает историю устройств, жизненных циклов или идентификаторов."
+
+msgid "Loading device profile..."
+msgstr "Загрузка профиля устройства..."
+
+# [devicehistory.volt] Device Details page
+msgid "Network Identity Details"
+msgstr "Сведения о сетевом идентификаторе"
+
+msgid "Network Identity Summary"
+msgstr "Сводка сетевого идентификатора"
+
+msgid "Back to Devices"
+msgstr "Назад к устройствам"
+
+msgid "Current Lifecycle"
+msgstr "Текущий жизненный цикл"
+
+msgid "Lifecycle History"
+msgstr "История жизненного цикла"
+
+msgid "MAC address"
+msgstr "MAC-адрес"
+
+msgid "A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below."
+msgstr "Жизненный цикл — это непрерывный период, в течение которого этот MAC-адрес рассматривается как одно и то же известное устройство. Более ранние жизненные циклы архивируются, а не удаляются, и остаются доступны ниже."
+
+msgid "Start New Lifecycle"
+msgstr "Начать новый жизненный цикл"
+
+msgid "Use this when the returning device should be treated as new."
+msgstr "Используйте это, когда вернувшееся устройство следует рассматривать как новое."
+
+msgid "Loading device history..."
+msgstr "Загрузка истории устройства..."
+
+msgid "Notes"
+msgstr "Заметки"
+
+msgid "There is no active lifecycle. Resolve the returning device in Lifecycle History before adding notes."
+msgstr "Активного жизненного цикла нет. Разрешите вернувшееся устройство в истории жизненного цикла перед добавлением заметок."
+
+msgid "Add Note"
+msgstr "Добавить заметку"
+
+msgid "Enter a new note..."
+msgstr "Введите новую заметку..."
+
+msgid "Loading notes..."
+msgstr "Загрузка заметок..."
+
+# [infrastructureservices.volt] Opt-in targeted port discovery
+msgid "Port Discovery"
+msgstr "Обнаружение портов"
+
+msgid "Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned."
+msgstr "Используйте «Выполнить сейчас» в строке устройства, чтобы просканировать TCP-порты 1-65535, включая стандартные и нестандартные порты. Открытые порты и найденные службы отображаются на вкладке «Сканирования». Выберите несколько устройств для необязательных еженедельных сканирований и сохраните. Сканирования выполняются по одному хосту за раз и останавливаются через 120 секунд; незавершённые сканирования помечаются как неудачные. UDP-порты, включая WireGuard, не сканируются."
+
+msgid "Scans"
+msgstr "Сканирования"
+
+msgid "Run Now"
+msgstr "Выполнить сейчас"
+
+msgid "Scan weekly"
+msgstr "Сканировать еженедельно"
+
+msgid "Scan Time"
+msgstr "Время сканирования"
+
+msgid "Scan Time (local time)"
+msgstr "Время сканирования (местное время)"
+
+msgid "Last Scan (local time)"
+msgstr "Последнее сканирование (местное время)"
+
+msgid "Result"
+msgstr "Результат"
+
+msgid "Open TCP Ports"
+msgstr "Открытые TCP-порты"
+
+msgid "Search IP, MAC or name"
+msgstr "Поиск IP, MAC или имени"
+
+msgid "TCP ports, e.g. 22,443"
+msgstr "TCP-порты, напр. 22,443"
+
+msgid "All results"
+msgstr "Все результаты"
+
+msgid "Complete"
+msgstr "Завершено"
+
+msgid "Running"
+msgstr "Выполняется"
+
+msgid "Filtering the 50 most recent scans"
+msgstr "Фильтрация 50 последних сканирований"
+
+# [devicehistory.volt] Per-device service alert controls
+msgid "Service Email Alerts"
+msgstr "Уведомления о службах по почте"
+
+msgid "Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings."
+msgstr "Выберите, отправляет ли этот сетевой идентификатор уведомления о службах по почте. «Использовать глобальную настройку» сохраняет значения по умолчанию из Настроек. Доставка почты должна быть включена в Настройках."
+
+msgid "Service event"
+msgstr "Событие службы"
+
+msgid "Preference"
+msgstr "Предпочтение"
+
+msgid "Effective"
+msgstr "Действующее"
+
+msgid "New service"
+msgstr "Новая служба"
+
+msgid "Service unavailable"
+msgstr "Служба недоступна"
+
+msgid "Service recovered"
+msgstr "Служба восстановлена"
+
+msgid "New service email preference"
+msgstr "Почтовое предпочтение для новой службы"
+
+msgid "Service unavailable email preference"
+msgstr "Почтовое предпочтение для недоступной службы"
+
+msgid "Service recovered email preference"
+msgstr "Почтовое предпочтение для восстановленной службы"
+
+msgid "Use global setting"
+msgstr "Использовать глобальную настройку"
+
+msgid "On"
+msgstr "Вкл."
+
+msgid "Off"
+msgstr "Выкл."
+
+msgid "Save alert preferences"
+msgstr "Сохранить предпочтения уведомлений"
+
+msgid "Email delivery is disabled in Settings."
+msgstr "Доставка почты отключена в Настройках."
+
+msgid "These preferences are saved, but service alert emails will not be sent."
+msgstr "Эти предпочтения сохранены, но уведомления о службах по почте не будут отправляться."
+
+msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
+msgstr "Эти предпочтения сохранены, но уведомления о службах этого сетевого идентификатора не будут отправляться, поскольку глобальные почтовые уведомления отключены."
+
+msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because monitoring is turned off."
+msgstr "Эти предпочтения сохранены, но уведомления о службах этого сетевого идентификатора не будут отправляться, поскольку мониторинг отключён."
+
+msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because no email recipient is configured in Settings."
+msgstr "Эти предпочтения сохранены, но уведомления о службах этого сетевого идентификатора не будут отправляться, поскольку в Настройках не указан получатель писем."
+
+msgid "These preferences are saved, but service alert email delivery is unavailable."
+msgstr "Эти предпочтения сохранены, но доставка уведомлений о службах по почте недоступна."
+
+msgid "Go to Email Notifications"
+msgstr "Перейти к уведомлениям по почте"
+
+msgid "Back to Network Identity Details"
+msgstr "Назад к сведениям о сетевом идентификаторе"
+
+msgid "Open Network Identity Details"
+msgstr "Открыть сведения о сетевом идентификаторе"
+
+msgid "View Network Identity Details"
+msgstr "Просмотр сведений о сетевом идентификаторе"
+
+msgid "Unable to load alert preferences"
+msgstr "Не удалось загрузить предпочтения уведомлений"
+
+msgid "Unable to save alert preferences"
+msgstr "Не удалось сохранить предпочтения уведомлений"
+
+msgid "Alert preferences saved"
+msgstr "Предпочтения уведомлений сохранены"
+
+msgid "More information"
+msgstr "Подробнее"
+
+msgid "About Service Email Alerts"
+msgstr "О почтовых уведомлениях о службах"
+
+msgid "About Lifecycle History"
+msgstr "Об истории жизненного цикла"
+
+msgid "About Network Identities"
+msgstr "О сетевых идентификаторах"
+
+msgid "About Device Profiles"
+msgstr "О профилях устройств"
+
+msgid "About Creating Profiles"
+msgstr "О создании профилей"
+
+msgid "About Port Discovery"
+msgstr "Об обнаружении портов"
+
+msgid "TCP only · 120-second limit per host"
+msgstr "Только TCP · Лимит 120 секунд на хост"
+
+msgid "About Email Delivery"
+msgstr "О доставке почты"
+
+msgid "About Direct SMTP"
+msgstr "О прямом SMTP"
+
+msgid "About SMTP Username"
+msgstr "Об имени пользователя SMTP"
+
+msgid "About Test Email"
+msgstr "О тестовом письме"
+
+msgid "About Conflict Alerts"
+msgstr "О конфликтных уведомлениях"
+
+msgid "About Infrastructure Service Alerts"
+msgstr "Об уведомлениях о службах инфраструктуры"
+
+msgid "About Notification Interfaces"
+msgstr "Об интерфейсах уведомлений"
+
+msgid "About Webhook Notifications"
+msgstr "Об уведомлениях Webhook"

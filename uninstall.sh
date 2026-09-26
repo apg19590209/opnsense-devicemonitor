@@ -93,10 +93,10 @@ echo "  Plugin files removed"
 # ============================================
 
 echo "[5/6] Removing translations..."
-rm -f /usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po
-rm -f /usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.mo
-rm -f /usr/local/opnsense/mvc/app/languages/en_US_devicemonitor.po
-rm -f /usr/local/opnsense/mvc/app/languages/en_US_devicemonitor.mo
+for lang in en_US cs_CZ de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN; do
+    rm -f "/usr/local/opnsense/mvc/app/languages/${lang}_devicemonitor.po"
+    rm -f "/usr/local/opnsense/mvc/app/languages/${lang}_devicemonitor.mo"
+done
 echo "  Translations removed"
 
 # ============================================

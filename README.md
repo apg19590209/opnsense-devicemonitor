@@ -6,6 +6,8 @@
 
 Plugin for automatic network device monitoring in OPNsense firewall. Detects new devices on the network using the native OPNsense hostwatch database and sends email or webhook notifications.
 
+> **Translations:** the interface is available in English, Czech, German, French, Spanish, Italian, Portuguese (Brazil), Dutch, Russian, Japanese and Simplified Chinese. All translations except English and Czech are machine-generated — native-speaker corrections are welcome.
+
 ---
 
 ## 📋 Table of Contents
@@ -150,7 +152,6 @@ dhcp_descriptions.update(dnsmasq_descriptions)  # Dnsmasq wins on conflict
 4. Hostname field preference within ISC DHCP
 Previously, the ISC DHCP reader used only `<descr>` (the description/note field). It now prefers `<hostname>` and falls back to `<descr>` only when `<hostname>` is absent or empty. This matches how hostnames actually appear in DNS and DHCP lease tables.
 
-
 ### v2.0 (April 2026) — Major overhaul
 
 This version is a complete architectural rewrite focused on deep integration with OPNsense 26.x. Many components that were previously custom-built are now replaced by native OPNsense mechanisms.
@@ -212,7 +213,7 @@ The `[status]` action now calls `daemon_status.sh` instead of `service devicemon
 
 Two fixes:
 - Default changed from `"YES"` to `"NO"` — FreeBSD convention: the script itself must default to disabled; activation is done by `/etc/rc.conf.d/devicemonitor`
-- Added `procname="/usr/local/bin/python3"` — without this, `rc.d` cannot find the running process and every `start` creates a new zombie process. 
+- Added `procname="/usr/local/bin/python3"` — without this, `rc.d` cannot find the running process and every `start` creates a new zombie process.
 
 **5. `service.xml` — fixed tag name, added `<pidfile>`, fixed `<commands>`**
 
