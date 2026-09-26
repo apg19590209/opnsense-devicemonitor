@@ -8,17 +8,16 @@
     vertical-align: middle;
     display: inline-block;
 }
-#service-alert-preferences select {
-    width: 190px;
-    max-width: 100%;
-    height: 30px;
-    padding: 4px 8px;
-}
 #service-alert-preferences td {
+    vertical-align: middle !important;
+}
+#service-alert-preferences .bootstrap-select {
     vertical-align: middle;
 }
-#service-alert-feedback:not(:empty) {
-    margin-bottom: 10px;
+#service-alert-preferences .bootstrap-select > .dropdown-toggle {
+    display: flex;
+    align-items: center;
+    height: 30px;
 }
 </style>
 
@@ -89,7 +88,7 @@
                 <p class="text-muted">
                     {{ lang._('Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings.') }}
                 </p>
-                <div id="service-alert-feedback" role="status" aria-live="polite"></div>
+                <p id="service-alert-delivery" class="text-muted"></p>
                 <div class="table-responsive">
                     <table class="table table-condensed" id="service-alert-preferences">
                         <thead><tr>
@@ -100,7 +99,7 @@
                         <tbody>
                             <tr data-alert-field="service_new">
                                 <td>{{ lang._('New service') }}</td>
-                                <td><select class="form-control input-sm" aria-label="{{ lang._('New service email preference') }}">
+                                <td><select class="selectpicker" data-style="btn-default btn-sm" data-width="190px" aria-label="{{ lang._('New service email preference') }}">
                                     <option value="inherit">{{ lang._('Use global setting') }}</option>
                                     <option value="on">{{ lang._('On') }}</option>
                                     <option value="off">{{ lang._('Off') }}</option>
@@ -109,7 +108,7 @@
                             </tr>
                             <tr data-alert-field="service_unavailable">
                                 <td>{{ lang._('Service unavailable') }}</td>
-                                <td><select class="form-control input-sm" aria-label="{{ lang._('Service unavailable email preference') }}">
+                                <td><select class="selectpicker" data-style="btn-default btn-sm" data-width="190px" aria-label="{{ lang._('Service unavailable email preference') }}">
                                     <option value="inherit">{{ lang._('Use global setting') }}</option>
                                     <option value="on">{{ lang._('On') }}</option>
                                     <option value="off">{{ lang._('Off') }}</option>
@@ -118,7 +117,7 @@
                             </tr>
                             <tr data-alert-field="service_recovered">
                                 <td>{{ lang._('Service recovered') }}</td>
-                                <td><select class="form-control input-sm" aria-label="{{ lang._('Service recovered email preference') }}">
+                                <td><select class="selectpicker" data-style="btn-default btn-sm" data-width="190px" aria-label="{{ lang._('Service recovered email preference') }}">
                                     <option value="inherit">{{ lang._('Use global setting') }}</option>
                                     <option value="on">{{ lang._('On') }}</option>
                                     <option value="off">{{ lang._('Off') }}</option>
@@ -253,11 +252,27 @@
 $(document).ready(function() {
     var params = new URLSearchParams(window.location.search);
     var mac = (params.get('mac') || '').trim().toLowerCase();
+    function showServiceAlertToast(message, success) {
+        var $toast = $('<div>').attr({role: 'status', 'aria-live': 'polite'})
+            .css({position: 'fixed', top: '20px', right: '20px',
+                'background-color': success ? '#4CAF50' : '#f44336',
+                color: 'white', padding: '15px 20px', 'border-radius': '4px',
+                'box-shadow': '0 4px 8px rgba(0,0,0,.3)', 'z-index': 9999,
+                'min-width': '280px', display: 'none'});
+        $('<i>').addClass('fa ' + (success ? 'fa-check-circle' : 'fa-exclamation-circle'))
+            .appendTo($toast);
+        $toast.append(document.createTextNode(' ' + message)).appendTo('body')
+            .fadeIn(300);
+        setTimeout(function() {
+            $toast.fadeOut(300, function() { $toast.remove(); });
+        }, 3000);
+    }
 
     function renderServiceAlertPreferences(response) {
         $('#service-alert-preferences tbody tr').each(function() {
             var field = $(this).attr('data-alert-field');
-            $(this).find('select').val(response.preferences[field]);
+            $(this).find('select').val(response.preferences[field])
+                .selectpicker('refresh');
             $(this).find('.alert-effective').text(
                 response.effective[field]
                     ? "{{ lang._('Enabled') }}"
@@ -265,7 +280,7 @@ $(document).ready(function() {
             );
         });
         $('#save-service-alerts').prop('disabled', false);
-        $('#service-alert-feedback').text(
+        $('#service-alert-delivery').text(
             response.email_available
                 ? ''
                 : "{{ lang._('Email delivery is disabled in Settings.') }}"
@@ -278,19 +293,19 @@ $(document).ready(function() {
                 if (response && response.result === 'ok') {
                     renderServiceAlertPreferences(response);
                 } else {
-                    $('#service-alert-feedback').text(
-                        "{{ lang._('Unable to load alert preferences') }}"
-                    );
+                    showServiceAlertToast("{{ lang._('Unable to load alert preferences') }}", false);
                 }
             }).fail(function() {
-                $('#service-alert-feedback').text(
-                    "{{ lang._('Unable to load alert preferences') }}"
-                );
+                showServiceAlertToast("{{ lang._('Unable to load alert preferences') }}", false);
             });
     }
 
     $('#save-service-alerts').on('click', function() {
-        var $button = $(this).prop('disabled', true);
+        var $button = $(this);
+        var originalLabel = $button.html();
+        $button.prop('disabled', true).html(
+            "<i class='fa fa-spinner fa-spin'></i> {{ lang._('Saving...') }}"
+        );
         var values = {mac: mac};
         $('#service-alert-preferences tbody tr').each(function() {
             values[$(this).attr('data-alert-field')] = $(this).find('select').val();
@@ -299,22 +314,19 @@ $(document).ready(function() {
             .done(function(response) {
                 if (response && response.result === 'saved') {
                     renderServiceAlertPreferences(response);
-                    $('#service-alert-feedback').text(
-                        "{{ lang._('Alert preferences saved') }}"
-                    );
+                    showServiceAlertToast("{{ lang._('Alert preferences saved') }}", true);
                 } else {
-                    $('#service-alert-feedback').text(
+                    showServiceAlertToast(
                         response && response.error
                             ? response.error
-                            : "{{ lang._('Unable to save alert preferences') }}"
+                            : "{{ lang._('Unable to save alert preferences') }}",
+                        false
                     );
                 }
             }).fail(function() {
-                $('#service-alert-feedback').text(
-                    "{{ lang._('Unable to save alert preferences') }}"
-                );
+                showServiceAlertToast("{{ lang._('Unable to save alert preferences') }}", false);
             }).always(function() {
-                $button.prop('disabled', false);
+                $button.prop('disabled', false).html(originalLabel);
             });
     });
 
