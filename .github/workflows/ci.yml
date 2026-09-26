@@ -54,6 +54,7 @@ jobs:
           sh -n install.sh
           sh -n install-unattended.sh
           sh -n release/merge-opnsense-catalog.sh
+          sh -n remove-locales.sh
           python3 tests/test_release_manifest.py
           sh -n uninstall.sh
           sh -n src/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh

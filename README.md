@@ -374,6 +374,21 @@ changes. An unavailable OPNsense catalogue aborts before installation.
 OPNsense package updates may replace a merged shared catalogue; rerun the
 guarded installer with the desired selection after such an update.
 
+To undo selected language files from a particular installation, use the
+`backup=` path printed by that installation. Check first, then restore only
+the languages selected in that installation:
+
+```sh
+sh remove-locales.sh --host YOUR-FIREWALL-HOSTNAME --backup /var/backups/devicemonitor/install-EXAMPLE --languages es_ES,cs_CZ --check
+sh remove-locales.sh --host YOUR-FIREWALL-HOSTNAME --backup /var/backups/devicemonitor/install-EXAMPLE --languages es_ES,cs_CZ
+```
+
+The removal command requires the installed files to match the installation's
+recorded hashes. It restores their predecessors, retains a new rollback copy,
+and restarts the web GUI if shared catalogues change. It stops if an OPNsense
+update or another install has changed any selected catalogue. It can undo only
+changes recorded in that install backup; earlier manual catalogue merges remain.
+
 After installation, verify the daemon:
 
 ```sh

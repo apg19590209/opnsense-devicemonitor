@@ -37,6 +37,9 @@ Status:
   published v2.9 release or install anything on production. The current
   development installer still has the v2.9 release-manifest/version gate;
   v2.10 release preparation must replace that gate and package the merge helper.
+- `remove-locales.sh` can restore selected catalogue predecessors from a
+  specific install backup with prestate hashes and a new rollback copy. It
+  cannot undo the manual merges that predated the optional installer.
 
 ## 26 September 2026 — major language UI translations (DM-BL-008)
 
