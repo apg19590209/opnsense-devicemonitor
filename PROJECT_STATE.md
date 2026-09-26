@@ -2,9 +2,9 @@
 
 ## Current state
 
-Last updated: 25 September 2026
+Last updated: 26 September 2026
 
-Branch: `v2.9-development`
+Branch: `v2.10-development`
 
 Authoritative development checkout: `/root/src/opnsense-devicemonitor-upstream`
 (FreeBSD 15.1-RELEASE amd64; OPNsense testbed host `192.168.20.23`)
@@ -13,8 +13,9 @@ Latest released implementation commit: `96cdd464640af6449afb1aa75c4aa193bc93f2ee
 
 Status:
 
+- Current development implementation: `4b2b992d1605184ba488e52452603b55f5673289` on `v2.10-development`. The 26 September work and its verification limits are recorded below; the latest released implementation remains v2.9.
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
-- The final v2.9 runtime package was installed and hash-verified on the testbed on 25 September 2026; the authoritative source checkout was fast-forwarded to the released development commit.
+- The final v2.9 runtime package was installed and hash-verified on the testbed on 25 September 2026. The checkout has since advanced to v2.10 development; the installed model and Network Identity Details template match `4b2b992` (verified 26 September). Other installed files were not re-audited in that verification.
 - The final v2.9 runtime package is installed and independently verified on production. The `v2.9` release tag remains at the implementation commit; this later documentation commit records deployment acceptance.
 - v2.9 was promoted to production; see the historical section
   "## v2.9 production promotion" for the earlier release-candidate promotion.
@@ -22,6 +23,74 @@ Status:
 - Targeted TCP Port Discovery, service archiving, responsive tables and the Devices refresh focus fix were promoted to production on 25 September 2026 (see below).
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
+
+## 26 September 2026 v2.10 development and service email verification
+
+Description: per-network-identity Service Email Alerts with clearer delivery
+warnings, terminology, contextual help and Settings navigation.
+Benefit: administrators can tune service alerts for one identity and understand
+why saved preferences cannot currently deliver email.
+
+Completed implementation (dates grouped in Australia/Sydney local time):
+
+- `81d0941`: per-identity `inherit` / `on` / `off` service email preferences,
+  persistence, API actions and service-alert processing integration. Decision 31
+  records the master-switch, recipient, lifecycle and cursor semantics.
+- `88a193f`: v2.10 CI checks the v2.9 release manifest against its immutable tag.
+- `e7c2a40`, `b8ff319`, `b201169`: aligned service-alert controls and save feedback,
+  explained disabled delivery, and added Email Notifications / return navigation.
+- `126d9d1`: Network Identity terminology, matching labels and manual updates.
+- `0e7ee17`, `32a0f08`, `3fda0e1`, `a1a9ce7`: accessible information icons,
+  contextual help beside the warning and within active tabs, and Settings help
+  aligned with labels.
+- `4b2b992`: specific unavailable-delivery reasons for global email disabled,
+  monitoring disabled and missing recipient, plus fallback warning text.
+
+Changed areas: `DevicesController.php`, `DeviceMonitor.php`, `scan_network.py`,
+Network Identity Details, Devices, Device Activity, Device Profiles,
+Infrastructure Services and Settings views; en_US/cs_CZ catalogues;
+`docs/USER_MANUAL.md`, `DECISIONS.md`, `PROJECT_RULES.md`, CI and focused
+UI, service-alert-processing and release-manifest tests. This reconciliation
+changes only `PROJECT_STATE.md`.
+
+Verified on testbed `192.168.20.23` during the 26 September SSH review:
+
+- Repository HEAD `4b2b992`; working tree clean before this documentation edit.
+- Installed `DeviceMonitor.php` and `devicehistory.volt` SHA256 hashes exactly
+  matched their repository sources.
+- User visually accepted the service email warning on the testbed.
+- Installed API controller/model methods passed isolated tests against a private
+  configuration and consistent SQLite snapshot: all three unavailable reasons,
+  blank/whitespace recipient, available state, email-disabled precedence when
+  multiple prerequisites fail, and effective alerts disabled when unavailable.
+- `inherit`, `on` and `off` saves persisted when read through a fresh model;
+  invalid preference values and non-POST saves were rejected.
+- Original configuration and preference fingerprints were recorded before tests;
+  snapshot configuration/preferences were restored and checked. Live configuration
+  and preferences were verified unchanged. No email was sent.
+- The diagnostic rerun passed (exit 0). Its temporary script was reviewed and
+  deleted because it depended on installed paths and live fixture data; it was
+  not added as a portable repository regression test.
+
+Verification limits / unresolved checks:
+
+- These were direct installed controller/model tests with a request fixture,
+  not authenticated HTTP API tests or a fresh local full-suite run. GitHub
+  Device Monitor CI for exact development commit `4b2b992d1605184ba488e52452603b55f5673289`
+  subsequently verified SUCCESS: run `36223055438`,
+  https://github.com/apg19590209/opnsense-devicemonitor/actions/runs/36223055438.
+  This run covers the implementation commit; CI for the documentation
+  reconciliation is tracked separately by its own commit. Deployment parity beyond the two files above was not
+  independently established in this review.
+- Automated browser testing was blocked by `ERR_CERT_AUTHORITY_INVALID`.
+  Warning visibility across every state, Settings/return-link interaction and
+  browser save/reload behavior remain unverified by automation; user visual
+  acceptance is recorded separately above.
+- Production was not contacted or changed during this work. Today's changes
+  are not recorded here as production-deployed.
+
+Next recommended step: complete the remaining authenticated UI interaction checks
+when a browser can access the testbed with a trusted certificate.
 
 ## 25 September 2026 v2.9 GitHub release
 
