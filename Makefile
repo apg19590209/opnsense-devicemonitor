@@ -14,6 +14,7 @@ NC     = \033[0m # No Colour
 PLUGIN_NAME = DeviceMonitor
 DB_DIR = /var/db/devicemonitor
 BACKUP_DIR = /root/devicemonitor_backup
+LANGUAGES ?= none
 
 help:
 	@echo "$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
@@ -22,6 +23,7 @@ help:
 	@echo ""
 	@echo "$(GREEN)Installation:$(NC)"
 	@echo "  make install TARGET_HOST=firewall.example - Guarded installation"
+	@echo "  make install TARGET_HOST=firewall.example LANGUAGES=es_ES,cs_CZ - Selected translations"
 	@echo "  make uninstall    - Uninstall plugin"
 	@echo "  make reinstall TARGET_HOST=firewall.example - Guarded installation"
 	@echo ""
@@ -47,7 +49,7 @@ install:
 	@echo "$(GREEN)Installing Device Monitor...$(NC)"
 	@test -f install.sh || { echo "$(RED)ERROR: install.sh not found!$(NC)"; exit 1; }
 	@test -n "$(TARGET_HOST)" || { echo "ERROR: TARGET_HOST required"; exit 1; }
-	@/bin/sh install.sh --host '$(TARGET_HOST)'
+	@/bin/sh install.sh --host '$(TARGET_HOST)' --languages '$(LANGUAGES)'
 	@echo "$(GREEN)Installation complete$(NC)"
 
 uninstall:

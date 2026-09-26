@@ -53,6 +53,7 @@ jobs:
           set -eu
           sh -n install.sh
           sh -n install-unattended.sh
+          sh -n release/merge-opnsense-catalog.sh
           python3 tests/test_release_manifest.py
           sh -n uninstall.sh
           sh -n src/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
@@ -66,6 +67,9 @@ jobs:
               "src/opnsense/mvc/app/languages/${lang}_devicemonitor.po" \
               -o "/tmp/devicemonitor-mo/${lang}_devicemonitor.mo"
           done
+
+      - name: Validate optional OPNsense locale merge
+        run: python3 tests/test_locale_merge.py
 
       - name: Validate Device Monitor database migrations
         run: |

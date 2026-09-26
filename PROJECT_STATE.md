@@ -2,7 +2,7 @@
 
 ## Current state
 
-Last updated: 26 September 2026
+Last updated: 27 September 2026
 
 Branch: `v2.10-development`
 
@@ -13,7 +13,7 @@ Latest released implementation commit: `96cdd464640af6449afb1aa75c4aa193bc93f2ee
 
 Status:
 
-- Current development implementation: `4b2b992d1605184ba488e52452603b55f5673289` on `v2.10-development`. The 26 September work and its verification limits are recorded below; the latest released implementation remains v2.9.
+- Current development implementation is on `v2.10-development`. The 26 September work and its verification limits are recorded below; the latest released implementation remains v2.9. The optional locale installer work below is source-only until a guarded v2.10 package is prepared and tested on OPNsense.
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
 - The final v2.9 runtime package was installed and hash-verified on the testbed on 25 September 2026. The checkout has since advanced to v2.10 development; the installed model and Network Identity Details template match `4b2b992` (verified 26 September). Other installed files were not re-audited in that verification.
 - The final v2.9 runtime package is installed and independently verified on production. The `v2.9` release tag remains at the implementation commit; this later documentation commit records deployment acceptance.
@@ -23,6 +23,20 @@ Status:
 - Targeted TCP Port Discovery, service archiving, responsive tables and the Devices refresh focus fix were promoted to production on 25 September 2026 (see below).
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
+
+## 27 September 2026 — optional locale installation (source preparation)
+
+- The development installer now accepts `--languages none` (default), `all`,
+  or an explicit comma-separated selection from the 11 plugin catalogues.
+- A selected non-English catalogue is merged into OPNsense's shared
+  `OPNsense.mo`, with existing core translations taking precedence. The same
+  guarded backup, hash, mode and rollback plan covers shared files. A selected
+  shared catalogue also triggers Volt cache invalidation and web GUI restart.
+- A test verifies core-string preservation, plugin-only strings, plural and
+  context entries, and repeat merges. This source work does not alter the
+  published v2.9 release or install anything on production. The current
+  development installer still has the v2.9 release-manifest/version gate;
+  v2.10 release preparation must replace that gate and package the merge helper.
 
 ## 26 September 2026 — major language UI translations (DM-BL-008)
 

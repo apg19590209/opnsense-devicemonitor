@@ -4,14 +4,43 @@ set -eu
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 EXPECTED_HOST=
 CHECK_ONLY=0
+LANGUAGES=none
+SUPPORTED_LANGUAGES='en_US cs_CZ de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN'
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --host) [ "$#" -ge 2 ] || exit 2; EXPECTED_HOST=$2; shift 2;;
         --check) CHECK_ONLY=1; shift;;
+        --languages) [ "$#" -ge 2 ] || exit 2; LANGUAGES=$2; shift 2;;
+        --help)
+            echo 'Usage: install.sh --host EXACT_HOST [--check] [--languages none|all|LOCALE[,LOCALE...]]'
+            echo "Locales: $SUPPORTED_LANGUAGES"
+            exit 0;;
         *) echo "ABORT: unknown argument $1" >&2; exit 2;;
     esac
 done
 [ -n "$EXPECTED_HOST" ] || { echo 'ABORT: --host is required' >&2; exit 2; }
+case "$LANGUAGES" in
+    all) SELECTED_LANGUAGES=$SUPPORTED_LANGUAGES;;
+    none) SELECTED_LANGUAGES=;;
+    *)
+        SELECTED_LANGUAGES=
+        old_ifs=$IFS
+        IFS=,
+        for lang in $LANGUAGES; do
+            case " $SUPPORTED_LANGUAGES " in
+                *" $lang "*) :;;
+                *) echo "ABORT: unsupported language $lang" >&2; exit 2;;
+            esac
+            case " $SELECTED_LANGUAGES " in
+                *" $lang "*) echo "ABORT: duplicate language $lang" >&2; exit 2;;
+            esac
+            SELECTED_LANGUAGES="${SELECTED_LANGUAGES:+$SELECTED_LANGUAGES }$lang"
+        done
+        IFS=$old_ifs
+        [ -n "$SELECTED_LANGUAGES" ] || { echo 'ABORT: empty language selection' >&2; exit 2; }
+        case "$LANGUAGES" in ,*|*,|*,,*) echo 'ABORT: empty language entry' >&2; exit 2;; esac
+        ;;
+esac
 [ "$(id -u)" = 0 ] || { echo 'ABORT: root required' >&2; exit 1; }
 [ "$(uname -s)" = FreeBSD ] || { echo 'ABORT: FreeBSD required' >&2; exit 1; }
 [ "$(/bin/hostname)" = "$EXPECTED_HOST" ] || { echo 'ABORT: hostname mismatch' >&2; exit 1; }
@@ -47,6 +76,7 @@ BACKUP=
 MUTATING=0
 WAS_RUNNING=0
 CONFIGD_CHANGED=0
+WEBGUI_CHANGED=0
 FRESH=0
 RC_LINK_CREATED=0
 [ "$installed" = fresh ] && FRESH=1
@@ -73,6 +103,10 @@ cleanup() {
         done < "$BACKUP/plan"
         if [ "$RC_LINK_CREATED" = 1 ]; then rm -f /etc/rc.d/devicemonitor; fi
         if [ "$CONFIGD_CHANGED" = 1 ]; then service configd restart || echo 'ROLLBACK_CONFIGD_RESTART_FAILED' >&2; fi
+        if [ "$WEBGUI_CHANGED" = 1 ]; then
+            if [ -d /var/lib/php/cache ]; then find /var/lib/php/cache -type f -name '*.php' -delete; fi
+            configctl webgui restart || echo 'ROLLBACK_WEBGUI_RESTART_FAILED' >&2
+        fi
         if [ "$WAS_RUNNING" = 1 ]; then service devicemonitor restart || echo 'ROLLBACK_DAEMON_RESTART_FAILED' >&2; fi
         echo "ROLLBACK_ATTEMPTED=$BACKUP" >&2
     fi
@@ -91,12 +125,24 @@ while read -r hash mode source target; do
     [ ! -L "$target" ] || { echo "ABORT: target symlink $target" >&2; exit 1; }
     printf '%s %s %s %s\n' "$hash" "$mode" "$source" "$target" >> "$STAGE/items"
 done < "$MANIFEST"
-for lang in en_US cs_CZ de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN; do
+for lang in $SELECTED_LANGUAGES; do
     source=src/opnsense/mvc/app/languages/${lang}_devicemonitor.po
     output=$STAGE/${lang}_devicemonitor.mo
     msgfmt --check -o "$output" "$source" >/dev/null || { echo "ABORT: gettext $lang" >&2; exit 1; }
     printf '%s %s %s %s\n' "$(sha256 -q "$output")" 644 "$output" "/usr/local/opnsense/mvc/app/languages/${lang}_devicemonitor.mo" >> "$STAGE/items"
+    [ "$lang" = en_US ] && continue
+    core=/usr/local/share/locale/${lang}/LC_MESSAGES/OPNsense.mo
+    [ -f "$core" ] && [ ! -L "$core" ] || { echo "ABORT: missing regular OPNsense catalogue $core" >&2; exit 1; }
+    command -v msgunfmt >/dev/null 2>&1 && command -v msgcat >/dev/null 2>&1 || { echo 'ABORT: gettext merge tools missing' >&2; exit 1; }
+    merged=$STAGE/${lang}_OPNsense.mo
+    /bin/sh "$SCRIPT_DIR/release/merge-opnsense-catalog.sh" "$core" "$source" "$merged" || { echo "ABORT: OPNsense catalogue merge $lang" >&2; exit 1; }
+    printf '%s %s %s %s\n' "$(sha256 -q "$merged")" "$(stat -f %Lp "$core")" "$merged" "$core" >> "$STAGE/items"
 done
+CORE_LOCALES_SELECTED=0
+for lang in $SELECTED_LANGUAGES; do [ "$lang" = en_US ] || CORE_LOCALES_SELECTED=1; done
+if [ "$CORE_LOCALES_SELECTED" = 1 ]; then
+    command -v configctl >/dev/null 2>&1 || { echo 'ABORT: configctl required for locale activation' >&2; exit 1; }
+fi
 python3 - <<'PY'
 import ast,glob,json,xml.etree.ElementTree as ET
 for p in glob.glob('src/opnsense/scripts/OPNsense/DeviceMonitor/*.py'):
@@ -134,10 +180,14 @@ while read -r hash mode source target; do
     id=$((id + 1))
 done < "$STAGE/items"
 count=$id
-expected=48
-[ "$FRESH" = 0 ] || expected=49
+expected=37
+for lang in $SELECTED_LANGUAGES; do
+    expected=$((expected + 1))
+    [ "$lang" = en_US ] || expected=$((expected + 1))
+done
+[ "$FRESH" = 0 ] || expected=$((expected + 1))
 [ "$count" = "$expected" ] || { echo 'ABORT: target count' >&2; exit 1; }
-printf 'CHECK_OK version=2.9 predecessor=%s files=%s daemon_running=%s host=%s\n' "$installed" "$count" "$WAS_RUNNING" "$EXPECTED_HOST"
+printf 'CHECK_OK version=2.9 predecessor=%s files=%s languages=%s daemon_running=%s host=%s\n' "$installed" "$count" "$LANGUAGES" "$WAS_RUNNING" "$EXPECTED_HOST"
 [ "$CHECK_ONLY" = 0 ] || exit 0
 mkdir -p /var/backups/devicemonitor
 BACKUP=$(mktemp -d /var/backups/devicemonitor/install-v29.XXXXXX)
@@ -188,6 +238,11 @@ if [ -d /var/lib/php/tmp ]; then find /var/lib/php/tmp -type f \( -name '*device
 if [ "$FRESH" = 1 ]; then /usr/local/etc/rc.configure_plugins; fi
 CONFIGD_CHANGED=1
 service configd restart
+if [ "$CORE_LOCALES_SELECTED" = 1 ]; then
+    WEBGUI_CHANGED=1
+    if [ -d /var/lib/php/cache ]; then find /var/lib/php/cache -type f -name '*.php' -delete; fi
+    configctl webgui restart
+fi
 if [ "$WAS_RUNNING" = 1 ]; then
     service devicemonitor restart
 elif [ "$FRESH" = 1 ]; then
@@ -208,4 +263,4 @@ c.close()
 PY
 fi
 MUTATING=0
-printf 'INSTALL_OK version=2.9 files=%s backup=%s daemon_restarted=%s\n' "$count" "$BACKUP" "$WAS_RUNNING"
+printf 'INSTALL_OK version=2.9 files=%s languages=%s backup=%s daemon_restarted=%s\n' "$count" "$LANGUAGES" "$BACKUP" "$WAS_RUNNING"

@@ -353,6 +353,27 @@ It aborts on failed checks instead of continuing with a partial installation.
 
 Existing configuration and device data are preserved during the upgrade.
 
+### Optional languages in the v2.10 development installer
+
+The development installer accepts `--languages none` (the default),
+`--languages all`, or a comma-separated selection such as
+`--languages es_ES,cs_CZ`. This option is not part of the published v2.9
+release asset. Run the matching `--check` command before installation:
+
+```sh
+sh install.sh --host YOUR-FIREWALL-HOSTNAME --languages es_ES,cs_CZ --check
+sh install.sh --host YOUR-FIREWALL-HOSTNAME --languages es_ES,cs_CZ
+```
+
+`none` leaves all installed language files unchanged. Selected languages get
+their Device Monitor catalogue; each selected non-English language also merges
+plugin-only strings into OPNsense's shared `OPNsense.mo`. Existing OPNsense
+translations win on duplicate strings. The installer verifies the merge,
+backs up each affected file, and restarts the web GUI when a shared catalogue
+changes. An unavailable OPNsense catalogue aborts before installation.
+OPNsense package updates may replace a merged shared catalogue; rerun the
+guarded installer with the desired selection after such an update.
+
 After installation, verify the daemon:
 
 ```sh
