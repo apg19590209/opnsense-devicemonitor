@@ -930,6 +930,9 @@ msgstr "Uložit předvolby upozornění"
 msgid "Email delivery is disabled in Settings."
 msgstr "Odesílání e-mailů je v Nastavení vypnuto."
 
+msgid "Email delivery is disabled in Settings. Preferences are saved, but service emails will not be sent."
+msgstr "Odesílání e-mailů je v Nastavení vypnuto. Předvolby se uloží, ale e-maily o službách nebudou odesílány."
+
 msgid "Unable to load alert preferences"
 msgstr "Předvolby upozornění nelze načíst"
 

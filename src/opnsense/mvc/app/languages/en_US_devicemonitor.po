@@ -929,6 +929,9 @@ msgstr "Save alert preferences"
 msgid "Email delivery is disabled in Settings."
 msgstr "Email delivery is disabled in Settings."
 
+msgid "Email delivery is disabled in Settings. Preferences are saved, but service emails will not be sent."
+msgstr "Email delivery is disabled in Settings. Preferences are saved, but service emails will not be sent."
+
 msgid "Unable to load alert preferences"
 msgstr "Unable to load alert preferences"
 

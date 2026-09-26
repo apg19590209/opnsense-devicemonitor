@@ -88,7 +88,12 @@
                 <p class="text-muted">
                     {{ lang._('Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings.') }}
                 </p>
-                <p id="service-alert-delivery" class="text-muted"></p>
+                <div id="service-alert-delivery" class="alert alert-warning"
+                     role="status" style="display:none;padding:8px 12px;">
+                    <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+                    <span>{{ lang._('Email delivery is disabled in Settings. Preferences are saved, but service emails will not be sent.') }}</span>
+                    <a href="/ui/devicemonitor/index/settings">{{ lang._('Settings') }}</a>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-condensed" id="service-alert-preferences">
                         <thead><tr>
@@ -280,11 +285,7 @@ $(document).ready(function() {
             );
         });
         $('#save-service-alerts').prop('disabled', false);
-        $('#service-alert-delivery').text(
-            response.email_available
-                ? ''
-                : "{{ lang._('Email delivery is disabled in Settings.') }}"
-        );
+        $('#service-alert-delivery').toggle(!response.email_available);
     }
 
     function loadServiceAlertPreferences() {
