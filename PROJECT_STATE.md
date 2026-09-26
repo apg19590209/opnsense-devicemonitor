@@ -40,6 +40,8 @@ Status:
 - `remove-locales.sh` can restore selected catalogue predecessors from a
   specific install backup with prestate hashes and a new rollback copy. It
   cannot undo the manual merges that predated the optional installer.
+- `uninstall.sh` accepts an explicit install backup and locale selection to
+  perform this guarded restore before any plugin files are removed.
 
 ## 26 September 2026 — major language UI translations (DM-BL-008)
 

@@ -4,10 +4,24 @@
 # Supports silent mode for reinstall: ./uninstall.sh --silent
 
 SILENT_MODE=0
+LOCALE_BACKUP=
+LOCALE_SELECTION=
+EXPECTED_HOST=
 
-# Check the --silent parameter
-if [ "$1" = "--silent" ]; then
-    SILENT_MODE=1
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --silent) SILENT_MODE=1; shift;;
+        --restore-languages-from) [ "$#" -ge 2 ] || exit 2; LOCALE_BACKUP=$2; shift 2;;
+        --languages) [ "$#" -ge 2 ] || exit 2; LOCALE_SELECTION=$2; shift 2;;
+        --host) [ "$#" -ge 2 ] || exit 2; EXPECTED_HOST=$2; shift 2;;
+        *) echo "ABORT: unknown uninstall argument $1" >&2; exit 2;;
+    esac
+done
+if [ -n "$LOCALE_BACKUP" ]; then
+    [ -n "$LOCALE_SELECTION" ] && [ -n "$EXPECTED_HOST" ] || { echo 'ABORT: locale restore requires --languages and --host' >&2; exit 2; }
+elif [ -n "$LOCALE_SELECTION" ] || [ -n "$EXPECTED_HOST" ]; then
+    echo 'ABORT: --languages/--host requires --restore-languages-from' >&2
+    exit 2
 fi
 
 if [ "$SILENT_MODE" -eq 0 ]; then
@@ -22,6 +36,15 @@ fi
     echo "ERROR: You must be root!"
     exit 1
 }
+
+# Restore shared OPNsense catalogues before any plugin removal. A failed hash
+# or backup check leaves the installed plugin intact.
+if [ -n "$LOCALE_BACKUP" ]; then
+    SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+    [ -f "$SCRIPT_DIR/remove-locales.sh" ] || { echo 'ABORT: locale restoration tool missing' >&2; exit 1; }
+    /bin/sh "$SCRIPT_DIR/remove-locales.sh" --host "$EXPECTED_HOST" --backup "$LOCALE_BACKUP" --languages "$LOCALE_SELECTION" --check || exit 1
+    /bin/sh "$SCRIPT_DIR/remove-locales.sh" --host "$EXPECTED_HOST" --backup "$LOCALE_BACKUP" --languages "$LOCALE_SELECTION" || exit 1
+fi
 
 # ============================================
 # 1. STOP SERVICES

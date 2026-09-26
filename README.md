@@ -719,6 +719,17 @@ sh uninstall.sh
 ```
 
 This removes all files, stops the daemon, disables autostart, and clears caches. The database `/var/db/devicemonitor/devices.db` is deleted.
+For languages installed with the guarded installer, restore the original
+OPNsense catalogues in the same operation by naming that install's backup:
+
+```sh
+sh uninstall.sh --host YOUR-FIREWALL-HOSTNAME --restore-languages-from /var/backups/devicemonitor/install-EXAMPLE --languages es_ES,cs_CZ
+```
+
+The locale restore runs first and aborts the uninstall if any selected
+catalogue has changed since that installation. Without these options,
+`uninstall.sh` leaves merged shared OPNsense catalogues in place. A manually
+merged catalogue requires its original pre-merge backup instead.
 
 ### Method 2: Silent uninstall (preserves database)
 
