@@ -952,3 +952,51 @@ msgstr "Unable to save alert preferences"
 
 msgid "Alert preferences saved"
 msgstr "Alert preferences saved"
+
+msgid "More information"
+msgstr "More information"
+
+msgid "About Service Email Alerts"
+msgstr "About Service Email Alerts"
+
+msgid "About Lifecycle History"
+msgstr "About Lifecycle History"
+
+msgid "About Network Identities"
+msgstr "About Network Identities"
+
+msgid "About Device Profiles"
+msgstr "About Device Profiles"
+
+msgid "About Creating Profiles"
+msgstr "About Creating Profiles"
+
+msgid "About Port Discovery"
+msgstr "About Port Discovery"
+
+msgid "TCP only · 120-second limit per host"
+msgstr "TCP only · 120-second limit per host"
+
+msgid "About Email Delivery"
+msgstr "About Email Delivery"
+
+msgid "About Direct SMTP"
+msgstr "About Direct SMTP"
+
+msgid "About SMTP Username"
+msgstr "About SMTP Username"
+
+msgid "About Test Email"
+msgstr "About Test Email"
+
+msgid "About Conflict Alerts"
+msgstr "About Conflict Alerts"
+
+msgid "About Infrastructure Service Alerts"
+msgstr "About Infrastructure Service Alerts"
+
+msgid "About Notification Interfaces"
+msgstr "About Notification Interfaces"
+
+msgid "About Webhook Notifications"
+msgstr "About Webhook Notifications"

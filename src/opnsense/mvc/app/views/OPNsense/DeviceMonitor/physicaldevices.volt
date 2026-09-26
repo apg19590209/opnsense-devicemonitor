@@ -13,10 +13,13 @@
                     <i class="fa fa-sitemap"></i> {{ lang._('Device Profiles') }}
                 </a>
             </li>
+            <li role="presentation" style="padding:8px 5px;">
+                <button type="button" class="dm-info" aria-label="{{ lang._('About Device Profiles') }}"
+                        data-content="{{ lang._('Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters.') }}">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                </button>
+            </li>
         </ul>
-        <p class="text-muted" style="margin:8px 0 0 0;">
-            {{ lang._('Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters.') }}
-        </p>
 
         <div id="physical-devices-sticky-controls">
             <div class="physical-devices-header">
@@ -78,6 +81,10 @@
                     <i class="fa fa-plus-circle"></i>
                     {{ lang._('Create Profile') }}
                 </strong>
+                <button type="button" class="dm-info" aria-label="{{ lang._('About Creating Profiles') }}"
+                        data-content="{{ lang._('Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history.') }}">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                </button>
             </div>
             <div class="panel-body">
                 <div class="form-inline">
@@ -98,9 +105,6 @@
                         <i class="fa fa-plus"></i>
                         {{ lang._('Create') }}
                     </button>
-                </div>
-                <div class="text-muted" style="margin-top:8px;">
-                    {{ lang._('Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history.') }}
                 </div>
             </div>
         </div>
@@ -163,10 +167,15 @@
     font-weight: 600;
     margin: 12px 0 4px 0;
 }
+.dm-info { border:0; background:transparent; color:#337ab7; padding:0 3px; cursor:pointer; }
 </style>
 
 <script>
 $(document).ready(function() {
+    $('.dm-info').popover({container:'body', placement:'auto bottom', trigger:'focus'});
+    $('.dm-info').on('keydown', function(event) {
+        if (event.key === 'Escape') { $(this).popover('hide').trigger('blur'); }
+    });
     var allDevices = [];
     var stateFilter = 'all';
     var searchText = '';

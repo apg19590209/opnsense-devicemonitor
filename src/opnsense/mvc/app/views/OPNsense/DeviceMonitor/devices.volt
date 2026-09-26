@@ -18,11 +18,13 @@
                         <i class="fa fa-sitemap"></i> {{ lang._('Device Profiles') }}
                     </a>
                 </li>
+                <li role="presentation" style="padding:8px 5px;">
+                    <button type="button" class="dm-info" aria-label="{{ lang._('About Network Identities') }}"
+                            data-content="{{ lang._('Automatically discovered network identities. Each row represents one MAC address.') }}">
+                        <i class="fa fa-info-circle" aria-hidden="true"></i>
+                    </button>
+                </li>
             </ul>
-            <p class="text-muted" style="margin:8px 0 0 0;">
-                {{ lang._('Automatically discovered network identities. Each row represents one MAC address.') }}
-            </p>
-
             <!-- Header with statistics -->
             <div id="devices-sticky-summary" class="devices-header">
                 <div class="devices-stats">
@@ -305,6 +307,7 @@ main.page-content > .row {
     height: auto;
     min-height: 100%;
 }
+.dm-info { border:0; background:transparent; color:#337ab7; padding:0 3px; cursor:pointer; }
 </style>
 
 <script>
@@ -396,6 +399,10 @@ main.page-content > .row {
     }
 
 $(document).ready(function() {
+    $('.dm-info').popover({container:'body', placement:'auto bottom', trigger:'focus'});
+    $('.dm-info').on('keydown', function(event) {
+        if (event.key === 'Escape') { $(this).popover('hide').trigger('blur'); }
+    });
 
     var translations = {
         deleted:        '{{ lang._('Device deleted') }}',

@@ -953,3 +953,51 @@ msgstr "Předvolby upozornění nelze uložit"
 
 msgid "Alert preferences saved"
 msgstr "Předvolby upozornění byly uloženy"
+
+msgid "More information"
+msgstr "Další informace"
+
+msgid "About Service Email Alerts"
+msgstr "O e-mailových upozorněních na služby"
+
+msgid "About Lifecycle History"
+msgstr "O historii životního cyklu"
+
+msgid "About Network Identities"
+msgstr "O síťových identitách"
+
+msgid "About Device Profiles"
+msgstr "O profilech zařízení"
+
+msgid "About Creating Profiles"
+msgstr "O vytváření profilů"
+
+msgid "About Port Discovery"
+msgstr "O vyhledávání portů"
+
+msgid "TCP only · 120-second limit per host"
+msgstr "Pouze TCP · limit 120 sekund na hostitele"
+
+msgid "About Email Delivery"
+msgstr "O doručování e-mailů"
+
+msgid "About Direct SMTP"
+msgstr "O přímém SMTP"
+
+msgid "About SMTP Username"
+msgstr "O uživatelském jménu SMTP"
+
+msgid "About Test Email"
+msgstr "O testovacím e-mailu"
+
+msgid "About Conflict Alerts"
+msgstr "O upozorněních na konflikty"
+
+msgid "About Infrastructure Service Alerts"
+msgstr "O upozorněních na služby infrastruktury"
+
+msgid "About Notification Interfaces"
+msgstr "O rozhraních pro upozornění"
+
+msgid "About Webhook Notifications"
+msgstr "O upozorněních webhookem"

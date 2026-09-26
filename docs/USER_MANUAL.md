@@ -82,6 +82,10 @@ The **Devices** menu item opens two tab-style views:
 - **Network Identities** — automatically discovered network identities; each row is one MAC address.
 - **Device Profiles** — real-world devices linked to one or more network identities (for example wired and Wi-Fi adapters).
 
+Small information icons beside headings and settings controls explain optional
+details when selected. Click or focus an icon to read its guidance; press Escape
+to close it. Warnings and scan or save results remain visible on the page.
+
 Two additional pages are reached from the Devices list rather than the menu:
 
 - **Network Identity Details** — a single device's summary, notes, lifecycle history and device-profile

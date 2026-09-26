@@ -131,11 +131,13 @@
                 <div class="panel panel-default infrastructure-recent-changes">
                     <div class="panel-heading">
                         {{ lang._('Port Discovery') }}
+                        <button type="button" class="dm-info" aria-label="{{ lang._('About Port Discovery') }}"
+                                data-content="{{ lang._('Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned.') }}">
+                            <i class="fa fa-info-circle" aria-hidden="true"></i>
+                        </button>
                     </div>
                     <div class="panel-body">
-                        <p class="text-muted">
-                            {{ lang._('Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned.') }}
-                        </p>
+                        <p class="text-muted">{{ lang._('TCP only · 120-second limit per host') }}</p>
                         <ul class="nav nav-tabs port-discovery-tabs" role="tablist">
                             <li role="presentation" class="active">
                                 <a href="#tab-port-discovery-devices"
@@ -584,10 +586,15 @@ header.page-content-head {
         background: #fff;
     }
 }
+.dm-info { border:0; background:transparent; color:#337ab7; padding:0 3px; cursor:pointer; }
 </style>
 
 <script>
 $(document).ready(function() {
+    $('.dm-info').popover({container:'body', placement:'auto bottom', trigger:'focus'});
+    $('.dm-info').on('keydown', function(event) {
+        if (event.key === 'Escape') { $(this).popover('hide').trigger('blur'); }
+    });
     var allServices = [];
 
     function dash(value) {

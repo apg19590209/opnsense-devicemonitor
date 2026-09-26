@@ -19,6 +19,7 @@
     align-items: center;
     height: 30px;
 }
+.dm-info { border:0; background:transparent; color:#337ab7; padding:0 3px; cursor:pointer; }
 </style>
 
 <div class="content-box">
@@ -83,11 +84,12 @@
         <div class="panel panel-default" id="device-service-alerts">
             <div class="panel-heading">
                 <strong><i class="fa fa-bell-o"></i> {{ lang._('Service Email Alerts') }}</strong>
+                <button type="button" class="dm-info" aria-label="{{ lang._('About Service Email Alerts') }}"
+                        data-content="{{ lang._('Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings.') }}">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                </button>
             </div>
             <div class="panel-body">
-                <p class="text-muted">
-                    {{ lang._('Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings.') }}
-                </p>
                 <div id="service-alert-delivery" class="alert alert-warning"
                      role="status" style="display:none;padding:8px 12px;">
                     <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
@@ -162,14 +164,14 @@
                     <i class="fa fa-history"></i>
                     {{ lang._('Lifecycle History') }}
                 </strong>
+                <button type="button" class="dm-info" aria-label="{{ lang._('About Lifecycle History') }}"
+                        data-content="{{ lang._('A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below.') }}">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                </button>
                 <span class="text-muted" style="margin-left:10px;">
                     {{ lang._('MAC address') }}:
                     <span id="device-history-mac"></span>
                 </span>
-            </div>
-
-            <div class="text-muted" style="padding:10px 15px;">
-                {{ lang._('A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below.') }}
             </div>
 
             <div id="return-resolution-controls"
@@ -259,6 +261,10 @@
 
 <script>
 $(document).ready(function() {
+    $('.dm-info').popover({container:'body', placement:'auto bottom', trigger:'focus'});
+    $('.dm-info').on('keydown', function(event) {
+        if (event.key === 'Escape') { $(this).popover('hide').trigger('blur'); }
+    });
     var params = new URLSearchParams(window.location.search);
     var mac = (params.get('mac') || '').trim().toLowerCase();
     $('#service-alert-settings-link').attr('href',
