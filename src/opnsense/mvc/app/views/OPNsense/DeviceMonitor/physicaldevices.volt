@@ -8,12 +8,10 @@
                     <i class="fa fa-list"></i> {{ lang._('Network Identities') }}
                 </a>
             </li>
-            <li role="presentation" class="active">
+            <li role="presentation" class="active dm-tab-with-info">
                 <a href="/ui/devicemonitor/index/physicaldevices">
                     <i class="fa fa-sitemap"></i> {{ lang._('Device Profiles') }}
                 </a>
-            </li>
-            <li role="presentation" style="padding:8px 5px;">
                 <button type="button" class="dm-info" aria-label="{{ lang._('About Device Profiles') }}"
                         data-content="{{ lang._('Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters.') }}">
                     <i class="fa fa-info-circle" aria-hidden="true"></i>
@@ -168,6 +166,12 @@
     margin: 12px 0 4px 0;
 }
 .dm-info { border:0; background:transparent; color:#337ab7; padding:0 3px; cursor:pointer; }
+.dm-tab-with-info { position:relative; }
+.dm-tab-with-info > a { padding-right:30px !important; }
+.dm-tab-with-info > .dm-info {
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    z-index:2; line-height:1;
+}
 </style>
 
 <script>

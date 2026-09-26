@@ -72,7 +72,7 @@ check(
     'MAC-record labels must use Network Identity consistently'
 );
 
-const activeMarker = 'role="presentation" class="active"';
+const activeMarker = 'role="presentation" class="active dm-tab-with-info"';
 
 check(
     devices.indexOf(activeMarker) < devices.indexOf(devicesLink) &&
@@ -84,6 +84,12 @@ check(
     profiles.indexOf(devicesLink) < profiles.indexOf(activeMarker) &&
         profiles.indexOf(activeMarker) < profiles.indexOf(profilesLink),
     'Device Profiles view must mark the Device Profiles tab active'
+);
+check(
+    devices.indexOf('About Network Identities') > devices.indexOf(devicesLink) &&
+        devices.indexOf('About Network Identities') < devices.indexOf(profilesLink) &&
+        profiles.indexOf('About Device Profiles') > profiles.indexOf(profilesLink),
+    'information buttons must sit in their associated active tab'
 );
 
 check(
