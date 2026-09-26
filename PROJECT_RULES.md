@@ -29,6 +29,24 @@ If these sources conflict, report the conflict rather than silently choosing one
 
 Inspect the actual source files relevant to the current task before recommending code changes.
 
+## Product terminology
+
+Use these terms consistently in user-facing labels and new documentation:
+
+- **Interface**: an OPNsense network port or VLAN selected for monitoring.
+- **Network Identity**: one discovered MAC address and its retained history.
+- **Device Profile**: one real-world device that can have multiple network identities.
+- **Service**: a network service observed at an address, protocol and port.
+- **Devices**: the navigation area containing Network Identities and Device Profiles.
+
+Use **Network Identity Details** for a MAC record's detail page and **Network
+Identity Summary** for its summary panel. Use **Service Email Alerts** for the
+per-identity service-alert preferences. Reserve **Interface** for OPNsense
+interfaces; a MAC record is not necessarily a physical network interface.
+Use Title Case for headings, tabs, controls and buttons, and sentence case for
+explanations and status messages. Preserve existing routes, API fields and
+database identifiers when changing displayed terminology.
+
 ## Working method
 
 - Work incrementally.
@@ -103,6 +121,15 @@ Minimise long terminal copy/paste operations.
 - Group safe read-only inspections when this reduces user interaction.
 - Minimise SSH authentication prompts by batching related remote work into one
   SSH session wherever practical.
+- Use the workstation's configured SSH key for testbed SSH and SCP so routine
+  commands run without password prompts. Keep the key and local SSH settings
+  outside the repository; do not commit credentials or private key material.
+- Make an authorised workflow unattended after its initial launch where
+  practical: combine transfer, identity and hash guards, backup, installation,
+  validation and rollback into one script that stops on failure. Report the
+  completed result or exact stop condition rather than pausing between phases.
+- Give one exact next action for unavoidable workstation steps, such as
+  downloading an artifact or completing an authenticated GUI check.
 - Avoid giant command blocks intended for terminal paste. For substantial edits
   or deployment logic, provide a downloadable script instead.
 - Print only the output filename and a small summary or line count in the

@@ -19,7 +19,7 @@
                class="btn btn-default btn-sm pull-right"
                style="font-size:14px;font-weight:600;padding:6px 12px;">
                 <i class="fa fa-arrow-left"></i>
-                {{ lang._('Back to Device Details') }}
+                {{ lang._('Back to Network Identity Details') }}
             </a>
 
             <h1 style="margin:0;font-size:20px;">

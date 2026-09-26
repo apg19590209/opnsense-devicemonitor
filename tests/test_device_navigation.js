@@ -22,6 +22,14 @@ const summary = fs.readFileSync(
     ROOT + '/views/OPNsense/DeviceMonitor/changesummary.volt',
     'utf8'
 );
+const timeline = fs.readFileSync(
+    ROOT + '/views/OPNsense/DeviceMonitor/activitytimeline.volt',
+    'utf8'
+);
+const settings = fs.readFileSync(
+    ROOT + '/views/OPNsense/DeviceMonitor/settings.volt',
+    'utf8'
+);
 
 function check(condition, message) {
     if (!condition) {
@@ -52,6 +60,17 @@ function hasTabs(text) {
 
 check(hasTabs(devices), 'Network Identities view must show both navigation tabs');
 check(hasTabs(profiles), 'Device Profiles view must show both navigation tabs');
+
+check(
+    details.includes("lang._('Network Identity Details')") &&
+        details.includes("lang._('Network Identity Summary')") &&
+        details.includes("lang._('Service Email Alerts')") &&
+        devices.includes("lang._('Total Identities')") &&
+        profiles.includes('View Network Identity Details') &&
+        timeline.includes('Back to Network Identity Details') &&
+        settings.includes('Back to Network Identity Details'),
+    'MAC-record labels must use Network Identity consistently'
+);
 
 const activeMarker = 'role="presentation" class="active"';
 

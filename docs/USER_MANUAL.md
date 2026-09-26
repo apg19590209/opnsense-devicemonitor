@@ -84,10 +84,10 @@ The **Devices** menu item opens two tab-style views:
 
 Two additional pages are reached from the Devices list rather than the menu:
 
-- **Device Details** — a single device's summary, notes, lifecycle history and device-profile
+- **Network Identity Details** — a single device's summary, notes, lifecycle history and device-profile
   association. Open it with the note/comment icon (or **History**) in a device's **Actions** column.
 - **Device Activity** — the chronological activity log for a single device. Open it
-  with the **Device Activity** button on the Device Details page.
+  with the **Device Activity** button on the Network Identity Details page.
 
 Device Monitor also provides a small dashboard widget (OPNsense Lobby) showing the daemon
 status (**Running**/**Stopped** with its PID), total devices, and how many are **Online**.
@@ -160,7 +160,7 @@ Devices**). The installed plugin version is shown under **Settings → About**.
 
 ### 4.5 Per-row actions
 
-- **Details/Notes** (comment icon) — opens the Device Details page. For a **RETURNING**
+- **Details/Notes** (comment icon) — opens the Network Identity Details page. For a **RETURNING**
   device this becomes a **History** button (history icon) to resolve the returning device.
   **Read-only** (opens a page).
 - **Check online** (plug icon) — pings the device and reports success/failure as a toast
@@ -188,7 +188,7 @@ the device's Device Activity.
   Profile, Scan Status, First Seen, Last Seen) are hidden progressively - only
   as many as needed - so the essential identity, status and action columns
   remain usable without horizontal scrolling; that information remains
-  available on the Device Details page.
+  available on the Network Identity Details page.
 - **Clear Database** and per-row **Delete** are the only destructive actions on this page.
 
 ---
@@ -210,7 +210,7 @@ If a device is deleted (or archived) and the same MAC address reappears later, D
 Monitor does **not** silently re-create it. Instead the device is shown as **RETURNING**
 (orange badge) on the Devices page.
 
-For a returning device you must make an explicit choice in its **Device Details →
+For a returning device you must make an explicit choice in its **Network Identity Details →
 Lifecycle History**:
 
 - **Start New Lifecycle** — treat the returning device as a new identity/ownership period.
@@ -244,7 +244,7 @@ rewriting device history.
 ## 6. Device history and comments (notes)
 
 **Path:** Devices → a device's **Actions → comment icon** (or **History** for returning
-devices) → **Device Details**
+devices) → **Network Identity Details**
 
 ### 6.1 Purpose
 
@@ -286,12 +286,12 @@ Columns: **Lifecycle**, **Status**, **IP Address**, **Friendly Name**, **Hostnam
 
 ### 6.5 Device Activity link
 
-The **Device Activity** button on Device Details opens the **Device Activity** page
+The **Device Activity** button on Network Identity Details opens the **Device Activity** page
 for the device (see below).
 
 ### 6.6 Device Activity page
 
-**Path:** Device Details → **Device Activity**
+**Path:** Network Identity Details → **Device Activity**
 
 Shows the device's activity history in a table with columns: **Date / time**, **Activity**
 (colour-coded label), **Details**, and **Lifecycle** (the lifecycle number).
@@ -332,9 +332,9 @@ On the **Device Profiles** page:
   **Unlink Identity** to remove a current identity. **Changes state.**
 - Filter the list with **All Profiles / Current Profiles / Archived Profiles** and search by
   name or MAC. **Read-only.**
-- **View Device Details** for any identity to open its **Device Details** page. **Read-only.**
+- **View Network Identity Details** for any identity to open its **Network Identity Details** page. **Read-only.**
 
-On a device's **Device Details** page, a read-only **Device Profile** summary shows the
+On a device's **Network Identity Details** page, a read-only **Device Profile** summary shows the
 profile's name and current identity count and links to the **Device Profiles** page.
 
 ### 7.3 What is displayed
@@ -831,7 +831,7 @@ Displays the installed Device Monitor version and descriptive information. **Rea
   a VLAN interface, select it in **Interfaces → Neighbors → Automatic Discovery** and restart
   Hostwatch. Then click **Run scan now**.
 - **A device shows "RETURNING".**
-  This is expected when a previously removed MAC reappears. Resolve it in Device Details →
+  This is expected when a previously removed MAC reappears. Resolve it in Network Identity Details →
   Lifecycle History.
 - **A service shows "Stale".**
   The service has not been re-verified recently. Run **Discover Now** on Infrastructure
@@ -870,8 +870,10 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 
 ## 19. Glossary
 
-- **Network Identity** — a discovered network device, keyed by MAC address (shown on the
-  Network Identities tab).
+- **Interface** — an OPNsense network port or VLAN selected for monitoring.
+- **Network Identity** — one discovered MAC address and its retained history (shown on the
+  Network Identities tab). **Network Identity Details** is the page for that record.
+- **Devices** — the navigation area containing Network Identities and Device Profiles.
 - **Hostwatch** — the OPNsense service that observes hosts on firewall interfaces.
 - **Lifecycle** — a period of continuous ownership/use for a MAC address.
 - **Returning device** — a known MAC that reappeared after removal and awaits a decision.
@@ -880,6 +882,7 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 - **Hostname** — the hostname Device Monitor detected (with a source tag).
 - **Device Profile** — one real-world piece of equipment, recognised by you, with one or
   more current or previous network identities.
+- **Service** — a network service observed at an address, protocol and port.
 - **Identity event** — a detected IP/MAC anomaly or conflict.
 - **Infrastructure service** — a network service (DHCP, DNS, SSH, SMB, …) found on a device.
 - **Targeted Nmap scan** — a single-host port/security scan.
@@ -896,7 +899,7 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 | ACL / permissions | `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/ACL/ACL.xml` |
 | Devices page (list, filters, CSV, actions) | `views/.../devices.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | Device Profiles | `views/.../physicaldevices.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
-| Device Details (summary, notes, lifecycle, device profile) | `views/.../devicehistory.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
+| Network Identity Details (summary, notes, lifecycle, device profile) | `views/.../devicehistory.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | Device Activity | `views/.../activitytimeline.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | IP and MAC Conflicts | `views/.../identityevents.volt`, `Api/DevicesController.php`, `models/.../DeviceMonitor.php` |
 | Infrastructure Services | `views/.../infrastructureservices.volt`, `Api/DevicesController.php`, `scan_network.py` |

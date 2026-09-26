@@ -30,7 +30,7 @@ function check(condition, message) {
     'Create Profile',
     'Add Identity',
     'Unlink Identity',
-    'View Device Details',
+    'View Network Identity Details',
     'Profile name',
     'Profile Name',
     'Current Identities',

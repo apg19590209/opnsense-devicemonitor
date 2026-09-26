@@ -52,8 +52,8 @@ msgstr "Settings"
 # ============================================
 
 #: devices.volt - header stats
-msgid "Total Devices"
-msgstr "Total Devices"
+msgid "Total Identities"
+msgstr "Total Identities"
 
 #: devices.volt - header stats (green)
 msgid "Online"
@@ -786,11 +786,11 @@ msgid "Loading device profile..."
 msgstr "Loading device profile..."
 
 # [devicehistory.volt] Device Details page
-msgid "Device Details"
-msgstr "Device Details"
+msgid "Network Identity Details"
+msgstr "Network Identity Details"
 
-msgid "Device Summary"
-msgstr "Device Summary"
+msgid "Network Identity Summary"
+msgstr "Network Identity Summary"
 
 msgid "Back to Devices"
 msgstr "Back to Devices"
@@ -881,8 +881,8 @@ msgid "Filtering the 50 most recent scans"
 msgstr "Filtering the 50 most recent scans"
 
 # [devicehistory.volt] Per-device service alert controls
-msgid "Service email alerts"
-msgstr "Service email alerts"
+msgid "Service Email Alerts"
+msgstr "Service Email Alerts"
 
 msgid "Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings."
 msgstr "Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings."
@@ -929,14 +929,20 @@ msgstr "Save alert preferences"
 msgid "Email delivery is disabled in Settings."
 msgstr "Email delivery is disabled in Settings."
 
-msgid "Email delivery is disabled in Settings. Preferences are saved, but service emails will not be sent."
-msgstr "Email delivery is disabled in Settings. Preferences are saved, but service emails will not be sent."
+msgid "These preferences are saved, but service alert emails will not be sent."
+msgstr "These preferences are saved, but service alert emails will not be sent."
 
 msgid "Go to Email Notifications"
 msgstr "Go to Email Notifications"
 
-msgid "Back to Device Details"
-msgstr "Back to Device Details"
+msgid "Back to Network Identity Details"
+msgstr "Back to Network Identity Details"
+
+msgid "Open Network Identity Details"
+msgstr "Open Network Identity Details"
+
+msgid "View Network Identity Details"
+msgstr "View Network Identity Details"
 
 msgid "Unable to load alert preferences"
 msgstr "Unable to load alert preferences"

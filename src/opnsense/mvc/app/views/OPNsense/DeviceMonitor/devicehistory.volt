@@ -40,7 +40,7 @@
                 {{ lang._('Device Activity') }}
             </a>
             <h1 style="margin:0;font-size:20px;">
-                {{ lang._('Device Details') }}
+                {{ lang._('Network Identity Details') }}
             </h1>
         </div>
 
@@ -48,7 +48,7 @@
             <div class="panel-heading">
                 <strong>
                     <i class="fa fa-desktop"></i>
-                    {{ lang._('Device Summary') }}
+                    {{ lang._('Network Identity Summary') }}
                 </strong>
             </div>
             <div class="panel-body" style="padding-bottom:5px;">
@@ -82,7 +82,7 @@
 
         <div class="panel panel-default" id="device-service-alerts">
             <div class="panel-heading">
-                <strong><i class="fa fa-bell-o"></i> {{ lang._('Service email alerts') }}</strong>
+                <strong><i class="fa fa-bell-o"></i> {{ lang._('Service Email Alerts') }}</strong>
             </div>
             <div class="panel-body">
                 <p class="text-muted">
@@ -91,7 +91,7 @@
                 <div id="service-alert-delivery" class="alert alert-warning"
                      role="status" style="display:none;padding:8px 12px;">
                     <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
-                    <span>{{ lang._('Email delivery is disabled in Settings. Preferences are saved, but service emails will not be sent.') }}</span>
+                    <span>{{ lang._('These preferences are saved, but service alert emails will not be sent.') }}</span>
                     <a id="service-alert-settings-link" class="btn btn-default btn-sm"
                        href="/ui/devicemonitor/index/settings#tab-email">
                         <i class="fa fa-envelope-o" aria-hidden="true"></i>

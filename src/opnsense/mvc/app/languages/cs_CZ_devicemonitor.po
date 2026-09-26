@@ -53,8 +53,8 @@ msgstr "Nastavení"
 
 
 #: devices.volt - statistika v záhlaví
-msgid "Total Devices"
-msgstr "Celkem zařízení"
+msgid "Total Identities"
+msgstr "Celkem identit"
 
 #: devices.volt - statistika v záhlaví (zeleně)
 msgid "Online"
@@ -787,11 +787,11 @@ msgid "Loading device profile..."
 msgstr "Načítání profilu zařízení..."
 
 # [devicehistory.volt] Device Details page
-msgid "Device Details"
-msgstr "Detail zařízení"
+msgid "Network Identity Details"
+msgstr "Podrobnosti síťové identity"
 
-msgid "Device Summary"
-msgstr "Souhrn zařízení"
+msgid "Network Identity Summary"
+msgstr "Souhrn síťové identity"
 
 msgid "Back to Devices"
 msgstr "Zpět na zařízení"
@@ -882,7 +882,7 @@ msgid "Filtering the 50 most recent scans"
 msgstr "Filtrování 50 nejnovějších skenování"
 
 # [devicehistory.volt] Nastavení e-mailových upozornění pro zařízení
-msgid "Service email alerts"
+msgid "Service Email Alerts"
 msgstr "E-mailová upozornění na služby"
 
 msgid "Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings."
@@ -930,14 +930,20 @@ msgstr "Uložit předvolby upozornění"
 msgid "Email delivery is disabled in Settings."
 msgstr "Odesílání e-mailů je v Nastavení vypnuto."
 
-msgid "Email delivery is disabled in Settings. Preferences are saved, but service emails will not be sent."
-msgstr "Odesílání e-mailů je v Nastavení vypnuto. Předvolby se uloží, ale e-maily o službách nebudou odesílány."
+msgid "These preferences are saved, but service alert emails will not be sent."
+msgstr "Tyto předvolby jsou uloženy, ale e-maily s upozorněními na služby nebudou odesílány."
 
 msgid "Go to Email Notifications"
 msgstr "Přejít na e-mailová upozornění"
 
-msgid "Back to Device Details"
-msgstr "Zpět na podrobnosti zařízení"
+msgid "Back to Network Identity Details"
+msgstr "Zpět na podrobnosti síťové identity"
+
+msgid "Open Network Identity Details"
+msgstr "Otevřít podrobnosti síťové identity"
+
+msgid "View Network Identity Details"
+msgstr "Zobrazit podrobnosti síťové identity"
 
 msgid "Unable to load alert preferences"
 msgstr "Předvolby upozornění nelze načíst"

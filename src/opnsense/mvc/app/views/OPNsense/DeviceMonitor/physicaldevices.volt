@@ -562,10 +562,10 @@ $(document).ready(function() {
                 .attr({
                     href: '/ui/devicemonitor/index/devicehistory?mac=' +
                         encodeURIComponent(member.mac || ''),
-                    title: 'Open Device Details'
+                    title: "{{ lang._('Open Network Identity Details') }}"
                 })
                 .addClass('btn btn-xs btn-default')
-                .html('<i class="fa fa-external-link"></i> View Device Details')
+                .html("<i class='fa fa-external-link'></i> {{ lang._('View Network Identity Details') }}")
                 .appendTo($actions);
 
             if (!isArchived) {
@@ -642,10 +642,10 @@ $(document).ready(function() {
                 .attr({
                     href: '/ui/devicemonitor/index/devicehistory?mac=' +
                         encodeURIComponent(member.mac || ''),
-                    title: 'Open Device Details'
+                    title: "{{ lang._('Open Network Identity Details') }}"
                 })
                 .addClass('btn btn-xs btn-default')
-                .html('<i class="fa fa-external-link"></i> View Device Details')
+                .html("<i class='fa fa-external-link'></i> {{ lang._('View Network Identity Details') }}")
                 .appendTo($actions);
 
             $('<tr>')

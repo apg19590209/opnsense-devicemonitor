@@ -36,7 +36,7 @@
                 <a id="return-to-device-details" class="btn btn-default btn-sm"
                    href="#" style="display:none;margin-bottom:12px;">
                     <i class="fa fa-arrow-left" aria-hidden="true"></i>
-                    {{ lang._('Back to Device Details') }}
+                    {{ lang._('Back to Network Identity Details') }}
                 </a>
                 <div class="alert alert-info">
                     {{ lang._('Configure email notifications from Device Monitor') }}

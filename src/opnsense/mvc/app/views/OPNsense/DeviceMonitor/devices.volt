@@ -27,7 +27,7 @@
             <div id="devices-sticky-summary" class="devices-header">
                 <div class="devices-stats">
                     <span>
-                        {{ lang._('Total Devices') }}:
+                        {{ lang._('Total Identities') }}:
                         <strong id="stat-total">—</strong>
                     </span>
                     <span>
@@ -878,7 +878,7 @@ $(document).ready(function() {
                 $('<td>').html(
                 (row.return_pending === 1 || row.return_pending === '1'
                     ? '<a class="btn btn-xs btn-primary" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+'#lifecycle-history" title="Resolve returning device / lifecycle history" style="margin-right:2px;"><i class="fa fa-history"></i> History</a>'
-                    : '<a class="btn btn-xs btn-default" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+'" title="Device details and notes" style="margin-right:2px;"><i class="fa fa-comment-o"></i></a>') +
+                    : '<a class="btn btn-xs btn-default" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+'" title="Network identity details and notes" style="margin-right:2px;"><i class="fa fa-comment-o"></i></a>') +
                 '<button class="btn btn-xs btn-warning command-check" data-row-mac="'+row.mac+'" data-row-ip="'+row.ip+'" title="Check online" style="margin-right:2px;"><i class="fa fa-plug"></i></button>' +
                 '<button class="btn btn-xs btn-info command-nmap" data-row-mac="'+row.mac+'" title="Run targeted Nmap scan" style="margin-right:2px;"><i class="fa fa-search"></i></button>' +
                 '<button class="btn btn-xs btn-danger command-delete" data-row-mac="'+row.mac+'"><i class="fa fa-trash"></i></button>')
