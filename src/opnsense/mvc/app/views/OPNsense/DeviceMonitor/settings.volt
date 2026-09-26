@@ -33,6 +33,11 @@
 
             <!-- TAB 3: Email -->
             <div role="tabpanel" class="tab-pane" id="tab-email">
+                <a id="return-to-device-details" class="btn btn-default btn-sm"
+                   href="#" style="display:none;margin-bottom:12px;">
+                    <i class="fa fa-arrow-left" aria-hidden="true"></i>
+                    {{ lang._('Back to Device Details') }}
+                </a>
                 <div class="alert alert-info">
                     {{ lang._('Configure email notifications from Device Monitor') }}
                 </div>
@@ -471,6 +476,13 @@
 
 <script>
 $().ready(function() {
+    var returnPath = new URLSearchParams(window.location.search).get('return');
+    if (returnPath && /^\/ui\/devicemonitor\/index\/devicehistory\?mac=[0-9a-fA-F:%]+$/.test(returnPath)) {
+        $('#return-to-device-details').attr('href', returnPath).show();
+    }
+    if (window.location.hash === '#tab-email' || returnPath) {
+        $('a[href="#tab-email"]').tab('show');
+    }
     var translations = {
         config_saved:  '{{ lang._('Configuration saved') }}',
         config_error:  '{{ lang._('Error saving configuration') }}',

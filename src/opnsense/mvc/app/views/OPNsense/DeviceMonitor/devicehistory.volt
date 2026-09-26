@@ -92,7 +92,11 @@
                      role="status" style="display:none;padding:8px 12px;">
                     <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
                     <span>{{ lang._('Email delivery is disabled in Settings. Preferences are saved, but service emails will not be sent.') }}</span>
-                    <a href="/ui/devicemonitor/index/settings">{{ lang._('Settings') }}</a>
+                    <a id="service-alert-settings-link" class="btn btn-default btn-sm"
+                       href="/ui/devicemonitor/index/settings#tab-email">
+                        <i class="fa fa-envelope-o" aria-hidden="true"></i>
+                        {{ lang._('Go to Email Notifications') }}
+                    </a>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-condensed" id="service-alert-preferences">
@@ -257,6 +261,10 @@
 $(document).ready(function() {
     var params = new URLSearchParams(window.location.search);
     var mac = (params.get('mac') || '').trim().toLowerCase();
+    $('#service-alert-settings-link').attr('href',
+        '/ui/devicemonitor/index/settings?return=' +
+        encodeURIComponent(window.location.pathname + window.location.search) +
+        '#tab-email');
     function showServiceAlertToast(message, success) {
         var $toast = $('<div>').attr({role: 'status', 'aria-live': 'polite'})
             .css({position: 'fixed', top: '20px', right: '20px',
