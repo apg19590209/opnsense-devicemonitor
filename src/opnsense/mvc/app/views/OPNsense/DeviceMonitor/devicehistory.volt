@@ -93,7 +93,7 @@
                 <div id="service-alert-delivery" class="alert alert-warning"
                      role="status" style="display:none;padding:8px 12px;">
                     <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
-                    <span>{{ lang._('These preferences are saved, but service alert emails will not be sent.') }}</span>
+                    <span id="service-alert-delivery-reason"></span>
                     <a id="service-alert-settings-link" class="btn btn-default btn-sm"
                        href="/ui/devicemonitor/index/settings#tab-email">
                         <i class="fa fa-envelope-o" aria-hidden="true"></i>
@@ -299,6 +299,15 @@ $(document).ready(function() {
             );
         });
         $('#save-service-alerts').prop('disabled', false);
+        var deliveryMessages = {
+            email_disabled: "{{ lang._('These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off.') }}",
+            monitoring_disabled: "{{ lang._('These preferences are saved, but this network identity’s service alert emails will not be sent because monitoring is turned off.') }}",
+            recipient_missing: "{{ lang._('These preferences are saved, but this network identity’s service alert emails will not be sent because no email recipient is configured in Settings.') }}"
+        };
+        $('#service-alert-delivery-reason').text(
+            deliveryMessages[response.email_unavailable_reason] ||
+            "{{ lang._('These preferences are saved, but service alert email delivery is unavailable.') }}"
+        );
         $('#service-alert-delivery').toggle(!response.email_available);
     }
 

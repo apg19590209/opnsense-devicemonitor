@@ -932,6 +932,18 @@ msgstr "Email delivery is disabled in Settings."
 msgid "These preferences are saved, but service alert emails will not be sent."
 msgstr "These preferences are saved, but service alert emails will not be sent."
 
+msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
+msgstr "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
+
+msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because monitoring is turned off."
+msgstr "These preferences are saved, but this network identity’s service alert emails will not be sent because monitoring is turned off."
+
+msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because no email recipient is configured in Settings."
+msgstr "These preferences are saved, but this network identity’s service alert emails will not be sent because no email recipient is configured in Settings."
+
+msgid "These preferences are saved, but service alert email delivery is unavailable."
+msgstr "These preferences are saved, but service alert email delivery is unavailable."
+
 msgid "Go to Email Notifications"
 msgstr "Go to Email Notifications"
 

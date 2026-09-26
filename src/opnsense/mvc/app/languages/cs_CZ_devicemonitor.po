@@ -933,6 +933,18 @@ msgstr "Odesílání e-mailů je v Nastavení vypnuto."
 msgid "These preferences are saved, but service alert emails will not be sent."
 msgstr "Tyto předvolby jsou uloženy, ale e-maily s upozorněními na služby nebudou odesílány."
 
+msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
+msgstr "Tyto předvolby jsou uloženy, ale e-maily s upozorněními na služby pro tuto síťovou identitu nebudou odesílány, protože globální e-mailová upozornění jsou vypnuta."
+
+msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because monitoring is turned off."
+msgstr "Tyto předvolby jsou uloženy, ale e-maily s upozorněními na služby pro tuto síťovou identitu nebudou odesílány, protože monitorování je vypnuto."
+
+msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because no email recipient is configured in Settings."
+msgstr "Tyto předvolby jsou uloženy, ale e-maily s upozorněními na služby pro tuto síťovou identitu nebudou odesílány, protože v Nastavení není zadán příjemce e-mailů."
+
+msgid "These preferences are saved, but service alert email delivery is unavailable."
+msgstr "Tyto předvolby jsou uloženy, ale doručování e-mailů s upozorněními na služby není dostupné."
+
 msgid "Go to Email Notifications"
 msgstr "Přejít na e-mailová upozornění"
 

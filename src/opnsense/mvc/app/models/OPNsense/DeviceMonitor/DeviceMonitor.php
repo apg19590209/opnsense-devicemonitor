@@ -2500,9 +2500,13 @@ class DeviceMonitor
             'service_unavailable' => 'service_email_unavailable',
             'service_recovered' => 'service_email_recovered',
         ];
-        $master = ($config['enabled'] ?? '0') == '1' &&
-            ($config['email_enabled'] ?? '0') == '1' &&
-            trim((string)($config['email_to'] ?? '')) !== '';
+        $monitoringEnabled = ($config['enabled'] ?? '0') == '1';
+        $emailEnabled = ($config['email_enabled'] ?? '0') == '1';
+        $recipientConfigured = trim((string)($config['email_to'] ?? '')) !== '';
+        $master = $monitoringEnabled && $emailEnabled && $recipientConfigured;
+        $unavailableReason = !$emailEnabled ? 'email_disabled' :
+            (!$monitoringEnabled ? 'monitoring_disabled' :
+                (!$recipientConfigured ? 'recipient_missing' : null));
         $preferences = [];
         $effective = [];
         foreach ($defaults as $field => $globalField) {
@@ -2519,6 +2523,7 @@ class DeviceMonitor
             'preferences' => $preferences,
             'effective' => $effective,
             'email_available' => $master,
+            'email_unavailable_reason' => $unavailableReason,
         ];
     }
 
