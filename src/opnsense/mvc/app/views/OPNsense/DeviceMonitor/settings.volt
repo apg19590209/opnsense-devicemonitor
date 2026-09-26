@@ -482,6 +482,27 @@
 </style>
 <script>
 $().ready(function() {
+    // Keep guidance beside the setting it explains, clear of the form control.
+    $('#tab-monitoring, #tab-nmap, #tab-email, #tab-webhook').each(function() {
+        $(this).find('table > tbody > tr').each(function() {
+            var $cells = $(this).children('td');
+            if ($cells.length !== 2) return;
+            var $heading = $cells.first().find('strong').first();
+            var $help = $cells.last().children('.dm-info').first();
+            if ($heading.length && $help.length) $help.insertAfter($heading);
+        });
+    });
+    $('#tab-nmap h4').first().append($('#tab-nmap h4').first().next('.dm-info'));
+    $('#tab-webhook > .dm-info').insertAfter(
+        $('#tab-webhook table > tbody > tr').first().children('td').first().find('label').first()
+    );
+    $('#email_sendmail_config').insertAfter($('#email_method').prev('label'));
+    $('#email_smtp_config > .dm-info').insertAfter($('#smtp_host').prev('label'));
+    $('#smtp_username').next('.dm-info').insertAfter($('#smtp_username').prev('label'));
+    ['adguard_url', 'pihole_url', 'pihole_password'].forEach(function(id) {
+        var $field = $('#' + id);
+        $field.next('.dm-info').insertAfter($field.prev('label'));
+    });
     $('.dm-info').popover({container:'body', placement:'auto bottom', trigger:'focus'});
     $('.dm-info').on('keydown', function(event) {
         if (event.key === 'Escape') { $(this).popover('hide').trigger('blur'); }
