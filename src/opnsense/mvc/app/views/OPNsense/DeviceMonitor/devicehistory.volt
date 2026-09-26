@@ -261,7 +261,7 @@
 
 <script>
 $(document).ready(function() {
-    $('.dm-info').popover({container:'body', placement:'auto bottom', trigger:'focus'});
+    $('.dm-info').popover({container:'body', placement:'auto right', trigger:'focus'});
     $('.dm-info').on('keydown', function(event) {
         if (event.key === 'Escape') { $(this).popover('hide').trigger('blur'); }
     });
