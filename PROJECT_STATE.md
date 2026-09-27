@@ -13,7 +13,9 @@ Latest released implementation commit: `96cdd464640af6449afb1aa75c4aa193bc93f2ee
 
 Status:
 
-- Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below. Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
+- Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
+- Latest development commit `702d674` is pushed to `origin/v2.10-development`; GitHub Actions Device Monitor CI run `36303936147` PASS. Details in "27 September 2026 v2.10 version metadata and config API alignment" below.
+- That v2.10 metadata is repository-only: no v2.10 tag, GitHub release or runtime package exists, the published `v2.9` release asset is unchanged, and no testbed or production install was performed.
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
 - The final v2.9 runtime package was installed and hash-verified on the testbed on 25 September 2026. The checkout has since advanced to v2.10 development; the installed model and Network Identity Details template match `4b2b992` (verified 26 September). Other installed files were not re-audited in that verification.
 - The final v2.9 runtime package is installed and independently verified on production. The `v2.9` release tag remains at the implementation commit; this later documentation commit records deployment acceptance.
@@ -23,6 +25,57 @@ Status:
 - Targeted TCP Port Discovery, service archiving, responsive tables and the Devices refresh focus fix were promoted to production on 25 September 2026 (see below).
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
+
+## 27 September 2026 v2.10 version metadata and config API alignment
+
+Description: synchronised the self-referential v2.10 version data with the
+`v2.10-development` branch and exposed the email/webhook delivery tests through
+the config API.
+Benefit: version checks, the release manifest and the guarded installer no
+longer contradict the branch, and the Settings page can test email and webhook
+delivery through the documented API URLs.
+
+- `release/v2.9-notes.md` and `release/v2.9-runtime.manifest` became
+  `release/v2.10-notes.md` and `release/v2.10-runtime.manifest` (still 37 rows).
+  The new manifest SHA256 is
+  `29ac9a165cef55b416b3602e1489a007e58a5f942849481d9a13822b7b5aaaa5`, re-pinned
+  in `install-unattended.sh`.
+- `install-unattended.sh` requires source `defaults.json` version `2.10`,
+  accepts `2.8|2.9|2.10` as installable predecessors, uses `v210` staging and
+  backup names, and reports `version=2.10` in `CHECK_OK` and `INSTALL_OK`.
+- `ConfigController` gained `sendEmailAction` and `sendWebhookAction`
+  (real-mode `sendEmail(false)` / `sendWebhook(false, ...)`) so the Settings
+  page can test delivery through the documented
+  `POST /api/devicemonitor/config/sendEmail` and
+  `POST /api/devicemonitor/config/sendWebhook` URLs; results log
+  SUCCESS/SKIPPED/FAILED.
+- `ServiceController::statusAction` reports state from the configd
+  `devicemonitor status` action instead of `ps` on the pidfile; the pidfile is
+  read only for the returned `pid`. The live
+  `src/opnsense/service/conf/actions.d/actions_devicemonitor.conf` is unchanged
+  and still defines `status`.
+- README and README_CZ runtime-package, upgrade and uninstall notes now use the
+  v2.10 package and asset names.
+- Deleted the unreferenced legacy `src/etc/configd/devicemonitor.conf` (3 lines;
+  superseded by `actions_devicemonitor.conf`).
+- `tests/test_release_manifest.py` validates the manifest against the working
+  tree instead of the immutable `v2.9` tag. The `.github/workflows/ci.yml`
+  `fetch-depth: 0` comment still refers to the old tag-based check; the comment
+  was not changed by this commit.
+
+Changed: 10 files, 126 insertions, 97 deletions. No database, live
+configuration, installed file, service or production host was touched, and no
+v2.10 tag, release or runtime package was created.
+
+Validation before commit: `php -l` on 11 sources,
+`sh -n install-unattended.sh`, `python3 tests/test_release_manifest.py`
+(`V210_RELEASE_MANIFEST=PASS`) and `git diff --check` all PASS locally.
+Pushed to `origin/v2.10-development`; GitHub Actions Device Monitor CI run
+`36303936147` PASS.
+
+Next recommended step: deploy the verified v2.10 development build to the
+testbed with rollback protection, which also enables the pending DM-BL-008
+multilingual browser acceptance and the new Settings delivery tests.
 
 ## 27 September 2026 translated JavaScript correction
 
