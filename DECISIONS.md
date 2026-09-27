@@ -964,3 +964,63 @@ service preferences (Decision 31) and global monitoring/email master switches
 remain unchanged by any cutover. `apiEmailUrl` and `apiWebhookUrl` are transport
 locations and must not be repurposed to carry credentials. A cutover must not
 change the observable behaviour of the Settings delivery tests.
+
+**Superseded (27 September 2026):** the cutover gates in this decision are
+withdrawn by Decision 33. The authoritative part of this decision is retained —
+configd is the notification transport, and the recorded authentication, TLS
+identity and privilege blockers remain the documented reason the HTTP route is
+not taken. No cutover is planned.
+
+## 33. Notification HTTP API integration is not implemented
+
+### Decision
+
+Device Monitor does not integrate the HTTP API for notification dispatch.
+Daemon notifications continue to use the configd actions
+`devicemonitor sendEmailNotification` and `devicemonitor sendWebhookNotification`,
+which run `notify_email.php` and `notify_webhook.php` as root and call
+`NotificationHandler::sendEmail(false)` and `sendWebhook(false, ...)`. This is
+the documented, supported and permanent mechanism for this plugin.
+
+This decision supersedes the cutover gates in Decision 32. The authoritative
+part of Decision 32 is retained: configd remains the notification transport and
+the recorded blockers (authentication, TLS identity, privileges) stay on record
+as the reason the HTTP route is not taken. The `apiEmailUrl` and `apiWebhookUrl`
+settings remain informational; they must not be used for dispatch unless a new
+recorded decision replaces this one.
+
+The `ConfigController` `sendEmail` and `sendWebhook` endpoints added for the
+documented API URLs remain available for authenticated external or automation
+use with an OPNsense API key. They are not part of the daemon delivery path, and
+this decision requires no change to or removal of them.
+
+### Reason
+
+The plugin already delivers notifications correctly through configctl without
+API authentication, and the HTTP route would add complexity without adding any
+notification capability:
+
+- It would require provisioning and storing an OPNsense API key and secret for a
+  least-privilege user, creating a credential lifecycle (creation, rotation,
+  revocation, leak handling) that the plugin otherwise does not need.
+- It would require the local web GUI certificate to cover the request host name
+  and its issuing CA to be trusted by Python. The shipped default
+  (`https://localhost/...`) fails host name verification, and disabling
+  verification would weaken security.
+- It would move delivery into php-fpm as `www`, which cannot write
+  `/var/log/devicemonitor.log` (0640 root:wheel) or read
+  `/var/db/devicemonitor/config.json` (0600 root:wheel), so notification logging
+  and direct SMTP would need permission changes to working files.
+- It would make notification delivery depend on the web GUI and php-fpm being
+  available, whereas the current path keeps working without them.
+- The endpoints call the same handler methods as the configctl scripts, so the
+  switch would change transport, authentication and privileges only, not any
+  notification behaviour.
+
+### Non-negotiable compatibility
+
+`notification_pending` semantics, interface-scoped filtering, per-identity
+service preferences (Decision 31), the global monitoring/email master switches
+and the observable behaviour of the Settings delivery tests are unchanged.
+Future work must not move daemon dispatch to `apiEmailUrl` or `apiWebhookUrl`
+without a new recorded decision that explicitly replaces this one.
