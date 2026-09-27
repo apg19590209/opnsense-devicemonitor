@@ -22,37 +22,29 @@ class ServiceController extends ApiControllerBase
     }
 
     /**
-     * Status daemona
+     * Daemon status, checked through the configd status action.
      */
     public function statusAction()
     {
+        $backend = new Backend();
+        $output = trim($backend->configdRun('devicemonitor status'));
         $model = new \OPNsense\DeviceMonitor\DeviceMonitor();
         $pidFile = $model->getPidFilePath();
-        
-        if (file_exists($pidFile)) {
-            $pid = trim(file_get_contents($pidFile));
-            
-            // Check whether the process is running
-            exec("ps -p $pid", $output, $return);
-            
-            if ($return === 0) {
-                return [
-                    'result' => 'running',
-                    'pid' => $pid,
-                    'message' => 'Daemon is running'
-                ];
-            } else {
-                return [
-                    'result' => 'stopped',
-                    'message' => 'Daemon is not running (stale pidfile)'
-                ];
-            }
-        } else {
+        $pid = file_exists($pidFile) ? trim(file_get_contents($pidFile)) : null;
+
+        if ($output === 'running') {
             return [
-                'result' => 'stopped',
-                'message' => 'Daemon is not running'
+                'result' => 'running',
+                'pid' => $pid,
+                'message' => 'Daemon is running'
             ];
         }
+
+        return [
+            'result' => 'stopped',
+            'pid' => $pid,
+            'message' => 'Daemon is not running'
+        ];
     }
 
     /**

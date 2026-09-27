@@ -1,5 +1,5 @@
 #!/bin/sh
-# Guarded Device Monitor v2.9 installation on OPNsense/FreeBSD.
+# Guarded Device Monitor v2.10 installation on OPNsense/FreeBSD.
 set -eu
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 EXPECTED_HOST=
@@ -24,10 +24,10 @@ for executable in sha256 stat install python3 php msgfmt nmap service; do
 done
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 cd "$SCRIPT_DIR"
-MANIFEST=release/v2.9-runtime.manifest
-[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = 57f167b3c3db3eae87190593c27311e6bd45d79ae0372c5c03625cfc82b5958d ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
+MANIFEST=release/v2.10-runtime.manifest
+[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = 29ac9a165cef55b416b3602e1489a007e58a5f942849481d9a13822b7b5aaaa5 ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 37 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
-[ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = 2.9 ] || { echo 'ABORT: source version' >&2; exit 1; }
+[ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = 2.10 ] || { echo 'ABORT: source version' >&2; exit 1; }
 LIVE_DEFAULTS=/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
 if [ -f "$LIVE_DEFAULTS" ]; then
     installed=$(python3 - "$LIVE_DEFAULTS" <<'PY'
@@ -35,14 +35,14 @@ import json,sys
 print(json.load(open(sys.argv[1]))['version'])
 PY
 ) || { echo 'ABORT: installed defaults invalid' >&2; exit 1; }
-    case "$installed" in 2.8|2.9) :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
+    case "$installed" in 2.8|2.9|2.10) :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
 elif [ -d /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor ]; then
     echo 'ABORT: partial existing installation' >&2; exit 1
 else
     installed=fresh
 fi
 [ ! -e /etc/rc.d/devicemonitor ] && [ ! -L /etc/rc.d/devicemonitor ] || [ "$(readlink /etc/rc.d/devicemonitor)" = /usr/local/etc/rc.d/devicemonitor ] || { echo 'ABORT: rc link collision' >&2; exit 1; }
-STAGE=$(mktemp -d /tmp/dm_install_v29.XXXXXX)
+STAGE=$(mktemp -d /tmp/dm_install_v210.XXXXXX)
 BACKUP=
 MUTATING=0
 WAS_RUNNING=0
@@ -137,10 +137,10 @@ count=$id
 expected=48
 [ "$FRESH" = 0 ] || expected=49
 [ "$count" = "$expected" ] || { echo 'ABORT: target count' >&2; exit 1; }
-printf 'CHECK_OK version=2.9 predecessor=%s files=%s daemon_running=%s host=%s\n' "$installed" "$count" "$WAS_RUNNING" "$EXPECTED_HOST"
+printf 'CHECK_OK version=2.10 predecessor=%s files=%s daemon_running=%s host=%s\n' "$installed" "$count" "$WAS_RUNNING" "$EXPECTED_HOST"
 [ "$CHECK_ONLY" = 0 ] || exit 0
 mkdir -p /var/backups/devicemonitor
-BACKUP=$(mktemp -d /var/backups/devicemonitor/install-v29.XXXXXX)
+BACKUP=$(mktemp -d /var/backups/devicemonitor/install-v210.XXXXXX)
 mkdir "$BACKUP/files"
 cp "$STAGE/plan" "$BACKUP/plan"
 while read -r id old new mode source target; do
@@ -208,4 +208,4 @@ c.close()
 PY
 fi
 MUTATING=0
-printf 'INSTALL_OK version=2.9 files=%s backup=%s daemon_restarted=%s\n' "$count" "$BACKUP" "$WAS_RUNNING"
+printf 'INSTALL_OK version=2.10 files=%s backup=%s daemon_restarted=%s\n' "$count" "$BACKUP" "$WAS_RUNNING"

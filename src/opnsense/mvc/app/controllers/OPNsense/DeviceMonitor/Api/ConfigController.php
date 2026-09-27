@@ -455,4 +455,42 @@ class ConfigController extends ApiControllerBase
         $handler->fLog($logMessage, "WEBHOOK-ConfigController");
         return $result;
     }
+
+    public function sendEmailAction()
+    {
+        $handler = new \NotificationHandler();
+        $handler->fLog("Preparing to send email notification", 'EMAIL');
+        $result = $handler->sendEmail(false);
+
+        $logMessage = "Email notification result: ";
+        if ($result['result'] === 'sent') {
+            $logMessage .= "SUCCESS";
+        } elseif ($result['result'] === 'skipped') {
+            $logMessage .= "SKIPPED";
+        } else {
+            $logMessage .= "FAILED";
+            $logMessage .= " | Reason: " . ($result['message'] ?? 'Unknown error');
+        }
+        $handler->fLog($logMessage, "EMAIL-ConfigController");
+        return $result;
+    }
+
+    public function sendWebhookAction()
+    {
+        $handler = new \NotificationHandler();
+        $handler->fLog("Preparing to send webhook notification", 'WEBHOOK');
+        $result = $handler->sendWebhook(false, $this->request->getPost('webhook_url', 'string', ''));
+
+        $logMessage = "Webhook notification result: ";
+        if ($result['result'] === 'sent' || $result['result'] === 'ok') {
+            $logMessage .= "SUCCESS";
+        } elseif ($result['result'] === 'skipped') {
+            $logMessage .= "SKIPPED";
+        } else {
+            $logMessage .= "FAILED";
+            $logMessage .= " | Reason: " . ($result['message'] ?? 'Unknown error');
+        }
+        $handler->fLog($logMessage, "WEBHOOK-ConfigController");
+        return $result;
+    }
 }

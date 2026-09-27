@@ -306,7 +306,7 @@ Také odstraněno rozbité `configctl webgui restart` a `service php-fpm restart
 
 ### Metoda 1: WinSCP + SSH (doporučeno)
 
-**Krok 1:** Stáhni balíček `dm-v2.9-runtime.tar.gz` z příloh vydání v2.9 na GitHubu.
+**Krok 1:** Stáhni balíček `dm-v2.10-runtime.tar.gz` z příloh vydání v2.10 na GitHubu.
 
 **Krok 2:** Povol SSH na OPNsense:
 ```
@@ -318,9 +318,9 @@ System → Settings → Administration → Secure Shell → Enable
 **Krok 4:** Připoj se přes SSH a nainstaluj:
 ```bash
 cd /tmp
-mkdir dm-v2.9
-tar -xzf dm-v2.9-runtime.tar.gz -C dm-v2.9
-cd dm-v2.9
+mkdir dm-v2.10
+tar -xzf dm-v2.10-runtime.tar.gz -C dm-v2.10
+cd dm-v2.10
 sh install.sh --host NAZEV-VASEHO-FIREWALLU
 ```
 
@@ -333,10 +333,10 @@ Restart firewallu není potřeba. Instalátor restartuje `configd` a již běž�
 ```bash
 ssh root@tvoje.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.9/dm-v2.9-runtime.tar.gz
-mkdir dm-v2.9
-tar -xzf dm-v2.9-runtime.tar.gz -C dm-v2.9
-cd dm-v2.9
+fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.10/dm-v2.10-runtime.tar.gz
+mkdir dm-v2.10
+tar -xzf dm-v2.10-runtime.tar.gz -C dm-v2.10
+cd dm-v2.10
 sh install.sh --host NAZEV-VASEHO-FIREWALLU
 ```
 
@@ -649,7 +649,7 @@ Odstraní všechny soubory, zastaví daemon, vypne autostart a vyčistí cache. 
 sh uninstall.sh --silent
 ```
 
-Instalační program v2.9 aktualizuje soubory na místě a nevolá odinstalační program.
+Instalační program v2.10 aktualizuje soubory na místě a nevolá odinstalační program.
 
 ### Metoda 3: Ruční
 
