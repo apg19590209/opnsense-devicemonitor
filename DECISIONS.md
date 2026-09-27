@@ -885,3 +885,82 @@ Device Profile membership.
 An administrator can tune alerts for a known identity without changing
 alerts for every device. Global delivery and scoping remain authoritative,
 and suppressed history cannot unexpectedly replay when preferences change.
+
+## 32. Notification dispatch: configd is authoritative, HTTP API cutover is gated
+
+### Decision
+
+Daemon notification dispatch is authoritative through configd.
+`scan_network.py` marks the in-scope filtered set with `notification_pending`
+and then invokes the configd actions `devicemonitor sendEmailNotification` and
+`devicemonitor sendWebhookNotification`, which run `notify_email.php` and
+`notify_webhook.php` as root and call `NotificationHandler::sendEmail(false)`
+and `sendWebhook(false, ...)`.
+
+`ConfigController::sendEmailAction` and `sendWebhookAction`
+(`POST /api/devicemonitor/config/sendEmail`, `POST /api/devicemonitor/config/sendWebhook`)
+exist for authenticated external and automation use. They are not a daemon
+transport and must not replace the configd path unless every cutover gate below
+is satisfied in a separately authorised task. Until then the `apiEmailUrl` and
+`apiWebhookUrl` entries in `defaults.json` remain informational, and
+`scan_network.py` must keep the configd path as its working behaviour.
+
+### Reason
+
+The HTTP endpoints invoke the same real-mode `NotificationHandler` calls as the
+configd scripts, so a cutover changes transport, authentication and privileges
+only — not behaviour — while risking working delivery. Measured on the testbed
+(27 September 2026):
+
+- Authentication is mandatory. The installed
+  `OPNsense\Base\ApiControllerBase` treats any request carrying an
+  `Authorization` header as an external API call requiring an API key and
+  secret validated against the `Local API` authenticator plus ACL page access;
+  a request without that header requires a session and, for POST, a CSRF token.
+  There is no localhost or internal bypass, and the plugin stores no API
+  credentials.
+- The documented default URL fails TLS hostname verification:
+  `https://localhost/api/devicemonitor/config/getversion` returns
+  `SSL: no alternative certificate subject name matches target hostname 'localhost'`,
+  because the testbed web GUI certificate carries the `192.168.20.23` IP SAN.
+- The API path executes inside php-fpm as `www`, while
+  `NotificationHandler::fLog()` appends to `/var/log/devicemonitor.log`
+  (0640 root:wheel) and direct-SMTP mode reads
+  `/var/db/devicemonitor/config.json` (0600 root:wheel). Both would fail for
+  `www`, whereas the configd path runs as root today.
+
+### Cutover gates
+
+The following must all hold before `scan_network.py` may send notifications
+through `apiEmailUrl` or `apiWebhookUrl`:
+
+1. Credentials source: a root-only credential store owned by the plugin
+   (`/var/db/devicemonitor/config.json` is web-readable-configurable and must not
+   hold secrets for this purpose), holding the API key and secret of a dedicated
+   user granted only `page-services-devicemonitor` (`ui/devicemonitor/*` and
+   `api/devicemonitor/*`). Secrets must never be written to the device database,
+   the device-monitor log, a command line or the repository, and must be
+   replaceable and revocable without touching device data.
+2. TLS identity: the request URL must use a host name covered by the web GUI
+   certificate SAN, with the issuing CA present in the Python trust store.
+   Certificate verification must never be disabled and redirects must not be
+   followed to an unverified host.
+3. Privilege model: notification code must keep the privileges it needs. Either
+   the notifying process retains root equivalence, or the log file and
+   config-file permissions are deliberately re-scoped for the web user as an
+   explicit, audited change limited to those files.
+4. Failure handling: per-channel timeout, no retry storm, authenticated and TLS
+   failures logged with distinguishable reasons, and pending notifications left
+   intact so no new-device alert is lost. The configd path stays available as an
+   explicit fallback until live delivery through the API is proven.
+5. Validation: live testbed proof for both channels covering success,
+   authentication failure, TLS failure and an unreachable web GUI, plus
+   regression proof that the configd path still delivers.
+
+### Non-negotiable compatibility
+
+`notification_pending` semantics, interface-scoped filtering, per-identity
+service preferences (Decision 31) and global monitoring/email master switches
+remain unchanged by any cutover. `apiEmailUrl` and `apiWebhookUrl` are transport
+locations and must not be repurposed to carry credentials. A cutover must not
+change the observable behaviour of the Settings delivery tests.

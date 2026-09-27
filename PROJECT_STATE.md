@@ -16,6 +16,7 @@ Status:
 - Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
 - Latest code change `702d674` is pushed to `origin/v2.10-development`; GitHub Actions Device Monitor CI run `36303936147` PASS. The documentation commit that follows it (this record) passed CI run `36304245358`. Details in "27 September 2026 v2.10 version metadata and config API alignment" below.
 - That v2.10 metadata is repository-only: no v2.10 tag, GitHub release or runtime package exists, the published `v2.9` release asset is unchanged, and no testbed or production install was performed.
+- Notification HTTP cutover (Task 3) is design-only: `DECISIONS.md` 32 makes configd dispatch authoritative and gates any future HTTP cutover; `scan_network.py` and the live notification path are unchanged.
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
 - The final v2.9 runtime package was installed and hash-verified on the testbed on 25 September 2026. The checkout has since advanced to v2.10 development; the installed model and Network Identity Details template match `4b2b992` (verified 26 September). Other installed files were not re-audited in that verification.
 - The final v2.9 runtime package is installed and independently verified on production. The `v2.9` release tag remains at the implementation commit; this later documentation commit records deployment acceptance.
@@ -25,6 +26,34 @@ Status:
 - Targeted TCP Port Discovery, service archiving, responsive tables and the Devices refresh focus fix were promoted to production on 25 September 2026 (see below).
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
+
+## 27 September 2026 notification HTTP cutover — design only
+
+Description: assessed switching daemon notification dispatch from the configd
+actions to the `ConfigController` `sendEmail`/`sendWebhook` HTTP endpoints and
+recorded the outcome as Decision 32 in `DECISIONS.md`.
+Benefit: avoids a change that would have broken working delivery, and fixes the
+preconditions any future cutover must meet.
+
+- Confirmed the endpoints run the same real-mode `NotificationHandler` methods
+  as `notify_email.php`/`notify_webhook.php`; only transport, authentication and
+  privileges would change. `apiEmailUrl`/`apiWebhookUrl` remain unused.
+- Blockers measured on the testbed: mandatory API key/secret with ACL page
+  access (the installed `ApiControllerBase` has no localhost bypass); TLS
+  hostname mismatch for the default `https://localhost/...` URL; and loss of
+  root privileges for `fLog()` (0640 root:wheel) and direct-SMTP `config.json`
+  (0600 root:wheel) because php-fpm runs as `www`.
+- Decision and gates (credentials source, TLS identity, privilege model,
+  failure handling, validation) recorded in `DECISIONS.md` 32.
+
+Changed: `DECISIONS.md` and this state record only. No implementation was
+performed: `scan_network.py` still dispatches through configctl, and no source,
+database, configuration, service, test or live notification path was modified.
+
+Next recommended step: in a separately authorised task, implement the gated
+cutover from `DECISIONS.md` 32 starting with the root-only credential store and
+the TLS identity, or explicitly close the item if configd dispatch is to remain
+permanent.
 
 ## 27 September 2026 v2.10 version metadata and config API alignment
 
