@@ -2,7 +2,7 @@
 
 ## Current state
 
-Last updated: 26 September 2026
+Last updated: 27 September 2026
 
 Branch: `v2.10-development`
 
@@ -13,7 +13,7 @@ Latest released implementation commit: `96cdd464640af6449afb1aa75c4aa193bc93f2ee
 
 Status:
 
-- Current development implementation: `4b2b992d1605184ba488e52452603b55f5673289` on `v2.10-development`. The 26 September work and its verification limits are recorded below; the latest released implementation remains v2.9.
+- Latest committed development implementation: `199be95` on `v2.10-development` (nine major UI translations and v2.10 version bump). Additional view/translation edits remain uncommitted and were preserved during this reconciliation. Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
 - The final v2.9 runtime package was installed and hash-verified on the testbed on 25 September 2026. The checkout has since advanced to v2.10 development; the installed model and Network Identity Details template match `4b2b992` (verified 26 September). Other installed files were not re-audited in that verification.
 - The final v2.9 runtime package is installed and independently verified on production. The `v2.9` release tag remains at the implementation commit; this later documentation commit records deployment acceptance.
@@ -23,6 +23,53 @@ Status:
 - Targeted TCP Port Discovery, service archiving, responsive tables and the Devices refresh focus fix were promoted to production on 25 September 2026 (see below).
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
+
+## 27 September 2026 testbed HTTPS and browser verification
+
+Description: repaired testbed HTTPS trust using the existing step-ca service,
+then resumed authenticated Service Email Alerts browser checks.
+Benefit: the in-app browser can validate the testbed certificate normally,
+allowing UI verification without a certificate-warning bypass.
+
+Environment work (testbed only):
+
+- Installed official `os-acme-client` 4.17 and its dependencies. The package
+  installer restarted configd; the web GUI was restarted to load the new cert.
+- Used the separately authorized CA at `https://192.168.20.16:8443`, ACME
+  provisioner `opnsense-acme`. Imported its public root into testbed trust;
+  Windows trust and CA server configuration were not changed.
+- Issued and activated certificate `6ab85b5c0c251`, with IP SAN
+  `192.168.20.23`, valid through 26 October 2026 23:54:59 UTC. The original
+  web certificate `6aaa3fe2b625e` remains available for rollback.
+- Native renewal: daily check at 03:17 firewall-local time, renew after 20 days,
+  reload the web GUI on success. Verified the generated job in
+  `/var/cron/tabs/nobody`, zero model validation errors, and a successful
+  non-due cron execution (exit 0). A future renewal has not yet been observed.
+- Root-only configuration backups and state record are retained under
+  `/var/backups/devicemonitor/tls-20260926-235345/`. These contain sensitive
+  configuration and must not be published.
+- Windows HTTPS check returned HTTP 200 with chain/hostname validation enabled
+  (best-effort handling of unavailable revocation information). The in-app
+  browser opened the login page without a certificate error; user signed in.
+
+Authenticated browser results: PASS for disabled-email warning text, navigation
+from the warning to the Email Notifications Settings tab, return to the same
+network identity, save-success feedback, and preference persistence on reload.
+The New service preference was temporarily changed from Use global setting to
+Off, saved and reloaded, then restored to Use global setting and reloaded again.
+All three original preference values were restored. Global monitoring/email
+settings were unchanged; normal preference-change audit records may remain.
+
+Limits: other unavailable reasons and the available state passed the earlier
+isolated controller/model tests, but were not exercised through live global
+settings changes in this browser session. No production host was accessed.
+
+Changed files for this reconciliation: `PROJECT_STATE.md` only. Existing
+uncommitted views, translations and local rules were preserved; the separate
+DM-BL-008 language acceptance task is not claimed complete by these checks.
+
+Next recommended step: finish GUI acceptance of the nine new UI languages
+already recorded under DM-BL-008.
 
 ## 26 September 2026 — major language UI translations (DM-BL-008)
 
@@ -109,15 +156,13 @@ Verification limits / unresolved checks:
   This run covers the implementation commit; CI for the documentation
   reconciliation is tracked separately by its own commit. Deployment parity beyond the two files above was not
   independently established in this review.
-- Automated browser testing was blocked by `ERR_CERT_AUTHORITY_INVALID`.
-  Warning visibility across every state, Settings/return-link interaction and
-  browser save/reload behavior remain unverified by automation; user visual
-  acceptance is recorded separately above.
+- The original browser certificate blocker was resolved on 27 September.
+  Disabled-email warning, Settings/return navigation and preference save/reload
+  checks subsequently passed; see the 27 September entry for scope and limits.
 - Production was not contacted or changed during this work. Today's changes
   are not recorded here as production-deployed.
 
-Next recommended step: complete the remaining authenticated UI interaction checks
-when a browser can access the testbed with a trusted certificate.
+Follow-up: authenticated interaction checks completed on 27 September as recorded above.
 
 ## 25 September 2026 v2.9 GitHub release
 
