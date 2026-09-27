@@ -14,7 +14,7 @@ Latest released implementation commit: `96cdd464640af6449afb1aa75c4aa193bc93f2ee
 Status:
 
 - Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
-- Latest source fix `aa25fe7` and its guarded v2.10 runtime-manifest update `0708239` are pushed to `origin/v2.10-development`; full GitHub Actions CI run `36315636699` PASS. Those commits changed no testbed runtime file or service; the nine corrected views were deployed to the testbed separately on 27 September 2026 (deployment record under DM-BL-008 below). `0708239` left the manifest SHA256 pinned in `install-unattended.sh` at the pre-refresh value, so the guarded installer aborted; that pin is restored by the local commit `3eeb78b`, not yet pushed (see the install-guard section below).
+- Latest source fix `aa25fe7` and its guarded v2.10 runtime-manifest update `0708239` are pushed to `origin/v2.10-development`; full GitHub Actions CI run `36315636699` PASS. Those commits changed no testbed runtime file or service; the nine corrected views were deployed to the testbed separately on 27 September 2026 (deployment record under DM-BL-008 below). `0708239` left the manifest SHA256 pinned in `install-unattended.sh` at the pre-refresh value, so the guarded installer aborted; that pin is restored by `3eeb78b`, which with its documentation commit `3fc9dfc` is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36323794636` (see the install-guard section below).
 - That v2.10 metadata is repository-only: no v2.10 tag, GitHub release or runtime package exists, the published `v2.9` release asset is unchanged, and no testbed or production install was performed.
 - Notification dispatch remains on configd permanently: the HTTP API integration for `apiEmailUrl`/`apiWebhookUrl` is not implemented (`DECISIONS.md` 33 supersedes the cutover gates recorded in `DECISIONS.md` 32); `scan_network.py` and the live notification path are unchanged. The `www` privilege claim originally recorded for the API path is corrected by `DECISIONS.md` 34 (the web GUI runs `php-cgi` as root).
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
@@ -54,14 +54,20 @@ testbed or production file, service, database or configuration was touched.
 Validation: `sh -n install-unattended.sh`, `python3 tests/test_release_manifest.py`
 (`V210_RELEASE_MANIFEST=PASS`), the `--check` run above and `git diff --check` all PASS.
 
-Unresolved: commit `3eeb78b` and this record are local to
-`/root/src/opnsense-devicemonitor-upstream` until pushed, so no CI run covers them.
-`release/v2.10-notes.md` still needs review against the corrected views, and one French
-and one Italian browser dialog still need visual confirmation (DM-BL-008b); Dutch cannot
-be selected through the current GUI language list (DM-BL-008a).
+Pushed and verified (27 September 2026): `3eeb78b` and this record (`3fc9dfc`) are on
+`origin/v2.10-development`, so the install-guard fix is no longer local-only. The GitHub
+Actions Device Monitor CI run for that push is `36323794636` (`Device Monitor CI`, branch
+`v2.10-development`, head `3fc9dfc`, push event, job `validate`, run 1) — **PASS**,
+including the `Validate translated JavaScript` and `Validate language acceptance
+(DM-BL-008)` steps.
 
-Next recommended step: push `3eeb78b` and this documentation commit to
-`origin/v2.10-development` and confirm the GitHub Actions CI run for them.
+Unresolved: `release/v2.10-notes.md` still needs review against the corrected views, and one
+French and one Italian browser dialog still need visual confirmation (DM-BL-008b); Dutch
+cannot be selected through the current GUI language list (DM-BL-008a).
+
+Next recommended step: review `release/v2.10-notes.md` against the nine corrected views
+(with the French and Italian dialog confirmation remaining a human browser check); the
+installer guard itself needs no further work.
 
 ## 27 September 2026 automated language acceptance (DM-BL-008)
 
@@ -155,11 +161,11 @@ JavaScript test/render helpers, one affected Change Summary UI assertion, the CI
 and this record. The same nine views were then deployed to the testbed (deployment record
 above); no catalogue, configuration, service, database or production file was changed.
 
-Next recommended step: the guard broken by the manifest refresh is restored by `3eeb78b`
-(see the install-guard section above), so what remains is the `release/v2.10-notes.md`
-review and human browser confirmation of the corrected JavaScript strings. Dutch cannot be
-selected through the current GUI language list; browser wording and full page interaction
-acceptance remain human checks.
+Next recommended step: the guard broken by the manifest refresh is restored by `3eeb78b`,
+pushed with `3fc9dfc` and green in CI run `36323794636` (see the install-guard section above),
+so what remains is the `release/v2.10-notes.md` review and human browser confirmation of the
+corrected JavaScript strings. Dutch cannot be selected through the current GUI language list;
+browser wording and full page interaction acceptance remain human checks.
 
 ## 27 September 2026 Settings delivery-action acceptance attempt
 
