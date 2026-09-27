@@ -140,8 +140,7 @@ Deployed (testbed `192.168.20.23`, host `OPNsense.internal`):
 - Not changed by that deployment: no catalogue, configuration, service, database or production
   file. The guarded payload was refreshed to the corrected views afterwards by `0708239`, and
   the release-notes review recorded at the end of this section was performed on 28 September
-  2026; `PRODUCT_BACKLOG.md` DM-BL-008b still lists that review as open and needs the matching
-  status update.
+  2026.
 
 Validation:
 
@@ -178,19 +177,20 @@ installed catalogues and the validated nine-language acceptance (10 pages, 448 s
 language, zero failures), and the `nl_NL` GUI-selectability limitation. `release/v2.10-notes.md`
 is not one of the 37 files in `release/v2.10-runtime.manifest`, so the review changed no guarded
 hash and `tests/test_release_manifest.py`, `sh -n install-unattended.sh` and `git diff --check`
-stayed PASS.
+stayed PASS. `PRODUCT_BACKLOG.md` DM-BL-008b records the same review as resolved on 28 September
+2026 and keeps only the French and Italian browser confirmation open for that item.
 
 Push and CI confirmed: the local-only statements this section originally carried were resolved
 by the push of `3eeb78b` and `3fc9dfc` (GitHub Actions Device Monitor CI run `36323794636`,
-head `3fc9dfc`, job `validate` — PASS) and of the record commit `02a1eba` (CI run
-`36324231410`, head `02a1eba` — PASS). Local and remote `v2.10-development` are the same commit;
-nothing on this branch is local-only.
+head `3fc9dfc`, job `validate` — PASS), of the record commit `02a1eba` (CI run
+`36324231410`, head `02a1eba` — PASS) and of the project-state and release-notes commit
+`e6443bc` (CI run `36355695028`, head `e6443bc` — PASS). Local and remote `v2.10-development` are
+the same commit; nothing on this branch is local-only.
 
 Still outstanding: the one French and one Italian browser dialog need human confirmation
-(DM-BL-008b), `PRODUCT_BACKLOG.md` DM-BL-008b needs the matching status update for the
-release-notes review, and DM-BL-008c (the shared-catalogue merge that makes the installed
-plugin catalogues readable by the GUI) remains an open decision — the release notes do not
-state that limitation.
+(DM-BL-008b), and DM-BL-008c (the shared-catalogue merge that makes the installed plugin
+catalogues readable by the GUI) remains an open decision — the release notes do not state that
+limitation.
 
 Next recommended step: decide DM-BL-008c — merge the pushed `feature/optional-locale-installer-20260927`
 branch or implement the equivalent merge for v2.10 — because until that merge ships, the nine

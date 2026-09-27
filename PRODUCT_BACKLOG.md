@@ -132,9 +132,17 @@ the languages whose values are escaped (reverting `changesummary.volt` to
 hostile-string control and the isolated translated-string probe, and
 `node tests/test_change_summary_ui.js` passes.
 
-**Still open:** `release/v2.10-notes.md` has not been reviewed against the corrected views.
-One browser dialog in French and one in Italian still need visual confirmation, because the
-defect is only visible in the browser.
+**Resolved (28 September 2026):** `release/v2.10-notes.md` was reviewed against the nine
+corrected views (commit `e6443bc`, pushed to `origin/v2.10-development`, CI run `36355695028`
+PASS) and now records the JavaScript-encoding correction, the eleven installed catalogues, the
+validated nine-language acceptance (10 pages, 448 message ids per language) and the `nl_NL`
+GUI-selectability limitation. The file is not one of the 37 guarded files in
+`release/v2.10-runtime.manifest`, so the review changed no manifest hash, and
+`tests/test_release_manifest.py`, `sh -n install-unattended.sh` and `git diff --check` stayed
+PASS.
+
+**Still open:** one browser dialog in French and one in Italian still need visual confirmation,
+because the defect is only visible in the browser.
 
 **Resolved (27 September 2026):** the installer pin that `0708239` left stale is corrected by
 commit `3eeb78b`, which pins the current `release/v2.10-runtime.manifest` SHA256
@@ -144,8 +152,8 @@ commit `3eeb78b`, which pins the current `release/v2.10-runtime.manifest` SHA256
 `install-unattended.sh --host OPNsense.internal --check` reports
 `CHECK_OK version=2.10 predecessor=2.10 files=48 daemon_running=1`.
 
-**Deferred:** the release-notes review and the browser confirmation, both outside the testbed
-view deployment performed here.
+**Deferred:** the browser confirmation, which needs a browser session against the deployed views
+and stays outside the local checkout work.
 
 ### DM-BL-008c — Installed plugin catalogues are invisible to the GUI without the shared merge
 
