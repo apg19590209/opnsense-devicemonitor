@@ -16,7 +16,7 @@ Status:
 - Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
 - Latest code change `702d674` is pushed to `origin/v2.10-development`; GitHub Actions Device Monitor CI run `36303936147` PASS. The documentation commit that follows it (this record) passed CI run `36304245358`. Details in "27 September 2026 v2.10 version metadata and config API alignment" below.
 - That v2.10 metadata is repository-only: no v2.10 tag, GitHub release or runtime package exists, the published `v2.9` release asset is unchanged, and no testbed or production install was performed.
-- Notification dispatch remains on configd permanently: the HTTP API integration for `apiEmailUrl`/`apiWebhookUrl` is not implemented (`DECISIONS.md` 33 supersedes the cutover gates recorded in `DECISIONS.md` 32); `scan_network.py` and the live notification path are unchanged.
+- Notification dispatch remains on configd permanently: the HTTP API integration for `apiEmailUrl`/`apiWebhookUrl` is not implemented (`DECISIONS.md` 33 supersedes the cutover gates recorded in `DECISIONS.md` 32); `scan_network.py` and the live notification path are unchanged. The `www` privilege claim originally recorded for the API path is corrected by `DECISIONS.md` 34 (the web GUI runs `php-cgi` as root).
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
 - The final v2.9 runtime package was installed and hash-verified on the testbed on 25 September 2026. The checkout has since advanced to v2.10 development; the installed model and Network Identity Details template match `4b2b992` (verified 26 September). Other installed files were not re-audited in that verification.
 - That partial testbed state was superseded on 27 September 2026: the full v2.10 development payload is deployed on the testbed (`files=48`, backup `install-v210.rdQhGA`), with 37/37 manifest hashes and 11/11 catalogues verified, and configd-based daemon status reporting running (see the section below). Production still runs v2.9.
@@ -27,6 +27,46 @@ Status:
 - Targeted TCP Port Discovery, service archiving, responsive tables and the Devices refresh focus fix were promoted to production on 25 September 2026 (see below).
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
+
+## 27 September 2026 Settings delivery-action acceptance attempt
+
+Description: verified the operator's report that the Settings email and webhook
+test actions work in the interface, using the device-monitor log, the live
+configuration, the web-server log and direct network probes.
+Outcome: **not confirmed** — the email test fails and no webhook test reached the
+application.
+
+- Email test: two attempts at 19:48:06 and 19:48:09 both logged
+  `Test email result: FAILED | Reason: Sendmail is not available. Install/configure
+  a local mailer or select Direct SMTP.` `email_method` is `sendmail`, but neither
+  `/usr/sbin/sendmail` nor `/usr/local/sbin/sendmail` exists on the testbed and
+  PHP `sendmail_path` points at `/usr/sbin/sendmail`, so delivery is impossible.
+  The Settings email toast shows the failure reason for any result other than
+  `sent`, so the interface reports this as an error.
+- Webhook test: the device-monitor log contains no webhook line at all (no
+  `Preparing to send test webhook`, no result line), so the handler never ran.
+  The stored `webhook_url` is malformed — `ntfy.sh` is duplicated before the
+  scheme, so `urlsplit` reports `scheme=ntfy.shhttps`, `host=ntfy.sh`, and `curl`
+  cannot resolve it (`Could not resolve host: ntfy.shhttps`), while
+  `https://ntfy.sh/` itself answers HTTP 200.
+- Web server: lighttpd logged `connect() /var/lib/php/tmp/php-fastcgi.socket-4:
+  Connection refused` at 19:46:20, i.e. the PHP backend was briefly unreachable
+  while the tests were being attempted.
+- Interface gap (no code change): `#test_webhook` in `settings.volt` has no
+  jQuery `error:` callback, so a failed request leaves the blue
+  "Sending..." text in place instead of showing an error, which can look like a
+  successful test.
+- Correction recorded: the web GUI runs `/usr/local/bin/php-cgi` FastCGI workers
+  as root (php-fpm is not installed), so the `www` privilege claim made earlier
+  for the API path was wrong (`DECISIONS.md` 34).
+
+Changed: `DECISIONS.md` and this state record only. No source, test,
+configuration, service or live notification path was modified.
+
+Next recommended step: fix the two testbed configuration items — set the webhook
+URL to a single `https://ntfy.sh/<topic>` value and select Direct SMTP (or
+install a local mailer) for email — then re-run the Settings test actions and
+re-verify the results from `/var/log/devicemonitor.log`.
 
 ## 27 September 2026 v2.10 testbed deployment
 
@@ -101,7 +141,10 @@ blockers remain the documented reason the HTTP route is not taken.
   access (the installed `ApiControllerBase` has no localhost bypass); TLS
   hostname mismatch for the default `https://localhost/...` URL; and loss of
   root privileges for `fLog()` (0640 root:wheel) and direct-SMTP `config.json`
-  (0600 root:wheel) because php-fpm runs as `www`.
+  (0600 root:wheel) because php-fpm runs as `www`. **Corrected (27 September
+  2026):** this bullet is wrong — the web GUI runs `/usr/local/bin/php-cgi` as
+  root, so the API path keeps the same privileges as configd
+  (`DECISIONS.md` 34).
 - Decision and gates (credentials source, TLS identity, privilege model,
   failure handling, validation) recorded in `DECISIONS.md` 32.
 

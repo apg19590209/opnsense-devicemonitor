@@ -969,7 +969,8 @@ change the observable behaviour of the Settings delivery tests.
 withdrawn by Decision 33. The authoritative part of this decision is retained —
 configd is the notification transport, and the recorded authentication, TLS
 identity and privilege blockers remain the documented reason the HTTP route is
-not taken. No cutover is planned.
+not taken. No cutover is planned. The php-fpm/`www` privilege bullet in the
+Reason section is factually corrected by Decision 34.
 
 ## 33. Notification HTTP API integration is not implemented
 
@@ -1017,6 +1018,12 @@ notification capability:
   switch would change transport, authentication and privileges only, not any
   notification behaviour.
 
+**Corrected (27 September 2026):** the php-fpm/`www` privilege bullet above is
+withdrawn — the web GUI executes PHP as root on the testbed. Decision 34 records
+the correction. The remaining grounds (API credential lifecycle, TLS host-name
+and CA trust, dependency on the web GUI being up, and no capability gain) stand,
+and this decision is unchanged.
+
 ### Non-negotiable compatibility
 
 `notification_pending` semantics, interface-scoped filtering, per-identity
@@ -1024,3 +1031,40 @@ service preferences (Decision 31), the global monitoring/email master switches
 and the observable behaviour of the Settings delivery tests are unchanged.
 Future work must not move daemon dispatch to `apiEmailUrl` or `apiWebhookUrl`
 without a new recorded decision that explicitly replaces this one.
+
+## 34. Correction: the web GUI executes PHP as root on OPNsense
+
+### Decision
+
+The privilege argument recorded in Decisions 32 and 33 against the HTTP API
+route is withdrawn. On the testbed (OPNsense 26.7.4, measured 27 September 2026)
+the web GUI is served by lighttpd with PHP executed by `/usr/local/bin/php-cgi`
+FastCGI workers running as **root**. `php-fpm` is not installed or running, so
+`/usr/local/etc/php-fpm.d/www.conf` (`user = www`) is not the active
+configuration. Requests handled through `/api/devicemonitor/...` therefore run
+with the same access to `/var/log/devicemonitor.log` (0640 root:wheel) and
+`/var/db/devicemonitor/config.json` (0600 root:wheel) as the configd actions.
+
+Decision 33 still stands: the notification HTTP API integration is not
+implemented and configd remains the daemon transport. The remaining grounds are
+the ones that stay verified — mandatory API key and secret authentication with
+ACL page access and no localhost bypass, TLS host-name and CA trust for the API
+URL, the credential lifecycle the plugin otherwise does not need, delivery
+depending on the web GUI being up, and no notification capability being gained.
+
+### Reason
+
+Decisions 32 and 33 derived the acting user from
+`/usr/local/etc/php-fpm.d/www.conf` instead of from the running system, which is
+not authoritative. Live measurement showed root-owned `php-cgi` workers on the
+`/var/lib/php/tmp/php-fastcgi.socket` listeners, `www` cannot write the
+device-monitor log or read `config.json` (verified with `su -m www`), and an API
+request through `/api/devicemonitor/config/testemail` did write its result to
+that root-only log. The correction keeps the authority order in
+`PROJECT_RULES.md`: source code and system evidence outrank documentation.
+
+### Non-negotiable compatibility
+
+This correction changes no decision outcome, no daemon transport and no
+notification behaviour. Decision 33's ban on moving dispatch to `apiEmailUrl`
+or `apiWebhookUrl` without a new recorded decision remains in force.
