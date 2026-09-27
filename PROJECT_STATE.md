@@ -19,6 +19,7 @@ Status:
 - Notification HTTP cutover (Task 3) is design-only: `DECISIONS.md` 32 makes configd dispatch authoritative and gates any future HTTP cutover; `scan_network.py` and the live notification path are unchanged.
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
 - The final v2.9 runtime package was installed and hash-verified on the testbed on 25 September 2026. The checkout has since advanced to v2.10 development; the installed model and Network Identity Details template match `4b2b992` (verified 26 September). Other installed files were not re-audited in that verification.
+- That partial testbed state was superseded on 27 September 2026: the full v2.10 development payload is deployed on the testbed (`files=48`, backup `install-v210.rdQhGA`), with 37/37 manifest hashes and 11/11 catalogues verified, and configd-based daemon status reporting running (see the section below). Production still runs v2.9.
 - The final v2.9 runtime package is installed and independently verified on production. The `v2.9` release tag remains at the implementation commit; this later documentation commit records deployment acceptance.
 - v2.9 was promoted to production; see the historical section
   "## v2.9 production promotion" for the earlier release-candidate promotion.
@@ -26,6 +27,64 @@ Status:
 - Targeted TCP Port Discovery, service archiving, responsive tables and the Devices refresh focus fix were promoted to production on 25 September 2026 (see below).
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
+
+## 27 September 2026 v2.10 testbed deployment
+
+Description: deployed the verified v2.10 development build to the testbed
+(`OPNsense.internal`, 192.168.20.23) with the guarded installer, after taking
+independent rollback protection.
+Benefit: the testbed now runs the committed v2.10 payload (config API actions,
+configd-based daemon status, corrected views), unblocking the pending
+Settings/GUI and multilingual browser acceptance work.
+
+- Preflight: installed predecessor `2.9`; daemon running as pid 98406;
+  `configctl devicemonitor status` = running; 25 of 37 manifest targets already
+  identical and 12 to change (both API controllers, `defaults.json`, nine
+  `.volt` views); all 11 compiled catalogues present; `devices.db` 3 devices,
+  0 pending, `quick_check` ok.
+- Rollback protection in place before the install: independent snapshot
+  `/root/devicemonitor_backup/pre-v210-20260927-181424` (37 targets, plan with
+  hashes, `config.json`, `devices.db`, executable `rollback.sh`), plus the
+  installer's own hash-guarded backup `install-v210.rdQhGA`.
+- `install-unattended.sh --host OPNsense.internal --check` →
+  `CHECK_OK version=2.10 predecessor=2.9 files=48 daemon_running=1`.
+- Apply → `INSTALL_OK version=2.10 files=48 backup=/var/backups/devicemonitor/install-v210.rdQhGA daemon_restarted=1`;
+  configd and the daemon restarted once (daemon pid 98406 → 653, log shows
+  clean stop/start).
+
+Verification after deployment:
+
+- 37/37 manifest targets match the release manifest hashes; 11/11 `.mo`
+  catalogues match a fresh `msgfmt --check` compile of the repository sources.
+- Installed `defaults.json` reports `2.10`; deployed `ServiceController` calls
+  `configdRun('devicemonitor status')`; deployed `ConfigController` exposes both
+  new real-mode actions; `php -l` PASS on both deployed controllers.
+- `configctl devicemonitor status` = `running`; pidfile matches the live pid;
+  rc status running; 7 device-monitor configd actions loaded; daemon still
+  running with the same pid after a stability interval.
+- Unauthenticated API probes (`config/getversion`, `service/status`,
+  `config/sendEmail`, `config/sendWebhook`) were redirected by the login layer
+  (HTTP 302) with zero `*-ConfigController` log lines, confirming the routes are
+  auth-gated and that the probes caused no delivery.
+- Notification code paths executed on the testbed return
+  `{"result":"skipped","message":"Email disabled"}` and
+  `{"result":"skipped","message":"Webhook disabled"}` — the guards stop delivery
+  because the testbed configuration has email and webhook disabled with no
+  recipient or URL.
+- Runtime data preserved: `config.json` byte-identical to the snapshot,
+  `devices.db` `quick_check` ok with the same 3 devices and 0 pending rows.
+
+Limits: live email/webhook delivery was not exercised — both channels are
+disabled in the testbed configuration, and the configuration was deliberately
+left unchanged. Settings-page test actions, the nine new languages (DM-BL-008)
+and the other GUI checks still require an authenticated browser session.
+Observation only (no code change): `ConfigController::sendWebhookAction` passes
+an empty string when the `webhook_url` parameter is absent, which bypasses the
+handler's "Webhook disabled" guard and would attempt delivery to an empty URL.
+
+Next recommended step: complete the authenticated browser acceptance run on the
+testbed — the Settings email/webhook test actions and the nine new UI languages
+recorded under DM-BL-008.
 
 ## 27 September 2026 notification HTTP cutover — design only
 
