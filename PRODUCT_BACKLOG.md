@@ -132,18 +132,20 @@ the languages whose values are escaped (reverting `changesummary.volt` to
 hostile-string control and the isolated translated-string probe, and
 `node tests/test_change_summary_ui.js` passes.
 
-**Still open:** `release/v2.10-runtime.manifest` was regenerated for the corrected views by
-`0708239` and `tests/test_release_manifest.py` passes against it
-(`V210_RELEASE_MANIFEST=PASS`, re-verified 27 September 2026). That commit did not update
-the manifest SHA256 pinned in `install-unattended.sh` line 28, which still holds the
-pre-refresh hash (`29ac9a16…`; the manifest is now `11472b46…`), so the guarded installer
-aborts with `ABORT: release manifest mismatch` and the pin needs its own change.
-`release/v2.10-notes.md` has not been reviewed against the corrected views. One
-browser dialog in French and one in Italian still need visual confirmation, because
-the defect is only visible in the browser.
+**Still open:** `release/v2.10-notes.md` has not been reviewed against the corrected views.
+One browser dialog in French and one in Italian still need visual confirmation, because the
+defect is only visible in the browser.
 
-**Deferred:** the installer-pin correction, the release-notes review and the browser
-confirmation, all outside the testbed view deployment performed here.
+**Resolved (27 September 2026):** the installer pin that `0708239` left stale is corrected by
+commit `3eeb78b`, which pins the current `release/v2.10-runtime.manifest` SHA256
+`11472b464798344b93ac4be3dc220632cbec62e5a07cdba311f6f77f7161ed76` in
+`install-unattended.sh` line 28; `tests/test_release_manifest.py` passes
+(`V210_RELEASE_MANIFEST=PASS`) and
+`install-unattended.sh --host OPNsense.internal --check` reports
+`CHECK_OK version=2.10 predecessor=2.10 files=48 daemon_running=1`.
+
+**Deferred:** the release-notes review and the browser confirmation, both outside the testbed
+view deployment performed here.
 
 ### DM-BL-008c — Installed plugin catalogues are invisible to the GUI without the shared merge
 
