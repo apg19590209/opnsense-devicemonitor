@@ -20,6 +20,7 @@ Status:
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
 - The final v2.9 runtime package was installed and hash-verified on the testbed on 25 September 2026. The checkout has since advanced to v2.10 development; the installed model and Network Identity Details template match `4b2b992` (verified 26 September). Other installed files were not re-audited in that verification.
 - That partial testbed state was superseded on 27 September 2026: the full v2.10 development payload is deployed on the testbed (`files=48`, backup `install-v210.rdQhGA`), with 37/37 manifest hashes and 11/11 catalogues verified, and configd-based daemon status reporting running (see the section below). Production still runs v2.9.
+- The DM-BL-008 language acceptance passed on the testbed on 27 September 2026 for all nine languages across 10 pages and 448 strings. Dutch (`nl_NL`) is not offered by the GUI language list. A source-only correction now reads JavaScript translations through the raw `query()` method before JSON encoding; it has not been deployed. See "27 September 2026 automated language acceptance (DM-BL-008)" below.
 - The final v2.9 runtime package is installed and independently verified on production. The `v2.9` release tag remains at the implementation commit; this later documentation commit records deployment acceptance.
 - v2.9 was promoted to production; see the historical section
   "## v2.9 production promotion" for the earlier release-candidate promotion.
@@ -27,6 +28,73 @@ Status:
 - Targeted TCP Port Discovery, service archiving, responsive tables and the Devices refresh focus fix were promoted to production on 25 September 2026 (see below).
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
+
+## 27 September 2026 automated language acceptance (DM-BL-008)
+
+Description: automated the recorded DM-BL-008 browser check — select each of the nine
+languages and confirm the Device Monitor pages render translated text — because the
+testbed has neither a browser nor GUI credentials, and the languages cannot be read by the
+developer.
+
+Method: `tests/test_language_acceptance.py` renders every Device Monitor page from its
+installed Volt template for each of the nine languages with the production view path — the
+locale handling of `ControllerRoot::setLang()`, the real `OPNsense\Base\ViewTranslator`
+over `/usr/local/share/locale`, and the real Phalcon Volt compiler, through the new
+`tests/render_device_monitor_page.php` — and compares the rendered page with the
+catalogues. Expected text comes from the catalogues, so no knowledge of the target
+languages is needed. It also verifies that the source `.po`, the installed plugin `.mo` and
+the deployed shared `OPNsense.mo` agree for every string the pages use, that the rendered
+page text matches the selected language and no other installed language, and that the
+language is offered by `System > Settings > General > Language` (`get_locale_list()`).
+
+Result on the testbed (27 September 2026): **PASS** for all nine languages, 10 pages and
+448 message ids each — de_DE 432 translated, fr_FR 430, es_ES 440, it_IT 439, pt_BR 435,
+nl_NL 428, ru_RU 443, ja_JP 440, zh_CN 440 (the remainder are strings that are identical in
+English by design, for example *Status*). Every page rendered the selected language's text
+with no English fallback, the text did not match any other installed language better, and
+the expected writing systems (Cyrillic, CJK) were present.
+
+One platform gap remains:
+
+- **`nl_NL` cannot be selected in the GUI.** The installed `get_locale_list()`
+  (`/usr/local/etc/inc/system.inc`) offers 19 languages and omits Dutch, and OPNsense ships
+  no Dutch core catalogue, so the deployed
+  `/usr/local/share/locale/nl_NL/LC_MESSAGES/OPNsense.mo` contains the Device Monitor
+  catalogue alone. The Dutch pages render correctly through the deployed catalogue and
+  locale (`nl_NL.UTF-8` exists), but the recorded step "select Dutch in
+  System → Settings → General → Language" cannot be performed; the live configuration value
+  was not changed by this work.
+- **JavaScript translation escaping is corrected in source.** `ViewTranslator::_()` HTML-escapes
+  translations, so JavaScript expressions now use its inherited raw `query()` method,
+  followed by `json_encode(15)` (`JSON_HEX_TAG|AMP|APOS|QUOT`). This keeps the output a
+  JavaScript string while preventing script-boundary injection. Runtime acceptance and
+  Node execution verify the exact translated string, including apostrophes, entities and
+  hostile markup. The fix is source-only; deployed testbed views have not been changed.
+
+Validation:
+
+- Initial negative controls: a catalogue without Device Monitor strings reports 390
+  source mismatches; a French catalogue installed in a German locale reports 441.
+- Candidate source views passed runtime acceptance through the installed Phalcon Volt
+  compiler and `ViewTranslator` for all nine languages, 10 pages and 448 strings, with
+  zero failures. The only gap is that `nl_NL` is absent from the 19-language GUI list.
+- The same nine-language acceptance passed using the CI interpolation engine.
+- All 120 rendered script blocks (11 catalogues plus the hostile fixture) passed Node
+  syntax checks. Executing the hostile translated string preserved its exact content,
+  including quotes, backslashes, newlines, `</script>`, ampersands and U+2028/U+2029.
+- All 11 Node UI tests passed. PHP lint, Python compile and `git diff --check` passed.
+
+Not covered: HTTP transport, full page JavaScript interactions, page layout and translation
+wording. Those remain browser/human acceptance checks.
+
+Changed areas: nine Volt views, the language acceptance renderer and test, the translated
+JavaScript test/render helpers, one affected Change Summary UI assertion, the CI workflow
+and this record. No installed file, catalogue, configuration, service or database was
+changed.
+
+Next recommended step: include the source fix in the normal guarded testbed release
+workflow; Dutch cannot be selected through the current GUI language list. Browser wording
+and full page interaction acceptance remain human checks.
 
 ## 27 September 2026 Settings delivery-action acceptance attempt
 
@@ -342,8 +410,9 @@ Changed files for this reconciliation: `PROJECT_STATE.md` only. Existing
 uncommitted views, translations and local rules were preserved; the separate
 DM-BL-008 language acceptance task is not claimed complete by these checks.
 
-Next recommended step: finish GUI acceptance of the nine new UI languages
-already recorded under DM-BL-008.
+Next recommended step: review the automated DM-BL-008 language acceptance result in
+"27 September 2026 automated language acceptance (DM-BL-008)" above; its two findings
+(`nl_NL` selectability and JavaScript entity escaping) are still open.
 
 ## 26 September 2026 — major language UI translations (DM-BL-008)
 
@@ -370,7 +439,10 @@ Unauthenticated route smoke check: HTTP 301→302, no PHP fatal.
 
 Next step: human GUI acceptance — select each of the nine new languages in
 System → Settings → General → Language and confirm the Device Monitor pages
-render translated strings.
+render translated strings. Superseded on 27 September 2026 by the automated
+acceptance run recorded in "27 September 2026 automated language acceptance
+(DM-BL-008)" above, which also found that `nl_NL` is not offered by that
+language list.
 
 ## 26 September 2026 v2.10 development and service email verification
 

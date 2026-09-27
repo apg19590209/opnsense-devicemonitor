@@ -24,7 +24,7 @@ keys = set()
 for view in sorted(VIEWS.glob('*.volt')):
     for index, script in enumerate(re.findall(r'<script\b[^>]*>(.*?)</script>', view.read_text(), re.S)):
         scripts.append((view.name, index, script))
-        for literal in re.findall(r"lang\._\(('(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\")\)", script):
+        for literal in re.findall(r"lang\.(?:_|query)\(('(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\")\)", script):
             # Current gettext keys use standard quoted strings; PHP decodes them in the renderer.
             keys.add(literal[1:-1].replace("\\'", "'").replace('\\"', '"').replace('\\\\', '\\'))
 assert scripts and keys
@@ -56,4 +56,24 @@ with tempfile.TemporaryDirectory(prefix='dm-translated-js-') as tmp:
 
 hostile = "L'identité \"quoted\" \\ path\nnext\rline\t</script><script>throw Error('injected')</script>&\u2028\u2029 日本語"
 verify('quotes-backslashes-newlines-script-tags-unicode', {key: hostile for key in keys})
+probe = subprocess.run([PHP, str(RENDERER)], input=json.dumps({
+    'script': "const translated = {{ lang.query('probe')|json_encode(15) }};",
+    'translations': {'probe': hostile},
+}), text=True, capture_output=True, encoding='utf-8')
+assert probe.returncode == 0, probe.stdout + probe.stderr
+if args.render_dir:
+    (args.render_dir / 'language-acceptance-probe.js').write_text(
+        probe.stdout + '\nprocess.stdout.write(JSON.stringify(translated));',
+        encoding='utf-8')
+else:
+    # Run the rendered block from a file: an inline -e program mixes the template's own
+    # declaration with the appended statement and is rejected as an invalid declaration.
+    program = probe.stdout + '\nprocess.stdout.write(JSON.stringify(translated));\n'
+    with tempfile.TemporaryDirectory(prefix='dm-probe-') as tmp:
+        script = Path(tmp) / 'probe.js'
+        script.write_text(program, encoding='utf-8')
+        node_value = subprocess.run([NODE, str(script)], text=True,
+                                    capture_output=True, encoding='utf-8')
+    assert node_value.returncode == 0, node_value.stderr
+    assert json.loads(node_value.stdout) == hostile, (node_value.stdout, hostile)
 print('TRANSLATED_JAVASCRIPT=' + ('RENDERED (syntax check still required)' if args.render_dir else 'PASS'))

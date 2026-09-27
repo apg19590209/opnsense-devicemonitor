@@ -4,7 +4,7 @@ const vm = require('vm');
 
 function renderTranslations(source) {
     return source.replace(
-        /\{\{\s*lang\._\(('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\)\|json_encode\(15\)\s*\}\}/g,
+        /\{\{\s*lang\.(?:_|query)\(('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\)\|json_encode\(15\)\s*\}\}/g,
         (_, literal) => JSON.stringify(vm.runInNewContext(literal))
             .replace(/</g, '\\u003c').replace(/>/g, '\\u003e')
             .replace(/&/g, '\\u0026').replace(/'/g, '\\u0027')

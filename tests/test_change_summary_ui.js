@@ -417,7 +417,7 @@ check(
 );
 
 check(
-    view.includes("lang._('No meaningful Device Monitor changes were recorded in this period.')|json_encode(15)"),
+    view.includes("lang.query('No meaningful Device Monitor changes were recorded in this period.')|json_encode(15)"),
     'Change Summary empty-state message missing'
 );
 

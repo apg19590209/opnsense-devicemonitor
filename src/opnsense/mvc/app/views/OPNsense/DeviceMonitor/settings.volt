@@ -515,11 +515,11 @@ $().ready(function() {
         $('a[href="#tab-email"]').tab('show');
     }
     var translations = {
-        config_saved:  {{ lang._('Configuration saved')|json_encode(15) }},
-        config_error:  {{ lang._('Error saving configuration')|json_encode(15) }},
-        test_sent:     {{ lang._('Test email sent to')|json_encode(15) }},
-        test_failed:   {{ lang._('Failed to send email')|json_encode(15) }},
-        saving:        {{ lang._('Saving...')|json_encode(15) }}
+        config_saved:  {{ lang.query('Configuration saved')|json_encode(15) }},
+        config_error:  {{ lang.query('Error saving configuration')|json_encode(15) }},
+        test_sent:     {{ lang.query('Test email sent to')|json_encode(15) }},
+        test_failed:   {{ lang.query('Failed to send email')|json_encode(15) }},
+        saving:        {{ lang.query('Saving...')|json_encode(15) }}
     };
 
     var allVlanNames = {};
@@ -547,7 +547,7 @@ $().ready(function() {
         var $c = $('#'+containerId).empty();
         var vlans = Object.keys(allVlanNames).sort();
         if (!vlans.length) {
-            $c.html(('<em style="color:#888;font-size:12px;">' + {{ lang._('No interfaces found')|json_encode(15) }} + '</em>'));
+            $c.html(('<em style="color:#888;font-size:12px;">' + {{ lang.query('No interfaces found')|json_encode(15) }} + '</em>'));
             return;
         }
         var sel = selectedVlans ? selectedVlans.split(',').map(function(v){return v.trim();}).filter(Boolean) : [];
@@ -572,7 +572,7 @@ $().ready(function() {
         var $c = $('#monitored-interface-list').empty();
         var names = Object.keys(monitoredInterfaces).sort();
         if (!names.length) {
-            $c.html(('<em style="color:#888;font-size:12px;">' + {{ lang._('No enabled IPv4 interfaces found')|json_encode(15) }} + '</em>'));
+            $c.html(('<em style="color:#888;font-size:12px;">' + {{ lang.query('No enabled IPv4 interfaces found')|json_encode(15) }} + '</em>'));
             updateMonitoredWarning();
             return;
         }
@@ -777,7 +777,7 @@ $().ready(function() {
 
     $('#btn-test-email').click(function() {
         var email=$('#email_to').val();
-        if (!email) { showToast({{ lang._('Please enter recipient email first')|json_encode(15) }},'error'); return; }
+        if (!email) { showToast({{ lang.query('Please enter recipient email first')|json_encode(15) }},'error'); return; }
         var $b=$(this), orig=$b.html();
 
         // Save the current form first so the test always uses the selected
@@ -798,13 +798,13 @@ $().ready(function() {
 
     $('#test_webhook').click(function() {
         var url=$('#webhook_url').val();
-        if (!url) { $('#webhook_test_result').html(('<span style="color:red;">❌ ' + {{ lang._('Enter webhook URL first')|json_encode(15) }} + '</span>')); return; }
-        $('#webhook_test_result').html(('<span style="color:blue;">⏳ ' + {{ lang._('Sending...')|json_encode(15) }} + '</span>'));
+        if (!url) { $('#webhook_test_result').html(('<span style="color:red;">❌ ' + {{ lang.query('Enter webhook URL first')|json_encode(15) }} + '</span>')); return; }
+        $('#webhook_test_result').html(('<span style="color:blue;">⏳ ' + {{ lang.query('Sending...')|json_encode(15) }} + '</span>'));
         $.ajax({ url:'/api/devicemonitor/config/testWebhook', type:'POST', data:{webhook_url:url},
             success:function(d) {
                 $('#webhook_test_result').html(d.result==='ok'
-                    ? ('<span style="color:green;">✅ ' + {{ lang._('Test sent!')|json_encode(15) }} + '</span>')
-                    : '<span style="color:red;">❌ '+(d.message||{{ lang._('Failed')|json_encode(15) }})+'</span>');
+                    ? ('<span style="color:green;">✅ ' + {{ lang.query('Test sent!')|json_encode(15) }} + '</span>')
+                    : '<span style="color:red;">❌ '+(d.message||{{ lang.query('Failed')|json_encode(15) }})+'</span>');
             }
         });
     });

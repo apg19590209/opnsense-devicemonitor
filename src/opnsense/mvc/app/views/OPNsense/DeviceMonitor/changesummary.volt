@@ -414,7 +414,7 @@ $(document).ready(function() {
             FRIENDLY_NAME_CHANGED: 'Friendly name changed',
             NOTE_CREATED: 'Note created',
             NOTE_UPDATED: 'Note edited',
-            NOTE_ARCHIVED: {{ lang._('Note archived')|json_encode(15) }},
+            NOTE_ARCHIVED: {{ lang.query('Note archived')|json_encode(15) }},
             NOTE_CHANGED: 'Note changed',
             IP_CHANGED: 'IP address changed',
             HOSTNAME_CHANGED: 'Hostname changed',
@@ -502,14 +502,14 @@ $(document).ready(function() {
 
     function actionLabel(type) {
         if (type === 'infrastructure') {
-            return {{ lang._('View Infrastructure')|json_encode(15) }};
+            return {{ lang.query('View Infrastructure')|json_encode(15) }};
         }
 
         if (type === 'identity') {
-            return {{ lang._('View Conflict')|json_encode(15) }};
+            return {{ lang.query('View Conflict')|json_encode(15) }};
         }
 
-        return {{ lang._('View Device')|json_encode(15) }};
+        return {{ lang.query('View Device')|json_encode(15) }};
     }
 
     function computeRange() {
@@ -643,7 +643,7 @@ $(document).ready(function() {
                 if (!result || result.result !== 'ok') {
                     showLoadError(
                         (result && result.error) ||
-                        {{ lang._('Unable to load changes')|json_encode(15) }}
+                        {{ lang.query('Unable to load changes')|json_encode(15) }}
                     );
                     return;
                 }
@@ -657,7 +657,7 @@ $(document).ready(function() {
                 );
             },
             error: function() {
-                showLoadError({{ lang._('Unable to load changes')|json_encode(15) }});
+                showLoadError({{ lang.query('Unable to load changes')|json_encode(15) }});
             }
         });
     }
@@ -671,7 +671,7 @@ $(document).ready(function() {
                     .attr('colspan', 8)
                     .addClass('text-muted')
                     .text(
-                        {{ lang._('No meaningful Device Monitor changes were recorded in this period.')|json_encode(15) }}
+                        {{ lang.query('No meaningful Device Monitor changes were recorded in this period.')|json_encode(15) }}
                     )
             ).appendTo($tbody);
             return;
@@ -737,7 +737,7 @@ $(document).ready(function() {
         var to = Math.min(offset + limit, total);
 
         $('#change-summary-pagination-info').text(
-            ({{ lang._('Showing')|json_encode(15) }} + " ") + from + '\u2013' + to + (" " + {{ lang._('of')|json_encode(15) }} + " ") + total
+            ({{ lang.query('Showing')|json_encode(15) }} + " ") + from + '\u2013' + to + (" " + {{ lang.query('of')|json_encode(15) }} + " ") + total
         );
 
         $('#btn-change-summary-prev').prop('disabled', offset <= 0);
@@ -777,7 +777,7 @@ $(document).ready(function() {
 
     $('#btn-mark-reviewed').on('click', function() {
         localStorage.setItem(LS_KEY, new Date().toISOString());
-        showToast({{ lang._('Marked as reviewed')|json_encode(15) }});
+        showToast({{ lang.query('Marked as reviewed')|json_encode(15) }});
 
         if (state.window === 'since_last_review') {
             state.offset = 0;

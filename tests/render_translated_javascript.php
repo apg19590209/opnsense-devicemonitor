@@ -2,7 +2,7 @@
 // Render script bodies only: no application bootstrap, database or live config.
 // 15 = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT.
 $input = json_decode(stream_get_contents(STDIN), true, 512, JSON_THROW_ON_ERROR);
-$pattern = '/\{\{\s*lang\._\((\x27(?:\\\\.|[^\x27\\\\])*\x27|"(?:\\\\.|[^"\\\\])*")\)\|json_encode\(15\)\s*\}\}/';
+$pattern = '/\{\{\s*lang\.query\((\x27(?:\\\\.|[^\x27\\\\])*\x27|"(?:\\\\.|[^"\\\\])*")\)\|json_encode\(15\)\s*\}\}/';
 $translations = $input['translations'];
 $translate = static function ($key) use ($translations) {
     return $translations[$key] ?? $key;
@@ -22,6 +22,7 @@ if (class_exists('Phalcon\\Mvc\\View\\Engine\\Volt\\Compiler')) {
         private $translate;
         public function __construct($translate) { $this->translate = $translate; }
         public function _($key) { return ($this->translate)($key); }
+        public function query($key, $placeholders = null) { return ($this->translate)($key); }
     };
     ob_start();
     eval('?>' . $compiled);

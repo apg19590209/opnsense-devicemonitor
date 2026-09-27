@@ -355,7 +355,7 @@ $(document).ready(function() {
                 $('<td>')
                     .attr('colspan', 4)
                     .addClass('text-muted')
-                    .text({{ lang._('No activity recorded')|json_encode(15) }})
+                    .text({{ lang.query('No activity recorded')|json_encode(15) }})
             ).appendTo($tbody);
             return;
         }

@@ -750,7 +750,7 @@ $(document).ready(function() {
             $('<div>')
                 .addClass('text-muted')
                 .css('padding', '10px')
-                .text({{ lang._('No verified infrastructure service changes recorded yet.')|json_encode(15) }})
+                .text({{ lang.query('No verified infrastructure service changes recorded yet.')|json_encode(15) }})
                 .appendTo($root);
             return;
         }
@@ -763,13 +763,13 @@ $(document).ready(function() {
         $('<thead>')
             .append(
                 $('<tr>').append(
-                    $('<th>').text({{ lang._('Date / Time')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('Change')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('Service')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('Device')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('Endpoint')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('Evidence')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('History')|json_encode(15) }})
+                    $('<th>').text({{ lang.query('Date / Time')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Change')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Service')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Device')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Endpoint')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Evidence')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('History')|json_encode(15) }})
                 )
             )
             .appendTo($table);
@@ -1238,7 +1238,7 @@ $(document).ready(function() {
         if (!rows.length) {
             $('<div>')
                 .addClass('alert alert-info')
-                .text({{ lang._('No infrastructure services match the current filter.')|json_encode(15) }})
+                .text({{ lang.query('No infrastructure services match the current filter.')|json_encode(15) }})
                 .appendTo($pane);
 
             return;
@@ -1260,15 +1260,15 @@ $(document).ready(function() {
         $('<thead>')
             .append(
                 $('<tr>').append(
-                    $('<th>').text({{ lang._('IP Address')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('Hostname')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('Status')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('Port / Protocol')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('Interface / VLAN')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('Detection')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('Confidence')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('Product / Version')|json_encode(15) }}),
-                    $('<th>').text({{ lang._('Last Verified')|json_encode(15) }})
+                    $('<th>').text({{ lang.query('IP Address')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Hostname')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Status')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Port / Protocol')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Interface / VLAN')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Detection')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Confidence')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Product / Version')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Last Verified')|json_encode(15) }})
                 )
             )
             .appendTo($table);
@@ -1349,11 +1349,11 @@ $(document).ready(function() {
                                     loadServices();
                                 } else {
                                     alert(data && data.error ||
-                                          {{ lang._('Unable to save service.')|json_encode(15) }});
+                                          {{ lang.query('Unable to save service.')|json_encode(15) }});
                                     $button.prop('disabled', false);
                                 }
                             }).fail(function() {
-                                alert({{ lang._('Unable to save service.')|json_encode(15) }});
+                                alert({{ lang.query('Unable to save service.')|json_encode(15) }});
                                 $button.prop('disabled', false);
                             });
                         }))
@@ -1452,7 +1452,7 @@ $(document).ready(function() {
                         $('<div>')
                             .addClass('alert alert-danger')
                             .text(
-                                {{ lang._('Unable to load recent service changes.')|json_encode(15) }}
+                                {{ lang.query('Unable to load recent service changes.')|json_encode(15) }}
                             )
                     );
 
@@ -1461,7 +1461,7 @@ $(document).ready(function() {
                         $('<div>')
                             .addClass('alert alert-danger')
                             .text(
-                                {{ lang._('Unable to load infrastructure services.')|json_encode(15) }}
+                                {{ lang.query('Unable to load infrastructure services.')|json_encode(15) }}
                             )
                     );
             },
@@ -1494,7 +1494,7 @@ $(document).ready(function() {
                     alert(
                         data && data.error
                             ? data.error
-                            : {{ lang._('Infrastructure discovery failed.')|json_encode(15) }}
+                            : {{ lang.query('Infrastructure discovery failed.')|json_encode(15) }}
                     );
                     return;
                 }
@@ -1503,7 +1503,7 @@ $(document).ready(function() {
             },
 
             error: function() {
-                alert({{ lang._('Infrastructure discovery failed.')|json_encode(15) }});
+                alert({{ lang.query('Infrastructure discovery failed.')|json_encode(15) }});
             },
 
             complete: function() {
@@ -1614,7 +1614,7 @@ $(document).ready(function() {
                 });
             var $button = $('<button type="button">')
                 .addClass('btn btn-primary btn-sm')
-                .text({{ lang._('Run Now')|json_encode(15) }})
+                .text({{ lang.query('Run Now')|json_encode(15) }})
                 .prop('disabled', portDiscoveryBusy ||
                                   !!portDiscoveryRunningMac)
                 .on('click', function() {
@@ -1624,7 +1624,7 @@ $(document).ready(function() {
                 ? (last.success === null ? 'Running' :
                    last.success == 1 ? 'Complete' :
                    last.error || 'Failed')
-                : {{ lang._('Not scanned')|json_encode(15) }};
+                : {{ lang.query('Not scanned')|json_encode(15) }};
             var $status = $('<td>')
                 .addClass('port-discovery-row-status')
                 .attr('role', 'status')
@@ -1693,7 +1693,7 @@ $(document).ready(function() {
         if (!$body.children().length) {
             $('<tr>').append($('<td colspan="4">')
                 .addClass('text-muted')
-                .text({{ lang._('No scans match the current filters.')|json_encode(15) }}))
+                .text({{ lang.query('No scans match the current filters.')|json_encode(15) }}))
                 .appendTo($body);
         }
     }
@@ -1716,14 +1716,14 @@ $(document).ready(function() {
                     $('#port-discovery-status').text(data.error);
                 } else if (!data.devices || !data.devices.length) {
                     $('#port-discovery-status')
-                        .text({{ lang._('No devices on the selected monitored interfaces.')|json_encode(15) }});
+                        .text({{ lang.query('No devices on the selected monitored interfaces.')|json_encode(15) }});
                 } else {
                     $('#port-discovery-status').text('');
                 }
             })
             .fail(function() {
                 $('#port-discovery-status')
-                    .text({{ lang._('Unable to load port discovery.')|json_encode(15) }});
+                    .text({{ lang.query('Unable to load port discovery.')|json_encode(15) }});
             });
     }
     $('#port-discovery-search').on('input', renderPortDiscoveryDevices);
@@ -1780,10 +1780,10 @@ $(document).ready(function() {
             type: 'POST', data: {mac: mac}, timeout: 135000
         }).done(function(data) {
             setPortDiscoveryRowStatus(mac, data && data.result === 'ok'
-                ? {{ lang._('Scan complete')|json_encode(15) }}
-                : (data && data.error || {{ lang._('Scan failed')|json_encode(15) }}), true);
+                ? {{ lang.query('Scan complete')|json_encode(15) }}
+                : (data && data.error || {{ lang.query('Scan failed')|json_encode(15) }}), true);
         }).fail(function() {
-            setPortDiscoveryRowStatus(mac, {{ lang._('Scan request failed')|json_encode(15) }}, true);
+            setPortDiscoveryRowStatus(mac, {{ lang.query('Scan request failed')|json_encode(15) }}, true);
         }).always(function() {
             portDiscoveryRunningMac = null;
             renderPortDiscoveryDevices();

@@ -70,6 +70,9 @@ jobs:
       - name: Validate translated JavaScript
         run: python3 tests/test_translated_javascript.py
 
+      - name: Validate language acceptance (DM-BL-008)
+        run: python3 tests/test_language_acceptance.py --engine interpolate
+
       - name: Validate Device Monitor database migrations
         run: |
           set -eu

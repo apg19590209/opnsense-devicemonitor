@@ -270,22 +270,22 @@ header.page-content-head {
 $(document).ready(function() {
 
     var identityText = {
-        noEvents: {{ lang._('No IP and MAC conflicts recorded')|json_encode(15) }},
-        loadError: {{ lang._('Unable to load IP and MAC conflicts')|json_encode(15) }},
-        showDetails: {{ lang._('Show conflict details')|json_encode(15) }},
-        hideDetails: {{ lang._('Hide conflict details')|json_encode(15) }},
-        otherInterface: {{ lang._('Other interface')|json_encode(15) }},
-        resolvedAt: {{ lang._('Resolved at')|json_encode(15) }},
-        details: {{ lang._('Details')|json_encode(15) }},
-        resolve: {{ lang._('Resolve conflict')|json_encode(15) }},
-        reopen: {{ lang._('Reopen conflict')|json_encode(15) }},
-        updateFailed: {{ lang._('Unable to update IP and MAC conflict')|json_encode(15) }},
-        resolved: {{ lang._('Resolved')|json_encode(15) }},
-        unresolved: {{ lang._('Unresolved')|json_encode(15) }},
-        ipv4Conflict: {{ lang._('IPv4 address used by another device')|json_encode(15) }},
-        ipv6Conflict: {{ lang._('IPv6 address used by another device')|json_encode(15) }},
-        multiIpv4: {{ lang._('Device using multiple IPv4 addresses')|json_encode(15) }},
-        multiInterface: {{ lang._('Device seen on multiple interfaces')|json_encode(15) }}
+        noEvents: {{ lang.query('No IP and MAC conflicts recorded')|json_encode(15) }},
+        loadError: {{ lang.query('Unable to load IP and MAC conflicts')|json_encode(15) }},
+        showDetails: {{ lang.query('Show conflict details')|json_encode(15) }},
+        hideDetails: {{ lang.query('Hide conflict details')|json_encode(15) }},
+        otherInterface: {{ lang.query('Other interface')|json_encode(15) }},
+        resolvedAt: {{ lang.query('Resolved at')|json_encode(15) }},
+        details: {{ lang.query('Details')|json_encode(15) }},
+        resolve: {{ lang.query('Resolve conflict')|json_encode(15) }},
+        reopen: {{ lang.query('Reopen conflict')|json_encode(15) }},
+        updateFailed: {{ lang.query('Unable to update IP and MAC conflict')|json_encode(15) }},
+        resolved: {{ lang.query('Resolved')|json_encode(15) }},
+        unresolved: {{ lang.query('Unresolved')|json_encode(15) }},
+        ipv4Conflict: {{ lang.query('IPv4 address used by another device')|json_encode(15) }},
+        ipv6Conflict: {{ lang.query('IPv6 address used by another device')|json_encode(15) }},
+        multiIpv4: {{ lang.query('Device using multiple IPv4 addresses')|json_encode(15) }},
+        multiInterface: {{ lang.query('Device seen on multiple interfaces')|json_encode(15) }}
     };
 
     function dash(value) {
