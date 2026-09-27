@@ -131,6 +131,38 @@ Relevant source-tree locations include:
 
 The OPNsense UI consumes Device Monitor API/model information and presents Device Monitor data to the administrator.
 
+### UI language support
+
+Language selection:
+
+- System → Settings → General (`/usr/local/www/system_general.php`) stores the
+  choice in `config.xml` as `<system><language>`, and its dropdown is built from
+  `get_locale_list()` in `/usr/local/etc/inc/system.inc`.
+- `get_locale_list()` is a static list of OPNsense-supported languages (19 on
+  OPNsense 26.7.4) and does not depend on which catalogues are installed.
+- The device locale data itself (`<code>.UTF-8`) comes from the FreeBSD base
+  locale set.
+
+Translation resolution for Device Monitor pages:
+
+- `OPNsense\Base\ControllerRoot::setLang()` builds `OPNsense\Base\ViewTranslator`
+  with `directory = /usr/local/share/locale`, `defaultDomain = OPNsense` and
+  locale `<code>.UTF-8`; the legacy pages use `set_language()` in
+  `/usr/local/www/authgui.inc` with the same directory and domain.
+- `ViewTranslator::_()` HTML-escapes its result (`view_html_safe`), which is
+  correct for HTML contexts and not for inline JavaScript strings.
+- Volt renders the views; `OPNsense\Base\ControllerBase` registers the
+  `theme_file_or_default`, `file_exists` and `cache_safe` functions and the `safe`
+  filter with the Volt compiler, and an unregistered function call in a template
+  fails as an unknown macro.
+
+Catalogue locations:
+
+- Core translations: `/usr/local/share/locale/<locale>/LC_MESSAGES/OPNsense.mo`.
+- Plugin translations as shipped by the installer:
+  `/usr/local/opnsense/mvc/app/languages/<locale>_<plugin>.po` and `.mo`. No
+  installed OPNsense code reads this directory; see the DM-BL-008c backlog item.
+
 ### Nmap
 
 Nmap is used by Device Monitor for security scanning.

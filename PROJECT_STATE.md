@@ -14,13 +14,13 @@ Latest released implementation commit: `96cdd464640af6449afb1aa75c4aa193bc93f2ee
 Status:
 
 - Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
-- Latest source fix `aa25fe7` and its guarded v2.10 runtime-manifest update `0708239` are pushed to `origin/v2.10-development`; full GitHub Actions CI run `36315636699` PASS. This is repository-only: no testbed runtime file or service was changed.
+- Latest source fix `aa25fe7` and its guarded v2.10 runtime-manifest update `0708239` are pushed to `origin/v2.10-development`; full GitHub Actions CI run `36315636699` PASS. Those commits changed no testbed runtime file or service; the nine corrected views were deployed to the testbed separately on 27 September 2026 (deployment record under DM-BL-008 below). `0708239` did not update the manifest SHA256 pinned in `install-unattended.sh`, so the guarded installer now aborts; that is recorded as open in `PRODUCT_BACKLOG.md` under DM-BL-008b.
 - That v2.10 metadata is repository-only: no v2.10 tag, GitHub release or runtime package exists, the published `v2.9` release asset is unchanged, and no testbed or production install was performed.
 - Notification dispatch remains on configd permanently: the HTTP API integration for `apiEmailUrl`/`apiWebhookUrl` is not implemented (`DECISIONS.md` 33 supersedes the cutover gates recorded in `DECISIONS.md` 32); `scan_network.py` and the live notification path are unchanged. The `www` privilege claim originally recorded for the API path is corrected by `DECISIONS.md` 34 (the web GUI runs `php-cgi` as root).
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
 - The final v2.9 runtime package was installed and hash-verified on the testbed on 25 September 2026. The checkout has since advanced to v2.10 development; the installed model and Network Identity Details template match `4b2b992` (verified 26 September). Other installed files were not re-audited in that verification.
 - That partial testbed state was superseded on 27 September 2026: the full v2.10 development payload is deployed on the testbed (`files=48`, backup `install-v210.rdQhGA`), with 37/37 manifest hashes and 11/11 catalogues verified, and configd-based daemon status reporting running (see the section below). Production still runs v2.9.
-- The DM-BL-008 language acceptance passed on the testbed on 27 September 2026 for all nine languages across 10 pages and 448 strings. Dutch (`nl_NL`) is not offered by the GUI language list. A source-only correction now reads JavaScript translations through the raw `query()` method before JSON encoding; it has not been deployed. See "27 September 2026 automated language acceptance (DM-BL-008)" below.
+- The DM-BL-008 language acceptance passed on the testbed on 27 September 2026 for all nine languages across 10 pages and 448 strings. Dutch (`nl_NL`) is not offered by the GUI language list. The JavaScript-encoding correction (raw `query()` before `json_encode(15)`) was deployed to the testbed on 27 September 2026 at 21:17:12 AEST with a rollback backup, and the post-deploy runtime acceptance passed; see the deployment record under "27 September 2026 automated language acceptance (DM-BL-008)" below.
 - The final v2.9 runtime package is installed and independently verified on production. The `v2.9` release tag remains at the implementation commit; this later documentation commit records deployment acceptance.
 - v2.9 was promoted to production; see the historical section
   "## v2.9 production promotion" for the earlier release-candidate promotion.
@@ -64,12 +64,35 @@ One platform gap remains:
   locale (`nl_NL.UTF-8` exists), but the recorded step "select Dutch in
   System → Settings → General → Language" cannot be performed; the live configuration value
   was not changed by this work.
-- **JavaScript translation escaping is corrected in source.** `ViewTranslator::_()` HTML-escapes
-  translations, so JavaScript expressions now use its inherited raw `query()` method,
+- **JavaScript translation escaping is corrected and deployed.** `ViewTranslator::_()` HTML-escapes
+  translations, so JavaScript expressions use its inherited raw `query()` method,
   followed by `json_encode(15)` (`JSON_HEX_TAG|AMP|APOS|QUOT`). This keeps the output a
   JavaScript string while preventing script-boundary injection. Runtime acceptance and
   Node execution verify the exact translated string, including apostrophes, entities and
-  hostile markup. The fix is source-only; deployed testbed views have not been changed.
+  hostile markup. The nine views are now deployed on the testbed (deployment record below);
+  the released v2.10 payload still carries the escaped views.
+
+Deployed (testbed `192.168.20.23`, host `OPNsense.internal`):
+
+- Deployment timestamp: `2026-09-27 21:17:12 AEST` (`2026-09-27T11:17:12Z`).
+- Scope: the nine corrected views, copied from
+  `/root/src/opnsense-devicemonitor-upstream/src/opnsense/mvc/app/views/OPNsense/DeviceMonitor`
+  to `/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor`.
+- Backup path: `/root/devicemonitor_backup/dm-language-js-query-views-20260927-211712` —
+  pre-deployment `*.pre` originals, `DEPLOY-INFO.txt` with per-file before/after SHA256,
+  and `rollback.sh`, which restores all nine views.
+- Verification: each deployed view is byte identical to its source view by SHA256
+  (re-checked 27 September 2026).
+- Post-deploy acceptance: **PASS** — `python3 tests/test_language_acceptance.py --engine runtime`
+  ran against the deployed runtime views at `2026-09-27 21:17:37 AEST` (record:
+  `/root/DM-BL-008_language_acceptance_20260927-js-deployed.md`), and was re-run on
+  27 September 2026 after this record was written with
+  `LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`: nine languages,
+  10 pages, 448 strings, zero failures and no JavaScript-entity finding. The single gap is
+  the `nl_NL` GUI-selectability warning recorded above.
+- Not changed: no catalogue, configuration, service, database or production file. The released
+  v2.10 payload and `release/v2.10-notes.md` are unchanged; the remaining release work is
+  recorded as open in `PRODUCT_BACKLOG.md` under DM-BL-008b.
 
 Validation:
 
@@ -95,12 +118,17 @@ wording. Those remain browser/human acceptance checks.
 Changed areas: nine Volt views, the nine corresponding hashes in
 `release/v2.10-runtime.manifest`, the language acceptance renderer and test, the translated
 JavaScript test/render helpers, one affected Change Summary UI assertion, the CI workflow
-and this record. No installed file, catalogue, configuration, service or database was
-changed.
+and this record. The same nine views were then deployed to the testbed (deployment record
+above); no catalogue, configuration, service, database or production file was changed.
 
-Next recommended step: include the source fix in the normal guarded testbed release
-workflow; Dutch cannot be selected through the current GUI language list. Browser wording
-and full page interaction acceptance remain human checks.
+Next recommended step: restore the v2.10 install guard — `install-unattended.sh` line 28 still
+pins the pre-refresh manifest SHA256
+(`29ac9a165cef55b416b3602e1489a007e58a5f942849481d9a13822b7b5aaaa5`) while
+`release/v2.10-runtime.manifest` is now
+`11472b464798344b93ac4be3dc220632cbec62e5a07cdba311f6f77f7161ed76`, so the guarded
+installer aborts with `ABORT: release manifest mismatch`. Dutch cannot be selected through
+the current GUI language list; browser wording and full page interaction acceptance remain
+human checks.
 
 ## 27 September 2026 Settings delivery-action acceptance attempt
 
