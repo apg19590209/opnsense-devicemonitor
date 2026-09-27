@@ -1,3 +1,4 @@
+const {renderTranslations} = require('./render_translations');
 const fs = require('fs');
 const path = require('path');
 
@@ -416,8 +417,7 @@ check(
 );
 
 check(
-    view.includes("'No meaningful Device Monitor changes were '") &&
-    view.includes("'recorded in this period.'"),
+    view.includes("lang._('No meaningful Device Monitor changes were recorded in this period.')|json_encode(15)"),
     'Change Summary empty-state message missing'
 );
 
@@ -450,7 +450,7 @@ check(
 );
 
 scripts.forEach(function(block) {
-    const javascript = block
+    const javascript = renderTranslations(block)
         .replace(/^<script>/, '')
         .replace(/<\/script>$/, '')
         .replace(/\{\{[\s\S]*?\}\}/g, 'VOLT');

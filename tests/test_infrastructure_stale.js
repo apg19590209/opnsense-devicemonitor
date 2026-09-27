@@ -1,3 +1,4 @@
+const {renderTranslations} = require('./render_translations');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -33,7 +34,7 @@ if (start < 0 || end < 0) {
     );
 }
 
-const functions = text.slice(start, end);
+const functions = renderTranslations(text.slice(start, end));
 
 const assertions = `
 

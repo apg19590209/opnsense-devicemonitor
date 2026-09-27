@@ -18,11 +18,9 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-
 # ============================================
 # [Menu.xml] Main menu items
 # ============================================
-
 #: Menu.xml - plugin menu name
 msgid "Device Monitor"
 msgstr "Apparaatbewaking"
@@ -47,11 +45,9 @@ msgstr "Echte apparaten die zijn gekoppeld aan een of meer netwerkidentiteiten, 
 msgid "Settings"
 msgstr "Instellingen"
 
-
 # ============================================
 # [devices.volt] Devices list page
 # ============================================
-
 #: devices.volt - header stats
 msgid "Total Identities"
 msgstr "Totaal identiteiten"
@@ -152,12 +148,9 @@ msgstr "Vriendelijke naam opgeslagen"
 msgid "Error saving friendly name"
 msgstr "Fout bij het opslaan van de vriendelijke naam"
 
-
 # ============================================
 # [settings.volt] Settings - 4 tabs
 # ============================================
-
-
 #: settings.volt - tab 1 label
 msgid "Email Notifications"
 msgstr "E-mailmeldingen"
@@ -166,17 +159,9 @@ msgstr "E-mailmeldingen"
 msgid "Webhook Notifications"
 msgstr "Webhookmeldingen"
 
-#: settings.volt - tab 3 label
-msgid "Other Settings"
-msgstr "Overige instellingen"
-
 #: settings.volt - tab 4 label
 msgid "About"
 msgstr "Over"
-
-#: settings.volt - tab 1 info text (localized)
-msgid "Configure email notifications for new devices on the network"
-msgstr "Configureer e-mailmeldingen voor nieuwe apparaten op het netwerk"
 
 #: settings.volt - tab 2 info text
 msgid "Configure webhook notifications for new devices on the network"
@@ -190,29 +175,9 @@ msgstr "E-mail inschakelen"
 msgid "Email Recipient"
 msgstr "E-mailontvanger"
 
-#: settings.volt - tab 1: help text below email recipient field
-msgid "Where to send notifications"
-msgstr "Waar meldingen naartoe sturen"
-
 #: settings.volt - tab 1: email sender label
 msgid "Email Sender"
 msgstr "E-mailafzender"
-
-#: settings.volt - tab 1: help text below email sender field
-msgid "From address"
-msgstr "Afzenderadres"
-
-#: settings.volt - tab 1: SMTP warning heading
-msgid "Important - SMTP Configuration"
-msgstr "Belangrijk - SMTP-configuratie"
-
-#: settings.volt - tab 1: SMTP warning text (with HTML tag)
-msgid "Plugin uses <strong>sendmail (Postfix)</strong> to send emails"
-msgstr "De plugin gebruikt <strong>sendmail (Postfix)</strong> om e-mails te verzenden"
-
-#: settings.volt - tab 1: SMTP warning text (with HTML and path)
-msgid "Must be configured in: <strong>System > Settings > Notifications > SMTP</strong>"
-msgstr "Moet worden geconfigureerd in: <strong>Systeem > Instellingen > Meldingen > SMTP</strong>"
 
 #: settings.volt - tab 1: test email button
 msgid "Test Email"
@@ -316,14 +281,6 @@ msgstr "Pi-hole-app-wachtwoord gegenereerd in de Pi-hole-webinterface"
 msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
 msgstr "OPNsense-plugin voor het bewaken van netwerkapparaten, het detecteren van IP- en MAC-adresconflicten, het ontdekken van infrastructuurdiensten, het uitvoeren van gerichte beveiligingsscans en het verzenden van configureerbare meldingen met behulp van native hostwatch-gegevens."
 
-#: settings.volt - tab 4: info table row
-msgid "Author"
-msgstr "Auteur"
-
-#: settings.volt - tab 4: info table row
-msgid "GitHub Repository"
-msgstr "GitHub-repository"
-
 #: settings.volt - v2.10 features heading
 msgid "v2.10 Features and Enhancements"
 msgstr "Functies en verbeteringen v2.10"
@@ -360,10 +317,6 @@ msgstr "Test-e-mail verzonden naar"
 msgid "Failed to send email"
 msgstr "E-mail verzenden mislukt"
 
-#: settings.volt - alert: user didn't fill email before test
-msgid "Please enter and save recipient email first"
-msgstr "Voer eerst het e-mailadres van de ontvanger in en sla dit op"
-
 #: settings.volt - alert: user didn't fill webhook URL
 msgid "Enter webhook URL first"
 msgstr "Voer eerst de webhook-URL in"
@@ -380,17 +333,13 @@ msgstr "Test verzonden!"
 msgid "Failed"
 msgstr "Mislukt"
 
-#: settings.volt - version subtitle (after plugin name)
-msgid "Using OPNsense hostwatch database"
-msgstr "Gebruik van de OPNsense hostwatch-database"
-
 #: settings.volt - Status column value / general status label
 msgid "Status"
 msgstr "Status"
+
 # ============================================
 # [settings.volt] Email transport
 # ============================================
-
 #: settings.volt - email transport
 msgid "Email delivery method"
 msgstr "E-mailbezorgmethode"
@@ -454,7 +403,6 @@ msgstr "Voer eerst het e-mailadres van de ontvanger in"
 # ============================================
 # [scanhistory.volt] Nmap scan history page
 # ============================================
-
 msgid "Nmap Scan History"
 msgstr "Nmap-scangeschiedenis"
 
@@ -469,9 +417,6 @@ msgstr "Gestart"
 
 msgid "Finished"
 msgstr "Voltooid"
-
-msgid "Error"
-msgstr "Fout"
 
 msgid "Email sent"
 msgstr "E-mail verzonden"
@@ -562,11 +507,6 @@ msgstr "Scandetails weergeven"
 
 msgid "Hide scan details"
 msgstr "Scandetails verbergen"
-msgid "Resolve event"
-msgstr "Gebeurtenis oplossen"
-
-msgid "Reopen event"
-msgstr "Gebeurtenis heropenen"
 
 msgid "Unable to update IP and MAC conflict"
 msgstr "Kan IP- en MAC-conflict niet bijwerken"
@@ -842,20 +782,11 @@ msgstr "Gebruik «Nu uitvoeren» op een apparaatrij om TCP-poorten 1-65535 te sc
 msgid "Scans"
 msgstr "Scans"
 
-msgid "Run Now"
-msgstr "Nu uitvoeren"
-
 msgid "Scan weekly"
 msgstr "Wekelijks scannen"
 
 msgid "Scan Time"
 msgstr "Scantijd"
-
-msgid "Scan Time (local time)"
-msgstr "Scantijd (lokale tijd)"
-
-msgid "Last Scan (local time)"
-msgstr "Laatste scan (lokale tijd)"
 
 msgid "Result"
 msgstr "Resultaat"
@@ -926,12 +857,6 @@ msgstr "Uit"
 
 msgid "Save alert preferences"
 msgstr "Meldingsvoorkeuren opslaan"
-
-msgid "Email delivery is disabled in Settings."
-msgstr "E-mailbezorging is uitgeschakeld in Instellingen."
-
-msgid "These preferences are saved, but service alert emails will not be sent."
-msgstr "Deze voorkeuren worden opgeslagen, maar service-meldingsmails worden niet verzonden."
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
 msgstr "Deze voorkeuren worden opgeslagen, maar de service-meldingsmails van deze netwerkidentiteit worden niet verzonden omdat globale e-mailmeldingen zijn uitgeschakeld."
@@ -1013,3 +938,639 @@ msgstr "Over meldingsinterfaces"
 
 msgid "About Webhook Notifications"
 msgstr "Over webhookmeldingen"
+
+
+# ============================================
+# v2.10 catalogue re-sync (new source strings)
+# ============================================
+
+#: activitytimeline.volt
+msgid "Activity"
+msgstr "Activiteit"
+
+#: settings.volt
+msgid "AdGuard DNS Rewrites"
+msgstr "AdGuard DNS-herschrijvingen"
+
+#: devices.volt
+msgid "AdGuard DNS rewrite"
+msgstr "AdGuard DNS-herschrijving"
+
+#: settings.volt
+msgid "AdGuard URL"
+msgstr "AdGuard-URL"
+
+#: settings.volt
+msgid "Alert only on verified or authoritative infrastructure-service evidence."
+msgstr "Alleen waarschuwen bij geverifieerd of autoritatief bewijs van infrastructuurdiensten."
+
+#: infrastructureservices.volt
+msgid "All Services"
+msgstr "Alle diensten"
+
+#: infrastructureservices.volt
+msgid "All Statuses"
+msgstr "Alle statussen"
+
+#: infrastructureservices.volt
+msgid "All devices"
+msgstr "Alle apparaten"
+
+#: settings.volt
+msgid "Automatically scan newly detected devices"
+msgstr "Nieuw gedetecteerde apparaten automatisch scannen"
+
+#: infrastructureservices.volt
+msgid "Available"
+msgstr "Beschikbaar"
+
+#: settings.volt
+msgid "Creator"
+msgstr "Maker"
+
+#: activitytimeline.volt
+msgid "Date / time"
+msgstr "Datum / tijd"
+
+#: identityevents.volt
+msgid "Details"
+msgstr "Details"
+
+#: settings.volt
+msgid "Detect services and versions using light detection"
+msgstr "Services en versies detecteren met lichte detectie"
+
+#: identityevents.volt
+msgid "Detected"
+msgstr "Gedetecteerd"
+
+#: settings.volt
+msgid "Developer"
+msgstr "Ontwikkelaar"
+
+#: infrastructureservices.volt
+msgid "Discover Now"
+msgstr "Nu ontdekken"
+
+#: devices.volt
+msgid "Dnsmasq"
+msgstr "Dnsmasq"
+
+#: scanhistory.volt
+msgid "Email"
+msgstr "E-mail"
+
+#: settings.volt
+msgid "Email infrastructure service alerts"
+msgstr "E-mailwaarschuwingen voor infrastructuurdiensten"
+
+#: settings.volt
+msgid "Enable AdGuard DNS rewrite hostname enrichment"
+msgstr "Hostname-verrijking via AdGuard DNS-herschrijvingen inschakelen"
+
+#: settings.volt
+msgid "Enable Targeted Nmap"
+msgstr "Gerichte Nmap inschakelen"
+
+#: settings.volt
+msgid "Established service unavailable"
+msgstr "Gevestigde dienst niet beschikbaar"
+
+#: identityevents.volt
+msgid "Event Type"
+msgstr "Gebeurtenistype"
+
+#: devices.volt
+msgid "Export to CSV"
+msgstr "Exporteren naar CSV"
+
+#: settings.volt
+msgid "Generic service-changed events remain history-only in this version."
+msgstr "Generieke gebeurtenissen van dienstwijzigingen blijven in deze versie alleen in de geschiedenis."
+
+#: settings.volt
+msgid "HTTPS base URL of your AdGuard Home server"
+msgstr "HTTPS-basis-URL van uw AdGuard Home-server"
+
+#: settings.volt
+msgid "Host Timeout"
+msgstr "Host-time-out"
+
+#: devices.volt
+msgid "Hostwatch"
+msgstr "Hostwatch"
+
+#: devices.volt
+msgid "ISC DHCP"
+msgstr "ISC DHCP"
+
+#: Menu.xml
+msgid "Infrastructure Services"
+msgstr "Infrastructuurdiensten"
+
+#: identityevents.volt
+msgid "Interface"
+msgstr "Interface"
+
+#: devices.volt
+msgid "Kea DHCP"
+msgstr "Kea DHCP"
+
+#: infrastructureservices.volt
+msgid "Last Scan"
+msgstr "Laatste scan"
+
+#: infrastructureservices.volt
+msgid "Latest verified or authoritative service changes"
+msgstr "Laatste geverifieerde of autoritatieve dienstwijzigingen"
+
+#: settings.volt
+msgid "Licensing & Compatibility"
+msgstr "Licentie en compatibiliteit"
+
+#: activitytimeline.volt
+msgid "Loading activity..."
+msgstr "Activiteit laden..."
+
+#: infrastructureservices.volt
+msgid "Loading recent service changes"
+msgstr "Recente dienstwijzigingen laden"
+
+#: scanhistory.volt
+msgid "Loading scan history..."
+msgstr "Scangeschiedenis laden..."
+
+#: settings.volt
+msgid "Maximum Nmap scan time per device (10-300 seconds)"
+msgstr "Maximale Nmap-scantijd per apparaat (10-300 seconden)"
+
+#: settings.volt
+msgid "Maximum Scans Per Cycle"
+msgstr "Maximale scans per cyclus"
+
+#: settings.volt
+msgid "Maximum queued targeted scans processed during one monitoring cycle (1-10)"
+msgstr "Maximaal aantal gerichte scans in wachtrij dat per bewakingscyclus wordt verwerkt (1-10)"
+
+#: settings.volt
+msgid "Monitoring"
+msgstr "Bewaking"
+
+#: infrastructureservices.volt
+msgid "Never scanned"
+msgstr "Nooit gescand"
+
+#: settings.volt
+msgid "New verified service"
+msgstr "Nieuwe geverifieerde dienst"
+
+#: settings.volt
+msgid "Nmap Scanning"
+msgstr "Nmap-scannen"
+
+#: settings.volt
+msgid "Nmap timing template. T4 is the default."
+msgstr "Nmap-timingmodel. T4 is standaard."
+
+#: settings.volt
+msgid "Number of most common TCP ports to scan (1-1000)"
+msgstr "Aantal meest voorkomende TCP-poorten om te scannen (1-1000)"
+
+#: scanhistory.volt
+msgid "Open Ports"
+msgstr "Open poorten"
+
+#: settings.volt
+msgid "Optional detailed scan performed for newly detected devices after notification."
+msgstr "Optionele gedetailleerde scan uitgevoerd voor nieuw gedetecteerde apparaten na melding."
+
+#: settings.volt
+msgid "Original Project"
+msgstr "Oorspronkelijk project"
+
+#: identityevents.volt
+msgid "Other IP"
+msgstr "Ander IP"
+
+#: identityevents.volt
+msgid "Other MAC"
+msgstr "Ander MAC"
+
+#: identityevents.volt
+msgid "Other interface"
+msgstr "Andere interface"
+
+#: settings.volt
+msgid "Password"
+msgstr "Wachtwoord"
+
+#: infrastructureservices.volt
+msgid "Recent Service Changes"
+msgstr "Recente dienstwijzigingen"
+
+#: infrastructureservices.volt
+msgid "Refresh View"
+msgstr "Weergave vernieuwen"
+
+#: settings.volt
+msgid "Repository"
+msgstr "Repository"
+
+#: identityevents.volt
+msgid "Resolved at"
+msgstr "Opgelost op"
+
+#: devices.volt
+msgid "Run scan now"
+msgstr "Scan nu uitvoeren"
+
+#: infrastructureservices.volt
+msgid "Save weekly selections"
+msgstr "Wekelijkse selecties opslaan"
+
+#: scanhistory.volt
+msgid "Scan"
+msgstr "Scan"
+
+#: devices.volt
+msgid "Scan Status"
+msgstr "Scanstatus"
+
+#: infrastructureservices.volt
+msgid "Search devices"
+msgstr "Apparaten zoeken"
+
+#: infrastructureservices.volt
+msgid "Search services"
+msgstr "Diensten zoeken"
+
+#: identityevents.volt
+msgid "Severity"
+msgstr "Ernst"
+
+#: infrastructureservices.volt
+msgid "Show archived"
+msgstr "Gearchiveerde weergeven"
+
+#: infrastructureservices.volt
+msgid "Stale"
+msgstr "Verouderd"
+
+#: settings.volt
+msgid "Targeted Nmap Scanning"
+msgstr "Gericht Nmap-scannen"
+
+#: settings.volt
+msgid "Timing Template"
+msgstr "Timingmodel"
+
+#: settings.volt
+msgid "Top TCP Ports"
+msgstr "Belangrijkste TCP-poorten"
+
+#: infrastructureservices.volt
+msgid "Total"
+msgstr "Totaal"
+
+#: scanhistory.volt
+msgid "Type"
+msgstr "Type"
+
+#: infrastructureservices.volt
+msgid "Unavailable"
+msgstr "Niet beschikbaar"
+
+#: settings.volt
+msgid "Unavailable service recovered"
+msgstr "Niet beschikbare dienst hersteld"
+
+#: settings.volt
+msgid "Username"
+msgstr "Gebruikersnaam"
+
+#: settings.volt
+msgid "Uses manually configured AdGuard Home DNS rewrites as a high-confidence hostname source. Enable this only if you use AdGuard Home."
+msgstr "Gebruikt handmatig geconfigureerde AdGuard Home DNS-herschrijvingen als uiterst betrouwbare hostnamebron. Schakel dit alleen in als u AdGuard Home gebruikt."
+
+#: settings.volt
+msgid "Version Detection"
+msgstr "Versiedetectie"
+
+#: infrastructureservices.volt
+msgid "Weekly enabled"
+msgstr "Wekelijks ingeschakeld"
+
+#: devices.volt
+msgid "identities"
+msgstr "identiteiten"
+
+#: devices.volt
+msgid "identity"
+msgstr "identiteit"
+
+# ============================================
+# JS i18n re-sync (hardcoded strings wrapped)
+# ============================================
+
+msgid "Add"
+msgstr "Toevoegen"
+
+msgid "Add Identity"
+msgstr "Identiteit toevoegen"
+
+msgid "Add this network identity to a device profile"
+msgstr "Deze netwerkidentiteit toevoegen aan een apparaatprofiel"
+
+msgid "Add to Profile"
+msgstr "Aan profiel toevoegen"
+
+msgid "Archive Note #"
+msgstr "Notitie nr. archiveren"
+
+msgid "Check online"
+msgstr "Online controleren"
+
+msgid "Confidence"
+msgstr "Betrouwbaarheid"
+
+msgid "Create profile"
+msgstr "Profiel aanmaken"
+
+msgid "Created"
+msgstr "Aangemaakt"
+
+msgid "Current Identities"
+msgstr "Huidige identiteiten"
+
+msgid "Date / Time"
+msgstr "Datum / tijd"
+
+msgid "Detection"
+msgstr "Detectie"
+
+msgid "Do not add separate devices merely because"
+msgstr "Voeg geen aparte apparaten toe alleen omdat"
+
+msgid "Edit note"
+msgstr "Notitie bewerken"
+
+msgid "Endpoint"
+msgstr "Eindpunt"
+
+msgid "Enter a note first"
+msgstr "Voer eerst een notitie in"
+
+msgid "Enter a profile name"
+msgstr "Voer een profielnaam in"
+
+msgid "Enter a valid MAC address"
+msgstr "Voer een geldig MAC-adres in"
+
+msgid "Evidence"
+msgstr "Bewijs"
+
+msgid "Exported"
+msgstr "Geëxporteerd"
+
+msgid "History"
+msgstr "Geschiedenis"
+
+msgid "Identities"
+msgstr "Identiteiten"
+
+msgid "Identity added"
+msgstr "Identiteit toegevoegd"
+
+msgid "Identity history will be preserved."
+msgstr "De identiteitsgeschiedenis blijft behouden."
+
+msgid "Identity unlinked"
+msgstr "Identiteit ontkoppeld"
+
+msgid "Infrastructure discovery failed."
+msgstr "Infrastructuurdetectie mislukt."
+
+msgid "Interface / VLAN"
+msgstr "Interface / VLAN"
+
+msgid "Last Verified"
+msgstr "Laatst geverifieerd"
+
+msgid "Linked"
+msgstr "Gekoppeld"
+
+msgid "Marked as reviewed"
+msgstr "Gemarkeerd als beoordeeld"
+
+msgid "Network identity details and notes"
+msgstr "Details en notities van netwerkidentiteit"
+
+msgid "Next:"
+msgstr "Volgende:"
+
+msgid "No IP address for this device"
+msgstr "Geen IP-adres voor dit apparaat"
+
+msgid "No active lifecycle"
+msgstr "Geen actieve levenscyclus"
+
+msgid "No active lifecycle notes"
+msgstr "Geen notities voor actieve levenscyclus"
+
+msgid "No activity recorded"
+msgstr "Geen activiteit vastgelegd"
+
+msgid "No current identities"
+msgstr "Geen huidige identiteiten"
+
+msgid "No data to export"
+msgstr "Geen gegevens om te exporteren"
+
+msgid "No devices found."
+msgstr "Geen apparaten gevonden."
+
+msgid "No devices on the selected monitored interfaces."
+msgstr "Geen apparaten op de geselecteerde bewaakte interfaces."
+
+msgid "No infrastructure services match the current filter."
+msgstr "Geen infrastructuurdiensten komen overeen met het huidige filter."
+
+msgid "No lifecycle history recorded"
+msgstr "Geen levenscyclusgeschiedenis vastgelegd"
+
+msgid "No meaningful Device Monitor changes were recorded in this period."
+msgstr "In deze periode zijn geen zinvolle Device Monitor-wijzigingen vastgelegd."
+
+msgid "No notes"
+msgstr "Geen notities"
+
+msgid "No scans match the current filters."
+msgstr "Geen scans komen overeen met de huidige filters."
+
+msgid "No verified infrastructure service changes recorded yet."
+msgstr "Nog geen geverifieerde infrastructuurdienstwijzigingen vastgelegd."
+
+msgid "Not scanned"
+msgstr "Niet gescand"
+
+msgid "Note #"
+msgstr "Notitie nr."
+
+msgid "Note added"
+msgstr "Notitie toegevoegd"
+
+msgid "Note archived"
+msgstr "Notitie gearchiveerd"
+
+msgid "Note cannot be empty"
+msgstr "De notitie mag niet leeg zijn"
+
+msgid "Note updated"
+msgstr "Notitie bijgewerkt"
+
+msgid "Only continue if this MAC belongs to the same device profile."
+msgstr "Ga alleen verder als dit MAC-adres tot hetzelfde apparaatprofiel behoort."
+
+msgid "Open Profile"
+msgstr "Profiel openen"
+
+msgid "Open this profile"
+msgstr "Dit profiel openen"
+
+msgid "Pending decision"
+msgstr "Beslissing in behandeling"
+
+msgid "Ping failed"
+msgstr "Ping mislukt"
+
+msgid "Port / Protocol"
+msgstr "Poort / Protocol"
+
+msgid "Previous Identities"
+msgstr "Vorige identiteiten"
+
+msgid "Product / Version"
+msgstr "Product / Versie"
+
+msgid "Profile Name"
+msgstr "Profielnaam"
+
+msgid "Profile Summary"
+msgstr "Profieloverzicht"
+
+msgid "Profile created"
+msgstr "Profiel aangemaakt"
+
+msgid "Relink"
+msgstr "Opnieuw koppelen"
+
+msgid "Relink returning device to this lifecycle"
+msgstr "Terugkerend apparaat opnieuw aan deze levenscyclus koppelen"
+
+msgid "Removed"
+msgstr "Verwijderd"
+
+msgid "Resolve returning device / lifecycle history"
+msgstr "Terugkerend apparaat afhandelen / levenscyclusgeschiedenis"
+
+msgid "Retry"
+msgstr "Opnieuw proberen"
+
+msgid "Run Now"
+msgstr "Nu uitvoeren"
+
+msgid "Run targeted Nmap scan"
+msgstr "Gerichte Nmap-scan uitvoeren"
+
+msgid "Scan complete"
+msgstr "Scan voltooid"
+
+msgid "Scan failed"
+msgstr "Scan mislukt"
+
+msgid "Scan request failed"
+msgstr "Scanverzoek mislukt"
+
+msgid "Start a new lifecycle for returning device"
+msgstr "Nieuwe levenscyclus starten voor terugkerend apparaat"
+
+msgid "Unable to add identity"
+msgstr "Kan identiteit niet toevoegen"
+
+msgid "Unable to add note"
+msgstr "Kan notitie niet toevoegen"
+
+msgid "Unable to archive note"
+msgstr "Kan notitie niet archiveren"
+
+msgid "Unable to load Nmap scan history"
+msgstr "Kan Nmap-scangeschiedenis niet laden"
+
+msgid "Unable to load changes"
+msgstr "Kan wijzigingen niet laden"
+
+msgid "Unable to load infrastructure services."
+msgstr "Kan infrastructuurdiensten niet laden."
+
+msgid "Unable to load notes"
+msgstr "Kan notities niet laden"
+
+msgid "Unable to load port discovery."
+msgstr "Kan poortdetectie niet laden."
+
+msgid "Unable to load recent service changes."
+msgstr "Kan recente dienstwijzigingen niet laden."
+
+msgid "Unable to save service."
+msgstr "Kan service niet opslaan."
+
+msgid "Unable to update note"
+msgstr "Kan notitie niet bijwerken"
+
+msgid "Unlink"
+msgstr "Ontkoppelen"
+
+msgid "Unlink Identity"
+msgstr "Identiteit ontkoppelen"
+
+msgid "Unlink this identity from the profile"
+msgstr "Deze identiteit van het profiel ontkoppelen"
+
+msgid "View ("
+msgstr "Weergeven ("
+
+msgid "View Conflict"
+msgstr "Conflict weergeven"
+
+msgid "View Device"
+msgstr "Apparaat weergeven"
+
+msgid "View Infrastructure"
+msgstr "Infrastructuur weergeven"
+
+msgid "devices"
+msgstr "apparaten"
+
+msgid "from profile"
+msgstr "van het profiel"
+
+msgid "of"
+msgstr "van"
+
+msgid "they are the same type, model or vendor."
+msgstr "ze hetzelfde type, model of dezelfde fabrikant zijn."
+
+msgid "to lifecycle #"
+msgstr "naar levenscyclus nr."
+
+msgid "to profile"
+msgstr "naar profiel"
+
+msgid "with MAC address"
+msgstr "met MAC-adres"
+
+msgid "Total Devices"
+msgstr "Apparaten totaal"
+
+msgid "Stopped"
+msgstr "Gestopt"

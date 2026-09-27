@@ -18,11 +18,9 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-
 # ============================================
 # [Menu.xml] Main menu items
 # ============================================
-
 #: Menu.xml - plugin menu name
 msgid "Device Monitor"
 msgstr "デバイス監視"
@@ -47,11 +45,9 @@ msgstr "有線およびWi-Fiアダプターなど、1つ以上のネットワー
 msgid "Settings"
 msgstr "設定"
 
-
 # ============================================
 # [devices.volt] Devices list page
 # ============================================
-
 #: devices.volt - header stats
 msgid "Total Identities"
 msgstr "IDの合計"
@@ -152,12 +148,9 @@ msgstr "表示名を保存しました"
 msgid "Error saving friendly name"
 msgstr "表示名の保存エラー"
 
-
 # ============================================
 # [settings.volt] Settings - 4 tabs
 # ============================================
-
-
 #: settings.volt - tab 1 label
 msgid "Email Notifications"
 msgstr "メール通知"
@@ -166,17 +159,9 @@ msgstr "メール通知"
 msgid "Webhook Notifications"
 msgstr "Webhook通知"
 
-#: settings.volt - tab 3 label
-msgid "Other Settings"
-msgstr "その他の設定"
-
 #: settings.volt - tab 4 label
 msgid "About"
 msgstr "情報"
-
-#: settings.volt - tab 1 info text (localized)
-msgid "Configure email notifications for new devices on the network"
-msgstr "ネットワーク上の新しいデバイスに対するメール通知を設定"
 
 #: settings.volt - tab 2 info text
 msgid "Configure webhook notifications for new devices on the network"
@@ -190,29 +175,9 @@ msgstr "メールを有効化"
 msgid "Email Recipient"
 msgstr "メール受信者"
 
-#: settings.volt - tab 1: help text below email recipient field
-msgid "Where to send notifications"
-msgstr "通知の送信先"
-
 #: settings.volt - tab 1: email sender label
 msgid "Email Sender"
 msgstr "メール送信者"
-
-#: settings.volt - tab 1: help text below email sender field
-msgid "From address"
-msgstr "差出人アドレス"
-
-#: settings.volt - tab 1: SMTP warning heading
-msgid "Important - SMTP Configuration"
-msgstr "重要 - SMTP設定"
-
-#: settings.volt - tab 1: SMTP warning text (with HTML tag)
-msgid "Plugin uses <strong>sendmail (Postfix)</strong> to send emails"
-msgstr "プラグインは<strong>sendmail (Postfix)</strong>を使用してメールを送信します"
-
-#: settings.volt - tab 1: SMTP warning text (with HTML and path)
-msgid "Must be configured in: <strong>System > Settings > Notifications > SMTP</strong>"
-msgstr "設定が必要: <strong>システム > 設定 > 通知 > SMTP</strong>"
 
 #: settings.volt - tab 1: test email button
 msgid "Test Email"
@@ -316,14 +281,6 @@ msgstr "Pi-hole Webインターフェースで生成されたPi-holeアプリパ
 msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
 msgstr "ネットワークデバイスの監視、IP/MACアドレス競合の検出、インフラサービスの発見、標的型セキュリティスキャンの実行、ネイティブhostwatchデータを使用した設定可能なアラート送信を行うOPNsenseプラグイン。"
 
-#: settings.volt - tab 4: info table row
-msgid "Author"
-msgstr "作者"
-
-#: settings.volt - tab 4: info table row
-msgid "GitHub Repository"
-msgstr "GitHubリポジトリ"
-
 #: settings.volt - v2.10 features heading
 msgid "v2.10 Features and Enhancements"
 msgstr "v2.10の機能と改善点"
@@ -360,10 +317,6 @@ msgstr "テストメールを送信しました:"
 msgid "Failed to send email"
 msgstr "メールの送信に失敗しました"
 
-#: settings.volt - alert: user didn't fill email before test
-msgid "Please enter and save recipient email first"
-msgstr "最初に受信者メールを入力して保存してください"
-
 #: settings.volt - alert: user didn't fill webhook URL
 msgid "Enter webhook URL first"
 msgstr "最初にWebhook URLを入力してください"
@@ -380,17 +333,13 @@ msgstr "テストを送信しました!"
 msgid "Failed"
 msgstr "失敗"
 
-#: settings.volt - version subtitle (after plugin name)
-msgid "Using OPNsense hostwatch database"
-msgstr "OPNsense hostwatchデータベースを使用中"
-
 #: settings.volt - Status column value / general status label
 msgid "Status"
 msgstr "状態"
+
 # ============================================
 # [settings.volt] Email transport
 # ============================================
-
 #: settings.volt - email transport
 msgid "Email delivery method"
 msgstr "メール配信方法"
@@ -454,7 +403,6 @@ msgstr "最初に受信者メールを入力してください"
 # ============================================
 # [scanhistory.volt] Nmap scan history page
 # ============================================
-
 msgid "Nmap Scan History"
 msgstr "Nmapスキャン履歴"
 
@@ -469,9 +417,6 @@ msgstr "開始"
 
 msgid "Finished"
 msgstr "完了"
-
-msgid "Error"
-msgstr "エラー"
 
 msgid "Email sent"
 msgstr "メール送信済み"
@@ -562,11 +507,6 @@ msgstr "スキャン詳細を表示"
 
 msgid "Hide scan details"
 msgstr "スキャン詳細を非表示"
-msgid "Resolve event"
-msgstr "イベントを解決"
-
-msgid "Reopen event"
-msgstr "イベントを再オープン"
 
 msgid "Unable to update IP and MAC conflict"
 msgstr "IP/MAC競合を更新できません"
@@ -842,20 +782,11 @@ msgstr "デバイス行の「今すぐ実行」を使用して、標準および
 msgid "Scans"
 msgstr "スキャン"
 
-msgid "Run Now"
-msgstr "今すぐ実行"
-
 msgid "Scan weekly"
 msgstr "毎週スキャン"
 
 msgid "Scan Time"
 msgstr "スキャン時刻"
-
-msgid "Scan Time (local time)"
-msgstr "スキャン時刻 (現地時間)"
-
-msgid "Last Scan (local time)"
-msgstr "最終スキャン (現地時間)"
 
 msgid "Result"
 msgstr "結果"
@@ -926,12 +857,6 @@ msgstr "オフ"
 
 msgid "Save alert preferences"
 msgstr "アラート設定を保存"
-
-msgid "Email delivery is disabled in Settings."
-msgstr "メール配信は設定で無効になっています。"
-
-msgid "These preferences are saved, but service alert emails will not be sent."
-msgstr "これらの設定は保存されますが、サービスアラートメールは送信されません。"
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
 msgstr "これらの設定は保存されますが、グローバルメール通知がオフのため、このネットワークIDのサービスアラートメールは送信されません。"
@@ -1013,3 +938,639 @@ msgstr "通知インターフェースについて"
 
 msgid "About Webhook Notifications"
 msgstr "Webhook通知について"
+
+
+# ============================================
+# v2.10 catalogue re-sync (new source strings)
+# ============================================
+
+#: activitytimeline.volt
+msgid "Activity"
+msgstr "アクティビティ"
+
+#: settings.volt
+msgid "AdGuard DNS Rewrites"
+msgstr "AdGuard DNS 書き換え"
+
+#: devices.volt
+msgid "AdGuard DNS rewrite"
+msgstr "AdGuard DNS 書き換え"
+
+#: settings.volt
+msgid "AdGuard URL"
+msgstr "AdGuard URL"
+
+#: settings.volt
+msgid "Alert only on verified or authoritative infrastructure-service evidence."
+msgstr "検証済みまたは信頼できるインフラストラクチャサービスの証拠がある場合のみ警告します。"
+
+#: infrastructureservices.volt
+msgid "All Services"
+msgstr "すべてのサービス"
+
+#: infrastructureservices.volt
+msgid "All Statuses"
+msgstr "すべてのステータス"
+
+#: infrastructureservices.volt
+msgid "All devices"
+msgstr "すべてのデバイス"
+
+#: settings.volt
+msgid "Automatically scan newly detected devices"
+msgstr "新しく検出されたデバイスを自動的にスキャン"
+
+#: infrastructureservices.volt
+msgid "Available"
+msgstr "利用可能"
+
+#: settings.volt
+msgid "Creator"
+msgstr "作成者"
+
+#: activitytimeline.volt
+msgid "Date / time"
+msgstr "日付 / 時刻"
+
+#: identityevents.volt
+msgid "Details"
+msgstr "詳細"
+
+#: settings.volt
+msgid "Detect services and versions using light detection"
+msgstr "ライト検出を使用してサービスとバージョンを検出"
+
+#: identityevents.volt
+msgid "Detected"
+msgstr "検出済み"
+
+#: settings.volt
+msgid "Developer"
+msgstr "開発者"
+
+#: infrastructureservices.volt
+msgid "Discover Now"
+msgstr "今すぐ検出"
+
+#: devices.volt
+msgid "Dnsmasq"
+msgstr "Dnsmasq"
+
+#: scanhistory.volt
+msgid "Email"
+msgstr "メール"
+
+#: settings.volt
+msgid "Email infrastructure service alerts"
+msgstr "インフラストラクチャサービスのメールアラート"
+
+#: settings.volt
+msgid "Enable AdGuard DNS rewrite hostname enrichment"
+msgstr "AdGuard DNS 書き換えによるホスト名エンリッチメントを有効化"
+
+#: settings.volt
+msgid "Enable Targeted Nmap"
+msgstr "ターゲットNmapを有効化"
+
+#: settings.volt
+msgid "Established service unavailable"
+msgstr "確立済みサービスが利用不可"
+
+#: identityevents.volt
+msgid "Event Type"
+msgstr "イベント種別"
+
+#: devices.volt
+msgid "Export to CSV"
+msgstr "CSVにエクスポート"
+
+#: settings.volt
+msgid "Generic service-changed events remain history-only in this version."
+msgstr "汎用のサービス変更イベントは、このバージョンでは履歴のみに残ります。"
+
+#: settings.volt
+msgid "HTTPS base URL of your AdGuard Home server"
+msgstr "AdGuard HomeサーバーのHTTPSベースURL"
+
+#: settings.volt
+msgid "Host Timeout"
+msgstr "ホストタイムアウト"
+
+#: devices.volt
+msgid "Hostwatch"
+msgstr "Hostwatch"
+
+#: devices.volt
+msgid "ISC DHCP"
+msgstr "ISC DHCP"
+
+#: Menu.xml
+msgid "Infrastructure Services"
+msgstr "インフラストラクチャサービス"
+
+#: identityevents.volt
+msgid "Interface"
+msgstr "インターフェース"
+
+#: devices.volt
+msgid "Kea DHCP"
+msgstr "Kea DHCP"
+
+#: infrastructureservices.volt
+msgid "Last Scan"
+msgstr "最終スキャン"
+
+#: infrastructureservices.volt
+msgid "Latest verified or authoritative service changes"
+msgstr "最新の検証済みまたは信頼できるサービス変更"
+
+#: settings.volt
+msgid "Licensing & Compatibility"
+msgstr "ライセンスと互換性"
+
+#: activitytimeline.volt
+msgid "Loading activity..."
+msgstr "アクティビティを読み込み中..."
+
+#: infrastructureservices.volt
+msgid "Loading recent service changes"
+msgstr "最近のサービス変更を読み込み中"
+
+#: scanhistory.volt
+msgid "Loading scan history..."
+msgstr "スキャン履歴を読み込み中..."
+
+#: settings.volt
+msgid "Maximum Nmap scan time per device (10-300 seconds)"
+msgstr "デバイスごとの最大Nmapスキャン時間（10〜300秒）"
+
+#: settings.volt
+msgid "Maximum Scans Per Cycle"
+msgstr "サイクルあたりの最大スキャン数"
+
+#: settings.volt
+msgid "Maximum queued targeted scans processed during one monitoring cycle (1-10)"
+msgstr "1回の監視サイクルで処理されるキュー内ターゲットスキャンの最大数（1〜10）"
+
+#: settings.volt
+msgid "Monitoring"
+msgstr "監視"
+
+#: infrastructureservices.volt
+msgid "Never scanned"
+msgstr "未スキャン"
+
+#: settings.volt
+msgid "New verified service"
+msgstr "新しい検証済みサービス"
+
+#: settings.volt
+msgid "Nmap Scanning"
+msgstr "Nmapスキャン"
+
+#: settings.volt
+msgid "Nmap timing template. T4 is the default."
+msgstr "Nmapタイミングテンプレート。デフォルトはT4です。"
+
+#: settings.volt
+msgid "Number of most common TCP ports to scan (1-1000)"
+msgstr "スキャンする最も一般的なTCPポートの数（1〜1000）"
+
+#: scanhistory.volt
+msgid "Open Ports"
+msgstr "開いているポート"
+
+#: settings.volt
+msgid "Optional detailed scan performed for newly detected devices after notification."
+msgstr "通知後に新しく検出されたデバイスに対して実行されるオプションの詳細スキャン。"
+
+#: settings.volt
+msgid "Original Project"
+msgstr "元のプロジェクト"
+
+#: identityevents.volt
+msgid "Other IP"
+msgstr "その他のIP"
+
+#: identityevents.volt
+msgid "Other MAC"
+msgstr "その他のMAC"
+
+#: identityevents.volt
+msgid "Other interface"
+msgstr "その他のインターフェース"
+
+#: settings.volt
+msgid "Password"
+msgstr "パスワード"
+
+#: infrastructureservices.volt
+msgid "Recent Service Changes"
+msgstr "最近のサービス変更"
+
+#: infrastructureservices.volt
+msgid "Refresh View"
+msgstr "表示を更新"
+
+#: settings.volt
+msgid "Repository"
+msgstr "リポジトリ"
+
+#: identityevents.volt
+msgid "Resolved at"
+msgstr "解決日時"
+
+#: devices.volt
+msgid "Run scan now"
+msgstr "今すぐスキャンを実行"
+
+#: infrastructureservices.volt
+msgid "Save weekly selections"
+msgstr "毎週の選択を保存"
+
+#: scanhistory.volt
+msgid "Scan"
+msgstr "スキャン"
+
+#: devices.volt
+msgid "Scan Status"
+msgstr "スキャン状態"
+
+#: infrastructureservices.volt
+msgid "Search devices"
+msgstr "デバイスを検索"
+
+#: infrastructureservices.volt
+msgid "Search services"
+msgstr "サービスを検索"
+
+#: identityevents.volt
+msgid "Severity"
+msgstr "重大度"
+
+#: infrastructureservices.volt
+msgid "Show archived"
+msgstr "アーカイブを表示"
+
+#: infrastructureservices.volt
+msgid "Stale"
+msgstr "古い"
+
+#: settings.volt
+msgid "Targeted Nmap Scanning"
+msgstr "ターゲットNmapスキャン"
+
+#: settings.volt
+msgid "Timing Template"
+msgstr "タイミングテンプレート"
+
+#: settings.volt
+msgid "Top TCP Ports"
+msgstr "上位TCPポート"
+
+#: infrastructureservices.volt
+msgid "Total"
+msgstr "合計"
+
+#: scanhistory.volt
+msgid "Type"
+msgstr "種類"
+
+#: infrastructureservices.volt
+msgid "Unavailable"
+msgstr "利用不可"
+
+#: settings.volt
+msgid "Unavailable service recovered"
+msgstr "利用不可のサービスが復旧"
+
+#: settings.volt
+msgid "Username"
+msgstr "ユーザー名"
+
+#: settings.volt
+msgid "Uses manually configured AdGuard Home DNS rewrites as a high-confidence hostname source. Enable this only if you use AdGuard Home."
+msgstr "手動設定されたAdGuard Home DNS書き換えを高信頼のホスト名ソースとして使用します。AdGuard Homeを使用している場合のみ有効にしてください。"
+
+#: settings.volt
+msgid "Version Detection"
+msgstr "バージョン検出"
+
+#: infrastructureservices.volt
+msgid "Weekly enabled"
+msgstr "毎週有効"
+
+#: devices.volt
+msgid "identities"
+msgstr "アイデンティティ"
+
+#: devices.volt
+msgid "identity"
+msgstr "アイデンティティ"
+
+# ============================================
+# JS i18n re-sync (hardcoded strings wrapped)
+# ============================================
+
+msgid "Add"
+msgstr "追加"
+
+msgid "Add Identity"
+msgstr "アイデンティティを追加"
+
+msgid "Add this network identity to a device profile"
+msgstr "このネットワークアイデンティティをデバイスプロファイルに追加"
+
+msgid "Add to Profile"
+msgstr "プロファイルに追加"
+
+msgid "Archive Note #"
+msgstr "メモ#をアーカイブ"
+
+msgid "Check online"
+msgstr "オンラインを確認"
+
+msgid "Confidence"
+msgstr "信頼度"
+
+msgid "Create profile"
+msgstr "プロファイルを作成"
+
+msgid "Created"
+msgstr "作成日時"
+
+msgid "Current Identities"
+msgstr "現在のアイデンティティ"
+
+msgid "Date / Time"
+msgstr "日付 / 時刻"
+
+msgid "Detection"
+msgstr "検出"
+
+msgid "Do not add separate devices merely because"
+msgstr "単に同じタイプであるという理由だけで別々のデバイスを追加しないでください"
+
+msgid "Edit note"
+msgstr "メモを編集"
+
+msgid "Endpoint"
+msgstr "エンドポイント"
+
+msgid "Enter a note first"
+msgstr "まずメモを入力してください"
+
+msgid "Enter a profile name"
+msgstr "プロファイル名を入力してください"
+
+msgid "Enter a valid MAC address"
+msgstr "有効なMACアドレスを入力してください"
+
+msgid "Evidence"
+msgstr "証拠"
+
+msgid "Exported"
+msgstr "エクスポート済み"
+
+msgid "History"
+msgstr "履歴"
+
+msgid "Identities"
+msgstr "アイデンティティ"
+
+msgid "Identity added"
+msgstr "アイデンティティを追加しました"
+
+msgid "Identity history will be preserved."
+msgstr "アイデンティティ履歴は保持されます。"
+
+msgid "Identity unlinked"
+msgstr "アイデンティティのリンクを解除しました"
+
+msgid "Infrastructure discovery failed."
+msgstr "インフラストラクチャの検出に失敗しました。"
+
+msgid "Interface / VLAN"
+msgstr "インターフェース / VLAN"
+
+msgid "Last Verified"
+msgstr "最終確認"
+
+msgid "Linked"
+msgstr "リンク済み"
+
+msgid "Marked as reviewed"
+msgstr "確認済みとしてマーク"
+
+msgid "Network identity details and notes"
+msgstr "ネットワークアイデンティティの詳細とメモ"
+
+msgid "Next:"
+msgstr "次:"
+
+msgid "No IP address for this device"
+msgstr "このデバイスにはIPアドレスがありません"
+
+msgid "No active lifecycle"
+msgstr "アクティブなライフサイクルがありません"
+
+msgid "No active lifecycle notes"
+msgstr "アクティブなライフサイクルのメモがありません"
+
+msgid "No activity recorded"
+msgstr "記録されたアクティビティはありません"
+
+msgid "No current identities"
+msgstr "現在のアイデンティティはありません"
+
+msgid "No data to export"
+msgstr "エクスポートするデータがありません"
+
+msgid "No devices found."
+msgstr "デバイスが見つかりません。"
+
+msgid "No devices on the selected monitored interfaces."
+msgstr "選択した監視対象インターフェースにデバイスがありません。"
+
+msgid "No infrastructure services match the current filter."
+msgstr "現在のフィルターに一致するインフラストラクチャサービスはありません。"
+
+msgid "No lifecycle history recorded"
+msgstr "ライフサイクル履歴は記録されていません"
+
+msgid "No meaningful Device Monitor changes were recorded in this period."
+msgstr "この期間に有意なDevice Monitorの変更は記録されませんでした。"
+
+msgid "No notes"
+msgstr "メモはありません"
+
+msgid "No scans match the current filters."
+msgstr "現在のフィルターに一致するスキャンはありません。"
+
+msgid "No verified infrastructure service changes recorded yet."
+msgstr "検証済みのインフラストラクチャサービス変更はまだ記録されていません。"
+
+msgid "Not scanned"
+msgstr "未スキャン"
+
+msgid "Note #"
+msgstr "メモ#"
+
+msgid "Note added"
+msgstr "メモを追加しました"
+
+msgid "Note archived"
+msgstr "メモをアーカイブしました"
+
+msgid "Note cannot be empty"
+msgstr "メモを空にすることはできません"
+
+msgid "Note updated"
+msgstr "メモを更新しました"
+
+msgid "Only continue if this MAC belongs to the same device profile."
+msgstr "このMACが同じデバイスプロファイルに属する場合のみ続行してください。"
+
+msgid "Open Profile"
+msgstr "プロファイルを開く"
+
+msgid "Open this profile"
+msgstr "このプロファイルを開く"
+
+msgid "Pending decision"
+msgstr "決定待ち"
+
+msgid "Ping failed"
+msgstr "疎通確認に失敗しました"
+
+msgid "Port / Protocol"
+msgstr "ポート / プロトコル"
+
+msgid "Previous Identities"
+msgstr "以前のアイデンティティ"
+
+msgid "Product / Version"
+msgstr "製品 / バージョン"
+
+msgid "Profile Name"
+msgstr "プロファイル名"
+
+msgid "Profile Summary"
+msgstr "プロファイル概要"
+
+msgid "Profile created"
+msgstr "プロファイルを作成しました"
+
+msgid "Relink"
+msgstr "再リンク"
+
+msgid "Relink returning device to this lifecycle"
+msgstr "戻ってきたデバイスをこのライフサイクルに再リンク"
+
+msgid "Removed"
+msgstr "削除済み"
+
+msgid "Resolve returning device / lifecycle history"
+msgstr "戻ってきたデバイスの解決 / ライフサイクル履歴"
+
+msgid "Retry"
+msgstr "再試行"
+
+msgid "Run Now"
+msgstr "今すぐ実行"
+
+msgid "Run targeted Nmap scan"
+msgstr "ターゲットNmapスキャンを実行"
+
+msgid "Scan complete"
+msgstr "スキャン完了"
+
+msgid "Scan failed"
+msgstr "スキャン失敗"
+
+msgid "Scan request failed"
+msgstr "スキャンリクエストに失敗しました"
+
+msgid "Start a new lifecycle for returning device"
+msgstr "戻ってきたデバイスの新しいライフサイクルを開始"
+
+msgid "Unable to add identity"
+msgstr "アイデンティティを追加できません"
+
+msgid "Unable to add note"
+msgstr "メモを追加できません"
+
+msgid "Unable to archive note"
+msgstr "メモをアーカイブできません"
+
+msgid "Unable to load Nmap scan history"
+msgstr "Nmapスキャン履歴を読み込めません"
+
+msgid "Unable to load changes"
+msgstr "変更を読み込めません"
+
+msgid "Unable to load infrastructure services."
+msgstr "インフラストラクチャサービスを読み込めません。"
+
+msgid "Unable to load notes"
+msgstr "メモを読み込めません"
+
+msgid "Unable to load port discovery."
+msgstr "ポートディスカバリを読み込めません。"
+
+msgid "Unable to load recent service changes."
+msgstr "最近のサービス変更を読み込めません。"
+
+msgid "Unable to save service."
+msgstr "サービスを保存できません。"
+
+msgid "Unable to update note"
+msgstr "メモを更新できません"
+
+msgid "Unlink"
+msgstr "リンク解除"
+
+msgid "Unlink Identity"
+msgstr "アイデンティティのリンクを解除"
+
+msgid "Unlink this identity from the profile"
+msgstr "このアイデンティティをプロファイルからリンク解除"
+
+msgid "View ("
+msgstr "表示 ("
+
+msgid "View Conflict"
+msgstr "競合を表示"
+
+msgid "View Device"
+msgstr "デバイスを表示"
+
+msgid "View Infrastructure"
+msgstr "インフラストラクチャを表示"
+
+msgid "devices"
+msgstr "デバイス"
+
+msgid "from profile"
+msgstr "プロファイルから"
+
+msgid "of"
+msgstr "の"
+
+msgid "they are the same type, model or vendor."
+msgstr "それらが同じタイプ、モデル、またはベンダーである。"
+
+msgid "to lifecycle #"
+msgstr "ライフサイクル#へ"
+
+msgid "to profile"
+msgstr "プロファイルへ"
+
+msgid "with MAC address"
+msgstr "MACアドレスで"
+
+msgid "Total Devices"
+msgstr "デバイス合計"
+
+msgid "Stopped"
+msgstr "停止中"

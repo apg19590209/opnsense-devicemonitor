@@ -67,6 +67,9 @@ jobs:
               -o "/tmp/devicemonitor-mo/${lang}_devicemonitor.mo"
           done
 
+      - name: Validate translated JavaScript
+        run: python3 tests/test_translated_javascript.py
+
       - name: Validate Device Monitor database migrations
         run: |
           set -eu

@@ -13,7 +13,7 @@ Latest released implementation commit: `96cdd464640af6449afb1aa75c4aa193bc93f2ee
 
 Status:
 
-- Latest committed development implementation: `199be95` on `v2.10-development` (nine major UI translations and v2.10 version bump). Additional view/translation edits remain uncommitted and were preserved during this reconciliation. Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
+- Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below. Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
 - The final v2.9 runtime package was installed and hash-verified on the testbed on 25 September 2026. The checkout has since advanced to v2.10 development; the installed model and Network Identity Details template match `4b2b992` (verified 26 September). Other installed files were not re-audited in that verification.
 - The final v2.9 runtime package is installed and independently verified on production. The `v2.9` release tag remains at the implementation commit; this later documentation commit records deployment acceptance.
@@ -23,6 +23,47 @@ Status:
 - Targeted TCP Port Discovery, service archiving, responsive tables and the Devices refresh focus fix were promoted to production on 25 September 2026 (see below).
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
+
+## 27 September 2026 translated JavaScript correction
+
+Description: complete the pending view/catalogue translation patch and encode
+translated values safely when embedding them in inline JavaScript.
+Benefit: apostrophes, quotation marks, backslashes and line breaks in translations
+no longer break Device Monitor pages, and translated closing script tags cannot
+terminate the surrounding inline script.
+
+- Reproduced the existing Device Profiles, Network Identity Details and Change
+  Summary UI test failures in an isolated snapshot.
+- Replaced direct interpolation inside quoted JavaScript with unquoted Volt
+  `lang._(...)|json_encode(15)` values (JSON_HEX_TAG, JSON_HEX_AMP,
+  JSON_HEX_APOS and JSON_HEX_QUOT). Preserved the existing catalogue changes.
+- Applied the same encoding to all nine views containing inline translations,
+  including pre-existing unsafe interpolation in Settings and IP/MAC Conflicts.
+- Updated structural/behavior UI tests to render translated string values and
+  updated the Change Summary empty-state assertion for the gettext message.
+- Added `tests/test_translated_javascript.py`, its PHP renderer and the shared
+  Node test helper. CI now compiles every catalogue and parses every rendered
+  inline script, including an adversarial translation fixture. On OPNsense the
+  renderer uses the actual Volt compiler; CI without Phalcon uses the same PHP
+  JSON encoder and rejects unencoded translation expressions.
+
+Validation before commit: all existing Node UI tests PASS; the final summary
+and VLAN helper corrections were rerun and PASS. All 11 catalogues PASS
+`msgfmt --check --check-format`; 120 actual Volt-rendered JavaScript blocks
+(10 blocks x 11 locales plus one adversarial fixture) PASS Node parsing.
+The fixture covers both quote styles, backslashes, newlines, Unicode separators,
+non-Latin text and closing script tags. PHP renderer lint and `git diff --check`
+PASS. Remote CI result is tracked against this change's commit.
+
+Changed areas: nine `.volt` views, eleven existing catalogue edits, affected UI
+tests, translation regression helpers, `.github/workflows/ci.yml` and this state
+record. No installed template, live configuration, database or service changed.
+The untracked local optimization rules were not included. Production was not
+accessed; PR #2 (optional locale installer) was not merged by this task.
+
+Remaining validation: rendering/parsing does not constitute visual language QA.
+Next recommended step: deploy the verified candidate to the testbed with rollback
+protection for multilingual browser acceptance before release or PR #2 merge.
 
 ## 27 September 2026 testbed HTTPS and browser verification
 

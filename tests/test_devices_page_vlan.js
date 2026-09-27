@@ -1,3 +1,4 @@
+const {renderTranslations} = require('./render_translations');
 const fs = require('fs');
 const vm = require('vm');
 
@@ -390,7 +391,7 @@ check(scripts && scripts.length > 0, 'Devices page JavaScript block missing');
 
 const javascript = scripts
     .map(function (block) {
-        return block
+        return renderTranslations(block)
             .replace(/^<script>/, '')
             .replace(/<\/script>$/, '')
             .replace(/\{\{[\s\S]*?\}\}/g, 'VOLT');

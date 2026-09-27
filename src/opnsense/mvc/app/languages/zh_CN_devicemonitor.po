@@ -18,11 +18,9 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-
 # ============================================
 # [Menu.xml] Main menu items
 # ============================================
-
 #: Menu.xml - plugin menu name
 msgid "Device Monitor"
 msgstr "设备监控"
@@ -47,11 +45,9 @@ msgstr "关联到一个或多个网络标识的真实设备，例如有线和 Wi
 msgid "Settings"
 msgstr "设置"
 
-
 # ============================================
 # [devices.volt] Devices list page
 # ============================================
-
 #: devices.volt - header stats
 msgid "Total Identities"
 msgstr "标识总数"
@@ -152,12 +148,9 @@ msgstr "友好名称已保存"
 msgid "Error saving friendly name"
 msgstr "保存友好名称时出错"
 
-
 # ============================================
 # [settings.volt] Settings - 4 tabs
 # ============================================
-
-
 #: settings.volt - tab 1 label
 msgid "Email Notifications"
 msgstr "电子邮件通知"
@@ -166,17 +159,9 @@ msgstr "电子邮件通知"
 msgid "Webhook Notifications"
 msgstr "Webhook 通知"
 
-#: settings.volt - tab 3 label
-msgid "Other Settings"
-msgstr "其他设置"
-
 #: settings.volt - tab 4 label
 msgid "About"
 msgstr "关于"
-
-#: settings.volt - tab 1 info text (localized)
-msgid "Configure email notifications for new devices on the network"
-msgstr "为网络上的新设备配置电子邮件通知"
 
 #: settings.volt - tab 2 info text
 msgid "Configure webhook notifications for new devices on the network"
@@ -190,29 +175,9 @@ msgstr "启用电子邮件"
 msgid "Email Recipient"
 msgstr "邮件收件人"
 
-#: settings.volt - tab 1: help text below email recipient field
-msgid "Where to send notifications"
-msgstr "通知发送到哪里"
-
 #: settings.volt - tab 1: email sender label
 msgid "Email Sender"
 msgstr "邮件发件人"
-
-#: settings.volt - tab 1: help text below email sender field
-msgid "From address"
-msgstr "发件地址"
-
-#: settings.volt - tab 1: SMTP warning heading
-msgid "Important - SMTP Configuration"
-msgstr "重要 - SMTP 配置"
-
-#: settings.volt - tab 1: SMTP warning text (with HTML tag)
-msgid "Plugin uses <strong>sendmail (Postfix)</strong> to send emails"
-msgstr "插件使用 <strong>sendmail (Postfix)</strong> 发送电子邮件"
-
-#: settings.volt - tab 1: SMTP warning text (with HTML and path)
-msgid "Must be configured in: <strong>System > Settings > Notifications > SMTP</strong>"
-msgstr "必须在以下位置配置：<strong>系统 > 设置 > 通知 > SMTP</strong>"
 
 #: settings.volt - tab 1: test email button
 msgid "Test Email"
@@ -316,14 +281,6 @@ msgstr "在 Pi-hole Web 界面中生成的 Pi-hole 应用密码"
 msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
 msgstr "用于监控网络设备、检测 IP 和 MAC 地址冲突、发现基础设施服务、执行定向安全扫描，并使用原生 hostwatch 数据发送可配置警报的 OPNsense 插件。"
 
-#: settings.volt - tab 4: info table row
-msgid "Author"
-msgstr "作者"
-
-#: settings.volt - tab 4: info table row
-msgid "GitHub Repository"
-msgstr "GitHub 仓库"
-
 #: settings.volt - v2.10 features heading
 msgid "v2.10 Features and Enhancements"
 msgstr "v2.10 功能与增强"
@@ -360,10 +317,6 @@ msgstr "测试邮件已发送至"
 msgid "Failed to send email"
 msgstr "发送邮件失败"
 
-#: settings.volt - alert: user didn't fill email before test
-msgid "Please enter and save recipient email first"
-msgstr "请先输入并保存收件人电子邮件"
-
 #: settings.volt - alert: user didn't fill webhook URL
 msgid "Enter webhook URL first"
 msgstr "请先输入 Webhook URL"
@@ -380,17 +333,13 @@ msgstr "测试已发送！"
 msgid "Failed"
 msgstr "失败"
 
-#: settings.volt - version subtitle (after plugin name)
-msgid "Using OPNsense hostwatch database"
-msgstr "正在使用 OPNsense hostwatch 数据库"
-
 #: settings.volt - Status column value / general status label
 msgid "Status"
 msgstr "状态"
+
 # ============================================
 # [settings.volt] Email transport
 # ============================================
-
 #: settings.volt - email transport
 msgid "Email delivery method"
 msgstr "邮件投递方式"
@@ -454,7 +403,6 @@ msgstr "请先输入收件人电子邮件"
 # ============================================
 # [scanhistory.volt] Nmap scan history page
 # ============================================
-
 msgid "Nmap Scan History"
 msgstr "Nmap 扫描历史"
 
@@ -469,9 +417,6 @@ msgstr "已开始"
 
 msgid "Finished"
 msgstr "已完成"
-
-msgid "Error"
-msgstr "错误"
 
 msgid "Email sent"
 msgstr "邮件已发送"
@@ -562,11 +507,6 @@ msgstr "显示扫描详情"
 
 msgid "Hide scan details"
 msgstr "隐藏扫描详情"
-msgid "Resolve event"
-msgstr "解决事件"
-
-msgid "Reopen event"
-msgstr "重新打开事件"
 
 msgid "Unable to update IP and MAC conflict"
 msgstr "无法更新 IP 和 MAC 冲突"
@@ -842,20 +782,11 @@ msgstr "在设备行使用“立即运行”来扫描 TCP 端口 1-65535，包�
 msgid "Scans"
 msgstr "扫描"
 
-msgid "Run Now"
-msgstr "立即运行"
-
 msgid "Scan weekly"
 msgstr "每周扫描"
 
 msgid "Scan Time"
 msgstr "扫描时间"
-
-msgid "Scan Time (local time)"
-msgstr "扫描时间（本地时间）"
-
-msgid "Last Scan (local time)"
-msgstr "上次扫描（本地时间）"
 
 msgid "Result"
 msgstr "结果"
@@ -926,12 +857,6 @@ msgstr "关"
 
 msgid "Save alert preferences"
 msgstr "保存警报偏好设置"
-
-msgid "Email delivery is disabled in Settings."
-msgstr "“设置”中已禁用邮件投递。"
-
-msgid "These preferences are saved, but service alert emails will not be sent."
-msgstr "这些偏好设置已保存，但不会发送服务警报邮件。"
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
 msgstr "这些偏好设置已保存，但由于全局电子邮件通知已关闭，此网络标识的服务警报邮件不会被发送。"
@@ -1013,3 +938,639 @@ msgstr "关于通知接口"
 
 msgid "About Webhook Notifications"
 msgstr "关于 Webhook 通知"
+
+
+# ============================================
+# v2.10 catalogue re-sync (new source strings)
+# ============================================
+
+#: activitytimeline.volt
+msgid "Activity"
+msgstr "活动"
+
+#: settings.volt
+msgid "AdGuard DNS Rewrites"
+msgstr "AdGuard DNS 重写"
+
+#: devices.volt
+msgid "AdGuard DNS rewrite"
+msgstr "AdGuard DNS 重写"
+
+#: settings.volt
+msgid "AdGuard URL"
+msgstr "AdGuard URL"
+
+#: settings.volt
+msgid "Alert only on verified or authoritative infrastructure-service evidence."
+msgstr "仅在已验证或权威的基础设施服务证据时发出警报。"
+
+#: infrastructureservices.volt
+msgid "All Services"
+msgstr "所有服务"
+
+#: infrastructureservices.volt
+msgid "All Statuses"
+msgstr "所有状态"
+
+#: infrastructureservices.volt
+msgid "All devices"
+msgstr "所有设备"
+
+#: settings.volt
+msgid "Automatically scan newly detected devices"
+msgstr "自动扫描新检测到的设备"
+
+#: infrastructureservices.volt
+msgid "Available"
+msgstr "可用"
+
+#: settings.volt
+msgid "Creator"
+msgstr "创建者"
+
+#: activitytimeline.volt
+msgid "Date / time"
+msgstr "日期 / 时间"
+
+#: identityevents.volt
+msgid "Details"
+msgstr "详情"
+
+#: settings.volt
+msgid "Detect services and versions using light detection"
+msgstr "使用轻量检测来检测服务和版本"
+
+#: identityevents.volt
+msgid "Detected"
+msgstr "已检测"
+
+#: settings.volt
+msgid "Developer"
+msgstr "开发者"
+
+#: infrastructureservices.volt
+msgid "Discover Now"
+msgstr "立即发现"
+
+#: devices.volt
+msgid "Dnsmasq"
+msgstr "Dnsmasq"
+
+#: scanhistory.volt
+msgid "Email"
+msgstr "电子邮件"
+
+#: settings.volt
+msgid "Email infrastructure service alerts"
+msgstr "基础设施服务邮件警报"
+
+#: settings.volt
+msgid "Enable AdGuard DNS rewrite hostname enrichment"
+msgstr "启用 AdGuard DNS 重写主机名增强"
+
+#: settings.volt
+msgid "Enable Targeted Nmap"
+msgstr "启用定向 Nmap"
+
+#: settings.volt
+msgid "Established service unavailable"
+msgstr "已建立的服务不可用"
+
+#: identityevents.volt
+msgid "Event Type"
+msgstr "事件类型"
+
+#: devices.volt
+msgid "Export to CSV"
+msgstr "导出为 CSV"
+
+#: settings.volt
+msgid "Generic service-changed events remain history-only in this version."
+msgstr "通用的服务变更事件在此版本中仅保留在历史记录中。"
+
+#: settings.volt
+msgid "HTTPS base URL of your AdGuard Home server"
+msgstr "AdGuard Home 服务器的 HTTPS 基础 URL"
+
+#: settings.volt
+msgid "Host Timeout"
+msgstr "主机超时"
+
+#: devices.volt
+msgid "Hostwatch"
+msgstr "Hostwatch"
+
+#: devices.volt
+msgid "ISC DHCP"
+msgstr "ISC DHCP"
+
+#: Menu.xml
+msgid "Infrastructure Services"
+msgstr "基础设施服务"
+
+#: identityevents.volt
+msgid "Interface"
+msgstr "接口"
+
+#: devices.volt
+msgid "Kea DHCP"
+msgstr "Kea DHCP"
+
+#: infrastructureservices.volt
+msgid "Last Scan"
+msgstr "上次扫描"
+
+#: infrastructureservices.volt
+msgid "Latest verified or authoritative service changes"
+msgstr "最新已验证或权威的服务变更"
+
+#: settings.volt
+msgid "Licensing & Compatibility"
+msgstr "许可与兼容性"
+
+#: activitytimeline.volt
+msgid "Loading activity..."
+msgstr "正在加载活动..."
+
+#: infrastructureservices.volt
+msgid "Loading recent service changes"
+msgstr "正在加载最近的服务变更"
+
+#: scanhistory.volt
+msgid "Loading scan history..."
+msgstr "正在加载扫描历史..."
+
+#: settings.volt
+msgid "Maximum Nmap scan time per device (10-300 seconds)"
+msgstr "每台设备的最大 Nmap 扫描时间（10-300 秒）"
+
+#: settings.volt
+msgid "Maximum Scans Per Cycle"
+msgstr "每个周期最大扫描次数"
+
+#: settings.volt
+msgid "Maximum queued targeted scans processed during one monitoring cycle (1-10)"
+msgstr "一个监控周期内处理的最大排队定向扫描次数（1-10）"
+
+#: settings.volt
+msgid "Monitoring"
+msgstr "监控"
+
+#: infrastructureservices.volt
+msgid "Never scanned"
+msgstr "从未扫描"
+
+#: settings.volt
+msgid "New verified service"
+msgstr "新的已验证服务"
+
+#: settings.volt
+msgid "Nmap Scanning"
+msgstr "Nmap 扫描"
+
+#: settings.volt
+msgid "Nmap timing template. T4 is the default."
+msgstr "Nmap 时序模板。默认为 T4。"
+
+#: settings.volt
+msgid "Number of most common TCP ports to scan (1-1000)"
+msgstr "要扫描的最常见 TCP 端口数量（1-1000）"
+
+#: scanhistory.volt
+msgid "Open Ports"
+msgstr "开放端口"
+
+#: settings.volt
+msgid "Optional detailed scan performed for newly detected devices after notification."
+msgstr "通知后对新检测到的设备执行的可选详细扫描。"
+
+#: settings.volt
+msgid "Original Project"
+msgstr "原始项目"
+
+#: identityevents.volt
+msgid "Other IP"
+msgstr "其他 IP"
+
+#: identityevents.volt
+msgid "Other MAC"
+msgstr "其他 MAC"
+
+#: identityevents.volt
+msgid "Other interface"
+msgstr "其他接口"
+
+#: settings.volt
+msgid "Password"
+msgstr "密码"
+
+#: infrastructureservices.volt
+msgid "Recent Service Changes"
+msgstr "最近的服务变更"
+
+#: infrastructureservices.volt
+msgid "Refresh View"
+msgstr "刷新视图"
+
+#: settings.volt
+msgid "Repository"
+msgstr "仓库"
+
+#: identityevents.volt
+msgid "Resolved at"
+msgstr "解决于"
+
+#: devices.volt
+msgid "Run scan now"
+msgstr "立即运行扫描"
+
+#: infrastructureservices.volt
+msgid "Save weekly selections"
+msgstr "保存每周选择"
+
+#: scanhistory.volt
+msgid "Scan"
+msgstr "扫描"
+
+#: devices.volt
+msgid "Scan Status"
+msgstr "扫描状态"
+
+#: infrastructureservices.volt
+msgid "Search devices"
+msgstr "搜索设备"
+
+#: infrastructureservices.volt
+msgid "Search services"
+msgstr "搜索服务"
+
+#: identityevents.volt
+msgid "Severity"
+msgstr "严重性"
+
+#: infrastructureservices.volt
+msgid "Show archived"
+msgstr "显示已归档"
+
+#: infrastructureservices.volt
+msgid "Stale"
+msgstr "过期"
+
+#: settings.volt
+msgid "Targeted Nmap Scanning"
+msgstr "定向 Nmap 扫描"
+
+#: settings.volt
+msgid "Timing Template"
+msgstr "时序模板"
+
+#: settings.volt
+msgid "Top TCP Ports"
+msgstr "常用 TCP 端口"
+
+#: infrastructureservices.volt
+msgid "Total"
+msgstr "总计"
+
+#: scanhistory.volt
+msgid "Type"
+msgstr "类型"
+
+#: infrastructureservices.volt
+msgid "Unavailable"
+msgstr "不可用"
+
+#: settings.volt
+msgid "Unavailable service recovered"
+msgstr "不可用的服务已恢复"
+
+#: settings.volt
+msgid "Username"
+msgstr "用户名"
+
+#: settings.volt
+msgid "Uses manually configured AdGuard Home DNS rewrites as a high-confidence hostname source. Enable this only if you use AdGuard Home."
+msgstr "使用手动配置的 AdGuard Home DNS 重写作为高置信度主机名来源。仅在使用 AdGuard Home 时启用。"
+
+#: settings.volt
+msgid "Version Detection"
+msgstr "版本检测"
+
+#: infrastructureservices.volt
+msgid "Weekly enabled"
+msgstr "每周已启用"
+
+#: devices.volt
+msgid "identities"
+msgstr "身份"
+
+#: devices.volt
+msgid "identity"
+msgstr "身份"
+
+# ============================================
+# JS i18n re-sync (hardcoded strings wrapped)
+# ============================================
+
+msgid "Add"
+msgstr "添加"
+
+msgid "Add Identity"
+msgstr "添加身份"
+
+msgid "Add this network identity to a device profile"
+msgstr "将此网络身份添加到设备配置文件"
+
+msgid "Add to Profile"
+msgstr "添加到配置文件"
+
+msgid "Archive Note #"
+msgstr "归档笔记 #"
+
+msgid "Check online"
+msgstr "检查在线"
+
+msgid "Confidence"
+msgstr "置信度"
+
+msgid "Create profile"
+msgstr "创建配置文件"
+
+msgid "Created"
+msgstr "创建时间"
+
+msgid "Current Identities"
+msgstr "当前身份"
+
+msgid "Date / Time"
+msgstr "日期 / 时间"
+
+msgid "Detection"
+msgstr "检测"
+
+msgid "Do not add separate devices merely because"
+msgstr "不要仅仅因为它们是相同类型就添加单独的设备"
+
+msgid "Edit note"
+msgstr "编辑笔记"
+
+msgid "Endpoint"
+msgstr "端点"
+
+msgid "Enter a note first"
+msgstr "请先输入笔记"
+
+msgid "Enter a profile name"
+msgstr "请输入配置文件名称"
+
+msgid "Enter a valid MAC address"
+msgstr "请输入有效的 MAC 地址"
+
+msgid "Evidence"
+msgstr "证据"
+
+msgid "Exported"
+msgstr "已导出"
+
+msgid "History"
+msgstr "历史"
+
+msgid "Identities"
+msgstr "身份"
+
+msgid "Identity added"
+msgstr "已添加身份"
+
+msgid "Identity history will be preserved."
+msgstr "身份历史将被保留。"
+
+msgid "Identity unlinked"
+msgstr "已解除关联身份"
+
+msgid "Infrastructure discovery failed."
+msgstr "基础设施发现失败。"
+
+msgid "Interface / VLAN"
+msgstr "接口 / VLAN"
+
+msgid "Last Verified"
+msgstr "上次验证"
+
+msgid "Linked"
+msgstr "已关联"
+
+msgid "Marked as reviewed"
+msgstr "已标记为已审阅"
+
+msgid "Network identity details and notes"
+msgstr "网络身份详情和笔记"
+
+msgid "Next:"
+msgstr "下一个："
+
+msgid "No IP address for this device"
+msgstr "此设备没有 IP 地址"
+
+msgid "No active lifecycle"
+msgstr "无活动生命周期"
+
+msgid "No active lifecycle notes"
+msgstr "无活动生命周期笔记"
+
+msgid "No activity recorded"
+msgstr "未记录任何活动"
+
+msgid "No current identities"
+msgstr "无当前身份"
+
+msgid "No data to export"
+msgstr "没有可导出的数据"
+
+msgid "No devices found."
+msgstr "未找到设备。"
+
+msgid "No devices on the selected monitored interfaces."
+msgstr "所选监控接口上没有设备。"
+
+msgid "No infrastructure services match the current filter."
+msgstr "没有符合当前过滤条件的基础设施服务。"
+
+msgid "No lifecycle history recorded"
+msgstr "未记录生命周期历史"
+
+msgid "No meaningful Device Monitor changes were recorded in this period."
+msgstr "此期间未记录有意义的 Device Monitor 变更。"
+
+msgid "No notes"
+msgstr "无笔记"
+
+msgid "No scans match the current filters."
+msgstr "没有符合当前过滤条件的扫描。"
+
+msgid "No verified infrastructure service changes recorded yet."
+msgstr "尚未记录已验证的基础设施服务变更。"
+
+msgid "Not scanned"
+msgstr "未扫描"
+
+msgid "Note #"
+msgstr "笔记 #"
+
+msgid "Note added"
+msgstr "已添加笔记"
+
+msgid "Note archived"
+msgstr "已归档笔记"
+
+msgid "Note cannot be empty"
+msgstr "笔记不能为空"
+
+msgid "Note updated"
+msgstr "笔记已更新"
+
+msgid "Only continue if this MAC belongs to the same device profile."
+msgstr "仅当此 MAC 属于同一设备配置文件时才继续。"
+
+msgid "Open Profile"
+msgstr "打开配置文件"
+
+msgid "Open this profile"
+msgstr "打开此配置文件"
+
+msgid "Pending decision"
+msgstr "待决定"
+
+msgid "Ping failed"
+msgstr "Ping 失败"
+
+msgid "Port / Protocol"
+msgstr "端口 / 协议"
+
+msgid "Previous Identities"
+msgstr "先前身份"
+
+msgid "Product / Version"
+msgstr "产品 / 版本"
+
+msgid "Profile Name"
+msgstr "配置文件名称"
+
+msgid "Profile Summary"
+msgstr "配置文件摘要"
+
+msgid "Profile created"
+msgstr "已创建配置文件"
+
+msgid "Relink"
+msgstr "重新关联"
+
+msgid "Relink returning device to this lifecycle"
+msgstr "将返回的设备重新关联到此生命周期"
+
+msgid "Removed"
+msgstr "已移除"
+
+msgid "Resolve returning device / lifecycle history"
+msgstr "处理返回的设备 / 生命周期历史"
+
+msgid "Retry"
+msgstr "重试"
+
+msgid "Run Now"
+msgstr "立即运行"
+
+msgid "Run targeted Nmap scan"
+msgstr "运行定向 Nmap 扫描"
+
+msgid "Scan complete"
+msgstr "扫描完成"
+
+msgid "Scan failed"
+msgstr "扫描失败"
+
+msgid "Scan request failed"
+msgstr "扫描请求失败"
+
+msgid "Start a new lifecycle for returning device"
+msgstr "为返回的设备启动新的生命周期"
+
+msgid "Unable to add identity"
+msgstr "无法添加身份"
+
+msgid "Unable to add note"
+msgstr "无法添加笔记"
+
+msgid "Unable to archive note"
+msgstr "无法归档笔记"
+
+msgid "Unable to load Nmap scan history"
+msgstr "无法加载 Nmap 扫描历史"
+
+msgid "Unable to load changes"
+msgstr "无法加载变更"
+
+msgid "Unable to load infrastructure services."
+msgstr "无法加载基础设施服务。"
+
+msgid "Unable to load notes"
+msgstr "无法加载笔记"
+
+msgid "Unable to load port discovery."
+msgstr "无法加载端口发现。"
+
+msgid "Unable to load recent service changes."
+msgstr "无法加载最近的服务变更。"
+
+msgid "Unable to save service."
+msgstr "无法保存服务。"
+
+msgid "Unable to update note"
+msgstr "无法更新笔记"
+
+msgid "Unlink"
+msgstr "解除关联"
+
+msgid "Unlink Identity"
+msgstr "解除关联身份"
+
+msgid "Unlink this identity from the profile"
+msgstr "将此身份从配置文件解除关联"
+
+msgid "View ("
+msgstr "查看 ("
+
+msgid "View Conflict"
+msgstr "查看冲突"
+
+msgid "View Device"
+msgstr "查看设备"
+
+msgid "View Infrastructure"
+msgstr "查看基础设施"
+
+msgid "devices"
+msgstr "设备"
+
+msgid "from profile"
+msgstr "从配置文件"
+
+msgid "of"
+msgstr "的"
+
+msgid "they are the same type, model or vendor."
+msgstr "它们是相同类型、型号或厂商。"
+
+msgid "to lifecycle #"
+msgstr "到生命周期 #"
+
+msgid "to profile"
+msgstr "到配置文件"
+
+msgid "with MAC address"
+msgstr "使用 MAC 地址"
+
+msgid "Total Devices"
+msgstr "设备总数"
+
+msgid "Stopped"
+msgstr "已停止"

@@ -18,11 +18,9 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-
 # ============================================
 # [Menu.xml] Main menu items
 # ============================================
-
 #: Menu.xml - plugin menu name
 msgid "Device Monitor"
 msgstr "Monitoramento de dispositivos"
@@ -47,11 +45,9 @@ msgstr "Dispositivos reais vinculados a uma ou mais identidades de rede, como ad
 msgid "Settings"
 msgstr "Configurações"
 
-
 # ============================================
 # [devices.volt] Devices list page
 # ============================================
-
 #: devices.volt - header stats
 msgid "Total Identities"
 msgstr "Total de identidades"
@@ -152,12 +148,9 @@ msgstr "Nome amigável salvo"
 msgid "Error saving friendly name"
 msgstr "Erro ao salvar o nome amigável"
 
-
 # ============================================
 # [settings.volt] Settings - 4 tabs
 # ============================================
-
-
 #: settings.volt - tab 1 label
 msgid "Email Notifications"
 msgstr "Notificações por e-mail"
@@ -166,17 +159,9 @@ msgstr "Notificações por e-mail"
 msgid "Webhook Notifications"
 msgstr "Notificações por webhook"
 
-#: settings.volt - tab 3 label
-msgid "Other Settings"
-msgstr "Outras configurações"
-
 #: settings.volt - tab 4 label
 msgid "About"
 msgstr "Sobre"
-
-#: settings.volt - tab 1 info text (localized)
-msgid "Configure email notifications for new devices on the network"
-msgstr "Configurar notificações por e-mail para novos dispositivos na rede"
 
 #: settings.volt - tab 2 info text
 msgid "Configure webhook notifications for new devices on the network"
@@ -190,29 +175,9 @@ msgstr "Ativar e-mail"
 msgid "Email Recipient"
 msgstr "Destinatário do e-mail"
 
-#: settings.volt - tab 1: help text below email recipient field
-msgid "Where to send notifications"
-msgstr "Para onde enviar as notificações"
-
 #: settings.volt - tab 1: email sender label
 msgid "Email Sender"
 msgstr "Remetente do e-mail"
-
-#: settings.volt - tab 1: help text below email sender field
-msgid "From address"
-msgstr "Endereço de origem"
-
-#: settings.volt - tab 1: SMTP warning heading
-msgid "Important - SMTP Configuration"
-msgstr "Importante - Configuração SMTP"
-
-#: settings.volt - tab 1: SMTP warning text (with HTML tag)
-msgid "Plugin uses <strong>sendmail (Postfix)</strong> to send emails"
-msgstr "O plugin usa <strong>sendmail (Postfix)</strong> para enviar e-mails"
-
-#: settings.volt - tab 1: SMTP warning text (with HTML and path)
-msgid "Must be configured in: <strong>System > Settings > Notifications > SMTP</strong>"
-msgstr "Deve ser configurado em: <strong>Sistema > Configurações > Notificações > SMTP</strong>"
 
 #: settings.volt - tab 1: test email button
 msgid "Test Email"
@@ -316,14 +281,6 @@ msgstr "Senha de aplicativo do Pi-hole gerada na interface web do Pi-hole"
 msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
 msgstr "Plugin OPNsense para monitorar dispositivos de rede, detectar conflitos de endereços IP e MAC, descobrir serviços de infraestrutura, realizar varreduras de segurança direcionadas e enviar alertas configuráveis usando dados nativos do hostwatch."
 
-#: settings.volt - tab 4: info table row
-msgid "Author"
-msgstr "Autor"
-
-#: settings.volt - tab 4: info table row
-msgid "GitHub Repository"
-msgstr "Repositório GitHub"
-
 #: settings.volt - v2.10 features heading
 msgid "v2.10 Features and Enhancements"
 msgstr "Recursos e melhorias da v2.10"
@@ -360,10 +317,6 @@ msgstr "E-mail de teste enviado para"
 msgid "Failed to send email"
 msgstr "Falha ao enviar o e-mail"
 
-#: settings.volt - alert: user didn't fill email before test
-msgid "Please enter and save recipient email first"
-msgstr "Primeiro insira e salve o e-mail do destinatário"
-
 #: settings.volt - alert: user didn't fill webhook URL
 msgid "Enter webhook URL first"
 msgstr "Primeiro insira a URL do webhook"
@@ -380,17 +333,13 @@ msgstr "Teste enviado!"
 msgid "Failed"
 msgstr "Falha"
 
-#: settings.volt - version subtitle (after plugin name)
-msgid "Using OPNsense hostwatch database"
-msgstr "Usando o banco de dados hostwatch do OPNsense"
-
 #: settings.volt - Status column value / general status label
 msgid "Status"
 msgstr "Status"
+
 # ============================================
 # [settings.volt] Email transport
 # ============================================
-
 #: settings.volt - email transport
 msgid "Email delivery method"
 msgstr "Método de entrega de e-mail"
@@ -454,7 +403,6 @@ msgstr "Primeiro insira o e-mail do destinatário"
 # ============================================
 # [scanhistory.volt] Nmap scan history page
 # ============================================
-
 msgid "Nmap Scan History"
 msgstr "Histórico de varreduras Nmap"
 
@@ -469,9 +417,6 @@ msgstr "Iniciado"
 
 msgid "Finished"
 msgstr "Concluído"
-
-msgid "Error"
-msgstr "Erro"
 
 msgid "Email sent"
 msgstr "E-mail enviado"
@@ -562,11 +507,6 @@ msgstr "Mostrar detalhes da varredura"
 
 msgid "Hide scan details"
 msgstr "Ocultar detalhes da varredura"
-msgid "Resolve event"
-msgstr "Resolver evento"
-
-msgid "Reopen event"
-msgstr "Reabrir evento"
 
 msgid "Unable to update IP and MAC conflict"
 msgstr "Não foi possível atualizar o conflito de IP e MAC"
@@ -842,20 +782,11 @@ msgstr "Use «Executar agora» em uma linha de dispositivo para verificar as por
 msgid "Scans"
 msgstr "Varreduras"
 
-msgid "Run Now"
-msgstr "Executar agora"
-
 msgid "Scan weekly"
 msgstr "Verificar semanalmente"
 
 msgid "Scan Time"
 msgstr "Hora da varredura"
-
-msgid "Scan Time (local time)"
-msgstr "Hora da varredura (hora local)"
-
-msgid "Last Scan (local time)"
-msgstr "Última varredura (hora local)"
 
 msgid "Result"
 msgstr "Resultado"
@@ -926,12 +857,6 @@ msgstr "Desativado"
 
 msgid "Save alert preferences"
 msgstr "Salvar preferências de alerta"
-
-msgid "Email delivery is disabled in Settings."
-msgstr "A entrega de e-mail está desabilitada nas Configurações."
-
-msgid "These preferences are saved, but service alert emails will not be sent."
-msgstr "Estas preferências são salvas, mas os e-mails de alerta de serviço não serão enviados."
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
 msgstr "Estas preferências são salvas, mas os e-mails de alerta de serviço desta identidade de rede não serão enviados porque as notificações globais por e-mail estão desativadas."
@@ -1013,3 +938,639 @@ msgstr "Sobre interfaces de notificação"
 
 msgid "About Webhook Notifications"
 msgstr "Sobre notificações por webhook"
+
+
+# ============================================
+# v2.10 catalogue re-sync (new source strings)
+# ============================================
+
+#: activitytimeline.volt
+msgid "Activity"
+msgstr "Atividade"
+
+#: settings.volt
+msgid "AdGuard DNS Rewrites"
+msgstr "Reescritas DNS do AdGuard"
+
+#: devices.volt
+msgid "AdGuard DNS rewrite"
+msgstr "Reescrita DNS do AdGuard"
+
+#: settings.volt
+msgid "AdGuard URL"
+msgstr "URL do AdGuard"
+
+#: settings.volt
+msgid "Alert only on verified or authoritative infrastructure-service evidence."
+msgstr "Alertar somente com evidências verificadas ou autoritativas de serviços de infraestrutura."
+
+#: infrastructureservices.volt
+msgid "All Services"
+msgstr "Todos os serviços"
+
+#: infrastructureservices.volt
+msgid "All Statuses"
+msgstr "Todos os status"
+
+#: infrastructureservices.volt
+msgid "All devices"
+msgstr "Todos os dispositivos"
+
+#: settings.volt
+msgid "Automatically scan newly detected devices"
+msgstr "Verificar automaticamente dispositivos recém-detectados"
+
+#: infrastructureservices.volt
+msgid "Available"
+msgstr "Disponível"
+
+#: settings.volt
+msgid "Creator"
+msgstr "Criador"
+
+#: activitytimeline.volt
+msgid "Date / time"
+msgstr "Data / hora"
+
+#: identityevents.volt
+msgid "Details"
+msgstr "Detalhes"
+
+#: settings.volt
+msgid "Detect services and versions using light detection"
+msgstr "Detectar serviços e versões usando detecção leve"
+
+#: identityevents.volt
+msgid "Detected"
+msgstr "Detectado"
+
+#: settings.volt
+msgid "Developer"
+msgstr "Desenvolvedor"
+
+#: infrastructureservices.volt
+msgid "Discover Now"
+msgstr "Descobrir agora"
+
+#: devices.volt
+msgid "Dnsmasq"
+msgstr "Dnsmasq"
+
+#: scanhistory.volt
+msgid "Email"
+msgstr "E-mail"
+
+#: settings.volt
+msgid "Email infrastructure service alerts"
+msgstr "Alertas de e-mail de serviços de infraestrutura"
+
+#: settings.volt
+msgid "Enable AdGuard DNS rewrite hostname enrichment"
+msgstr "Ativar enriquecimento de nomes de host por reescritas DNS do AdGuard"
+
+#: settings.volt
+msgid "Enable Targeted Nmap"
+msgstr "Ativar Nmap direcionado"
+
+#: settings.volt
+msgid "Established service unavailable"
+msgstr "Serviço estabelecido indisponível"
+
+#: identityevents.volt
+msgid "Event Type"
+msgstr "Tipo de evento"
+
+#: devices.volt
+msgid "Export to CSV"
+msgstr "Exportar para CSV"
+
+#: settings.volt
+msgid "Generic service-changed events remain history-only in this version."
+msgstr "Eventos genéricos de alteração de serviço permanecem apenas no histórico nesta versão."
+
+#: settings.volt
+msgid "HTTPS base URL of your AdGuard Home server"
+msgstr "URL base HTTPS do seu servidor AdGuard Home"
+
+#: settings.volt
+msgid "Host Timeout"
+msgstr "Tempo limite do host"
+
+#: devices.volt
+msgid "Hostwatch"
+msgstr "Hostwatch"
+
+#: devices.volt
+msgid "ISC DHCP"
+msgstr "ISC DHCP"
+
+#: Menu.xml
+msgid "Infrastructure Services"
+msgstr "Serviços de infraestrutura"
+
+#: identityevents.volt
+msgid "Interface"
+msgstr "Interface"
+
+#: devices.volt
+msgid "Kea DHCP"
+msgstr "Kea DHCP"
+
+#: infrastructureservices.volt
+msgid "Last Scan"
+msgstr "Última verificação"
+
+#: infrastructureservices.volt
+msgid "Latest verified or authoritative service changes"
+msgstr "Últimas alterações de serviço verificadas ou autoritativas"
+
+#: settings.volt
+msgid "Licensing & Compatibility"
+msgstr "Licenciamento e compatibilidade"
+
+#: activitytimeline.volt
+msgid "Loading activity..."
+msgstr "Carregando atividade..."
+
+#: infrastructureservices.volt
+msgid "Loading recent service changes"
+msgstr "Carregando alterações recentes de serviço"
+
+#: scanhistory.volt
+msgid "Loading scan history..."
+msgstr "Carregando histórico de verificações..."
+
+#: settings.volt
+msgid "Maximum Nmap scan time per device (10-300 seconds)"
+msgstr "Tempo máximo de verificação Nmap por dispositivo (10-300 segundos)"
+
+#: settings.volt
+msgid "Maximum Scans Per Cycle"
+msgstr "Verificações máximas por ciclo"
+
+#: settings.volt
+msgid "Maximum queued targeted scans processed during one monitoring cycle (1-10)"
+msgstr "Máximo de verificações direcionadas em fila processadas durante um ciclo de monitoramento (1-10)"
+
+#: settings.volt
+msgid "Monitoring"
+msgstr "Monitoramento"
+
+#: infrastructureservices.volt
+msgid "Never scanned"
+msgstr "Nunca verificado"
+
+#: settings.volt
+msgid "New verified service"
+msgstr "Novo serviço verificado"
+
+#: settings.volt
+msgid "Nmap Scanning"
+msgstr "Verificação Nmap"
+
+#: settings.volt
+msgid "Nmap timing template. T4 is the default."
+msgstr "Modelo de temporização do Nmap. T4 é o padrão."
+
+#: settings.volt
+msgid "Number of most common TCP ports to scan (1-1000)"
+msgstr "Número de portas TCP mais comuns a verificar (1-1000)"
+
+#: scanhistory.volt
+msgid "Open Ports"
+msgstr "Portas abertas"
+
+#: settings.volt
+msgid "Optional detailed scan performed for newly detected devices after notification."
+msgstr "Verificação detalhada opcional realizada para dispositivos recém-detectados após a notificação."
+
+#: settings.volt
+msgid "Original Project"
+msgstr "Projeto original"
+
+#: identityevents.volt
+msgid "Other IP"
+msgstr "Outro IP"
+
+#: identityevents.volt
+msgid "Other MAC"
+msgstr "Outro MAC"
+
+#: identityevents.volt
+msgid "Other interface"
+msgstr "Outra interface"
+
+#: settings.volt
+msgid "Password"
+msgstr "Senha"
+
+#: infrastructureservices.volt
+msgid "Recent Service Changes"
+msgstr "Alterações recentes de serviço"
+
+#: infrastructureservices.volt
+msgid "Refresh View"
+msgstr "Atualizar visualização"
+
+#: settings.volt
+msgid "Repository"
+msgstr "Repositório"
+
+#: identityevents.volt
+msgid "Resolved at"
+msgstr "Resolvido em"
+
+#: devices.volt
+msgid "Run scan now"
+msgstr "Executar verificação agora"
+
+#: infrastructureservices.volt
+msgid "Save weekly selections"
+msgstr "Salvar seleções semanais"
+
+#: scanhistory.volt
+msgid "Scan"
+msgstr "Verificação"
+
+#: devices.volt
+msgid "Scan Status"
+msgstr "Status da verificação"
+
+#: infrastructureservices.volt
+msgid "Search devices"
+msgstr "Pesquisar dispositivos"
+
+#: infrastructureservices.volt
+msgid "Search services"
+msgstr "Pesquisar serviços"
+
+#: identityevents.volt
+msgid "Severity"
+msgstr "Gravidade"
+
+#: infrastructureservices.volt
+msgid "Show archived"
+msgstr "Mostrar arquivados"
+
+#: infrastructureservices.volt
+msgid "Stale"
+msgstr "Obsoleto"
+
+#: settings.volt
+msgid "Targeted Nmap Scanning"
+msgstr "Verificação Nmap direcionada"
+
+#: settings.volt
+msgid "Timing Template"
+msgstr "Modelo de temporização"
+
+#: settings.volt
+msgid "Top TCP Ports"
+msgstr "Principais portas TCP"
+
+#: infrastructureservices.volt
+msgid "Total"
+msgstr "Total"
+
+#: scanhistory.volt
+msgid "Type"
+msgstr "Tipo"
+
+#: infrastructureservices.volt
+msgid "Unavailable"
+msgstr "Indisponível"
+
+#: settings.volt
+msgid "Unavailable service recovered"
+msgstr "Serviço indisponível recuperado"
+
+#: settings.volt
+msgid "Username"
+msgstr "Nome de usuário"
+
+#: settings.volt
+msgid "Uses manually configured AdGuard Home DNS rewrites as a high-confidence hostname source. Enable this only if you use AdGuard Home."
+msgstr "Usa as reescritas DNS do AdGuard Home configuradas manualmente como fonte de nomes de host de alta confiança. Ative somente se você usar o AdGuard Home."
+
+#: settings.volt
+msgid "Version Detection"
+msgstr "Detecção de versão"
+
+#: infrastructureservices.volt
+msgid "Weekly enabled"
+msgstr "Semanal ativado"
+
+#: devices.volt
+msgid "identities"
+msgstr "identidades"
+
+#: devices.volt
+msgid "identity"
+msgstr "identidade"
+
+# ============================================
+# JS i18n re-sync (hardcoded strings wrapped)
+# ============================================
+
+msgid "Add"
+msgstr "Adicionar"
+
+msgid "Add Identity"
+msgstr "Adicionar identidade"
+
+msgid "Add this network identity to a device profile"
+msgstr "Adicionar esta identidade de rede a um perfil de dispositivo"
+
+msgid "Add to Profile"
+msgstr "Adicionar ao perfil"
+
+msgid "Archive Note #"
+msgstr "Arquivar nota n.º"
+
+msgid "Check online"
+msgstr "Verificar online"
+
+msgid "Confidence"
+msgstr "Confiança"
+
+msgid "Create profile"
+msgstr "Criar perfil"
+
+msgid "Created"
+msgstr "Criado"
+
+msgid "Current Identities"
+msgstr "Identidades atuais"
+
+msgid "Date / Time"
+msgstr "Data / hora"
+
+msgid "Detection"
+msgstr "Detecção"
+
+msgid "Do not add separate devices merely because"
+msgstr "Não adicione dispositivos separados apenas porque"
+
+msgid "Edit note"
+msgstr "Editar nota"
+
+msgid "Endpoint"
+msgstr "Endpoint"
+
+msgid "Enter a note first"
+msgstr "Insira primeiro uma nota"
+
+msgid "Enter a profile name"
+msgstr "Insira um nome de perfil"
+
+msgid "Enter a valid MAC address"
+msgstr "Insira um endereço MAC válido"
+
+msgid "Evidence"
+msgstr "Evidência"
+
+msgid "Exported"
+msgstr "Exportado"
+
+msgid "History"
+msgstr "Histórico"
+
+msgid "Identities"
+msgstr "Identidades"
+
+msgid "Identity added"
+msgstr "Identidade adicionada"
+
+msgid "Identity history will be preserved."
+msgstr "O histórico de identidades será preservado."
+
+msgid "Identity unlinked"
+msgstr "Identidade desvinculada"
+
+msgid "Infrastructure discovery failed."
+msgstr "Falha na descoberta de infraestrutura."
+
+msgid "Interface / VLAN"
+msgstr "Interface / VLAN"
+
+msgid "Last Verified"
+msgstr "Última verificação"
+
+msgid "Linked"
+msgstr "Vinculado"
+
+msgid "Marked as reviewed"
+msgstr "Marcado como revisado"
+
+msgid "Network identity details and notes"
+msgstr "Detalhes e notas da identidade de rede"
+
+msgid "Next:"
+msgstr "Próximo:"
+
+msgid "No IP address for this device"
+msgstr "Nenhum endereço IP para este dispositivo"
+
+msgid "No active lifecycle"
+msgstr "Nenhum ciclo de vida ativo"
+
+msgid "No active lifecycle notes"
+msgstr "Nenhuma nota do ciclo de vida ativo"
+
+msgid "No activity recorded"
+msgstr "Nenhuma atividade registrada"
+
+msgid "No current identities"
+msgstr "Nenhuma identidade atual"
+
+msgid "No data to export"
+msgstr "Nenhum dado para exportar"
+
+msgid "No devices found."
+msgstr "Nenhum dispositivo encontrado."
+
+msgid "No devices on the selected monitored interfaces."
+msgstr "Nenhum dispositivo nas interfaces monitoradas selecionadas."
+
+msgid "No infrastructure services match the current filter."
+msgstr "Nenhum serviço de infraestrutura corresponde ao filtro atual."
+
+msgid "No lifecycle history recorded"
+msgstr "Nenhum histórico de ciclo de vida registrado"
+
+msgid "No meaningful Device Monitor changes were recorded in this period."
+msgstr "Nenhuma alteração significativa do Device Monitor foi registrada neste período."
+
+msgid "No notes"
+msgstr "Sem notas"
+
+msgid "No scans match the current filters."
+msgstr "Nenhuma verificação corresponde aos filtros atuais."
+
+msgid "No verified infrastructure service changes recorded yet."
+msgstr "Nenhuma alteração verificada de serviço de infraestrutura registrada ainda."
+
+msgid "Not scanned"
+msgstr "Não verificado"
+
+msgid "Note #"
+msgstr "Nota n.º"
+
+msgid "Note added"
+msgstr "Nota adicionada"
+
+msgid "Note archived"
+msgstr "Nota arquivada"
+
+msgid "Note cannot be empty"
+msgstr "A nota não pode estar vazia"
+
+msgid "Note updated"
+msgstr "Nota atualizada"
+
+msgid "Only continue if this MAC belongs to the same device profile."
+msgstr "Continue apenas se este MAC pertencer ao mesmo perfil de dispositivo."
+
+msgid "Open Profile"
+msgstr "Abrir perfil"
+
+msgid "Open this profile"
+msgstr "Abrir este perfil"
+
+msgid "Pending decision"
+msgstr "Decisão pendente"
+
+msgid "Ping failed"
+msgstr "Falha no ping"
+
+msgid "Port / Protocol"
+msgstr "Porta / Protocolo"
+
+msgid "Previous Identities"
+msgstr "Identidades anteriores"
+
+msgid "Product / Version"
+msgstr "Produto / Versão"
+
+msgid "Profile Name"
+msgstr "Nome do perfil"
+
+msgid "Profile Summary"
+msgstr "Resumo do perfil"
+
+msgid "Profile created"
+msgstr "Perfil criado"
+
+msgid "Relink"
+msgstr "Revincular"
+
+msgid "Relink returning device to this lifecycle"
+msgstr "Revincular o dispositivo de retorno a este ciclo de vida"
+
+msgid "Removed"
+msgstr "Removido"
+
+msgid "Resolve returning device / lifecycle history"
+msgstr "Resolver dispositivo de retorno / histórico de ciclo de vida"
+
+msgid "Retry"
+msgstr "Tentar novamente"
+
+msgid "Run Now"
+msgstr "Executar agora"
+
+msgid "Run targeted Nmap scan"
+msgstr "Executar verificação Nmap direcionada"
+
+msgid "Scan complete"
+msgstr "Verificação concluída"
+
+msgid "Scan failed"
+msgstr "Falha na verificação"
+
+msgid "Scan request failed"
+msgstr "Falha na solicitação de verificação"
+
+msgid "Start a new lifecycle for returning device"
+msgstr "Iniciar um novo ciclo de vida para o dispositivo de retorno"
+
+msgid "Unable to add identity"
+msgstr "Não foi possível adicionar a identidade"
+
+msgid "Unable to add note"
+msgstr "Não foi possível adicionar a nota"
+
+msgid "Unable to archive note"
+msgstr "Não foi possível arquivar a nota"
+
+msgid "Unable to load Nmap scan history"
+msgstr "Não foi possível carregar o histórico de verificação Nmap"
+
+msgid "Unable to load changes"
+msgstr "Não foi possível carregar as alterações"
+
+msgid "Unable to load infrastructure services."
+msgstr "Não foi possível carregar os serviços de infraestrutura."
+
+msgid "Unable to load notes"
+msgstr "Não foi possível carregar as notas"
+
+msgid "Unable to load port discovery."
+msgstr "Não foi possível carregar a descoberta de portas."
+
+msgid "Unable to load recent service changes."
+msgstr "Não foi possível carregar as alterações de serviço recentes."
+
+msgid "Unable to save service."
+msgstr "Não foi possível salvar o serviço."
+
+msgid "Unable to update note"
+msgstr "Não foi possível atualizar a nota"
+
+msgid "Unlink"
+msgstr "Desvincular"
+
+msgid "Unlink Identity"
+msgstr "Desvincular identidade"
+
+msgid "Unlink this identity from the profile"
+msgstr "Desvincular esta identidade do perfil"
+
+msgid "View ("
+msgstr "Ver ("
+
+msgid "View Conflict"
+msgstr "Ver conflito"
+
+msgid "View Device"
+msgstr "Ver dispositivo"
+
+msgid "View Infrastructure"
+msgstr "Ver infraestrutura"
+
+msgid "devices"
+msgstr "dispositivos"
+
+msgid "from profile"
+msgstr "do perfil"
+
+msgid "of"
+msgstr "de"
+
+msgid "they are the same type, model or vendor."
+msgstr "são do mesmo tipo, modelo ou fabricante."
+
+msgid "to lifecycle #"
+msgstr "ao ciclo de vida n.º"
+
+msgid "to profile"
+msgstr "ao perfil"
+
+msgid "with MAC address"
+msgstr "com o endereço MAC"
+
+msgid "Total Devices"
+msgstr "Total de dispositivos"
+
+msgid "Stopped"
+msgstr "Parado"

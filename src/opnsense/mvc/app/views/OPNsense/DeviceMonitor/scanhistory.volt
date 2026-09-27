@@ -264,40 +264,40 @@ $(document).ready(function() {
     }
 
     var historyText = {
-        emailSent: "{{ lang._('Email sent') }}",
-        emailFailed: "{{ lang._('Email failed') }}",
-        sent: "{{ lang._('Sent') }}",
-        failed: "{{ lang._('Failed') }}",
-        success: "{{ lang._('Success') }}",
-        incomplete: "{{ lang._('Incomplete') }}",
-        none: "{{ lang._('None') }}",
-        manual: "{{ lang._('Manual') }}",
-        automatic: "{{ lang._('Automatic') }}",
-        port: "{{ lang._('Port') }}",
-        protocol: "{{ lang._('Protocol') }}",
-        service: "{{ lang._('Service') }}",
-        product: "{{ lang._('Product') }}",
-        version: "{{ lang._('Version') }}",
-        extraInfo: "{{ lang._('Extra info') }}",
-        noOpenPorts: "{{ lang._('No open ports recorded') }}",
-        enabled: "{{ lang._('Enabled') }}",
-        disabled: "{{ lang._('Disabled') }}",
-        finished: "{{ lang._('Finished') }}",
-        topPorts: "{{ lang._('Top ports') }}",
-        timing: "{{ lang._('Timing') }}",
-        hostTimeout: "{{ lang._('Host timeout') }}",
-        versionDetection: "{{ lang._('Version detection') }}",
-        nmapVersion: "{{ lang._('Nmap version') }}",
-        nmapElapsed: "{{ lang._('Nmap elapsed') }}",
-        osHint: "{{ lang._('OS hint') }}",
-        openPorts: "{{ lang._('Open ports') }}",
-        emailSentLabel: "{{ lang._('Email sent') }}",
-        scanError: "{{ lang._('Scan error') }}",
-        emailError: "{{ lang._('Email error') }}",
-        openPortDetails: "{{ lang._('Open port details') }}",
-        noHistory: "{{ lang._('No targeted Nmap scan history recorded') }}",
-        showDetails: "{{ lang._('Show scan details') }}",
-        hideDetails: "{{ lang._('Hide scan details') }}",
+        emailSent: {{ lang._('Email sent')|json_encode(15) }},
+        emailFailed: {{ lang._('Email failed')|json_encode(15) }},
+        sent: {{ lang._('Sent')|json_encode(15) }},
+        failed: {{ lang._('Failed')|json_encode(15) }},
+        success: {{ lang._('Success')|json_encode(15) }},
+        incomplete: {{ lang._('Incomplete')|json_encode(15) }},
+        none: {{ lang._('None')|json_encode(15) }},
+        manual: {{ lang._('Manual')|json_encode(15) }},
+        automatic: {{ lang._('Automatic')|json_encode(15) }},
+        port: {{ lang._('Port')|json_encode(15) }},
+        protocol: {{ lang._('Protocol')|json_encode(15) }},
+        service: {{ lang._('Service')|json_encode(15) }},
+        product: {{ lang._('Product')|json_encode(15) }},
+        version: {{ lang._('Version')|json_encode(15) }},
+        extraInfo: {{ lang._('Extra info')|json_encode(15) }},
+        noOpenPorts: {{ lang._('No open ports recorded')|json_encode(15) }},
+        enabled: {{ lang._('Enabled')|json_encode(15) }},
+        disabled: {{ lang._('Disabled')|json_encode(15) }},
+        finished: {{ lang._('Finished')|json_encode(15) }},
+        topPorts: {{ lang._('Top ports')|json_encode(15) }},
+        timing: {{ lang._('Timing')|json_encode(15) }},
+        hostTimeout: {{ lang._('Host timeout')|json_encode(15) }},
+        versionDetection: {{ lang._('Version detection')|json_encode(15) }},
+        nmapVersion: {{ lang._('Nmap version')|json_encode(15) }},
+        nmapElapsed: {{ lang._('Nmap elapsed')|json_encode(15) }},
+        osHint: {{ lang._('OS hint')|json_encode(15) }},
+        openPorts: {{ lang._('Open ports')|json_encode(15) }},
+        emailSentLabel: {{ lang._('Email sent')|json_encode(15) }},
+        scanError: {{ lang._('Scan error')|json_encode(15) }},
+        emailError: {{ lang._('Email error')|json_encode(15) }},
+        openPortDetails: {{ lang._('Open port details')|json_encode(15) }},
+        noHistory: {{ lang._('No targeted Nmap scan history recorded')|json_encode(15) }},
+        showDetails: {{ lang._('Show scan details')|json_encode(15) }},
+        hideDetails: {{ lang._('Hide scan details')|json_encode(15) }},
 
     };
 
@@ -659,7 +659,7 @@ $(document).ready(function() {
                         .attr('colspan', 8)
                         .addClass('text-danger')
                         .text(
-                            'Unable to load Nmap scan history'
+                            {{ lang._('Unable to load Nmap scan history')|json_encode(15) }}
                         )
                 )
             );

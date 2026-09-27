@@ -1,3 +1,4 @@
+const {renderTranslations} = require('./render_translations');
 const fs = require('fs');
 
 const historyPath =
@@ -98,7 +99,7 @@ check(
 );
 
 scripts.forEach(function(block) {
-    const javascript = block
+    const javascript = renderTranslations(block)
         .replace(/^<script>/, '')
         .replace(/<\/script>$/, '');
 

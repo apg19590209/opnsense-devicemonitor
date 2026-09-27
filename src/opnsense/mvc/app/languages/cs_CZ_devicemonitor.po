@@ -17,11 +17,9 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-
 # ============================================
 # [Menu.xml] Položky hlavního menu
 # ============================================
-
 #: Menu.xml - menu název pluginu
 msgid "Device Monitor"
 msgstr "Sledování zařízení"
@@ -46,12 +44,9 @@ msgstr "Reálná zařízení propojená s jednou nebo více síťovými identita
 msgid "Settings"
 msgstr "Nastavení"
 
-
 # ============================================
 # [devices.volt] Stránka se seznamem zařízení
 # ============================================
-
-
 #: devices.volt - statistika v záhlaví
 msgid "Total Identities"
 msgstr "Celkem identit"
@@ -152,12 +147,9 @@ msgstr "Vlastní název uložen"
 msgid "Error saving friendly name"
 msgstr "Chyba při ukládání vlastního názvu"
 
-
 # ============================================
 # [settings.volt] Nastavení - 4 taby
 # ============================================
-
-
 #: settings.volt - tab 1 název
 msgid "Email Notifications"
 msgstr "Email notifikace"
@@ -166,17 +158,9 @@ msgstr "Email notifikace"
 msgid "Webhook Notifications"
 msgstr "Webhook notifikace"
 
-#: settings.volt - tab 3 název
-msgid "Other Settings"
-msgstr "Ostatní nastavení"
-
 #: settings.volt - tab 4 název
 msgid "About"
 msgstr "O pluginu"
-
-#: settings.volt - tab 1 info text (lokalizovaný!)
-msgid "Configure email notifications for new devices on the network"
-msgstr "Nastavení emailových notifikací pro nová zařízení v síti"
 
 #: settings.volt - tab 2 info text
 msgid "Configure webhook notifications for new devices on the network"
@@ -190,29 +174,9 @@ msgstr "Zapnout email"
 msgid "Email Recipient"
 msgstr "Email příjemce"
 
-#: settings.volt - tab 1: nápověda pod polem email příjemce
-msgid "Where to send notifications"
-msgstr "Kam odesílat notifikace"
-
 #: settings.volt - tab 1: label nad polem email odesílatele
 msgid "Email Sender"
 msgstr "Email odesílatele"
-
-#: settings.volt - tab 1: nápověda pod polem email odesílatele
-msgid "From address"
-msgstr "Adresa odesílatele"
-
-#: settings.volt - tab 1: nadpis SMTP upozornění
-msgid "Important - SMTP Configuration"
-msgstr "Důležité - SMTP konfigurace"
-
-#: settings.volt - tab 1: text SMTP upozornění (s HTML tagem)
-msgid "Plugin uses <strong>sendmail (Postfix)</strong> to send emails"
-msgstr "Plugin používá <strong>sendmail (Postfix)</strong> pro odesílání emailů"
-
-#: settings.volt - tab 1: text SMTP upozornění (s HTML tagem a cestou)
-msgid "Must be configured in: <strong>System > Settings > Notifications > SMTP</strong>"
-msgstr "Musí být nakonfigurováno v: <strong>System > Settings > Notifications > SMTP</strong>"
 
 #: settings.volt - tab 1: tlačítko pro test emailu
 msgid "Test Email"
@@ -316,14 +280,6 @@ msgstr "Aplikační heslo Pi-hole vygenerované ve webovém rozhraní Pi-hole"
 msgid "OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data."
 msgstr "Plugin pro OPNsense pro sledování síťových zařízení, konfliktů IP a MAC adres, zjišťování infrastrukturních služeb, provádění cílených bezpečnostních skenů a odesílání konfigurovatelných upozornění s využitím nativních dat hostwatch."
 
-#: settings.volt - tab 4: tabulka info - položka
-msgid "Author"
-msgstr "Autor"
-
-#: settings.volt - tab 4: tabulka info - položka
-msgid "GitHub Repository"
-msgstr "GitHub repozitář"
-
 #: settings.volt - v2.10 features heading
 msgid "v2.10 Features and Enhancements"
 msgstr "Funkce a vylepšení v2.10"
@@ -360,10 +316,6 @@ msgstr "Testovací email odeslán na"
 msgid "Failed to send email"
 msgstr "Email se nepodařilo odeslat"
 
-#: settings.volt - alert: uživatel nevyplnil email před testem
-msgid "Please enter and save recipient email first"
-msgstr "Nejprve vyplň emailovou adresu příjemce"
-
 #: settings.volt - alert: uživatel nevyplnil webhook URL
 msgid "Enter webhook URL first"
 msgstr "Nejprve vyplň webhook URL"
@@ -380,17 +332,13 @@ msgstr "Test odeslán!"
 msgid "Failed"
 msgstr "Chyba"
 
-#: settings.volt - verze pluginu (za Device Monitor v záhlaví)
-msgid "Using OPNsense hostwatch database"
-msgstr "Využívá hostwatch databázi OPNsense"
-
 #: settings.volt - Status sloupec / hodnota
 msgid "Status"
 msgstr "Stav"
+
 # ============================================
 # [settings.volt] Email transport
 # ============================================
-
 #: settings.volt - email transport
 msgid "Email delivery method"
 msgstr "Způsob odesílání e-mailu"
@@ -454,7 +402,6 @@ msgstr "Nejprve zadejte e-mail příjemce"
 # ============================================
 # [scanhistory.volt] Historie Nmap skenů
 # ============================================
-
 msgid "Nmap Scan History"
 msgstr "Historie Nmap skenů"
 
@@ -469,9 +416,6 @@ msgstr "Spuštěno"
 
 msgid "Finished"
 msgstr "Dokončeno"
-
-msgid "Error"
-msgstr "Chyba"
 
 msgid "Email sent"
 msgstr "E-mail odeslán"
@@ -562,11 +506,6 @@ msgstr "Zobrazit podrobnosti skenu"
 
 msgid "Hide scan details"
 msgstr "Skrýt podrobnosti skenu"
-msgid "Resolve event"
-msgstr "Vyřešit událost"
-
-msgid "Reopen event"
-msgstr "Znovu otevřít událost"
 
 msgid "Unable to update IP and MAC conflict"
 msgstr "Konflikt IP a MAC nelze aktualizovat"
@@ -842,20 +781,11 @@ msgstr "Tlačítkem Spustit nyní u zařízení prohledejte porty TCP 1–65535,
 msgid "Scans"
 msgstr "Skenování"
 
-msgid "Run Now"
-msgstr "Spustit nyní"
-
 msgid "Scan weekly"
 msgstr "Skenovat týdně"
 
 msgid "Scan Time"
 msgstr "Čas skenování"
-
-msgid "Scan Time (local time)"
-msgstr "Čas skenování (místní čas)"
-
-msgid "Last Scan (local time)"
-msgstr "Poslední skenování (místní čas)"
 
 msgid "Result"
 msgstr "Výsledek"
@@ -926,12 +856,6 @@ msgstr "Vypnuto"
 
 msgid "Save alert preferences"
 msgstr "Uložit předvolby upozornění"
-
-msgid "Email delivery is disabled in Settings."
-msgstr "Odesílání e-mailů je v Nastavení vypnuto."
-
-msgid "These preferences are saved, but service alert emails will not be sent."
-msgstr "Tyto předvolby jsou uloženy, ale e-maily s upozorněními na služby nebudou odesílány."
 
 msgid "These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off."
 msgstr "Tyto předvolby jsou uloženy, ale e-maily s upozorněními na služby pro tuto síťovou identitu nebudou odesílány, protože globální e-mailová upozornění jsou vypnuta."
@@ -1013,3 +937,639 @@ msgstr "O rozhraních pro upozornění"
 
 msgid "About Webhook Notifications"
 msgstr "O upozorněních webhookem"
+
+
+# ============================================
+# v2.10 catalogue re-sync (new source strings)
+# ============================================
+
+#: activitytimeline.volt
+msgid "Activity"
+msgstr "Aktivita"
+
+#: settings.volt
+msgid "AdGuard DNS Rewrites"
+msgstr "Přepisy DNS AdGuard"
+
+#: devices.volt
+msgid "AdGuard DNS rewrite"
+msgstr "Přepis DNS AdGuard"
+
+#: settings.volt
+msgid "AdGuard URL"
+msgstr "Adresa URL AdGuard"
+
+#: settings.volt
+msgid "Alert only on verified or authoritative infrastructure-service evidence."
+msgstr "Upozornit pouze na ověřené nebo autoritativní důkazy o infrastrukturních službách."
+
+#: infrastructureservices.volt
+msgid "All Services"
+msgstr "Všechny služby"
+
+#: infrastructureservices.volt
+msgid "All Statuses"
+msgstr "Všechny stavy"
+
+#: infrastructureservices.volt
+msgid "All devices"
+msgstr "Všechna zařízení"
+
+#: settings.volt
+msgid "Automatically scan newly detected devices"
+msgstr "Automaticky skenovat nově zjištěná zařízení"
+
+#: infrastructureservices.volt
+msgid "Available"
+msgstr "K dispozici"
+
+#: settings.volt
+msgid "Creator"
+msgstr "Tvůrce"
+
+#: activitytimeline.volt
+msgid "Date / time"
+msgstr "Datum / čas"
+
+#: identityevents.volt
+msgid "Details"
+msgstr "Podrobnosti"
+
+#: settings.volt
+msgid "Detect services and versions using light detection"
+msgstr "Zjišťovat služby a verze pomocí lehké detekce"
+
+#: identityevents.volt
+msgid "Detected"
+msgstr "Zjištěno"
+
+#: settings.volt
+msgid "Developer"
+msgstr "Vývojář"
+
+#: infrastructureservices.volt
+msgid "Discover Now"
+msgstr "Zjistit nyní"
+
+#: devices.volt
+msgid "Dnsmasq"
+msgstr "Dnsmasq"
+
+#: scanhistory.volt
+msgid "Email"
+msgstr "E-mail"
+
+#: settings.volt
+msgid "Email infrastructure service alerts"
+msgstr "E-mailová upozornění infrastrukturních služeb"
+
+#: settings.volt
+msgid "Enable AdGuard DNS rewrite hostname enrichment"
+msgstr "Povolit obohacení názvů hostitelů pomocí přepisů DNS AdGuard"
+
+#: settings.volt
+msgid "Enable Targeted Nmap"
+msgstr "Povolit cílený Nmap"
+
+#: settings.volt
+msgid "Established service unavailable"
+msgstr "Zavedená služba nedostupná"
+
+#: identityevents.volt
+msgid "Event Type"
+msgstr "Typ události"
+
+#: devices.volt
+msgid "Export to CSV"
+msgstr "Exportovat do CSV"
+
+#: settings.volt
+msgid "Generic service-changed events remain history-only in this version."
+msgstr "Obecné události změn služeb zůstávají v této verzi pouze v historii."
+
+#: settings.volt
+msgid "HTTPS base URL of your AdGuard Home server"
+msgstr "Základní adresa URL HTTPS vašeho serveru AdGuard Home"
+
+#: settings.volt
+msgid "Host Timeout"
+msgstr "Časový limit hostitele"
+
+#: devices.volt
+msgid "Hostwatch"
+msgstr "Hostwatch"
+
+#: devices.volt
+msgid "ISC DHCP"
+msgstr "ISC DHCP"
+
+#: Menu.xml
+msgid "Infrastructure Services"
+msgstr "Infrastrukturní služby"
+
+#: identityevents.volt
+msgid "Interface"
+msgstr "Rozhraní"
+
+#: devices.volt
+msgid "Kea DHCP"
+msgstr "Kea DHCP"
+
+#: infrastructureservices.volt
+msgid "Last Scan"
+msgstr "Poslední sken"
+
+#: infrastructureservices.volt
+msgid "Latest verified or authoritative service changes"
+msgstr "Poslední ověřené nebo autoritativní změny služeb"
+
+#: settings.volt
+msgid "Licensing & Compatibility"
+msgstr "Licence a kompatibilita"
+
+#: activitytimeline.volt
+msgid "Loading activity..."
+msgstr "Načítání aktivity..."
+
+#: infrastructureservices.volt
+msgid "Loading recent service changes"
+msgstr "Načítání nedávných změn služeb"
+
+#: scanhistory.volt
+msgid "Loading scan history..."
+msgstr "Načítání historie skenů..."
+
+#: settings.volt
+msgid "Maximum Nmap scan time per device (10-300 seconds)"
+msgstr "Maximální doba skenování Nmap na zařízení (10-300 sekund)"
+
+#: settings.volt
+msgid "Maximum Scans Per Cycle"
+msgstr "Maximální počet skenů na cyklus"
+
+#: settings.volt
+msgid "Maximum queued targeted scans processed during one monitoring cycle (1-10)"
+msgstr "Maximální počet cílených skenů ve frontě zpracovaných během jednoho monitorovacího cyklu (1-10)"
+
+#: settings.volt
+msgid "Monitoring"
+msgstr "Monitorování"
+
+#: infrastructureservices.volt
+msgid "Never scanned"
+msgstr "Nikdy neskenováno"
+
+#: settings.volt
+msgid "New verified service"
+msgstr "Nová ověřená služba"
+
+#: settings.volt
+msgid "Nmap Scanning"
+msgstr "Skenování Nmap"
+
+#: settings.volt
+msgid "Nmap timing template. T4 is the default."
+msgstr "Šablona časování Nmap. Výchozí je T4."
+
+#: settings.volt
+msgid "Number of most common TCP ports to scan (1-1000)"
+msgstr "Počet nejběžnějších portů TCP ke skenování (1-1000)"
+
+#: scanhistory.volt
+msgid "Open Ports"
+msgstr "Otevřené porty"
+
+#: settings.volt
+msgid "Optional detailed scan performed for newly detected devices after notification."
+msgstr "Volitelný podrobný sken provedený pro nově zjištěná zařízení po oznámení."
+
+#: settings.volt
+msgid "Original Project"
+msgstr "Původní projekt"
+
+#: identityevents.volt
+msgid "Other IP"
+msgstr "Jiná IP"
+
+#: identityevents.volt
+msgid "Other MAC"
+msgstr "Jiná MAC"
+
+#: identityevents.volt
+msgid "Other interface"
+msgstr "Jiné rozhraní"
+
+#: settings.volt
+msgid "Password"
+msgstr "Heslo"
+
+#: infrastructureservices.volt
+msgid "Recent Service Changes"
+msgstr "Nedávné změny služeb"
+
+#: infrastructureservices.volt
+msgid "Refresh View"
+msgstr "Obnovit zobrazení"
+
+#: settings.volt
+msgid "Repository"
+msgstr "Úložiště"
+
+#: identityevents.volt
+msgid "Resolved at"
+msgstr "Vyřešeno v"
+
+#: devices.volt
+msgid "Run scan now"
+msgstr "Spustit sken nyní"
+
+#: infrastructureservices.volt
+msgid "Save weekly selections"
+msgstr "Uložit týdenní výběry"
+
+#: scanhistory.volt
+msgid "Scan"
+msgstr "Sken"
+
+#: devices.volt
+msgid "Scan Status"
+msgstr "Stav skenu"
+
+#: infrastructureservices.volt
+msgid "Search devices"
+msgstr "Hledat zařízení"
+
+#: infrastructureservices.volt
+msgid "Search services"
+msgstr "Hledat služby"
+
+#: identityevents.volt
+msgid "Severity"
+msgstr "Závažnost"
+
+#: infrastructureservices.volt
+msgid "Show archived"
+msgstr "Zobrazit archivované"
+
+#: infrastructureservices.volt
+msgid "Stale"
+msgstr "Zastaralé"
+
+#: settings.volt
+msgid "Targeted Nmap Scanning"
+msgstr "Cílené skenování Nmap"
+
+#: settings.volt
+msgid "Timing Template"
+msgstr "Šablona časování"
+
+#: settings.volt
+msgid "Top TCP Ports"
+msgstr "Hlavní porty TCP"
+
+#: infrastructureservices.volt
+msgid "Total"
+msgstr "Celkem"
+
+#: scanhistory.volt
+msgid "Type"
+msgstr "Typ"
+
+#: infrastructureservices.volt
+msgid "Unavailable"
+msgstr "Nedostupné"
+
+#: settings.volt
+msgid "Unavailable service recovered"
+msgstr "Nedostupná služba obnovena"
+
+#: settings.volt
+msgid "Username"
+msgstr "Uživatelské jméno"
+
+#: settings.volt
+msgid "Uses manually configured AdGuard Home DNS rewrites as a high-confidence hostname source. Enable this only if you use AdGuard Home."
+msgstr "Používá ručně nakonfigurované přepisy DNS AdGuard Home jako vysoce spolehlivý zdroj názvů hostitelů. Povolte pouze v případě, že používáte AdGuard Home."
+
+#: settings.volt
+msgid "Version Detection"
+msgstr "Detekce verzí"
+
+#: infrastructureservices.volt
+msgid "Weekly enabled"
+msgstr "Týdně povoleno"
+
+#: devices.volt
+msgid "identities"
+msgstr "identity"
+
+#: devices.volt
+msgid "identity"
+msgstr "identita"
+
+# ============================================
+# JS i18n re-sync (hardcoded strings wrapped)
+# ============================================
+
+msgid "Add"
+msgstr "Přidat"
+
+msgid "Add Identity"
+msgstr "Přidat identitu"
+
+msgid "Add this network identity to a device profile"
+msgstr "Přidat tuto síťovou identitu do profilu zařízení"
+
+msgid "Add to Profile"
+msgstr "Přidat do profilu"
+
+msgid "Archive Note #"
+msgstr "Archivovat poznámku č."
+
+msgid "Check online"
+msgstr "Zkontrolovat online"
+
+msgid "Confidence"
+msgstr "Spolehlivost"
+
+msgid "Create profile"
+msgstr "Vytvořit profil"
+
+msgid "Created"
+msgstr "Vytvořeno"
+
+msgid "Current Identities"
+msgstr "Aktuální identity"
+
+msgid "Date / Time"
+msgstr "Datum / čas"
+
+msgid "Detection"
+msgstr "Detekce"
+
+msgid "Do not add separate devices merely because"
+msgstr "Nepřidávejte samostatná zařízení pouze proto, že"
+
+msgid "Edit note"
+msgstr "Upravit poznámku"
+
+msgid "Endpoint"
+msgstr "Koncový bod"
+
+msgid "Enter a note first"
+msgstr "Nejprve zadejte poznámku"
+
+msgid "Enter a profile name"
+msgstr "Zadejte název profilu"
+
+msgid "Enter a valid MAC address"
+msgstr "Zadejte platnou MAC adresu"
+
+msgid "Evidence"
+msgstr "Důkaz"
+
+msgid "Exported"
+msgstr "Exportováno"
+
+msgid "History"
+msgstr "Historie"
+
+msgid "Identities"
+msgstr "Identity"
+
+msgid "Identity added"
+msgstr "Identita přidána"
+
+msgid "Identity history will be preserved."
+msgstr "Historie identit bude zachována."
+
+msgid "Identity unlinked"
+msgstr "Identita odpojena"
+
+msgid "Infrastructure discovery failed."
+msgstr "Zjišťování infrastruktury se nezdařilo."
+
+msgid "Interface / VLAN"
+msgstr "Rozhraní / VLAN"
+
+msgid "Last Verified"
+msgstr "Naposledy ověřeno"
+
+msgid "Linked"
+msgstr "Propojeno"
+
+msgid "Marked as reviewed"
+msgstr "Označeno jako zkontrolované"
+
+msgid "Network identity details and notes"
+msgstr "Podrobnosti a poznámky síťové identity"
+
+msgid "Next:"
+msgstr "Další:"
+
+msgid "No IP address for this device"
+msgstr "Pro toto zařízení není žádná IP adresa"
+
+msgid "No active lifecycle"
+msgstr "Žádný aktivní životní cyklus"
+
+msgid "No active lifecycle notes"
+msgstr "Žádné poznámky aktivního životního cyklu"
+
+msgid "No activity recorded"
+msgstr "Nebyla zaznamenána žádná aktivita"
+
+msgid "No current identities"
+msgstr "Žádné aktuální identity"
+
+msgid "No data to export"
+msgstr "Žádná data k exportu"
+
+msgid "No devices found."
+msgstr "Nebyla nalezena žádná zařízení."
+
+msgid "No devices on the selected monitored interfaces."
+msgstr "Na vybraných monitorovaných rozhraních nejsou žádná zařízení."
+
+msgid "No infrastructure services match the current filter."
+msgstr "Žádné infrastrukturní služby neodpovídají aktuálnímu filtru."
+
+msgid "No lifecycle history recorded"
+msgstr "Nebyla zaznamenána žádná historie životního cyklu"
+
+msgid "No meaningful Device Monitor changes were recorded in this period."
+msgstr "V tomto období nebyly zaznamenány žádné významné změny Device Monitoru."
+
+msgid "No notes"
+msgstr "Žádné poznámky"
+
+msgid "No scans match the current filters."
+msgstr "Žádné skeny neodpovídají aktuálním filtrům."
+
+msgid "No verified infrastructure service changes recorded yet."
+msgstr "Zatím nebyly zaznamenány žádné ověřené změny infrastrukturních služeb."
+
+msgid "Not scanned"
+msgstr "Neskenováno"
+
+msgid "Note #"
+msgstr "Poznámka č."
+
+msgid "Note added"
+msgstr "Poznámka přidána"
+
+msgid "Note archived"
+msgstr "Poznámka archivována"
+
+msgid "Note cannot be empty"
+msgstr "Poznámka nesmí být prázdná"
+
+msgid "Note updated"
+msgstr "Poznámka aktualizována"
+
+msgid "Only continue if this MAC belongs to the same device profile."
+msgstr "Pokračujte pouze v případě, že tato MAC patří ke stejnému profilu zařízení."
+
+msgid "Open Profile"
+msgstr "Otevřít profil"
+
+msgid "Open this profile"
+msgstr "Otevřít tento profil"
+
+msgid "Pending decision"
+msgstr "Čeká na rozhodnutí"
+
+msgid "Ping failed"
+msgstr "Ping se nezdařil"
+
+msgid "Port / Protocol"
+msgstr "Port / Protokol"
+
+msgid "Previous Identities"
+msgstr "Předchozí identity"
+
+msgid "Product / Version"
+msgstr "Produkt / Verze"
+
+msgid "Profile Name"
+msgstr "Název profilu"
+
+msgid "Profile Summary"
+msgstr "Souhrn profilu"
+
+msgid "Profile created"
+msgstr "Profil vytvořen"
+
+msgid "Relink"
+msgstr "Znovu propojit"
+
+msgid "Relink returning device to this lifecycle"
+msgstr "Znovu propojit vracející se zařízení s tímto životním cyklem"
+
+msgid "Removed"
+msgstr "Odebráno"
+
+msgid "Resolve returning device / lifecycle history"
+msgstr "Vyřešit vracející se zařízení / historie životního cyklu"
+
+msgid "Retry"
+msgstr "Opakovat"
+
+msgid "Run Now"
+msgstr "Spustit nyní"
+
+msgid "Run targeted Nmap scan"
+msgstr "Spustit cílený sken Nmap"
+
+msgid "Scan complete"
+msgstr "Sken dokončen"
+
+msgid "Scan failed"
+msgstr "Sken se nezdařil"
+
+msgid "Scan request failed"
+msgstr "Požadavek na sken se nezdařil"
+
+msgid "Start a new lifecycle for returning device"
+msgstr "Zahájit nový životní cyklus pro vracející se zařízení"
+
+msgid "Unable to add identity"
+msgstr "Identitu nelze přidat"
+
+msgid "Unable to add note"
+msgstr "Poznámku nelze přidat"
+
+msgid "Unable to archive note"
+msgstr "Poznámku nelze archivovat"
+
+msgid "Unable to load Nmap scan history"
+msgstr "Nelze načíst historii skenů Nmap"
+
+msgid "Unable to load changes"
+msgstr "Nelze načíst změny"
+
+msgid "Unable to load infrastructure services."
+msgstr "Nelze načíst infrastrukturní služby."
+
+msgid "Unable to load notes"
+msgstr "Nelze načíst poznámky"
+
+msgid "Unable to load port discovery."
+msgstr "Nelze načíst zjišťování portů."
+
+msgid "Unable to load recent service changes."
+msgstr "Nelze načíst nedávné změny služeb."
+
+msgid "Unable to save service."
+msgstr "Službu nelze uložit."
+
+msgid "Unable to update note"
+msgstr "Poznámku nelze aktualizovat"
+
+msgid "Unlink"
+msgstr "Odpojit"
+
+msgid "Unlink Identity"
+msgstr "Odpojit identitu"
+
+msgid "Unlink this identity from the profile"
+msgstr "Odpojit tuto identitu od profilu"
+
+msgid "View ("
+msgstr "Zobrazit ("
+
+msgid "View Conflict"
+msgstr "Zobrazit konflikt"
+
+msgid "View Device"
+msgstr "Zobrazit zařízení"
+
+msgid "View Infrastructure"
+msgstr "Zobrazit infrastrukturu"
+
+msgid "devices"
+msgstr "zařízení"
+
+msgid "from profile"
+msgstr "z profilu"
+
+msgid "of"
+msgstr "z"
+
+msgid "they are the same type, model or vendor."
+msgstr "jsou stejného typu, modelu nebo výrobce."
+
+msgid "to lifecycle #"
+msgstr "k životnímu cyklu č."
+
+msgid "to profile"
+msgstr "do profilu"
+
+msgid "with MAC address"
+msgstr "s MAC adresou"
+
+msgid "Total Devices"
+msgstr "Zařízení celkem"
+
+msgid "Stopped"
+msgstr "Zastaveno"

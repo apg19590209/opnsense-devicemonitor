@@ -1,3 +1,4 @@
+const {renderTranslations} = require('./render_translations');
 const fs = require('fs');
 const vm = require('vm');
 
@@ -37,15 +38,14 @@ check(
     );
 });
 
-// Extract the inline script block(s) and neutralise Volt placeholders before
-// parsing/executing the JavaScript.
+// Render translated strings before parsing/executing the inline JavaScript.
 const scripts = view.match(/<script>([\s\S]*?)<\/script>/g);
 
 check(scripts && scripts.length > 0, 'Devices page JavaScript block missing');
 
 const javascript = scripts
     .map(function (block) {
-        return block
+        return renderTranslations(block)
             .replace(/^<script>/, '')
             .replace(/<\/script>$/, '')
             .replace(/\{\{[\s\S]*?\}\}/g, 'VOLT');

@@ -1,3 +1,4 @@
+const {renderTranslations} = require('./render_translations');
 const fs = require('fs');
 
 const devicesPath =
@@ -77,7 +78,7 @@ check(
 );
 
 scripts.forEach(function(block) {
-    const javascript = block
+    const javascript = renderTranslations(block)
         .replace(/^<script>/, '')
         .replace(/<\/script>$/, '')
         // Volt substitutes lang._() placeholders before the browser parses

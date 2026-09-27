@@ -409,19 +409,19 @@ $(document).ready(function() {
     });
 
     var translations = {
-        deleted:        '{{ lang._('Device deleted') }}',
-        delete_error:   '{{ lang._('Error deleting device') }}',
-        db_cleared:     '{{ lang._('Database cleared') }}',
-        db_clear_error: '{{ lang._('Error clearing database') }}',
-        hostname_saved: '{{ lang._('Friendly name saved') }}',
-        hostname_cleared: '{{ lang._('Friendly name cleared') }}',
-        hostname_error: '{{ lang._('Error saving friendly name') }}',
-        confirm_delete: '{{ lang._('Delete device') }}',
-        confirm_clear:  '{{ lang._('Really delete all devices from database?') }}',
-        all_vlans:      '{{ lang._('All VLANs') }}',
-        select_vlan:    '{{ lang._('Select a VLAN') }}',
-        identity:       '{{ lang._('identity') }}',
-        identities:     '{{ lang._('identities') }}'
+        deleted:        {{ lang._('Device deleted')|json_encode(15) }},
+        delete_error:   {{ lang._('Error deleting device')|json_encode(15) }},
+        db_cleared:     {{ lang._('Database cleared')|json_encode(15) }},
+        db_clear_error: {{ lang._('Error clearing database')|json_encode(15) }},
+        hostname_saved: {{ lang._('Friendly name saved')|json_encode(15) }},
+        hostname_cleared: {{ lang._('Friendly name cleared')|json_encode(15) }},
+        hostname_error: {{ lang._('Error saving friendly name')|json_encode(15) }},
+        confirm_delete: {{ lang._('Delete device')|json_encode(15) }},
+        confirm_clear:  {{ lang._('Really delete all devices from database?')|json_encode(15) }},
+        all_vlans:      {{ lang._('All VLANs')|json_encode(15) }},
+        select_vlan:    {{ lang._('Select a VLAN')|json_encode(15) }},
+        identity:       {{ lang._('identity')|json_encode(15) }},
+        identities:     {{ lang._('identities')|json_encode(15) }}
     };
 
     var allRows = [], activeVlans = [], activeStatus = '', vlanNames = {};
@@ -669,7 +669,7 @@ $(document).ready(function() {
                     'color': '#f0ad4e',
                     'font-weight': 'bold',
                     'white-space': 'nowrap'
-                }).text('Retry ' + attempts + '/5')
+                }).text(({{ lang._('Retry')|json_encode(15) }} + " ") + attempts + '/5')
             );
 
             if (row.nmap_next_attempt) {
@@ -677,7 +677,7 @@ $(document).ready(function() {
                     $('<small>').addClass('text-muted').css({
                         'display': 'block',
                         'white-space': 'nowrap'
-                    }).text('Next: ' + row.nmap_next_attempt)
+                    }).text(({{ lang._('Next:')|json_encode(15) }} + " ") + row.nmap_next_attempt)
                 );
             }
 
@@ -788,11 +788,11 @@ $(document).ready(function() {
     }
     function hostnameSourceLabel(source) {
         var labels = {
-            adguard: '{{ lang._('AdGuard DNS rewrite') }}',
-            dnsmasq: '{{ lang._('Dnsmasq') }}',
-            kea: '{{ lang._('Kea DHCP') }}',
-            isc: '{{ lang._('ISC DHCP') }}',
-            hostwatch: '{{ lang._('Hostwatch') }}'
+            adguard: {{ lang._('AdGuard DNS rewrite')|json_encode(15) }},
+            dnsmasq: {{ lang._('Dnsmasq')|json_encode(15) }},
+            kea: {{ lang._('Kea DHCP')|json_encode(15) }},
+            isc: {{ lang._('ISC DHCP')|json_encode(15) }},
+            hostwatch: {{ lang._('Hostwatch')|json_encode(15) }}
         };
         return labels[source] || source || '';
     }
@@ -888,10 +888,10 @@ $(document).ready(function() {
                 $('<td>').text(row.last_seen||'').addClass('devices-col-secondary devices-col-sec-5'),
                 $('<td>').html(
                 (row.return_pending === 1 || row.return_pending === '1'
-                    ? '<a class="btn btn-xs btn-primary" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+'#lifecycle-history" title="Resolve returning device / lifecycle history" style="margin-right:2px;"><i class="fa fa-history"></i> History</a>'
-                    : '<a class="btn btn-xs btn-default" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+'" title="Network identity details and notes" style="margin-right:2px;"><i class="fa fa-comment-o"></i></a>') +
-                '<button class="btn btn-xs btn-warning command-check" data-row-mac="'+row.mac+'" data-row-ip="'+row.ip+'" title="Check online" style="margin-right:2px;"><i class="fa fa-plug"></i></button>' +
-                '<button class="btn btn-xs btn-info command-nmap" data-row-mac="'+row.mac+'" title="Run targeted Nmap scan" style="margin-right:2px;"><i class="fa fa-search"></i></button>' +
+                    ? '<a class="btn btn-xs btn-primary" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+('#lifecycle-history" title="' + {{ lang._('Resolve returning device / lifecycle history')|json_encode(15) }} + '" style="margin-right:2px;"><i class="fa fa-history"></i> ' + {{ lang._('History')|json_encode(15) }} + '</a>')
+                    : '<a class="btn btn-xs btn-default" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+('" title="' + {{ lang._('Network identity details and notes')|json_encode(15) }} + '" style="margin-right:2px;"><i class="fa fa-comment-o"></i></a>')) +
+                '<button class="btn btn-xs btn-warning command-check" data-row-mac="'+row.mac+'" data-row-ip="'+row.ip+('" title="' + {{ lang._('Check online')|json_encode(15) }} + '" style="margin-right:2px;"><i class="fa fa-plug"></i></button>') +
+                '<button class="btn btn-xs btn-info command-nmap" data-row-mac="'+row.mac+('" title="' + {{ lang._('Run targeted Nmap scan')|json_encode(15) }} + '" style="margin-right:2px;"><i class="fa fa-search"></i></button>') +
                 '<button class="btn btn-xs btn-danger command-delete" data-row-mac="'+row.mac+'"><i class="fa fa-trash"></i></button>')
             ).appendTo($tbody);
         });
@@ -987,7 +987,7 @@ $(document).ready(function() {
             var $btn = $(this);
 
             if (!ip) {
-                showToast('No IP address for this device', 'error');
+                showToast({{ lang._('No IP address for this device')|json_encode(15) }}, 'error');
                 return;
             }
 
@@ -1008,7 +1008,7 @@ $(document).ready(function() {
                 },
                 error: function() {
                     $btn.prop('disabled', false).html('<i class="fa fa-plug"></i>');
-                    showToast('Ping failed', 'error');
+                    showToast({{ lang._('Ping failed')|json_encode(15) }}, 'error');
                 }
             });
         });
@@ -1086,7 +1086,7 @@ $(document).ready(function() {
         });
 
         if (!filtered.length) {
-            showToast('No data to export', 'error');
+            showToast({{ lang._('No data to export')|json_encode(15) }}, 'error');
             return;
         }
 
@@ -1131,7 +1131,7 @@ $(document).ready(function() {
         $a.remove();
         URL.revokeObjectURL(url);
 
-        showToast('Exported ' + filtered.length + ' devices', 'success');
+        showToast(({{ lang._('Exported')|json_encode(15) }} + " ") + filtered.length + (" " + {{ lang._('devices')|json_encode(15) }}), 'success');
     });
 
     $('#btn-clear').on('click',function(){
