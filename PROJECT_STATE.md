@@ -83,11 +83,15 @@ Validation:
   syntax checks. Executing the hostile translated string preserved its exact content,
   including quotes, backslashes, newlines, `</script>`, ampersands and U+2028/U+2029.
 - All 11 Node UI tests passed. PHP lint, Python compile and `git diff --check` passed.
+- `tests/test_release_manifest.py` passed after refreshing the nine guarded
+  `release/v2.10-runtime.manifest` view hashes; every recorded preimage matched the
+  parent commit.
 
 Not covered: HTTP transport, full page JavaScript interactions, page layout and translation
 wording. Those remain browser/human acceptance checks.
 
-Changed areas: nine Volt views, the language acceptance renderer and test, the translated
+Changed areas: nine Volt views, the nine corresponding hashes in
+`release/v2.10-runtime.manifest`, the language acceptance renderer and test, the translated
 JavaScript test/render helpers, one affected Change Summary UI assertion, the CI workflow
 and this record. No installed file, catalogue, configuration, service or database was
 changed.
