@@ -67,10 +67,29 @@ webhook test was ever invoked.
 Changed: `DECISIONS.md` and this state record only. No source, test,
 configuration, service or live notification path was modified.
 
-Next recommended step: fix the two testbed configuration items — set the webhook
-URL to a single `https://ntfy.sh/<topic>` value and select Direct SMTP (or
-install a local mailer) for email — then re-run the Settings test actions and
-re-verify the results from `/var/log/devicemonitor.log`.
+Next recommended step: configure email delivery on the testbed — either supply
+Direct SMTP credentials, or accept that email stays unconfigured and out of the
+v2.10 acceptance scope. Webhook delivery is confirmed working (see follow-up).
+
+Follow-up (27 September 2026, 19:59): the malformed webhook URL was repaired on
+the testbed. `config.json` was backed up first
+(`/root/devicemonitor_backup/config-json-pre-webhook-url-fix-20260927-195948`),
+the duplicated `ntfy.sh` prefix was removed deterministically (the topic token
+was not altered) and the stored value now parses as
+`scheme=https host=ntfy.sh` with the original path preserved; the file remains
+valid JSON, mode 0600 root:wheel. A test through the same handler path the
+Settings button uses returned
+`{"result":"ok","message":"Webhook sent (HTTP 200)","type":"ntfy","test":true,"count":0}`,
+so webhook delivery is confirmed end to end.
+
+Email cannot be repaired from existing data: no mailer is installed
+(`sendmail`, `mail`, `msmtp`, `dma` all absent; the plugin's `sendmail` method
+requires `/usr/local/sbin/sendmail`, typically provided by `os-postfix`),
+`/conf/config.xml` holds no system notification SMTP settings, and no plugin
+backup contains SMTP credentials — every archived `config.json` shows
+`email_method=sendmail` with empty host, user and password. Direct SMTP is
+therefore the only practical route and requires credentials held only by the
+operator.
 
 ## 27 September 2026 v2.10 testbed deployment
 
