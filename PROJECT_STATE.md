@@ -67,9 +67,20 @@ webhook test was ever invoked.
 Changed: `DECISIONS.md` and this state record only. No source, test,
 configuration, service or live notification path was modified.
 
-Next recommended step: configure email delivery on the testbed — either supply
-Direct SMTP credentials, or accept that email stays unconfigured and out of the
-v2.10 acceptance scope. Webhook delivery is confirmed working (see follow-up).
+Next recommended step: proceed to the DM-BL-008 language acceptance on the
+testbed. Email delivery is no longer an open testbed item (see the operator
+clarification below); webhook delivery is confirmed working.
+
+Operator clarification (27 September 2026, 20:07): email delivery has worked in
+production and was never tested or configured in the testbed. The testbed
+failure is therefore a testbed configuration gap (no mailer, no SMTP
+credentials, no local MTA ever installed), not a regression, not a code defect
+and not a production problem. This is operator-attested here: confirming
+production's transport (a local mailer via `os-postfix` versus Direct SMTP)
+would require reading production configuration, which is outside this session's
+authorisation. Email is consequently dropped from the v2.10 testbed acceptance
+scope, and `email_method` is deliberately left unchanged at `sendmail` on the
+testbed.
 
 Follow-up (27 September 2026, 19:59): the malformed webhook URL was repaired on
 the testbed. `config.json` was backed up first
