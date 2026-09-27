@@ -91,6 +91,20 @@ backup contains SMTP credentials — every archived `config.json` shows
 therefore the only practical route and requires credentials held only by the
 operator.
 
+Checked on request (27 September 2026, 20:03): the current `sendmail` method
+cannot be made to work on this testbed as-is. No mailer has ever been installed
+on this host — no `postfix`/`dma`/`exim`/`sendmail` package, no
+`/usr/local/etc/postfix` or `/var/db/postfix` leftovers, no
+`/usr/local/sbin/sendmail`, and `/conf/config.xml` lists no plugins at all
+(`plugins: []`, no postfix settings block). Outbound port 25 to
+`gmail-smtp-in.l.google.com` fails with `No route to host`, while
+`smtp.gmail.com` is reachable on 587 and 465. Installing `os-postfix` would
+therefore still not deliver mail without a relayhost, which is Direct SMTP with
+extra moving parts. Email delivery from this testbed requires Direct SMTP
+(`email_method=smtp`) with operator-supplied credentials; the Settings UI labels
+the two options "Local Sendmail / Postfix" and "Direct SMTP (built into Device
+Monitor)".
+
 ## 27 September 2026 v2.10 testbed deployment
 
 Description: deployed the verified v2.10 development build to the testbed
