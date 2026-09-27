@@ -2,7 +2,7 @@
 
 ## Current state
 
-Last updated: 27 September 2026
+Last updated: 28 September 2026
 
 Branch: `v2.10-development`
 
@@ -14,7 +14,7 @@ Latest released implementation commit: `96cdd464640af6449afb1aa75c4aa193bc93f2ee
 Status:
 
 - Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
-- Latest source fix `aa25fe7` and its guarded v2.10 runtime-manifest update `0708239` are pushed to `origin/v2.10-development`; full GitHub Actions CI run `36315636699` PASS. Those commits changed no testbed runtime file or service; the nine corrected views were deployed to the testbed separately on 27 September 2026 (deployment record under DM-BL-008 below). `0708239` left the manifest SHA256 pinned in `install-unattended.sh` at the pre-refresh value, so the guarded installer aborted; that pin is restored by `3eeb78b`, which with its documentation commit `3fc9dfc` is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36323794636` (see the install-guard section below).
+- Latest source fix `aa25fe7` and its guarded v2.10 runtime-manifest update `0708239` are pushed to `origin/v2.10-development`; full GitHub Actions CI run `36315636699` PASS. Those commits changed no testbed runtime file or service; the nine corrected views were deployed to the testbed separately on 27 September 2026 (deployment record under DM-BL-008 below). `0708239` left the manifest SHA256 pinned in `install-unattended.sh` at the pre-refresh value, so the guarded installer aborted; that pin is restored by `3eeb78b`, which with its documentation commit `3fc9dfc` is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36323794636`; the following record commit `02a1eba` is also pushed and green in CI run `36324231410`, so no commit on this branch is local-only (see the install-guard section below).
 - That v2.10 metadata is repository-only: no v2.10 tag, GitHub release or runtime package exists, the published `v2.9` release asset is unchanged, and no testbed or production install was performed.
 - Notification dispatch remains on configd permanently: the HTTP API integration for `apiEmailUrl`/`apiWebhookUrl` is not implemented (`DECISIONS.md` 33 supersedes the cutover gates recorded in `DECISIONS.md` 32); `scan_network.py` and the live notification path are unchanged. The `www` privilege claim originally recorded for the API path is corrected by `DECISIONS.md` 34 (the web GUI runs `php-cgi` as root).
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
@@ -61,13 +61,16 @@ Actions Device Monitor CI run for that push is `36323794636` (`Device Monitor CI
 including the `Validate translated JavaScript` and `Validate language acceptance
 (DM-BL-008)` steps.
 
-Unresolved: `release/v2.10-notes.md` still needs review against the corrected views, and one
-French and one Italian browser dialog still need visual confirmation (DM-BL-008b); Dutch
-cannot be selected through the current GUI language list (DM-BL-008a).
+Unresolved: one French and one Italian browser dialog still need visual confirmation
+(DM-BL-008b); Dutch cannot be selected through the current GUI language list (DM-BL-008a); and
+DM-BL-008c (the shared-catalogue merge that makes the installed plugin catalogues readable by
+the GUI) is still an open decision. The `release/v2.10-notes.md` review that was outstanding
+here was completed on 28 September 2026 (see the end of the DM-BL-008 section below).
 
-Next recommended step: review `release/v2.10-notes.md` against the nine corrected views
-(with the French and Italian dialog confirmation remaining a human browser check); the
-installer guard itself needs no further work.
+Next recommended step: decide DM-BL-008c — merge the pushed
+`feature/optional-locale-installer-20260927` branch or implement the equivalent merge for
+v2.10 — because until that merge ships, the nine translations are inert on a firewall
+installed from the release asset alone. The installer guard itself needs no further work.
 
 ## 27 September 2026 automated language acceptance (DM-BL-008)
 
@@ -109,8 +112,12 @@ One platform gap remains:
   followed by `json_encode(15)` (`JSON_HEX_TAG|AMP|APOS|QUOT`). This keeps the output a
   JavaScript string while preventing script-boundary injection. Runtime acceptance and
   Node execution verify the exact translated string, including apostrophes, entities and
-  hostile markup. The nine views are now deployed on the testbed (deployment record below);
-  the released v2.10 payload still carries the escaped views.
+  hostile markup. The nine views are now deployed on the testbed (deployment record below), and
+  the v2.10 development payload carries the same corrected views: `0708239` refreshed the nine
+  guarded `release/v2.10-runtime.manifest` view hashes to them, and
+  `tests/test_release_manifest.py` reports `V210_RELEASE_MANIFEST=PASS` against the current
+  checkout (re-checked 28 September 2026). No v2.10 package, tag or release asset has been
+  built from that payload.
 
 Deployed (testbed `192.168.20.23`, host `OPNsense.internal`):
 
@@ -130,9 +137,11 @@ Deployed (testbed `192.168.20.23`, host `OPNsense.internal`):
   `LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`: nine languages,
   10 pages, 448 strings, zero failures and no JavaScript-entity finding. The single gap is
   the `nl_NL` GUI-selectability warning recorded above.
-- Not changed: no catalogue, configuration, service, database or production file. The released
-  v2.10 payload and `release/v2.10-notes.md` are unchanged; the remaining release work is
-  recorded as open in `PRODUCT_BACKLOG.md` under DM-BL-008b.
+- Not changed by that deployment: no catalogue, configuration, service, database or production
+  file. The guarded payload was refreshed to the corrected views afterwards by `0708239`, and
+  the release-notes review recorded at the end of this section was performed on 28 September
+  2026; `PRODUCT_BACKLOG.md` DM-BL-008b still lists that review as open and needs the matching
+  status update.
 
 Validation:
 
@@ -161,11 +170,31 @@ JavaScript test/render helpers, one affected Change Summary UI assertion, the CI
 and this record. The same nine views were then deployed to the testbed (deployment record
 above); no catalogue, configuration, service, database or production file was changed.
 
-Next recommended step: the guard broken by the manifest refresh is restored by `3eeb78b`,
-pushed with `3fc9dfc` and green in CI run `36323794636` (see the install-guard section above),
-so what remains is the `release/v2.10-notes.md` review and human browser confirmation of the
-corrected JavaScript strings. Dutch cannot be selected through the current GUI language list;
-browser wording and full page interaction acceptance remain human checks.
+Release-notes review (28 September 2026): `release/v2.10-notes.md` was reviewed against the
+nine corrected views and now records the JavaScript-encoding correction (the raw translated
+value is JSON-encoded, so apostrophes, quotation marks, backslashes, line breaks and
+`</script>` in translations render exactly and cannot break or inject into a page), the eleven
+installed catalogues and the validated nine-language acceptance (10 pages, 448 strings per
+language, zero failures), and the `nl_NL` GUI-selectability limitation. `release/v2.10-notes.md`
+is not one of the 37 files in `release/v2.10-runtime.manifest`, so the review changed no guarded
+hash and `tests/test_release_manifest.py`, `sh -n install-unattended.sh` and `git diff --check`
+stayed PASS.
+
+Push and CI confirmed: the local-only statements this section originally carried were resolved
+by the push of `3eeb78b` and `3fc9dfc` (GitHub Actions Device Monitor CI run `36323794636`,
+head `3fc9dfc`, job `validate` — PASS) and of the record commit `02a1eba` (CI run
+`36324231410`, head `02a1eba` — PASS). Local and remote `v2.10-development` are the same commit;
+nothing on this branch is local-only.
+
+Still outstanding: the one French and one Italian browser dialog need human confirmation
+(DM-BL-008b), `PRODUCT_BACKLOG.md` DM-BL-008b needs the matching status update for the
+release-notes review, and DM-BL-008c (the shared-catalogue merge that makes the installed
+plugin catalogues readable by the GUI) remains an open decision — the release notes do not
+state that limitation.
+
+Next recommended step: decide DM-BL-008c — merge the pushed `feature/optional-locale-installer-20260927`
+branch or implement the equivalent merge for v2.10 — because until that merge ships, the nine
+translations are inert on a firewall installed from the release asset alone.
 
 ## 27 September 2026 Settings delivery-action acceptance attempt
 
