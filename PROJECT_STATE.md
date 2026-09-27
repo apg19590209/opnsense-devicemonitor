@@ -14,7 +14,7 @@ Latest released implementation commit: `96cdd464640af6449afb1aa75c4aa193bc93f2ee
 Status:
 
 - Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
-- Latest code change `702d674` is pushed to `origin/v2.10-development`; GitHub Actions Device Monitor CI run `36303936147` PASS. The documentation commit that follows it (this record) passed CI run `36304245358`. Details in "27 September 2026 v2.10 version metadata and config API alignment" below.
+- Latest source fix `aa25fe7` and its guarded v2.10 runtime-manifest update `0708239` are pushed to `origin/v2.10-development`; full GitHub Actions CI run `36315636699` PASS. This is repository-only: no testbed runtime file or service was changed.
 - That v2.10 metadata is repository-only: no v2.10 tag, GitHub release or runtime package exists, the published `v2.9` release asset is unchanged, and no testbed or production install was performed.
 - Notification dispatch remains on configd permanently: the HTTP API integration for `apiEmailUrl`/`apiWebhookUrl` is not implemented (`DECISIONS.md` 33 supersedes the cutover gates recorded in `DECISIONS.md` 32); `scan_network.py` and the live notification path are unchanged. The `www` privilege claim originally recorded for the API path is corrected by `DECISIONS.md` 34 (the web GUI runs `php-cgi` as root).
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
@@ -86,6 +86,8 @@ Validation:
 - `tests/test_release_manifest.py` passed after refreshing the nine guarded
   `release/v2.10-runtime.manifest` view hashes; every recorded preimage matched the
   parent commit.
+- Source commit `aa25fe7` and manifest update `0708239` are pushed; full CI run
+  `36315636699` passed, including both new language-acceptance steps.
 
 Not covered: HTTP transport, full page JavaScript interactions, page layout and translation
 wording. Those remain browser/human acceptance checks.
