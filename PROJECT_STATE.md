@@ -30,11 +30,12 @@ Status:
 
 ## 27 September 2026 Settings delivery-action acceptance attempt
 
-Description: verified the operator's report that the Settings email and webhook
-test actions work in the interface, using the device-monitor log, the live
-configuration, the web-server log and direct network probes.
-Outcome: **not confirmed** — the email test fails and no webhook test reached the
-application.
+Description: checked the report that the Settings delivery actions were working,
+using the device-monitor log, the live configuration, the web-server log and
+direct network probes.
+Outcome: **no acceptance claimed** — the only attempts present are two email
+tests issued from the Settings page, both failing; there is no evidence that a
+webhook test was ever invoked.
 
 - Email test: two attempts at 19:48:06 and 19:48:09 both logged
   `Test email result: FAILED | Reason: Sendmail is not available. Install/configure
@@ -43,12 +44,15 @@ application.
   PHP `sendmail_path` points at `/usr/sbin/sendmail`, so delivery is impossible.
   The Settings email toast shows the failure reason for any result other than
   `sent`, so the interface reports this as an error.
-- Webhook test: the device-monitor log contains no webhook line at all (no
-  `Preparing to send test webhook`, no result line), so the handler never ran.
-  The stored `webhook_url` is malformed — `ntfy.sh` is duplicated before the
-  scheme, so `urlsplit` reports `scheme=ntfy.shhttps`, `host=ntfy.sh`, and `curl`
-  cannot resolve it (`Could not resolve host: ntfy.shhttps`), while
-  `https://ntfy.sh/` itself answers HTTP 200.
+- Webhook: the device-monitor log contains no webhook line at all (no
+  `Preparing to send test webhook`, no result line) and the lighttpd log shows
+  no related request, so there is no evidence that a webhook test was ever
+  invoked; nothing here indicates the webhook path was exercised. For the record,
+  the currently stored `webhook_url` is malformed — `ntfy.sh` is duplicated
+  before the scheme, so `urlsplit` reports `scheme=ntfy.shhttps`, `host=ntfy.sh`
+  and `curl` cannot resolve it (`Could not resolve host: ntfy.shhttps`), while
+  `https://ntfy.sh/` itself answers HTTP 200. This affects nothing while webhook
+  delivery is unused.
 - Web server: lighttpd logged `connect() /var/lib/php/tmp/php-fastcgi.socket-4:
   Connection refused` at 19:46:20, i.e. the PHP backend was briefly unreachable
   while the tests were being attempted.
