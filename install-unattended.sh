@@ -25,7 +25,7 @@ done
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 cd "$SCRIPT_DIR"
 MANIFEST=release/v2.10-runtime.manifest
-[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = 696c0df85b11b6e818f68b52c21340952e1ec9d4d3e51be09e61ab5d6152d610 ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
+[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = ee688415eb586abec361b84cd54ac75d5fe45a4fddb136f89bfcda610894ce69 ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 38 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
 [ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = 2.10 ] || { echo 'ABORT: source version' >&2; exit 1; }
 LIVE_DEFAULTS=/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
@@ -92,10 +92,12 @@ while read -r hash mode source target; do
     printf '%s %s %s %s\n' "$hash" "$mode" "$source" "$target" >> "$STAGE/items"
 done < "$MANIFEST"
 for lang in en_US cs_CZ de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN; do
-    source=src/opnsense/mvc/app/languages/${lang}_devicemonitor.po
-    output=$STAGE/${lang}_devicemonitor.mo
-    msgfmt --check -o "$output" "$source" >/dev/null || { echo "ABORT: gettext $lang" >&2; exit 1; }
-    printf '%s %s %s %s\n' "$(sha256 -q "$output")" 644 "$output" "/usr/local/opnsense/mvc/app/languages/${lang}_devicemonitor.mo" >> "$STAGE/items"
+    pofile=src/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.po
+    modir=$STAGE/${lang}/LC_MESSAGES
+    mkdir -p "$modir"
+    output=$modir/devicemonitor.mo
+    msgfmt --check -o "$output" "$pofile" >/dev/null || { echo "ABORT: gettext $lang" >&2; exit 1; }
+    printf '%s %s %s %s\n' "$(sha256 -q "$output")" 644 "$output" "/usr/local/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.mo" >> "$STAGE/items"
 done
 python3 - <<'PY'
 import ast,glob,json,xml.etree.ElementTree as ET

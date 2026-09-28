@@ -94,6 +94,12 @@ echo "  Plugin files removed"
 
 echo "[5/6] Removing translations..."
 for lang in en_US cs_CZ de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN; do
+    rm -f "/usr/local/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.po"
+    rm -f "/usr/local/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.mo"
+    rmdir "/usr/local/opnsense/mvc/app/languages/${lang}/LC_MESSAGES" 2>/dev/null || true
+    rmdir "/usr/local/opnsense/mvc/app/languages/${lang}" 2>/dev/null || true
+    # Legacy flat layout from v2.9/v2.10 release-asset installs; unreadable by
+    # bindtextdomain() and superseded by the <locale>/LC_MESSAGES/ layout above.
     rm -f "/usr/local/opnsense/mvc/app/languages/${lang}_devicemonitor.po"
     rm -f "/usr/local/opnsense/mvc/app/languages/${lang}_devicemonitor.mo"
 done

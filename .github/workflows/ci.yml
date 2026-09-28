@@ -62,9 +62,10 @@ jobs:
           set -eu
           mkdir -p /tmp/devicemonitor-mo
           for lang in en_US cs_CZ de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN; do
+            mkdir -p "/tmp/devicemonitor-mo/${lang}/LC_MESSAGES"
             msgfmt \
-              "src/opnsense/mvc/app/languages/${lang}_devicemonitor.po" \
-              -o "/tmp/devicemonitor-mo/${lang}_devicemonitor.mo"
+              "src/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.po" \
+              -o "/tmp/devicemonitor-mo/${lang}/LC_MESSAGES/devicemonitor.mo"
           done
 
       - name: Validate translated JavaScript
@@ -72,6 +73,9 @@ jobs:
 
       - name: Validate language acceptance (DM-BL-008)
         run: python3 tests/test_language_acceptance.py --engine interpolate
+
+      - name: Validate sidecar catalogue resolution (O3/O4)
+        run: python3 tests/test_sidecar_catalogue.py
 
       - name: Validate Device Monitor database migrations
         run: |

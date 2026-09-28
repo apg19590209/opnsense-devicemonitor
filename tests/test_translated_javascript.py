@@ -47,12 +47,13 @@ def verify(label, translations):
     print(f'{label}: {len(scripts)} script blocks ' + ('RENDERED' if args.render_dir else 'PASS'))
 
 with tempfile.TemporaryDirectory(prefix='dm-translated-js-') as tmp:
-    for po in sorted(LANGUAGES.glob('*_devicemonitor.po')):
+    for po in sorted(LANGUAGES.glob('*/LC_MESSAGES/devicemonitor.po')):
+        locale = po.parent.parent.name
         mo = Path(tmp) / 'catalogue.mo'
         subprocess.run(['msgfmt', '--check', '--check-format', str(po), '-o', str(mo)], check=True)
         with mo.open('rb') as stream:
             catalogue = gettext.GNUTranslations(stream)
-        verify(po.stem, {key: catalogue.gettext(key) for key in keys})
+        verify(locale, {key: catalogue.gettext(key) for key in keys})
 
 hostile = "L'identité \"quoted\" \\ path\nnext\rline\t</script><script>throw Error('injected')</script>&\u2028\u2029 日本語"
 verify('quotes-backslashes-newlines-script-tags-unicode', {key: hostile for key in keys})
