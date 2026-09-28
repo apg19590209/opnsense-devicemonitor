@@ -3,6 +3,11 @@
 - Locale: `fr_FR` (French)
 - Recorded: 2026-09-28
 - Target: OPNsense firewall admin UI (device address not stated in the supplied log)
+- Target address, operator-attested: `192.168.20.23` — the same host as the `it_IT`
+  testbed. Attested by the operator on 2026-09-28. See [Target attribution](#target-attribution).
+  Not present in the supplied log, and corroborated by no artifact.
+- Case data: `verification/locales/locale_cases/fr_FR.json` — case boundaries and
+  provenance only; it holds no run output and closes nothing
 - Status: **OPERATOR-REPORTED**
 - Harness executed by this workstream: **NO**
 - Evidence artifacts attached: **supplied log transcript only**
@@ -21,6 +26,29 @@ and no browser or WebDriver binary available.
 
 Nothing in this file asserts more than the operator reported. See
 [Evidence gap](#evidence-gap) for exactly what is missing.
+
+## Target attribution
+
+The line above the fold states a fact about the transcript: the supplied log does not name
+a device. That statement is still true and is not withdrawn here.
+
+Separately, the operator has attested that this French pass ran against the **same target
+host as the Italian pass, `192.168.20.23`**. That is recorded as an operator statement,
+with its provenance, and not as a verified fact:
+
+- **Source.** Operator attestation, 2026-09-28, through this repository's tracking channel.
+- **Corroboration.** None. The supplied log names no address, no route, and no build, and
+  no artifact from the target has been supplied. `REPORT-it_IT-2026-09-28.md` records the
+  same address for the Italian pass, but two attestations of one address are not an
+  artifact trail — they are the same class of evidence, and the Italian address is itself
+  unverified.
+- **Standing.** This is a working assumption about scheduling and scope. It may not close
+  anything, it does not satisfy the *Target identification* item in the evidence gap, and
+  it must be corrected if an artifact shows a different host.
+
+`locale_cases/fr_FR.json` carries the same address and the same caveat in its `target`
+block (`address_provenance`, `address_in_supplied_log: false`,
+`address_corroborated_by_artifact: false`).
 
 ## Supplied log (verbatim)
 
@@ -75,10 +103,17 @@ version, so the corroboration does not establish identity, version, or reproduci
 Present:
 
 - [x] Verbatim operator log transcript — reproduced inline under *Supplied log*
+- [x] Case-boundary file `verification/locales/locale_cases/fr_FR.json` — case data only;
+  it contains no run output and closes nothing
 
 Absent. Until these exist, the reported PASS results are unverified and no downstream
-defect or backlog item may be closed on their strength:
+defect or backlog item may be closed on their strength. **Nothing supplied since this
+record was written is a run artifact**, so every box below stays unchecked and the record
+stays `OPERATOR-REPORTED` — an operator statement, however precise, does not satisfy any
+item here (see `out/README.md` → *Acceptance checklist before an item can be closed*).
 
+- [ ] Corroboration that this run targeted `192.168.20.23` — the address is
+  operator-attested only, and the supplied log names no device ([Target attribution](#target-attribution))
 - [ ] Raw tool output file (as opposed to the pasted transcript), with timestamps
 - [ ] Result artifact from the target run — `result-fr_FR.json`, `report-fr_FR.html`, or equivalent
 - [ ] Stream timeline (per-snapshot `t_ms`, `chars`, `sha256`) proving progressive streaming and lossless assembly
@@ -99,12 +134,21 @@ English settings.
 
 **Does not assert:** that the `verification/locales/` harness ran or passed; that
 streaming, encoding, fallback, or `document.lang` checks were exercised; which device was
-used; that an artifact trail exists; that `F1` or `DM-BL-008c` is resolved.
+used (the address above is operator-attested, not evidenced, and the supplied log does not
+name one); that the shared-host attribution is correct; that an artifact trail exists; that
+`F1` or `DM-BL-008c` is resolved; that `DM-BL-008b` is resolved.
+
+**Status of the tracked items:** unchanged. `F1` `DEFERRED`, `DM-BL-008c` `DEFERRED`,
+`DM-BL-008b` `PENDING-EVIDENCE`. No evidence flag on this record was cleared by the target
+attribution.
 
 ## Related records
 
 - `verification/locales/README.md` — index and status legend
-- `verification/locales/REPORT-it_IT-2026-09-28.md` — Italian pass, same target class
+- `verification/locales/locale_cases/fr_FR.json` — case boundaries, target attribution,
+  and the tracking rules this record obeys (no run output)
+- `verification/locales/REPORT-it_IT-2026-09-28.md` — Italian pass, same target class,
+  and the origin of the `192.168.20.23` address
 - `verification/locales/deferrals.md` — `F1`, `DM-BL-008b`, `DM-BL-008c` state; this
   French pass is the run from which `F1` and `DM-BL-008c` were deferred
 - `PRODUCT_BACKLOG.md`, `PROJECT_STATE.md` — `DM-BL-008b` currently `PENDING-EVIDENCE`

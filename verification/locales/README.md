@@ -16,7 +16,7 @@ them.
 
 | Record | Locale | Target | Status |
 | --- | --- | --- | --- |
-| `REPORT-fr_FR-2026-09-28.md` | `fr_FR` | OPNsense UI (address not stated in the supplied log) | `OPERATOR-REPORTED` |
+| `REPORT-fr_FR-2026-09-28.md` | `fr_FR` | `192.168.20.23` (OPNsense UI — operator-attested, not in the supplied log; see the report's *Target attribution*) | `OPERATOR-REPORTED` |
 | `REPORT-it_IT-2026-09-28.md` | `it_IT` | `192.168.20.23` (OPNsense UI) | `OPERATOR-REPORTED` |
 
 See `deferrals.md` for F1, `DM-BL-008b`, `DM-BL-008c`.
@@ -25,6 +25,12 @@ See `deferrals.md` for F1, `DM-BL-008b`, `DM-BL-008c`.
 
 `verify_locale_stream.py` (proposed, **not yet committed**). Protocol: standard library
 plus `selenium` only; case data in `locale_cases/<locale>.json`.
+
+Case data for `fr_FR` now exists at `locale_cases/fr_FR.json` (added 2026-09-28). Nothing
+reads it yet: the harness is still uncommitted, so the file records boundaries, target
+attribution, and the provenance rules rather than driving a run. No ratified schema exists
+in this directory, so it is marked `draft-unratified` and every field a run would fill is
+`null`. A non-`null` value in it is never a PASS.
 
 Checks emitted: `stream_progressed`, `stream_lossless`, `no_replacement_char`,
 `no_mojibake`, `no_control_chars`, `localized_markers_present`,
