@@ -483,6 +483,14 @@
                             </td>
                         </tr>
                     </table>
+
+                    <div style="padding:10px 0 0 0;">
+                        <button type="button"
+                                class="btn btn-primary btn-apply"
+                                id="btn-apply-about">
+                            <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
+                        </button>
+                    </div>
                 </div>
             </div>
 
