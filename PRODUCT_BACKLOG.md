@@ -297,3 +297,16 @@ for `O3`: the nested catalogues, the committed sidecar binder and the migrated v
 installed ones, all 38 manifest targets verify on disk, and the eleven catalogues match the
 source. Monitoring remains disabled, so no scan ran. `O4` stays open for human browser
 confirmation only.
+
+### Final sign-off — 28 September 2026
+
+- **`O4` — view migration: `CLOSED` (verified via human browser pass)**, recorded on operator
+  instruction. Provenance: operator attestation in this session; the run-book's evidence artifacts
+  (screenshots, About-tab page source for both toggle states, browser and version, timestamps, the
+  `<language>` value before and after) were not attached to this checkout, so this entry states the
+  operator's reported result rather than an artifact-backed verification, as `DM-BL-008b` does.
+- **Sidecar dialogue domain switching: `SUCCESSFUL`** — `fr_FR` and `it_IT` runtime validation
+  matched the expected values in `verification/O4-HUMAN-ACCEPTANCE-RUNBOOK.md`, including the
+  precedence case with the toggle on and the core-domain fallback with it off.
+- `O3` (installer catalogue layout) remains `RESOLVED` and deployed. `DM-BL-008a` (Dutch
+  selectability) and the `DM-BL-008c` merge decision are unaffected by this sign-off and stay open.

@@ -2595,3 +2595,31 @@ INSTALL_OK version=2.10 files=49 backup=/var/backups/devicemonitor/install-v210.
 - Still open: human browser confirmation of the migrated pages with the sidecar toggle both on
   and off (Settings -> About). That is the only unmet condition of `O4`; no browser or WebDriver
   is installed on this host.
+
+## 28 September 2026 — `O4` sign-off (operator-attested browser pass) and local merge readiness
+
+- **Status as instructed: `O4` view migration `CLOSED` (verified via human browser pass), and the
+  sidecar domain switch recorded as `SUCCESSFUL` for `fr_FR` and `it_IT`.** Provenance: operator
+  attestation in this session. No artifact was attached to this checkout: the run-book's evidence
+  list (screenshots, the About-tab page source for the toggle ON and OFF states, browser name and
+  version, run timestamps, the `<language>` value before and after, and the
+  `sidecar_translation_enabled` value observed in each state) has not been supplied here. The record
+  therefore states the operator's reported result, exactly as `DM-BL-008b` distinguishes an
+  attestation from an artifact-backed verification; attaching those items raises this to
+  artifact-verified and would need no other change.
+- The technical preconditions for that pass are present and documented above: the About tab's
+  `#btn-apply-about` is deployed, the sidecar domain resolves on the live host for `fr_FR`, `de_DE`
+  and `it_IT` (`Résumé des modifications`, `Surveillance des appareils`, `Riepilogo modifiche`,
+  `Monitoraggio dispositivi`), and `devicemonitor_t()` takes precedence over the core catalogue with
+  the toggle on and falls through to it with the toggle off.
+- **Local merge readiness verified without moving anything.** `origin/v2.10-development` (`548dbcc`)
+  is an ancestor of `990a4b0`, so a plain merge into it fast-forwards. In a throwaway detached
+  worktree the `--no-ff --no-commit` variant reported "Automatic merge went well", staged 46 files
+  (1527 insertions, 424 deletions) with `MERGE_HEAD` present, and `merge --abort` returned the
+  sandbox to clean; the readiness test itself, `merge --ff-only`, reported
+  `Updating 548dbcc..990a4b0 - Fast-forward` with 125 tracked files and 0 conflict markers. The
+  local `v2.10-development` ref was not moved (still `548dbcc`) and the main checkout still carries
+  only the parallel locale-verification changes (75 insertions, 19 deletions).
+- Note for the record: `--no-ff` is the opposite of a fast-forward test, because it forces a merge
+  commit. The command that answers the question is `git merge-base --is-ancestor` followed by
+  `git merge --ff-only`; `--no-ff --no-commit` only proves that a merge commit would apply cleanly.
