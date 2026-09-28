@@ -6,7 +6,7 @@ import json
 root = Path(__file__).resolve().parents[1]
 manifest = root / 'release/v2.10-runtime.manifest'
 rows = [line.split() for line in manifest.read_text().splitlines()]
-assert len(rows) == 37
+assert len(rows) == 38
 assert all(len(row) == 4 for row in rows)
 sources = [row[2] for row in rows]
 targets = [row[3] for row in rows]
@@ -24,6 +24,8 @@ for digest, mode, source, target in rows:
             ('src/etc/rc.d/devicemonitor', '/usr/local/etc/rc.d/devicemonitor'),
             ('src/etc/inc/plugins.inc.d/devicemonitor.inc',
              '/usr/local/etc/inc/plugins.inc.d/devicemonitor.inc'),
+            ('src/etc/inc/devicemonitor_locale.inc',
+             '/usr/local/etc/inc/devicemonitor_locale.inc'),
         }
     assert '/var/db/' not in target and 'config.json' not in target
 defaults = json.loads(

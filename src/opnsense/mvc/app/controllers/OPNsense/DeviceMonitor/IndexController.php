@@ -4,6 +4,23 @@ namespace OPNsense\DeviceMonitor;
 
 class IndexController extends \OPNsense\Base\IndexController
 {
+    /*
+     * O4 / DM-BL-008c - bind the plugin's own "devicemonitor" text domain before any
+     * view is rendered. The views call the global devicemonitor_t(), which this
+     * binder defines, so the include is not optional for a Device Monitor page: if
+     * the file is missing the page must fail rather than resolve English silently.
+     */
+    public function initialize()
+    {
+        parent::initialize();
+
+        require_once '/usr/local/etc/inc/devicemonitor_locale.inc';
+
+        if (function_exists('devicemonitor_bind_sidecar')) {
+            devicemonitor_bind_sidecar();
+        }
+    }
+
     public function devicesAction()
     {
         $this->view->pick('OPNsense/DeviceMonitor/devices');

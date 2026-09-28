@@ -24,7 +24,7 @@ keys = set()
 for view in sorted(VIEWS.glob('*.volt')):
     for index, script in enumerate(re.findall(r'<script\b[^>]*>(.*?)</script>', view.read_text(), re.S)):
         scripts.append((view.name, index, script))
-        for literal in re.findall(r"lang\.(?:_|query)\(('(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\")\)", script):
+        for literal in re.findall(r"(?:lang\.(?:_|query)|devicemonitor_raw|devicemonitor_t)\(('(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\")\)", script):
             # Current gettext keys use standard quoted strings; PHP decodes them in the renderer.
             keys.add(literal[1:-1].replace("\\'", "'").replace('\\"', '"').replace('\\\\', '\\'))
 assert scripts and keys

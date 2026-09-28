@@ -14,7 +14,7 @@ function check(condition, message) {
 }
 
 [
-    "{{ lang._('Device Profile') }}",
+    "{{ devicemonitor_t('Device Profile') }}",
     'function buildGroupingCell(row)',
     'buildGroupingCell(row)',
     'physical_device_id',
@@ -81,7 +81,7 @@ scripts.forEach(function(block) {
     const javascript = renderTranslations(block)
         .replace(/^<script>/, '')
         .replace(/<\/script>$/, '')
-        // Volt substitutes lang._() placeholders before the browser parses
+        // Volt substitutes devicemonitor_t() placeholders before the browser parses
         // this block, so neutralise them before syntax checking the raw file.
         .replace(/\{\{[\s\S]*?\}\}/g, 'VOLT');
 

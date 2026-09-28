@@ -4,27 +4,27 @@
         <ul class="nav nav-tabs" role="tablist" style="margin:10px 0 0 0;">
             <li role="presentation" class="active">
                 <a href="#tab-monitoring" role="tab" data-toggle="tab">
-                    <i class="fa fa-desktop"></i> {{ lang._('Monitoring') }}
+                    <i class="fa fa-desktop"></i> {{ devicemonitor_t('Monitoring') }}
                 </a>
             </li>
             <li role="presentation">
                 <a href="#tab-nmap" role="tab" data-toggle="tab">
-                    <i class="fa fa-search"></i> {{ lang._('Nmap Scanning') }}
+                    <i class="fa fa-search"></i> {{ devicemonitor_t('Nmap Scanning') }}
                 </a>
             </li>
             <li role="presentation">
                 <a href="#tab-email" role="tab" data-toggle="tab">
-                    <i class="fa fa-envelope-o"></i> {{ lang._('Email Notifications') }}
+                    <i class="fa fa-envelope-o"></i> {{ devicemonitor_t('Email Notifications') }}
                 </a>
             </li>
             <li role="presentation">
                 <a href="#tab-webhook" role="tab" data-toggle="tab">
-                    <i class="fa fa-bell-o"></i> {{ lang._('Webhook Notifications') }}
+                    <i class="fa fa-bell-o"></i> {{ devicemonitor_t('Webhook Notifications') }}
                 </a>
             </li>
             <li role="presentation">
                 <a href="#tab-about" role="tab" data-toggle="tab">
-                    <i class="fa fa-info-circle"></i> {{ lang._('About') }}
+                    <i class="fa fa-info-circle"></i> {{ devicemonitor_t('About') }}
                 </a>
             </li>
         </ul>
@@ -36,7 +36,7 @@
                 <a id="return-to-device-details" class="btn btn-default btn-sm"
                    href="#" style="display:none;margin-bottom:12px;">
                     <i class="fa fa-arrow-left" aria-hidden="true"></i>
-                    {{ lang._('Back to Network Identity Details') }}
+                    {{ devicemonitor_t('Back to Network Identity Details') }}
                 </a>
                 <table class="table table-striped">
                     <tbody>
@@ -44,73 +44,73 @@
                             <td style="width:30%;vertical-align:top;">
                                 <label>
                                     <input type="checkbox" id="email_enabled" />
-                                    <strong>{{ lang._('Enable Email') }}</strong>
+                                    <strong>{{ devicemonitor_t('Enable Email') }}</strong>
                                 </label>
                             </td>
                             <td>
                                 <div id="email_config">
 
-                                    <label>{{ lang._('Email Recipient') }}:</label>
+                                    <label>{{ devicemonitor_t('Email Recipient') }}:</label>
                                     <input type="email" id="email_to" class="form-control" placeholder="admin@example.com" style="max-width:400px;" />
                                     <br><br>
 
-                                    <label>{{ lang._('Email Sender') }}:</label>
+                                    <label>{{ devicemonitor_t('Email Sender') }}:</label>
                                     <input type="email" id="email_from" class="form-control" placeholder="devicemonitor@opnsense.local" style="max-width:400px;" />
                                     <br><br>
 
-                                    <label>{{ lang._('Email delivery method') }}:</label>
+                                    <label>{{ devicemonitor_t('Email delivery method') }}:</label>
                                     <select id="email_method" class="form-control" style="max-width:400px;">
-                                        <option value="sendmail">{{ lang._('Local Sendmail / Postfix') }}</option>
-                                        <option value="smtp">{{ lang._('Direct SMTP (built into Device Monitor)') }}</option>
+                                        <option value="sendmail">{{ devicemonitor_t('Local Sendmail / Postfix') }}</option>
+                                        <option value="smtp">{{ devicemonitor_t('Direct SMTP (built into Device Monitor)') }}</option>
                                     </select>
-                                    <button type="button" id="email_sendmail_config" class="dm-info" aria-label="{{ lang._('About Email Delivery') }}"
-                                            data-content="{{ lang._('Choose the mail transport that matches your OPNsense installation') }} {{ lang._('Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured.') }}">
+                                    <button type="button" id="email_sendmail_config" class="dm-info" aria-label="{{ devicemonitor_t('About Email Delivery') }}"
+                                            data-content="{{ devicemonitor_t('Choose the mail transport that matches your OPNsense installation') }} {{ devicemonitor_t('Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured.') }}">
                                         <i class="fa fa-info-circle" aria-hidden="true"></i>
                                     </button>
 
                                     <div id="email_smtp_config" style="margin-top:14px;max-width:600px;display:none;">
-                                        <button type="button" class="dm-info" aria-label="{{ lang._('About Direct SMTP') }}"
-                                                data-content="{{ lang._('Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit.') }}">
+                                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Direct SMTP') }}"
+                                                data-content="{{ devicemonitor_t('Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit.') }}">
                                             <i class="fa fa-info-circle" aria-hidden="true"></i>
                                         </button>
 
-                                        <label>{{ lang._('SMTP Server') }}:</label>
+                                        <label>{{ devicemonitor_t('SMTP Server') }}:</label>
                                         <input type="text" id="smtp_host" class="form-control" placeholder="smtp.example.com" style="max-width:400px;" />
                                         <br>
 
                                         <div style="display:flex;gap:15px;align-items:flex-end;flex-wrap:wrap;">
                                             <div>
-                                                <label>{{ lang._('SMTP Port') }}:</label>
+                                                <label>{{ devicemonitor_t('SMTP Port') }}:</label>
                                                 <input type="number" id="smtp_port" class="form-control" value="587" min="1" max="65535" style="width:120px;" />
                                             </div>
                                             <div>
-                                                <label>{{ lang._('Encryption') }}:</label>
+                                                <label>{{ devicemonitor_t('Encryption') }}:</label>
                                                 <select id="smtp_encryption" class="form-control" style="width:180px;">
                                                     <option value="starttls">STARTTLS</option>
                                                     <option value="ssl">SSL/TLS</option>
-                                                    <option value="none">{{ lang._('None') }}</option>
+                                                    <option value="none">{{ devicemonitor_t('None') }}</option>
                                                 </select>
                                             </div>
                                         </div>
                                         <br>
 
-                                        <label>{{ lang._('SMTP Username') }}:</label>
+                                        <label>{{ devicemonitor_t('SMTP Username') }}:</label>
                                         <input type="text" id="smtp_username" class="form-control" autocomplete="username" style="max-width:400px;" />
-                                        <button type="button" class="dm-info" aria-label="{{ lang._('About SMTP Username') }}"
-                                                data-content="{{ lang._('Leave empty if the SMTP server does not require authentication') }}">
+                                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About SMTP Username') }}"
+                                                data-content="{{ devicemonitor_t('Leave empty if the SMTP server does not require authentication') }}">
                                             <i class="fa fa-info-circle" aria-hidden="true"></i>
                                         </button>
                                         <br><br>
 
-                                        <label>{{ lang._('SMTP Password') }}:</label>
+                                        <label>{{ devicemonitor_t('SMTP Password') }}:</label>
                                         <input type="password" id="smtp_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
                                     </div>
 
                                     <button type="button" id="btn-test-email" class="btn btn-default btn-sm" style="margin-top:14px;">
-                                        🧪 {{ lang._('Test Email') }}
+                                        🧪 {{ devicemonitor_t('Test Email') }}
                                     </button>
-                                    <button type="button" class="dm-info" aria-label="{{ lang._('About Test Email') }}"
-                                            data-content="{{ lang._('The current email settings are saved before the test is sent') }}">
+                                    <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Test Email') }}"
+                                            data-content="{{ devicemonitor_t('The current email settings are saved before the test is sent') }}">
                                         <i class="fa fa-info-circle" aria-hidden="true"></i>
                                     </button>
                                 </div>
@@ -118,57 +118,57 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:top;padding-top:16px;">
-                                <strong>{{ lang._('IP and MAC Conflicts') }}</strong>
+                                <strong>{{ devicemonitor_t('IP and MAC Conflicts') }}</strong>
                             </td>
                             <td style="padding-top:16px;">
                                 <label style="margin:0;">
                                     <input type="checkbox" id="identity_email_enabled" />
-                                    <strong>{{ lang._('Email high-severity conflict alerts') }}</strong>
+                                    <strong>{{ devicemonitor_t('Email high-severity conflict alerts') }}</strong>
                                 </label>
                                 <br>
-                                <button type="button" class="dm-info" aria-label="{{ lang._('About Conflict Alerts') }}"
-                                        data-content="{{ lang._('Send an email when a new high-severity IPv4 or IPv6 address conflict is detected.') }}">
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Conflict Alerts') }}"
+                                        data-content="{{ devicemonitor_t('Send an email when a new high-severity IPv4 or IPv6 address conflict is detected.') }}">
                                     <i class="fa fa-info-circle" aria-hidden="true"></i>
                                 </button>
                             </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:top;padding-top:16px;">
-                                <strong>{{ lang._('Infrastructure Services') }}</strong>
+                                <strong>{{ devicemonitor_t('Infrastructure Services') }}</strong>
                             </td>
                             <td style="padding-top:16px;">
                                 <label style="margin:0;">
                                     <input type="checkbox" id="service_email_enabled" />
-                                    <strong>{{ lang._('Email infrastructure service alerts') }}</strong>
+                                    <strong>{{ devicemonitor_t('Email infrastructure service alerts') }}</strong>
                                 </label>
                                 <br>
-                                <button type="button" class="dm-info" aria-label="{{ lang._('About Infrastructure Service Alerts') }}"
-                                        data-content="{{ lang._('Alert only on verified or authoritative infrastructure-service evidence.') }} {{ lang._('Generic service-changed events remain history-only in this version.') }}">
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Infrastructure Service Alerts') }}"
+                                        data-content="{{ devicemonitor_t('Alert only on verified or authoritative infrastructure-service evidence.') }} {{ devicemonitor_t('Generic service-changed events remain history-only in this version.') }}">
                                     <i class="fa fa-info-circle" aria-hidden="true"></i>
                                 </button>
                                 <div id="service_email_options" style="margin-top:10px;margin-left:20px;">
                                     <label style="display:block;font-weight:normal;">
                                         <input type="checkbox" id="service_email_new" />
-                                        {{ lang._('New verified service') }}
+                                        {{ devicemonitor_t('New verified service') }}
                                     </label>
                                     <label style="display:block;font-weight:normal;">
                                         <input type="checkbox" id="service_email_unavailable" />
-                                        {{ lang._('Established service unavailable') }}
+                                        {{ devicemonitor_t('Established service unavailable') }}
                                     </label>
                                     <label style="display:block;font-weight:normal;">
                                         <input type="checkbox" id="service_email_recovered" />
-                                        {{ lang._('Unavailable service recovered') }}
+                                        {{ devicemonitor_t('Unavailable service recovered') }}
                                     </label>
                                 </div>
                             </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:top;padding-top:16px;">
-                                <strong>{{ lang._('Notify for interfaces') }}</strong>
+                                <strong>{{ devicemonitor_t('Notify for interfaces') }}</strong>
                             </td>
                             <td>
-                                <button type="button" class="dm-info" aria-label="{{ lang._('About Notification Interfaces') }}"
-                                        data-content="{{ lang._('Leave empty to receive notifications from all interfaces') }}">
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Notification Interfaces') }}"
+                                        data-content="{{ devicemonitor_t('Leave empty to receive notifications from all interfaces') }}">
                                     <i class="fa fa-info-circle" aria-hidden="true"></i>
                                 </button>
                                 <div style="margin-top:6px;border:1px solid #444;border-radius:4px;padding:8px;max-width:350px;max-height:180px;overflow-y:auto;" id="email-vlan-list"></div>
@@ -178,15 +178,15 @@
                 </table>
                 <div style="padding:10px 0 0 0;">
                     <button type="button" class="btn btn-primary btn-apply" id="btn-apply-email">
-                        <i class="fa fa-check"></i> {{ lang._('Apply') }}
+                        <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
                     </button>
                 </div>
             </div>
 
             <!-- TAB 4: Webhook -->
             <div role="tabpanel" class="tab-pane" id="tab-webhook">
-                <button type="button" class="dm-info" aria-label="{{ lang._('About Webhook Notifications') }}"
-                        data-content="{{ lang._('Configure webhook notifications for new devices on the network') }}">
+                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Webhook Notifications') }}"
+                        data-content="{{ devicemonitor_t('Configure webhook notifications for new devices on the network') }}">
                     <i class="fa fa-info-circle" aria-hidden="true"></i>
                 </button>
                 <table class="table table-striped">
@@ -195,12 +195,12 @@
                             <td style="width:30%;vertical-align:top;">
                                 <label>
                                     <input type="checkbox" id="webhook_enabled" />
-                                    <strong>{{ lang._('Enable Webhook') }}</strong>
+                                    <strong>{{ devicemonitor_t('Enable Webhook') }}</strong>
                                 </label>
                             </td>
                             <td>
                                 <div id="webhook_config">
-                                    <label>{{ lang._('Webhook URL') }}:</label>
+                                    <label>{{ devicemonitor_t('Webhook URL') }}:</label>
                                     <input type="text" id="webhook_url" class="form-control" placeholder="https://ntfy.sh/your_topic" style="max-width:500px;" />
                                     <div style="margin-top:10px;padding:12px;background:#f8f9fa;border-left:4px solid #007bff;border-radius:4px;max-width:500px;">
                                         <div style="font-weight:600;color:#495057;margin-bottom:8px;">💡 Examples:</div>
@@ -212,7 +212,7 @@
                                     </div>
                                     <br>
                                     <button type="button" id="test_webhook" class="btn btn-default btn-sm">
-                                        🧪 {{ lang._('Send Test') }}
+                                        🧪 {{ devicemonitor_t('Send Test') }}
                                     </button>
                                     <span id="webhook_test_result" style="margin-left:10px;font-weight:bold;"></span>
                                 </div>
@@ -221,10 +221,10 @@
 
                         <tr>
                             <td style="vertical-align:top;padding-top:16px;">
-                                <strong>{{ lang._('Notify for interfaces') }}</strong>
+                                <strong>{{ devicemonitor_t('Notify for interfaces') }}</strong>
                             </td>
                             <td>
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Notify for interfaces') }}" data-content="{{ lang._('Leave empty to receive notifications from all interfaces') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Notify for interfaces') }}" data-content="{{ devicemonitor_t('Leave empty to receive notifications from all interfaces') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                                 <div style="margin-top:6px;border:1px solid #444;border-radius:4px;padding:8px;max-width:350px;max-height:180px;overflow-y:auto;" id="webhook-vlan-list"></div>
                             </td>
                         </tr>
@@ -232,7 +232,7 @@
                 </table>
                 <div style="padding:10px 0 0 0;">
                     <button type="button" class="btn btn-primary btn-apply" id="btn-apply-webhook">
-                        <i class="fa fa-check"></i> {{ lang._('Apply') }}
+                        <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
                     </button>
                 </div>
             </div>
@@ -242,58 +242,58 @@
                 <table class="table table-striped">
                     <tbody>
                         <tr>
-                            <td style="width:30%;"><strong>{{ lang._('Enable Monitoring') }}</strong></td>
+                            <td style="width:30%;"><strong>{{ devicemonitor_t('Enable Monitoring') }}</strong></td>
                             <td>
                                 <input type="checkbox" id="enabled" />
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Enable Monitoring') }}" data-content="{{ lang._('Enable automatic network monitoring') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Enable Monitoring') }}" data-content="{{ devicemonitor_t('Enable automatic network monitoring') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:top;">
-                                <strong>{{ lang._('Monitored Interfaces') }}</strong>
+                                <strong>{{ devicemonitor_t('Monitored Interfaces') }}</strong>
                             </td>
                             <td>
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Monitored Interfaces') }}" data-content="{{ lang._('Only devices on selected interfaces are scanned. With no selection, scanning is refused.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Monitored Interfaces') }}" data-content="{{ devicemonitor_t('Only devices on selected interfaces are scanned. With no selection, scanning is refused.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                                 <div style="margin-top:6px;border:1px solid #444;border-radius:4px;padding:8px;max-width:450px;max-height:200px;overflow-y:auto;" id="monitored-interface-list"></div>
                                 <div id="monitored-interface-warning" class="text-danger" style="margin-top:6px;display:none;">
-                                    <i class="fa fa-exclamation-triangle"></i> {{ lang._('Monitoring is enabled but no interface is selected. Scans will be refused.') }}
+                                    <i class="fa fa-exclamation-triangle"></i> {{ devicemonitor_t('Monitoring is enabled but no interface is selected. Scans will be refused.') }}
                                 </div>
                             </td>
                         </tr>
                         <tr>
-                            <td><strong>{{ lang._('Scan Interval') }}</strong></td>
+                            <td><strong>{{ devicemonitor_t('Scan Interval') }}</strong></td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:10px;">
                                     <input type="number" id="scan_interval" class="form-control" value="300" min="60" max="3600" style="max-width:120px;" />
-                                    <span class="text-muted">{{ lang._('seconds') }}</span>
+                                    <span class="text-muted">{{ devicemonitor_t('seconds') }}</span>
                                 </div>
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Scan Interval') }}" data-content="{{ lang._('Seconds between scans (60-3600)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Scan Interval') }}" data-content="{{ devicemonitor_t('Seconds between scans (60-3600)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:top;">
-                                <strong>{{ lang._('AdGuard DNS Rewrites') }}</strong>
+                                <strong>{{ devicemonitor_t('AdGuard DNS Rewrites') }}</strong>
                             </td>
                             <td>
                                 <label style="margin:0;">
                                     <input type="checkbox" id="adguard_rewrite_enabled" />
-                                    <strong>{{ lang._('Enable AdGuard DNS rewrite hostname enrichment') }}</strong>
+                                    <strong>{{ devicemonitor_t('Enable AdGuard DNS rewrite hostname enrichment') }}</strong>
                                 </label>
                                 <br>
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('AdGuard DNS Rewrites') }}" data-content="{{ lang._('Uses manually configured AdGuard Home DNS rewrites as a high-confidence hostname source. Enable this only if you use AdGuard Home.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('AdGuard DNS Rewrites') }}" data-content="{{ devicemonitor_t('Uses manually configured AdGuard Home DNS rewrites as a high-confidence hostname source. Enable this only if you use AdGuard Home.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
 
                                 <div id="adguard_rewrite_config" style="margin-top:14px;max-width:600px;display:none;">
-                                    <label>{{ lang._('AdGuard URL') }}:</label>
+                                    <label>{{ devicemonitor_t('AdGuard URL') }}:</label>
                                     <input type="text" id="adguard_url" class="form-control" placeholder="https://192.168.1.2" style="max-width:400px;" />
-                                    <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('AdGuard URL') }}" data-content="{{ lang._('HTTPS base URL of your AdGuard Home server') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                    <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('AdGuard URL') }}" data-content="{{ devicemonitor_t('HTTPS base URL of your AdGuard Home server') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                                     <br><br>
 
-                                    <label>{{ lang._('Username') }}:</label>
+                                    <label>{{ devicemonitor_t('Username') }}:</label>
                                     <input type="text" id="adguard_username" class="form-control" autocomplete="username" style="max-width:400px;" />
                                     <br>
 
-                                    <label>{{ lang._('Password') }}:</label>
+                                    <label>{{ devicemonitor_t('Password') }}:</label>
                                     <input type="password" id="adguard_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
                                 </div>
                             </td>
@@ -301,42 +301,42 @@
 
                         <tr>
                             <td style="vertical-align:top;">
-                                <strong>{{ lang._('Pi-hole Hostnames') }}</strong>
-                                <span class="badge" style="background:#f0ad4e;color:#fff;margin-left:6px;font-weight:normal;">{{ lang._('Experimental') }}</span>
+                                <strong>{{ devicemonitor_t('Pi-hole Hostnames') }}</strong>
+                                <span class="badge" style="background:#f0ad4e;color:#fff;margin-left:6px;font-weight:normal;">{{ devicemonitor_t('Experimental') }}</span>
                             </td>
                             <td>
                                 <label style="margin:0;">
                                     <input type="checkbox" id="pihole_enabled" />
-                                    <strong>{{ lang._('Enable Pi-hole hostname enrichment') }}</strong>
+                                    <strong>{{ devicemonitor_t('Enable Pi-hole hostname enrichment') }}</strong>
                                 </label>
                                 <br>
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Pi-hole Hostnames') }}" data-content="{{ lang._('Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Pi-hole Hostnames') }}" data-content="{{ devicemonitor_t('Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
 
                                 <div id="pihole_config" style="margin-top:14px;max-width:600px;display:none;">
-                                    <label>{{ lang._('Pi-hole URL') }}:</label>
+                                    <label>{{ devicemonitor_t('Pi-hole URL') }}:</label>
                                     <input type="text" id="pihole_url" class="form-control" placeholder="https://192.168.1.3" style="max-width:400px;" />
-                                    <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Pi-hole URL') }}" data-content="{{ lang._('HTTPS base URL of your Pi-hole server') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                    <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Pi-hole URL') }}" data-content="{{ devicemonitor_t('HTTPS base URL of your Pi-hole server') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                                     <br><br>
 
-                                    <label>{{ lang._('App password') }}:</label>
+                                    <label>{{ devicemonitor_t('App password') }}:</label>
                                     <input type="password" id="pihole_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
-                                    <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('App password') }}" data-content="{{ lang._('Pi-hole app password generated in the Pi-hole web interface') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                    <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('App password') }}" data-content="{{ devicemonitor_t('Pi-hole app password generated in the Pi-hole web interface') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                                 </div>
                             </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:top;">
-                                <strong>{{ lang._('Unbound Hostnames') }}</strong>
-                                <span class="badge" style="background:#f0ad4e;color:#fff;margin-left:6px;font-weight:normal;">{{ lang._('Experimental') }}</span>
+                                <strong>{{ devicemonitor_t('Unbound Hostnames') }}</strong>
+                                <span class="badge" style="background:#f0ad4e;color:#fff;margin-left:6px;font-weight:normal;">{{ devicemonitor_t('Experimental') }}</span>
                             </td>
                             <td>
                                 <label style="margin:0;">
                                     <input type="checkbox" id="unbound_enabled" />
-                                    <strong>{{ lang._('Enable Unbound hostname enrichment') }}</strong>
+                                    <strong>{{ devicemonitor_t('Enable Unbound hostname enrichment') }}</strong>
                                 </label>
                                 <br>
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Unbound Hostnames') }}" data-content="{{ lang._('Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Unbound Hostnames') }}" data-content="{{ devicemonitor_t('Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
@@ -347,7 +347,7 @@
                     <button type="button"
                             class="btn btn-primary btn-apply"
                             id="btn-apply-monitoring">
-                        <i class="fa fa-check"></i> {{ lang._('Apply') }}
+                        <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
                     </button>
                 </div>
             </div>
@@ -358,29 +358,29 @@
                     <tbody>
                         <tr>
                             <td colspan="2">
-                                <h4 style="margin:5px 0;">{{ lang._('Targeted Nmap Scanning') }}</h4>
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Targeted Nmap Scanning') }}" data-content="{{ lang._('Optional detailed scan performed for newly detected devices after notification.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <h4 style="margin:5px 0;">{{ devicemonitor_t('Targeted Nmap Scanning') }}</h4>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Targeted Nmap Scanning') }}" data-content="{{ devicemonitor_t('Optional detailed scan performed for newly detected devices after notification.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
                         <tr>
-                            <td><strong>{{ lang._('Enable Targeted Nmap') }}</strong></td>
+                            <td><strong>{{ devicemonitor_t('Enable Targeted Nmap') }}</strong></td>
                             <td>
                                 <input type="checkbox" id="targeted_nmap_enabled" />
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Enable Targeted Nmap') }}" data-content="{{ lang._('Automatically scan newly detected devices') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Enable Targeted Nmap') }}" data-content="{{ devicemonitor_t('Automatically scan newly detected devices') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
                         <tr>
-                            <td><strong>{{ lang._('Top TCP Ports') }}</strong></td>
+                            <td><strong>{{ devicemonitor_t('Top TCP Ports') }}</strong></td>
                             <td>
                                 <input type="number" id="nmap_top_ports" class="form-control" value="100" min="1" max="1000" style="max-width:120px;" />
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Top TCP Ports') }}" data-content="{{ lang._('Number of most common TCP ports to scan (1-1000)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Top TCP Ports') }}" data-content="{{ devicemonitor_t('Number of most common TCP ports to scan (1-1000)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
                         <tr>
-                            <td><strong>{{ lang._('Timing Template') }}</strong></td>
+                            <td><strong>{{ devicemonitor_t('Timing Template') }}</strong></td>
                             <td>
                                 <select id="nmap_timing" class="form-control" style="max-width:180px;">
                                     <option value="0">T0</option>
@@ -390,41 +390,41 @@
                                     <option value="4">T4</option>
                                     <option value="5">T5</option>
                                 </select>
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Timing Template') }}" data-content="{{ lang._('Nmap timing template. T4 is the default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Timing Template') }}" data-content="{{ devicemonitor_t('Nmap timing template. T4 is the default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
                         <tr>
-                            <td><strong>{{ lang._('Host Timeout') }}</strong></td>
+                            <td><strong>{{ devicemonitor_t('Host Timeout') }}</strong></td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:10px;">
                                     <input type="number" id="nmap_host_timeout" class="form-control" value="45" min="10" max="300" style="max-width:120px;" />
-                                    <span class="text-muted">{{ lang._('seconds') }}</span>
+                                    <span class="text-muted">{{ devicemonitor_t('seconds') }}</span>
                                 </div>
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Host Timeout') }}" data-content="{{ lang._('Maximum Nmap scan time per device (10-300 seconds)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Host Timeout') }}" data-content="{{ devicemonitor_t('Maximum Nmap scan time per device (10-300 seconds)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
                         <tr>
-                            <td><strong>{{ lang._('Version Detection') }}</strong></td>
+                            <td><strong>{{ devicemonitor_t('Version Detection') }}</strong></td>
                             <td>
                                 <input type="checkbox" id="nmap_version_detection" />
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Version Detection') }}" data-content="{{ lang._('Detect services and versions using light detection') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Version Detection') }}" data-content="{{ devicemonitor_t('Detect services and versions using light detection') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
                         <tr>
-                            <td><strong>{{ lang._('Maximum Scans Per Cycle') }}</strong></td>
+                            <td><strong>{{ devicemonitor_t('Maximum Scans Per Cycle') }}</strong></td>
                             <td>
                                 <input type="number" id="nmap_max_per_cycle" class="form-control" value="2" min="1" max="10" style="max-width:120px;" />
-                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Maximum Scans Per Cycle') }}" data-content="{{ lang._('Maximum queued targeted scans processed during one monitoring cycle (1-10)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Maximum Scans Per Cycle') }}" data-content="{{ devicemonitor_t('Maximum queued targeted scans processed during one monitoring cycle (1-10)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
                     </tbody>
                 </table>
                 <div style="padding:10px 0 0 0;">
                     <button type="button" class="btn btn-primary btn-apply" id="btn-apply-nmap">
-                        <i class="fa fa-check"></i> {{ lang._('Apply') }}
+                        <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
                     </button>
                 </div>
             </div>
@@ -432,42 +432,55 @@
             <!-- TAB 5: About -->
             <div role="tabpanel" class="tab-pane" id="tab-about">
                 <div style="max-width:600px;padding:10px 0;">
-                    <h3 style="margin-top:0;">{{ lang._('Device Monitor') }} <span id="about-version" style="color:#888;font-size:16px;"></span></h3>
-                    <p class="text-muted">{{ lang._('OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data.') }}</p>
+                    <h3 style="margin-top:0;">{{ devicemonitor_t('Device Monitor') }} <span id="about-version" style="color:#888;font-size:16px;"></span></h3>
+                    <p class="text-muted">{{ devicemonitor_t('OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data.') }}</p>
                     <table class="table table-condensed" style="margin-top:20px;">
                         <tr>
-                            <th colspan="2" style="padding-top:14px;">{{ lang._('Original Project') }}</th>
+                            <th colspan="2" style="padding-top:14px;">{{ devicemonitor_t('Original Project') }}</th>
                         </tr>
                         <tr>
-                            <td style="width:40%;color:#888;">{{ lang._('Creator') }}</td>
+                            <td style="width:40%;color:#888;">{{ devicemonitor_t('Creator') }}</td>
                             <td>Hacesoft</td>
                         </tr>
                         <tr>
-                            <td style="color:#888;">{{ lang._('Repository') }}</td>
+                            <td style="color:#888;">{{ devicemonitor_t('Repository') }}</td>
                             <td><a href="https://github.com/hacesoft/opnsense-devicemonitor" target="_blank">github.com/hacesoft/opnsense-devicemonitor</a></td>
                         </tr>
 
                         <tr>
-                            <th colspan="2" style="padding-top:18px;">{{ lang._('v2.10 Features and Enhancements') }}</th>
+                            <th colspan="2" style="padding-top:18px;">{{ devicemonitor_t('v2.10 Features and Enhancements') }}</th>
                         </tr>
                         <tr>
-                            <td style="color:#888;">{{ lang._('Developer') }}</td>
+                            <td style="color:#888;">{{ devicemonitor_t('Developer') }}</td>
                             <td>Anthony Gonzalez</td>
                         </tr>
                         <tr>
-                            <td style="color:#888;">{{ lang._('Repository') }}</td>
+                            <td style="color:#888;">{{ devicemonitor_t('Repository') }}</td>
                             <td><a href="https://github.com/apg19590209/opnsense-devicemonitor" target="_blank">github.com/apg19590209/opnsense-devicemonitor</a></td>
                         </tr>
                         <tr>
-                            <th colspan="2" style="padding-top:18px;">{{ lang._('Licensing & Compatibility') }}</th>
+                            <th colspan="2" style="padding-top:18px;">{{ devicemonitor_t('Licensing & Compatibility') }}</th>
                         </tr>
                         <tr>
-                            <td style="color:#888;">{{ lang._('Licence') }}</td>
+                            <td style="color:#888;">{{ devicemonitor_t('Licence') }}</td>
                             <td>BSD 2-Clause License</td>
                         </tr>
                         <tr>
-                            <td style="color:#888;">{{ lang._('Requires OPNsense') }}</td>
+                            <td style="color:#888;">{{ devicemonitor_t('Requires OPNsense') }}</td>
                             <td>&ge; 26.1.5</td>
+                        </tr>
+                    </table>
+
+                    <h4 style="margin-top:22px;">{{ devicemonitor_t('Language') }}</h4>
+                    <table class="table table-condensed">
+                        <tr>
+                            <td style="width:40%;color:#888;">{{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}</td>
+                            <td>
+                                <input type="checkbox" id="sidecar_translation_enabled" />
+                                <div class="text-muted" style="margin-top:6px;max-width:520px;">
+                                    {{ devicemonitor_t('Translate Device Monitor strings from the plugin sidecar catalogue. When disabled, the plugin uses the stock OPNsense core catalogues only. The core language files under /usr/local/share/locale are never modified in either case.') }}
+                                </div>
+                            </td>
                         </tr>
                     </table>
                 </div>
@@ -643,6 +656,15 @@ $().ready(function() {
                 ) === '1'
             );
             $('#nmap_max_per_cycle').val(d.nmap_max_per_cycle||2);
+            $('#sidecar_translation_enabled').prop(
+                'checked',
+                String(
+                    d.sidecar_translation_enabled !== undefined &&
+                    d.sidecar_translation_enabled !== null
+                        ? d.sidecar_translation_enabled
+                        : '1'
+                ) === '1'
+            );
             $('#email_enabled').prop('checked', d.email_enabled==='1');
             $('#identity_email_enabled').prop('checked', d.identity_email_enabled==='1');
             $('#service_email_enabled').prop('checked', d.service_email_enabled==='1');
@@ -749,7 +771,8 @@ $().ready(function() {
             nmap_timing: $('#nmap_timing').val(),
             nmap_host_timeout: $('#nmap_host_timeout').val(),
             nmap_version_detection: $('#nmap_version_detection').is(':checked')?'1':'0',
-            nmap_max_per_cycle: $('#nmap_max_per_cycle').val()
+            nmap_max_per_cycle: $('#nmap_max_per_cycle').val(),
+            sidecar_translation_enabled: $('#sidecar_translation_enabled').is(':checked')?'1':'0'
         };
     }
 

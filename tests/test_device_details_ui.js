@@ -52,20 +52,20 @@ check(
 const head = thead[0];
 
 check(
-    head.indexOf("lang._('Lifecycle')") <
-        head.indexOf("lang._('Status')"),
+    head.indexOf("devicemonitor_t('Lifecycle')") <
+        head.indexOf("devicemonitor_t('Status')"),
     'Lifecycle History column order: Lifecycle must precede Status'
 );
 
 check(
-    head.indexOf("lang._('Status')") <
-        head.indexOf("lang._('IP Address')"),
+    head.indexOf("devicemonitor_t('Status')") <
+        head.indexOf("devicemonitor_t('IP Address')"),
     'Lifecycle History column order: Status must precede IP Address'
 );
 
 check(
-    head.indexOf("lang._('IP Address')") <
-        head.indexOf("lang._('Friendly Name')"),
+    head.indexOf("devicemonitor_t('IP Address')") <
+        head.indexOf("devicemonitor_t('Friendly Name')"),
     'Lifecycle History column order: IP Address must precede Friendly Name'
 );
 

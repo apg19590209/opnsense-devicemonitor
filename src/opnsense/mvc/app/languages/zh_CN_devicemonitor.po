@@ -1574,3 +1574,10 @@ msgstr "设备总数"
 
 msgid "Stopped"
 msgstr "已停止"
+
+msgid "Language"
+msgstr "语言"
+msgid "Plugin translations (sidecar catalogue)"
+msgstr "插件翻译（附属目录）"
+msgid "Translate Device Monitor strings from the plugin sidecar catalogue. When disabled, the plugin uses the stock OPNsense core catalogues only. The core language files under /usr/local/share/locale are never modified in either case."
+msgstr "从插件的附属目录翻译 Device Monitor 字符串。禁用时，插件仅使用 OPNsense 自带的核心目录。无论哪种情况，/usr/local/share/locale 下的核心语言文件都不会被修改。"

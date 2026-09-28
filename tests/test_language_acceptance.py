@@ -58,11 +58,12 @@ PAGES = (
     ('infrastructureservices', 'infrastructureservices.volt', {'portDiscoveryPage': False}),
     ('portdiscovery', 'infrastructureservices.volt', {'portDiscoveryPage': True}),
 )
-LANG_CALL = re.compile(r"""lang\.(?:_|query)\(\s*('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\s*\)""")
-# Every message id that a script body passes through json_encode(15), whichever method it calls:
-# a regression to lang._() must still be visible to the escaping check below.
-JSON_CALL = re.compile(r"""lang\.(?:_|query)\(\s*('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\s*\)\s*\|json_encode\(15\)""")
-UNSAFE_JS_CALL = re.compile(r"""lang\._\(\s*('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\s*\)\s*\|json_encode\(15\)""")
+LANG_CALL = re.compile(r"""(?:lang\.(?:_|query)|devicemonitor_raw|devicemonitor_t)\(\s*('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\s*\)""")
+# Every message id that a script body passes through json_encode(15), whichever translator it calls:
+# a regression to the escaped form (lang._() or devicemonitor_t()) must still be visible to the
+# escaping check below.
+JSON_CALL = re.compile(r"""(?:lang\.(?:_|query)|devicemonitor_raw|devicemonitor_t)\(\s*('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\s*\)\s*\|json_encode\(15\)""")
+UNSAFE_JS_CALL = re.compile(r"""(?:lang\._|devicemonitor_t)\(\s*('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\s*\)\s*\|json_encode\(15\)""")
 SCRIPT_BLOCK = re.compile(r'<script\b[^>]*>(.*?)</script>', re.S)
 ENTITY = re.compile(r'&(?:#[0-9]+|#x[0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);')
 CJK = re.compile('[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uff00-\uffef]')
@@ -95,7 +96,8 @@ def page_keys(template):
 def script_bodies(template):
     """Inline <script> bodies: the only place a JSON-encoded translation is evaluated.
 
-    A lang._() call in HTML context is escaped on purpose, so the JavaScript-escaping
+    A devicemonitor_t() (formerly lang._()) call in HTML context is escaped on purpose, so the
+    JavaScript-escaping
     checks must not be applied to the template as a whole.
     """
     return '\n'.join(SCRIPT_BLOCK.findall(template))
@@ -358,7 +360,8 @@ def main():
         # infrastructure-services view, so a page-level check reports the same call sites twice.
         for view, keys in escaped_js.items():
             fail(f'{view}: {len(keys)} translation(s) HTML-escaped inside a script body before '
-                 f'json_encode(15), e.g. {sorted(keys)[0]!r}; use the raw lang.query()')
+                 f'json_encode(15), e.g. {sorted(keys)[0]!r}; use the raw lang.query() '
+                 f'or devicemonitor_raw()')
     reference_po = SOURCE_PO / f'{REFERENCE}_devicemonitor.po'
     reference = po_entries(reference_po) if reference_po.is_file() else {key: key for key in union}
     catalogues = load_catalogues(languages + ['cs_CZ', REFERENCE], union, directory)
@@ -386,7 +389,8 @@ def main():
                              if key in rendered and ENTITY.search(rendered[key]))
             if escaped:
                 fail(f'{language}: {len(escaped)} JavaScript translation(s) arrive HTML-escaped, '
-                     f'e.g. {escaped[0]!r} as {rendered[escaped[0]]!r}; use the raw lang.query()')
+                     f'e.g. {escaped[0]!r} as {rendered[escaped[0]]!r}; use the raw lang.query() '
+                     f'or devicemonitor_raw()')
 
         scores = identity_scores(rendered, union, catalogues, reference)
         best = max(scores, key=scores.get) if scores else language

@@ -87,10 +87,10 @@ check(infrastructure.includes('{% if portDiscoveryPage %}') &&
       infrastructure.includes('{% if not portDiscoveryPage %}') &&
       infrastructure.includes("if ($('#port-discovery-page').length)"),
     'Port Discovery must render separately from Infrastructure Services');
-check(infrastructure.includes("{{ lang._('Last Scan') }}") &&
-      infrastructure.includes("{{ lang._('Scan Time') }}") &&
-      !infrastructure.includes("{{ lang._('Last Scan (local time)') }}") &&
-      !infrastructure.includes("{{ lang._('Scan Time (local time)') }}"),
+check(infrastructure.includes("{{ devicemonitor_t('Last Scan') }}") &&
+      infrastructure.includes("{{ devicemonitor_t('Scan Time') }}") &&
+      !infrastructure.includes("{{ devicemonitor_t('Last Scan (local time)') }}") &&
+      !infrastructure.includes("{{ devicemonitor_t('Scan Time (local time)') }}"),
     'Port Discovery time headings should be concise');
 
 // #services-type-filter options are appended asynchronously by populateTypes(),

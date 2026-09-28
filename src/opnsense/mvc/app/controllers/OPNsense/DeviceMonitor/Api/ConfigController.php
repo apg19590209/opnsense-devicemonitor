@@ -421,6 +421,16 @@ class ConfigController extends ApiControllerBase
         $config['nmap_version_detection'] = $nmap_version_detection;
         $config['nmap_max_per_cycle'] = $nmap_max_per_cycle;
 
+        /* O4 / DM-BL-008c - sidecar translation toggle.
+         * Written only when the form actually posts the field, so an older settings
+         * page or a partial API call can never silently switch the sidecar off. A
+         * missing key stays enabled (see defaults.json and devicemonitor_locale.inc). */
+        $sidecar_translation_enabled = $this->request->getPost('sidecar_translation_enabled', 'string', null);
+        if ($sidecar_translation_enabled !== null) {
+            $config['sidecar_translation_enabled'] =
+                (trim((string)$sidecar_translation_enabled) === '1') ? '1' : '0';
+        }
+
         if ($model->setConfig($config)) {
             return ['result' => 'saved', 'message' => 'Configuration saved'];
         }
@@ -446,7 +456,16 @@ class ConfigController extends ApiControllerBase
     {
         $handler = new \NotificationHandler();
         $handler->fLog("Preparing to send test webhook", 'WEBHOOK');
-        $result = $handler->sendWebhook(true, $this->request->getPost('webhook_url', 'string', ''));
+
+        /* A test needs an explicit URL from the form. Absent, empty and
+         * whitespace-only values are rejected here rather than handed to curl. */
+        $webhook_url = trim((string)$this->request->getPost('webhook_url', 'string', ''));
+        if ($webhook_url === '') {
+            $handler->fLog("Test webhook result: FAILED | Reason: Webhook URL required", "WEBHOOK-ConfigController");
+            return ['result' => 'failed', 'message' => 'Webhook URL required'];
+        }
+
+        $result = $handler->sendWebhook(true, $webhook_url);
 
         $logMessage = "Test webhook result: " . (($result['result'] === 'sent' || $result['result'] === 'ok') ? "SUCCESS" : "FAILED");
         if ($result['result'] !== 'sent' && $result['result'] !== 'ok') {
@@ -479,7 +498,31 @@ class ConfigController extends ApiControllerBase
     {
         $handler = new \NotificationHandler();
         $handler->fLog("Preparing to send webhook notification", 'WEBHOOK');
-        $result = $handler->sendWebhook(false, $this->request->getPost('webhook_url', 'string', ''));
+
+        /* Strict guard. The parameter used to reach the handler as '' whenever the
+         * caller omitted it; the handler only short-circuits on null, so the
+         * "Webhook disabled" guard was bypassed and delivery was attempted to an
+         * empty URL. Absent, null, empty and whitespace-only values are now all
+         * detected, and an unresolvable endpoint stops here. */
+        $webhook_url = trim((string)$this->request->getPost('webhook_url', 'string', ''));
+        if ($webhook_url === '') {
+            $backendConfig = \OPNsense\DeviceMonitor\DeviceMonitor::getConfig();
+            $configured_url = isset($backendConfig['webhook_url'])
+                ? trim((string)$backendConfig['webhook_url'])
+                : '';
+            $configured_enabled = isset($backendConfig['webhook_enabled'])
+                ? ((string)$backendConfig['webhook_enabled'] === '1')
+                : false;
+
+            if ($configured_url === '' || !$configured_enabled) {
+                $handler->fLog("Webhook notification result: SKIPPED | Reason: Webhook disabled", "WEBHOOK-ConfigController");
+                return ['result' => 'skipped', 'message' => 'Webhook disabled'];
+            }
+
+            $webhook_url = $configured_url;
+        }
+
+        $result = $handler->sendWebhook(false, $webhook_url);
 
         $logMessage = "Webhook notification result: ";
         if ($result['result'] === 'sent' || $result['result'] === 'ok') {
