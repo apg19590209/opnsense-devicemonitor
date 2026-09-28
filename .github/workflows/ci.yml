@@ -74,6 +74,11 @@ jobs:
       - name: Validate language acceptance (DM-BL-008)
         run: python3 tests/test_language_acceptance.py --engine interpolate
 
+      - name: Configure Host System Locales for Translation Probes
+        run: |
+          sudo locale-gen fr_FR.UTF-8 de_DE.UTF-8
+          sudo update-locale
+
       - name: Validate sidecar catalogue resolution (O3/O4)
         run: python3 tests/test_sidecar_catalogue.py
 
