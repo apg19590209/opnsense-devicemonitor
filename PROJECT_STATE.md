@@ -13,8 +13,13 @@
   repository is present at the tree root (`/usr/local/cline-freebsd/src/cline`, branch
   `master`, initialised 2026-09-28) and this record set is committed there — `a8420d1`
   (`it_IT`), `17460a4` (`fr_FR`), `abb159e` (root `.gitignore`), `2ce962d`
-  (`.clinerules/general.md`), plus the commit that adds the `fr_FR` case file. No remote is
-  configured, so commits are local and cannot be pushed from this host.
+  (`.clinerules/general.md`), plus the commit that adds the `fr_FR` case file.
+- **Corrected 2026-09-28 (second revision) — `origin` is active.** The remote
+  `https://github.com/apg19590209/opnsense-devicemonitor` is registered in this repository
+  and both fetch and push work from this host (verified: `git ls-remote`, `git fetch`, and
+  one completed `git push` whose branch was then deliberately deleted — see *Open
+  blockers* item 3). The earlier sentence, "No remote is configured, so commits are local
+  and cannot be pushed from this host", was accurate when written and is corrected here.
 - The `verification/locales/` Selenium harness remains a **proposal**: not written to
   disk, and not runnable on the recording host (no Selenium, no `pip`, no browser or
   WebDriver binary).
@@ -57,9 +62,22 @@
 1. No evidence artifacts for the reported `it_IT` pass (blocking `DM-BL-008b`).
 2. No confirmation of the OPNsense locale restore beyond operator attestation
    (infrastructure state, not a documentation fact).
-3. No git **remote** is configured. The repository exists and commits are made locally,
-   but nothing can be pushed from here. (Replaces the earlier, stale claim that no git
-   repository existed — see *Repository state*.)
+3. **No push to `main` is possible yet, and this is unresolved.** `origin` is configured
+   and pushes work, but the local history is **unrelated** to the remote:
+   `git merge-base HEAD origin/main` finds no common ancestor — 292 commits on `origin/main`
+   against a 6-commit record set here (7 locally once this correction is included). Three
+   paths collide:
+   - `PROJECT_STATE.md` — 4,161 bytes here (this stub) against 101,496 bytes / 1,896 lines
+     of authoritative project state on `origin/main`.
+   - `PRODUCT_BACKLOG.md` — 4,619 bytes here against 657 bytes on `origin/main`.
+   - `.gitignore` — 2,209 bytes here against 49 bytes on `origin/main`.
+
+   A trial rebase onto `origin/main` conflicted at commit 1 of 6 (`add/add` on
+   `PROJECT_STATE.md` and `PRODUCT_BACKLOG.md`). Resolving in favour of this record set
+   would replace the authoritative file by a net `71 insertions(+), 1896 deletions(-)`, so
+   the alignment needs an explicit decision; a rebase by itself is **not**
+   non-destructive. (Replaces the earlier stale claims that no git repository, and later
+   that no remote, existed — see *Repository state*.)
 4. Harness not yet implemented, and its host prerequisites are unmet.
 
 ## Next actions
@@ -67,5 +85,8 @@
 - Obtain the artifacts listed in `verification/locales/REPORT-it_IT-2026-09-28.md`.
 - Decide whether the locale harness should target a browser UI at all, given that the
   `apps/cli` application in this repository is a terminal TUI.
-- Configure a git remote (none is set) before any push attempt. Local commits already
-  work, so the "initialise the repository" step is done and must not be repeated here.
+- Resolve *Open blockers* item 3 before any push to `main`: decide whether this record set
+  is merged into the authoritative `origin/main:PROJECT_STATE.md` and `PRODUCT_BACKLOG.md`
+  or discarded. `origin` is already configured and local commits already work, so the
+  "initialise the repository" and "configure a remote" steps are done and must not be
+  repeated here.
