@@ -84,7 +84,7 @@ trap cleanup EXIT
 : > "$STAGE/items"
 while read -r hash mode source target; do
     case "$source:$target" in
-        src/opnsense/*:/usr/local/opnsense/*|src/etc/rc.d/devicemonitor:/usr/local/etc/rc.d/devicemonitor|src/etc/inc/plugins.inc.d/devicemonitor.inc:/usr/local/etc/inc/plugins.inc.d/devicemonitor.inc) :;;
+        src/opnsense/*:/usr/local/opnsense/*|src/etc/rc.d/devicemonitor:/usr/local/etc/rc.d/devicemonitor|src/etc/inc/plugins.inc.d/devicemonitor.inc:/usr/local/etc/inc/plugins.inc.d/devicemonitor.inc|src/etc/inc/devicemonitor_locale.inc:/usr/local/etc/inc/devicemonitor_locale.inc) :;;
         *) echo "ABORT: invalid manifest path $source" >&2; exit 1;;
     esac
     [ -f "$source" ] && [ ! -L "$source" ] && [ "$(sha256 -q "$source")" = "$hash" ] || { echo "ABORT: source hash $source" >&2; exit 1; }
@@ -136,8 +136,8 @@ while read -r hash mode source target; do
     id=$((id + 1))
 done < "$STAGE/items"
 count=$id
-expected=48
-[ "$FRESH" = 0 ] || expected=49
+expected=49
+[ "$FRESH" = 0 ] || expected=50
 [ "$count" = "$expected" ] || { echo 'ABORT: target count' >&2; exit 1; }
 printf 'CHECK_OK version=2.10 predecessor=%s files=%s daemon_running=%s host=%s\n' "$installed" "$count" "$WAS_RUNNING" "$EXPECTED_HOST"
 [ "$CHECK_ONLY" = 0 ] || exit 0
