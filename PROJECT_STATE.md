@@ -1900,7 +1900,8 @@ Next step: none required — v2.9 is promoted to production and validated.
 Splits Device Monitor translations out of the core `OPNsense` text domain so plugin
 strings can be translated without touching `/usr/local/share/locale`.
 
-Status: IMPLEMENTED on the testbed `192.168.20.23`; not pushed.
+Status: `RESOLVED` on the testbed `192.168.20.23` — scope: catalogue layout and binding
+framework only. Published on `feature/sidecar-catalogue-20260928`.
 
 - Catalogue layout migrated from flat `<locale>_devicemonitor.{po,mo}` to
   `<locale>/LC_MESSAGES/devicemonitor.{po,mo}` in 11 locales. The flat layout was
@@ -1931,3 +1932,16 @@ Open: the testbed carries ~280 lines of uncommitted local work in `ConfigControl
 (`version` 2.10). A pre-flight hash check caught this and blocked the wholesale file copy, so
 the toggle was hand-merged additively onto the live files instead. Those changes remain
 uncommitted upstream and should be reconciled.
+
+Resolution (2026-09-28): `RESOLVED` for the catalogue layout and the binding framework.
+
+- D2 layout fix: 11 locales moved from flat `languages/<locale>_devicemonitor.{po,mo}` to
+  `languages/<locale>/LC_MESSAGES/devicemonitor.{po,mo}`; each `.mo` recompiled and verified
+  identical to its `.po` by an `msgunfmt` round-trip.
+- `devicemonitor_locale.inc` deployed to `/usr/local/etc/inc/` and bound from
+  `IndexController::initialize()` and `plugins.inc.d/devicemonitor.inc`.
+- Scope boundary: 0 of 376 GUI `lang._()` strings route through the sidecar. The view
+  call-site migration is tracked as `O4` in `PRODUCT_BACKLOG.md`.
+- Workspace hygiene: 30 `.pre-*` scratch files relocated out of the language tree to
+  `/root/opnsense-patches/languages-pre-sidecar-20260928-214105/` (22) and
+  `/root/opnsense-patches/languages-pre-existing/` (8).
