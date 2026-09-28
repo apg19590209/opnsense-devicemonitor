@@ -89,6 +89,22 @@ def unquote(literal):
     return literal[1:-1].replace("\\'", "'").replace('\\"', '"').replace('\\\\', '\\')
 
 
+def source_po(code):
+    """Source catalogue in the sidecar layout devicemonitor_locale.inc binds.
+
+    The flat <locale>_devicemonitor.po layout of v2.9/v2.10 release-asset installs is
+    still read as a fallback so an older checkout or deployment stays diagnosable.
+    """
+    nested = SOURCE_PO / code / 'LC_MESSAGES' / 'devicemonitor.po'
+    return nested if nested.is_file() else SOURCE_PO / f'{code}_devicemonitor.po'
+
+
+def plugin_mo(code, installed_po=INSTALLED_PO):
+    """Deployed plugin catalogue: nested sidecar layout first, legacy flat layout second."""
+    nested = Path(installed_po) / code / 'LC_MESSAGES' / 'devicemonitor.mo'
+    return nested if nested.is_file() else Path(installed_po) / f'{code}_devicemonitor.mo'
+
+
 def page_keys(template):
     return {unquote(match) for match in LANG_CALL.findall(template)}
 
@@ -192,13 +208,13 @@ def probe_environment(languages, directory):
     return locales, selectable, engine
 
 
-def load_catalogues(languages, keys, directory):
+def load_catalogues(languages, keys, directory, installed_po=INSTALLED_PO):
     """Resolved values per language from the source catalogue, plugin .mo and shared .mo."""
     catalogues = {}
     for code in languages:
         shared = Path(directory) / code / 'LC_MESSAGES' / 'OPNsense.mo'
-        plugin = INSTALLED_PO / f'{code}_devicemonitor.mo'
-        source = SOURCE_PO / f'{code}_devicemonitor.po'
+        plugin = plugin_mo(code, installed_po)
+        source = source_po(code)
         entries = po_entries(source) if source.is_file() else {}
         shared_values = catalogue_values(read_mo(shared), keys) if shared.is_file() else None
         plugin_values = catalogue_values(read_mo(plugin), keys) if plugin.is_file() else None
@@ -313,6 +329,10 @@ def main():
     parser.add_argument('--languages', default=','.join(LANGUAGES))
     parser.add_argument('--report', type=Path, help='write a markdown acceptance record')
     parser.add_argument('--views', type=Path, help='render templates from this directory (default installed views)')
+    parser.add_argument('--installed-po', type=Path, default=INSTALLED_PO,
+                        help='deployed plugin catalogue directory to compare against the source '
+                             '(default %(default)s); point it at a staged tree to check a host whose '
+                             'deployment is intentionally behind the checkout')
     parser.add_argument('--locale-dir', type=Path, default=SHARED_LOCALE,
                         help='shared gettext domain the GUI reads (default %(default)s)')
     parser.add_argument('--strict', action='store_true',
@@ -362,9 +382,9 @@ def main():
             fail(f'{view}: {len(keys)} translation(s) HTML-escaped inside a script body before '
                  f'json_encode(15), e.g. {sorted(keys)[0]!r}; use the raw lang.query() '
                  f'or devicemonitor_raw()')
-    reference_po = SOURCE_PO / f'{REFERENCE}_devicemonitor.po'
+    reference_po = source_po(REFERENCE)
     reference = po_entries(reference_po) if reference_po.is_file() else {key: key for key in union}
-    catalogues = load_catalogues(languages + ['cs_CZ', REFERENCE], union, directory)
+    catalogues = load_catalogues(languages + ['cs_CZ', REFERENCE], union, directory, args.installed_po)
 
     results, gaps = [], 0
     for language in languages:
