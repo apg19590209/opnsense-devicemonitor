@@ -5,7 +5,7 @@
             <div id="identity-events-sticky-controls" class="panel-heading identity-events-heading">
                 <strong style="font-size:13px;">
                     <i class="fa fa-exclamation-triangle"></i>
-                    {{ lang._('IP and MAC Conflicts') }}
+                    {{ devicemonitor_t('IP and MAC Conflicts') }}
                     <span id="identity-events-total"
                           class="badge"
                           style="margin-left:6px;">0</span>
@@ -13,14 +13,14 @@
                     <span class="identity-events-summary">
                         <a href="?status=unresolved"
                            class="identity-events-summary-link">
-                            {{ lang._('Unresolved') }}
+                            {{ devicemonitor_t('Unresolved') }}
                             <span id="identity-events-unresolved"
                                   class="badge">0</span>
                         </a>
 
                         <a href="?status=resolved"
                            class="identity-events-summary-link">
-                            {{ lang._('Resolved') }}
+                            {{ devicemonitor_t('Resolved') }}
                             <span id="identity-events-resolved"
                                   class="badge">0</span>
                         </a>
@@ -30,21 +30,21 @@
                 <div class="identity-events-controls">
                     <label for="identity-events-status"
                            style="margin:0;font-size:12px;font-weight:600;">
-                        {{ lang._('Status') }}
+                        {{ devicemonitor_t('Status') }}
                     </label>
 
                     <select id="identity-events-status"
                             class="selectpicker"
                             data-style="btn-default btn-xs"
                             data-width="115px">
-                        <option value="all"{% if identityEventsStatus == 'all' %} selected{% endif %}>{{ lang._('All') }}</option>
-                        <option value="unresolved"{% if identityEventsStatus == 'unresolved' %} selected{% endif %}>{{ lang._('Unresolved') }}</option>
-                        <option value="resolved"{% if identityEventsStatus == 'resolved' %} selected{% endif %}>{{ lang._('Resolved') }}</option>
+                        <option value="all"{% if identityEventsStatus == 'all' %} selected{% endif %}>{{ devicemonitor_t('All') }}</option>
+                        <option value="unresolved"{% if identityEventsStatus == 'unresolved' %} selected{% endif %}>{{ devicemonitor_t('Unresolved') }}</option>
+                        <option value="resolved"{% if identityEventsStatus == 'resolved' %} selected{% endif %}>{{ devicemonitor_t('Resolved') }}</option>
                     </select>
 
                     <label for="identity-events-limit"
                            style="margin:0;font-size:12px;font-weight:600;">
-                        {{ lang._('Rows') }}
+                        {{ devicemonitor_t('Rows') }}
                     </label>
 
                     <select id="identity-events-limit"
@@ -59,7 +59,7 @@
 
                     <button id="btn-identity-refresh"
                             class="btn btn-xs btn-default"
-                            title="{{ lang._('Refresh IP and MAC conflicts') }}">
+                            title="{{ devicemonitor_t('Refresh IP and MAC conflicts') }}">
                         <i class="fa fa-refresh"></i>
                     </button>
                 </div>
@@ -71,22 +71,22 @@
                        id="grid-identity-events">
                     <thead>
                         <tr>
-                            <th>{{ lang._('Detected') }}</th>
-                            <th>{{ lang._('Severity') }}</th>
-                            <th>{{ lang._('Status') }}</th>
-                            <th>{{ lang._('Event Type') }}</th>
-                            <th>{{ lang._('MAC Address') }}</th>
-                            <th>{{ lang._('IP Address') }}</th>
-                            <th>{{ lang._('Other MAC') }}</th>
-                            <th>{{ lang._('Other IP') }}</th>
-                            <th>{{ lang._('Interface') }}</th>
-                            <th class="text-center">{{ lang._('Details') }}</th>
+                            <th>{{ devicemonitor_t('Detected') }}</th>
+                            <th>{{ devicemonitor_t('Severity') }}</th>
+                            <th>{{ devicemonitor_t('Status') }}</th>
+                            <th>{{ devicemonitor_t('Event Type') }}</th>
+                            <th>{{ devicemonitor_t('MAC Address') }}</th>
+                            <th>{{ devicemonitor_t('IP Address') }}</th>
+                            <th>{{ devicemonitor_t('Other MAC') }}</th>
+                            <th>{{ devicemonitor_t('Other IP') }}</th>
+                            <th>{{ devicemonitor_t('Interface') }}</th>
+                            <th class="text-center">{{ devicemonitor_t('Details') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td colspan="10" class="text-muted">
-                                {{ lang._('Loading IP and MAC conflicts...') }}
+                                {{ devicemonitor_t('Loading IP and MAC conflicts...') }}
                             </td>
                         </tr>
                     </tbody>

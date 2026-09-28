@@ -19,11 +19,11 @@
                class="btn btn-default btn-sm pull-right"
                style="font-size:14px;font-weight:600;padding:6px 12px;">
                 <i class="fa fa-arrow-left"></i>
-                {{ lang._('Back to Network Identity Details') }}
+                {{ devicemonitor_t('Back to Network Identity Details') }}
             </a>
 
             <h1 style="margin:0;font-size:20px;">
-                {{ lang._('Device Activity') }}
+                {{ devicemonitor_t('Device Activity') }}
             </h1>
         </div>
 
@@ -31,10 +31,10 @@
             <div class="panel-heading">
                 <strong>
                     <i class="fa fa-clock-o"></i>
-                    {{ lang._('Device Activity') }}
+                    {{ devicemonitor_t('Device Activity') }}
                 </strong>
                 <span class="text-muted" style="margin-left:10px;">
-                    {{ lang._('MAC address') }}:
+                    {{ devicemonitor_t('MAC address') }}:
                     <span id="timeline-mac">&mdash;</span>
                 </span>
             </div>
@@ -46,21 +46,21 @@
                     <thead>
                         <tr>
                             <th style="width:190px;">
-                                {{ lang._('Date / time') }}
+                                {{ devicemonitor_t('Date / time') }}
                             </th>
                             <th style="width:220px;">
-                                {{ lang._('Activity') }}
+                                {{ devicemonitor_t('Activity') }}
                             </th>
-                            <th>{{ lang._('Details') }}</th>
+                            <th>{{ devicemonitor_t('Details') }}</th>
                             <th style="width:100px;">
-                                {{ lang._('Lifecycle') }}
+                                {{ devicemonitor_t('Lifecycle') }}
                             </th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td colspan="4" class="text-muted">
-                                {{ lang._('Loading activity...') }}
+                                {{ devicemonitor_t('Loading activity...') }}
                             </td>
                         </tr>
                     </tbody>

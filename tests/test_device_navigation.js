@@ -62,10 +62,10 @@ check(hasTabs(devices), 'Network Identities view must show both navigation tabs'
 check(hasTabs(profiles), 'Device Profiles view must show both navigation tabs');
 
 check(
-    details.includes("lang._('Network Identity Details')") &&
-        details.includes("lang._('Network Identity Summary')") &&
-        details.includes("lang._('Service Email Alerts')") &&
-        devices.includes("lang._('Total Identities')") &&
+    details.includes("devicemonitor_t('Network Identity Details')") &&
+        details.includes("devicemonitor_t('Network Identity Summary')") &&
+        details.includes("devicemonitor_t('Service Email Alerts')") &&
+        devices.includes("devicemonitor_t('Total Identities')") &&
         profiles.includes('View Network Identity Details') &&
         timeline.includes('Back to Network Identity Details') &&
         settings.includes('Back to Network Identity Details'),

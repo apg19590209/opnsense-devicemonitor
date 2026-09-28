@@ -6,7 +6,7 @@
 
                 <strong style="font-size:13px;">
                     <i class="fa fa-history"></i>
-                    {{ lang._('Nmap Scan History') }}
+                    {{ devicemonitor_t('Nmap Scan History') }}
                     <span id="scan-history-total"
                           class="badge"
                           style="margin-left:6px;">0</span>
@@ -15,7 +15,7 @@
                 <div class="scan-history-controls">
                     <label for="scan-history-limit"
                            style="margin:0;font-size:12px;font-weight:600;">
-                        {{ lang._('Rows') }}
+                        {{ devicemonitor_t('Rows') }}
                     </label>
 
                     <select id="scan-history-limit"
@@ -30,7 +30,7 @@
 
                     <button id="btn-history-refresh"
                             class="btn btn-xs btn-default"
-                            title="{{ lang._('Refresh scan history') }}">
+                            title="{{ devicemonitor_t('Refresh scan history') }}">
                         <i class="fa fa-refresh"></i>
                     </button>
                 </div>
@@ -42,20 +42,20 @@
                        id="grid-scan-history">
                     <thead>
                         <tr>
-                            <th>{{ lang._('Started') }}</th>
-                            <th>{{ lang._('MAC Address') }}</th>
-                            <th>{{ lang._('IP Address') }}</th>
-                            <th>{{ lang._('Type') }}</th>
-                            <th>{{ lang._('Scan') }}</th>
-                            <th>{{ lang._('Open Ports') }}</th>
-                            <th>{{ lang._('Email') }}</th>
-                            <th class="text-center">{{ lang._('Details') }}</th>
+                            <th>{{ devicemonitor_t('Started') }}</th>
+                            <th>{{ devicemonitor_t('MAC Address') }}</th>
+                            <th>{{ devicemonitor_t('IP Address') }}</th>
+                            <th>{{ devicemonitor_t('Type') }}</th>
+                            <th>{{ devicemonitor_t('Scan') }}</th>
+                            <th>{{ devicemonitor_t('Open Ports') }}</th>
+                            <th>{{ devicemonitor_t('Email') }}</th>
+                            <th class="text-center">{{ devicemonitor_t('Details') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td colspan="8" class="text-muted">
-                                {{ lang._('Loading scan history...') }}
+                                {{ devicemonitor_t('Loading scan history...') }}
                             </td>
                         </tr>
                     </tbody>

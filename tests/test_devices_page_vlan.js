@@ -54,15 +54,15 @@ check(
 check(view.includes('id="vlan-apply"'), 'VLAN Apply button missing');
 check(!view.includes('id="vlan-clear"'), 'standalone VLAN Clear button must be removed');
 check(
-    view.includes("{{ lang._('Apply VLAN Filter') }}"),
+    view.includes("{{ devicemonitor_t('Apply VLAN Filter') }}"),
     'Apply button must be localised as "Apply VLAN Filter"'
 );
 check(
-    !view.includes("{{ lang._('Apply') }}"),
+    !view.includes("{{ devicemonitor_t('Apply') }}"),
     'generic "Apply" must not be reused for the VLAN apply button'
 );
 check(
-    view.includes("{{ lang._('Not applied') }}"),
+    view.includes("{{ devicemonitor_t('Not applied') }}"),
     'pending "Not applied" indicator must be localised'
 );
 check(

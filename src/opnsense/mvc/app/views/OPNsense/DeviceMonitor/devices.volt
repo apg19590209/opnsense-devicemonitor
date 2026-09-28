@@ -10,16 +10,16 @@
             <ul class="nav nav-tabs" role="tablist" style="margin:0;">
                 <li role="presentation" class="active dm-tab-with-info">
                     <a href="/ui/devicemonitor/index/devices">
-                        <i class="fa fa-list"></i> {{ lang._('Network Identities') }}
+                        <i class="fa fa-list"></i> {{ devicemonitor_t('Network Identities') }}
                     </a>
-                    <button type="button" class="dm-info" aria-label="{{ lang._('About Network Identities') }}"
-                            data-content="{{ lang._('Automatically discovered network identities. Each row represents one MAC address.') }}">
+                    <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Network Identities') }}"
+                            data-content="{{ devicemonitor_t('Automatically discovered network identities. Each row represents one MAC address.') }}">
                         <i class="fa fa-info-circle" aria-hidden="true"></i>
                     </button>
                 </li>
                 <li role="presentation">
                     <a href="/ui/devicemonitor/index/physicaldevices">
-                        <i class="fa fa-sitemap"></i> {{ lang._('Device Profiles') }}
+                        <i class="fa fa-sitemap"></i> {{ devicemonitor_t('Device Profiles') }}
                     </a>
                 </li>
             </ul>
@@ -27,11 +27,11 @@
             <div id="devices-sticky-summary" class="devices-header">
                 <div class="devices-stats">
                     <span>
-                        {{ lang._('Total Identities') }}:
+                        {{ devicemonitor_t('Total Identities') }}:
                         <strong id="stat-total">—</strong>
                     </span>
                     <span>
-                        {{ lang._('Online') }}:
+                        {{ devicemonitor_t('Online') }}:
                         <strong id="stat-online">—</strong>
                     </span>
                 </div>
@@ -44,7 +44,7 @@
                 <div class="dropdown" id="vlan-filter-wrapper">
                     <button type="button" class="btn btn-default btn-sm dropdown-toggle"
                             id="vlan-dropdown-toggle" data-toggle="dropdown">
-                        <span id="vlan-filter-label">{{ lang._('All VLANs') }}</span>
+                        <span id="vlan-filter-label">{{ devicemonitor_t('All VLANs') }}</span>
                         <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu" id="vlan-checklist">
@@ -54,35 +54,35 @@
                 <!-- Explicit apply control for the VLAN multi-select. Checkbox
                      changes only update the pending selection and the dropdown
                      label; rows are filtered only when Apply is pressed. -->
-                <button type="button" id="vlan-apply" class="btn btn-default btn-sm" disabled>{{ lang._('Apply VLAN Filter') }}</button>
-                <span id="vlan-not-applied" class="text-muted" style="display:none;">{{ lang._('Not applied') }}</span>
+                <button type="button" id="vlan-apply" class="btn btn-default btn-sm" disabled>{{ devicemonitor_t('Apply VLAN Filter') }}</button>
+                <span id="vlan-not-applied" class="text-muted" style="display:none;">{{ devicemonitor_t('Not applied') }}</span>
 
                 <!-- Status filtr -->
                 <select id="filter-status"
                         class="selectpicker"
                         data-style="btn-default btn-sm"
                         data-width="130px">
-                    <option value="">{{ lang._('All statuses') }}</option>
+                    <option value="">{{ devicemonitor_t('All statuses') }}</option>
                     <option value="online">🟢 Online</option>
                     <option value="offline">⚫ Offline</option>
                 </select>
 
-                <button id="btn-refresh" class="btn btn-default btn-sm" title="{{ lang._('Refresh') }}">
+                <button id="btn-refresh" class="btn btn-default btn-sm" title="{{ devicemonitor_t('Refresh') }}">
                     <i class="fa fa-refresh"></i>
                 </button>
 
-                <button id="btn-scan-now" class="btn btn-default btn-sm" title="{{ lang._('Run scan now') }}">
+                <button id="btn-scan-now" class="btn btn-default btn-sm" title="{{ devicemonitor_t('Run scan now') }}">
                     <i class="fa fa-search"></i>
                 </button>
 
-                <button id="btn-export" class="btn btn-default btn-sm" title="{{ lang._('Export to CSV') }}">
+                <button id="btn-export" class="btn btn-default btn-sm" title="{{ devicemonitor_t('Export to CSV') }}">
                     <i class="fa fa-download"></i>
                 </button>
 
                 <div class="devices-toolbar-spacer"></div>
 
                 <button id="btn-clear" class="btn btn-danger btn-sm">
-                    <i class="fa fa-trash"></i> {{ lang._('Clear Database') }}
+                    <i class="fa fa-trash"></i> {{ devicemonitor_t('Clear Database') }}
                 </button>
             </div>
 
@@ -92,20 +92,20 @@
         <table class="table table-condensed table-hover table-striped devices-table" id="grid-devices">
             <thead>
                 <tr>
-                    <th class="sortable devices-table-header" data-col="ip">{{ lang._('IP Address') }} <i class="fa fa-sort"></i></th>
-                    <th class="sortable devices-table-header" data-col="custom_hostname">{{ lang._('Friendly Name') }} <i class="fa fa-sort"></i></th>
-                    <th class="sortable devices-table-header" data-col="hostname">{{ lang._('Hostname') }} <i class="fa fa-sort"></i></th>
-                    <th class="sortable devices-table-header" data-col="mac">{{ lang._('MAC Address') }} <i class="fa fa-sort"></i></th>
-                    <th class="sortable devices-table-header" data-col="vendor">{{ lang._('Vendor') }} <i class="fa fa-sort"></i></th>
-                    <th class="devices-table-header devices-col-secondary devices-col-sec-1">{{ lang._('Services') }}</th>
+                    <th class="sortable devices-table-header" data-col="ip">{{ devicemonitor_t('IP Address') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable devices-table-header" data-col="custom_hostname">{{ devicemonitor_t('Friendly Name') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable devices-table-header" data-col="hostname">{{ devicemonitor_t('Hostname') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable devices-table-header" data-col="mac">{{ devicemonitor_t('MAC Address') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable devices-table-header" data-col="vendor">{{ devicemonitor_t('Vendor') }} <i class="fa fa-sort"></i></th>
+                    <th class="devices-table-header devices-col-secondary devices-col-sec-1">{{ devicemonitor_t('Services') }}</th>
 
-                    <th class="sortable devices-table-header" data-col="vlan">{{ lang._('VLAN') }} <i class="fa fa-sort"></i></th>
-                    <th class="sortable devices-table-header" data-col="status">{{ lang._('Status') }} <i class="fa fa-sort"></i></th>
-                    <th class="devices-table-header devices-col-secondary devices-col-sec-2">{{ lang._('Device Profile') }}</th>
-                    <th class="sortable devices-table-header devices-col-secondary devices-col-sec-3" data-col="nmap_scan_status">{{ lang._('Scan Status') }} <i class="fa fa-sort"></i></th>
-                    <th class="devices-table-header devices-col-secondary devices-col-sec-4">{{ lang._('First Seen') }}</th>
-                    <th class="sortable devices-table-header devices-col-secondary devices-col-sec-5" data-col="last_seen">{{ lang._('Last Seen') }} <i class="fa fa-sort"></i></th>
-                    <th class="devices-table-header">{{ lang._('Actions') }}</th>
+                    <th class="sortable devices-table-header" data-col="vlan">{{ devicemonitor_t('VLAN') }} <i class="fa fa-sort"></i></th>
+                    <th class="sortable devices-table-header" data-col="status">{{ devicemonitor_t('Status') }} <i class="fa fa-sort"></i></th>
+                    <th class="devices-table-header devices-col-secondary devices-col-sec-2">{{ devicemonitor_t('Device Profile') }}</th>
+                    <th class="sortable devices-table-header devices-col-secondary devices-col-sec-3" data-col="nmap_scan_status">{{ devicemonitor_t('Scan Status') }} <i class="fa fa-sort"></i></th>
+                    <th class="devices-table-header devices-col-secondary devices-col-sec-4">{{ devicemonitor_t('First Seen') }}</th>
+                    <th class="sortable devices-table-header devices-col-secondary devices-col-sec-5" data-col="last_seen">{{ devicemonitor_t('Last Seen') }} <i class="fa fa-sort"></i></th>
+                    <th class="devices-table-header">{{ devicemonitor_t('Actions') }}</th>
                 </tr>
             </thead>
             <tbody></tbody>

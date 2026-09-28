@@ -1574,3 +1574,10 @@ msgstr "Total de dispositivos"
 
 msgid "Stopped"
 msgstr "Detenido"
+
+msgid "Language"
+msgstr "Idioma"
+msgid "Plugin translations (sidecar catalogue)"
+msgstr "Traducciones del plugin (catálogo sidecar)"
+msgid "Translate Device Monitor strings from the plugin sidecar catalogue. When disabled, the plugin uses the stock OPNsense core catalogues only. The core language files under /usr/local/share/locale are never modified in either case."
+msgstr "Traduce las cadenas de Device Monitor desde el catálogo sidecar del plugin. Si se desactiva, el plugin solo utiliza los catálogos principales de OPNsense. Los archivos de idioma principales en /usr/local/share/locale nunca se modifican."

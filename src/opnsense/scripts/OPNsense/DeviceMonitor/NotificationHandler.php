@@ -423,18 +423,28 @@ HTML;
      */
     public function sendWebhook($is_test = false, $webhook_url = null)
     {
-        
-        
+        /* Strict normalisation: null, '' and whitespace-only all mean "not supplied".
+         * Anything else is trimmed. The previous `=== null` test let an empty string
+         * through, which skipped the disabled guard below and reached curl_init(''). */
+        $webhook_url = ($webhook_url === null || trim((string)$webhook_url) === '')
+            ? null
+            : trim((string)$webhook_url);
+
         // Load webhook_url from configuration if it was not supplied
         if ($webhook_url === null) {
             $model = new \OPNsense\DeviceMonitor\DeviceMonitor();
             $config = $model->getConfig();
-            
-            if ($config['webhook_enabled'] != '1' || empty($config['webhook_url'])) {
+
+            $configured_url = isset($config['webhook_url']) ? trim((string)$config['webhook_url']) : '';
+            $configured_enabled = isset($config['webhook_enabled'])
+                ? ((string)$config['webhook_enabled'] === '1')
+                : false;
+
+            if (!$configured_enabled || $configured_url === '') {
                 return ['result' => 'skipped', 'message' => 'Webhook disabled'];
             }
-            
-            $webhook_url = $config['webhook_url'];
+
+            $webhook_url = $configured_url;
         }
         
         

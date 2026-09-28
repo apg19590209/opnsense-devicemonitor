@@ -8,7 +8,8 @@
  * OPNsense.mo) and the real Phalcon Volt compiler.
  *
  * interpolate engine: reproduces only the constructs the Device Monitor views
- * use — {{ lang._('...') }}, {{ lang.query('...')|json_encode(15) }} and the simple
+ * use — {{ devicemonitor_t('...') }} (the sidecar translator, HTML-escaped exactly as
+ * {{ lang._('...') }} was), {{ lang.query('...')|json_encode(15) }} and the simple
  * {% if %} / {% else %} / {% endif %} blocks — so the acceptance test can also
  * run where Phalcon is unavailable (CI). Unsupported constructs are rejected.
  *
@@ -65,6 +66,24 @@ class DeviceMonitorRecordingTranslator
 }
 
 $values = null;
+/* The views call the global sidecar translator (O4 / DM-BL-008c). In the runtime
+   engine these shims delegate to the recording translator so a resolved id is
+   reported exactly as the production binder would resolve it: devicemonitor_t() is
+   HTML-escaped like lang._(), devicemonitor_raw() is raw like lang.query(). */
+if (!function_exists('devicemonitor_t')) {
+    function devicemonitor_t($message_id, array $placeholders = [])
+    {
+        global $lang;
+        return $lang === null ? (string)$message_id : $lang->_($message_id, $placeholders);
+    }
+}
+if (!function_exists('devicemonitor_raw')) {
+    function devicemonitor_raw($message_id, array $placeholders = [])
+    {
+        global $lang;
+        return $lang === null ? (string)$message_id : $lang->query($message_id);
+    }
+}
 if ($engine === 'runtime') {
     require_once $translatorFile;
     putenv('LANG=' . $locale);
@@ -85,13 +104,16 @@ if ($engine === 'runtime') {
     /* Translation expressions: text context is HTML-escaped by ViewTranslator,
        JavaScript context is JSON-encoded (15 = JSON_HEX_TAG|HEX_AMP|HEX_APOS|HEX_QUOT). */
     $renderable = preg_replace_callback(
-        '/\{\{\s*lang\.(query|_)\((\'(?:\\\\.|[^\'\\\\])*\'|"(?:\\\\.|[^"\\\\])*")\s*\)(\|json_encode\(15\))?\s*\}\}/',
+        '/\{\{\s*(?:lang\.(query|_)|(devicemonitor_raw|devicemonitor_t))\((\'(?:\\\\.|[^\'\\\\])*\'|"(?:\\\\.|[^"\\\\])*")\s*\)(\|json_encode\(15\))?\s*\}\}/',
         static function ($matches) use ($translations) {
-            $messageId = eval('return ' . $matches[2] . ';');
+            $messageId = eval('return ' . $matches[3] . ';');
             $literal = var_export($translations[$messageId] ?? $messageId, true);
-            return isset($matches[3]) && $matches[3] !== ''
+            /* Raw contexts: lang.query() and its sidecar equivalent devicemonitor_raw().
+               Everything else is HTML-escaped text, as ViewTranslator does. */
+            $raw = ($matches[1] ?? '') === 'query' || ($matches[2] ?? '') === 'devicemonitor_raw';
+            return isset($matches[4]) && $matches[4] !== ''
                 ? '<?= json_encode(' . $literal . ', 15 | JSON_THROW_ON_ERROR) ?>'
-                : ($matches[1] === 'query'
+                : ($raw
                     ? '<?= ' . $literal . ' ?>'
                     : '<?= view_html_safe(' . $literal . ') ?>');
         },

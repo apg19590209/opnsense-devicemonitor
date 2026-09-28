@@ -60,11 +60,11 @@ function check(condition, message) {
 
 // The Device Profiles summary must use the "Profiles" label, not "Devices".
 check(
-    page.includes("{{ lang._('Profiles') }}:"),
+    page.includes("{{ devicemonitor_t('Profiles') }}:"),
     'Device Profiles summary must use the "Profiles" label'
 );
 check(
-    !page.includes("{{ lang._('Devices') }}:"),
+    !page.includes("{{ devicemonitor_t('Devices') }}:"),
     'Device Profiles summary must not use the "Devices" label'
 );
 

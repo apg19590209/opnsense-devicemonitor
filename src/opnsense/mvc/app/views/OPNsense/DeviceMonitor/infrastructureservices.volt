@@ -8,19 +8,19 @@
             <div class="infrastructure-header">
                 <div class="infrastructure-stats">
                     <span>
-                        {{ lang._('Total') }}:
+                        {{ devicemonitor_t('Total') }}:
                         <strong id="services-total">0</strong>
                     </span>
                     <span>
-                        {{ lang._('Available') }}:
+                        {{ devicemonitor_t('Available') }}:
                         <strong id="services-available">0</strong>
                     </span>
                     <span>
-                        {{ lang._('Unavailable') }}:
+                        {{ devicemonitor_t('Unavailable') }}:
                         <strong id="services-unavailable">0</strong>
                     </span>
                     <span>
-                        {{ lang._('Stale') }}:
+                        {{ devicemonitor_t('Stale') }}:
                         <strong id="services-stale">0</strong>
                     </span>
                 </div>
@@ -33,7 +33,7 @@
                     class="btn btn-primary btn-sm"
                 >
                     <i class="fa fa-refresh"></i>
-                    {{ lang._('Refresh View') }}
+                    {{ devicemonitor_t('Refresh View') }}
                 </button>
                 <button
                     id="btn-services-discover"
@@ -41,7 +41,7 @@
                     class="btn btn-success btn-sm"
                 >
                     <i class="fa fa-search"></i>
-                    {{ lang._('Discover Now') }}
+                    {{ devicemonitor_t('Discover Now') }}
                 </button>
 
                 <select
@@ -51,7 +51,7 @@
                     data-width="180px"
                 >
                     <option value="">
-                        {{ lang._('All Services') }}
+                        {{ devicemonitor_t('All Services') }}
                     </option>
                 </select>
 
@@ -62,16 +62,16 @@
                     data-width="180px"
                 >
                     <option value="">
-                        {{ lang._('All Statuses') }}
+                        {{ devicemonitor_t('All Statuses') }}
                     </option>
                     <option value="available">
-                        {{ lang._('Available') }}
+                        {{ devicemonitor_t('Available') }}
                     </option>
                     <option value="unavailable">
-                        {{ lang._('Unavailable') }}
+                        {{ devicemonitor_t('Unavailable') }}
                     </option>
                     <option value="stale">
-                        {{ lang._('Stale') }}
+                        {{ devicemonitor_t('Stale') }}
                     </option>
                 </select>
 
@@ -79,16 +79,16 @@
                     id="services-search"
                     type="text"
                     class="form-control input-sm"
-                    placeholder="{{ lang._('Search services') }}"
+                    placeholder="{{ devicemonitor_t('Search services') }}"
                 />
 
                 <span class="text-muted">
-                    {{ lang._('Showing') }}
+                    {{ devicemonitor_t('Showing') }}
                     <strong id="services-visible">0</strong>
                 </span>
                 <label class="checkbox-inline">
                     <input id="services-show-archived" type="checkbox">
-                    {{ lang._('Show archived') }}
+                    {{ devicemonitor_t('Show archived') }}
                 </label>
             </div>
 
@@ -100,7 +100,7 @@
                        data-toggle="tab"
                        role="tab"
                        aria-controls="tab-infrastructure-recent-changes">
-                        {{ lang._('Recent Service Changes') }}
+                        {{ devicemonitor_t('Recent Service Changes') }}
                     </a>
                 </li>
             </ul>
@@ -115,12 +115,12 @@
                 <div class="panel panel-default infrastructure-recent-changes">
                     <div class="panel-heading">
                         <span class="text-muted">
-                            {{ lang._('Latest verified or authoritative service changes') }}
+                            {{ devicemonitor_t('Latest verified or authoritative service changes') }}
                         </span>
                     </div>
                     <div id="infrastructure-recent-changes">
                         <div class="text-muted">
-                            {{ lang._('Loading recent service changes') }}...
+                            {{ devicemonitor_t('Loading recent service changes') }}...
                         </div>
                     </div>
                 </div>
@@ -130,25 +130,25 @@
                  class="tab-pane active" role="tabpanel">
                 <div class="panel panel-default infrastructure-recent-changes">
                     <div class="panel-heading">
-                        {{ lang._('Port Discovery') }}
-                        <button type="button" class="dm-info" aria-label="{{ lang._('About Port Discovery') }}"
-                                data-content="{{ lang._('Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned.') }}">
+                        {{ devicemonitor_t('Port Discovery') }}
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Port Discovery') }}"
+                                data-content="{{ devicemonitor_t('Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned.') }}">
                             <i class="fa fa-info-circle" aria-hidden="true"></i>
                         </button>
                     </div>
                     <div class="panel-body">
-                        <p class="text-muted">{{ lang._('TCP only · 120-second limit per host') }}</p>
+                        <p class="text-muted">{{ devicemonitor_t('TCP only · 120-second limit per host') }}</p>
                         <ul class="nav nav-tabs port-discovery-tabs" role="tablist">
                             <li role="presentation" class="active">
                                 <a href="#tab-port-discovery-devices"
                                    data-toggle="tab" role="tab">
-                                    {{ lang._('Devices') }}
+                                    {{ devicemonitor_t('Devices') }}
                                 </a>
                             </li>
                             <li role="presentation">
                                 <a href="#tab-port-discovery-scans"
                                    data-toggle="tab" role="tab">
-                                    {{ lang._('Scans') }}
+                                    {{ devicemonitor_t('Scans') }}
                                 </a>
                             </li>
                         </ul>
@@ -158,18 +158,18 @@
                             <div class="port-discovery-controls">
                                 <input id="port-discovery-search" type="search"
                                        class="form-control input-sm"
-                                       placeholder="{{ lang._('Search devices') }}">
+                                       placeholder="{{ devicemonitor_t('Search devices') }}">
                                 <select id="port-discovery-filter"
                                         class="selectpicker"
                                         data-style="btn-default btn-sm"
                                         data-width="180px">
-                                    <option value="all">{{ lang._('All devices') }}</option>
-                                    <option value="weekly">{{ lang._('Weekly enabled') }}</option>
-                                    <option value="never">{{ lang._('Never scanned') }}</option>
+                                    <option value="all">{{ devicemonitor_t('All devices') }}</option>
+                                    <option value="weekly">{{ devicemonitor_t('Weekly enabled') }}</option>
+                                    <option value="never">{{ devicemonitor_t('Never scanned') }}</option>
                                 </select>
                                 <button type="button" id="btn-port-discovery-save"
                                         class="btn btn-primary btn-sm" disabled>
-                                    {{ lang._('Save weekly selections') }}
+                                    {{ devicemonitor_t('Save weekly selections') }}
                                 </button>
                                 <span id="port-discovery-schedule-status"
                                       class="text-muted" role="status"
@@ -181,11 +181,11 @@
                                 <table id="port-discovery-device-table"
                                        class="table table-striped table-condensed">
                                     <thead><tr>
-                                        <th>{{ lang._('Device') }}</th>
-                                        <th>{{ lang._('Last Scan') }}</th>
-                                        <th>{{ lang._('Status') }}</th>
-                                        <th>{{ lang._('Scan weekly') }}</th>
-                                        <th>{{ lang._('Action') }}</th>
+                                        <th>{{ devicemonitor_t('Device') }}</th>
+                                        <th>{{ devicemonitor_t('Last Scan') }}</th>
+                                        <th>{{ devicemonitor_t('Status') }}</th>
+                                        <th>{{ devicemonitor_t('Scan weekly') }}</th>
+                                        <th>{{ devicemonitor_t('Action') }}</th>
                                     </tr></thead>
                                     <tbody id="port-discovery-devices"></tbody>
                                 </table>
@@ -196,30 +196,30 @@
                             <div class="port-discovery-controls port-discovery-scan-filters">
                                 <input id="port-scans-search" type="search"
                                        class="form-control input-sm"
-                                       placeholder="{{ lang._('Search IP, MAC or name') }}">
+                                       placeholder="{{ devicemonitor_t('Search IP, MAC or name') }}">
                                 <input id="port-scans-port" type="text"
                                        class="form-control input-sm"
-                                       placeholder="{{ lang._('TCP ports, e.g. 22,443') }}">
+                                       placeholder="{{ devicemonitor_t('TCP ports, e.g. 22,443') }}">
                                 <select id="port-scans-result"
                                         class="selectpicker"
                                         data-style="btn-default btn-sm"
                                         data-width="160px">
-                                    <option value="all">{{ lang._('All results') }}</option>
-                                    <option value="complete">{{ lang._('Complete') }}</option>
-                                    <option value="failed">{{ lang._('Failed') }}</option>
-                                    <option value="running">{{ lang._('Running') }}</option>
+                                    <option value="all">{{ devicemonitor_t('All results') }}</option>
+                                    <option value="complete">{{ devicemonitor_t('Complete') }}</option>
+                                    <option value="failed">{{ devicemonitor_t('Failed') }}</option>
+                                    <option value="running">{{ devicemonitor_t('Running') }}</option>
                                 </select>
                                 <span class="text-muted">
-                                    {{ lang._('Filtering the 50 most recent scans') }}
+                                    {{ devicemonitor_t('Filtering the 50 most recent scans') }}
                                 </span>
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-striped table-condensed">
                                     <thead><tr>
-                                        <th>{{ lang._('Device') }}</th>
-                                        <th>{{ lang._('Scan Time') }}</th>
-                                        <th>{{ lang._('Result') }}</th>
-                                        <th>{{ lang._('Open TCP Ports') }}</th>
+                                        <th>{{ devicemonitor_t('Device') }}</th>
+                                        <th>{{ devicemonitor_t('Scan Time') }}</th>
+                                        <th>{{ devicemonitor_t('Result') }}</th>
+                                        <th>{{ devicemonitor_t('Open TCP Ports') }}</th>
                                     </tr></thead>
                                     <tbody id="port-discovery-results"></tbody>
                                 </table>

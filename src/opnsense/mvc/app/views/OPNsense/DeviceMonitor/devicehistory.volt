@@ -30,7 +30,7 @@
                class="btn btn-default btn-sm pull-right"
                style="font-size:14px;font-weight:600;padding:6px 12px;">
                 <i class="fa fa-arrow-left"></i>
-                {{ lang._('Back to Devices') }}
+                {{ devicemonitor_t('Back to Devices') }}
             </a>
 
             <a id="activity-timeline-link"
@@ -38,10 +38,10 @@
                class="btn btn-default btn-sm pull-right"
                style="font-size:14px;font-weight:600;padding:6px 12px;margin-right:6px;">
                 <i class="fa fa-clock-o"></i>
-                {{ lang._('Device Activity') }}
+                {{ devicemonitor_t('Device Activity') }}
             </a>
             <h1 style="margin:0;font-size:20px;">
-                {{ lang._('Network Identity Details') }}
+                {{ devicemonitor_t('Network Identity Details') }}
             </h1>
         </div>
 
@@ -49,7 +49,7 @@
             <div class="panel-heading">
                 <strong>
                     <i class="fa fa-desktop"></i>
-                    {{ lang._('Network Identity Summary') }}
+                    {{ devicemonitor_t('Network Identity Summary') }}
                 </strong>
             </div>
             <div class="panel-body" style="padding-bottom:5px;">
@@ -57,11 +57,11 @@
                     <div class="col-md-6">
                         <table class="table table-condensed" style="margin-bottom:5px;">
                             <tbody>
-                                <tr><th style="width:135px;">{{ lang._('IP Address') }}</th><td id="summary-ip">&mdash;</td></tr>
-                                <tr><th>{{ lang._('Friendly Name') }}</th><td id="summary-friendly-name">&mdash;</td></tr>
-                                <tr><th>{{ lang._('Hostname') }}</th><td id="summary-hostname">&mdash;</td></tr>
-                                <tr><th>{{ lang._('MAC Address') }}</th><td id="summary-mac">&mdash;</td></tr>
-                                <tr><th>{{ lang._('Vendor') }}</th><td id="summary-vendor">&mdash;</td></tr>
+                                <tr><th style="width:135px;">{{ devicemonitor_t('IP Address') }}</th><td id="summary-ip">&mdash;</td></tr>
+                                <tr><th>{{ devicemonitor_t('Friendly Name') }}</th><td id="summary-friendly-name">&mdash;</td></tr>
+                                <tr><th>{{ devicemonitor_t('Hostname') }}</th><td id="summary-hostname">&mdash;</td></tr>
+                                <tr><th>{{ devicemonitor_t('MAC Address') }}</th><td id="summary-mac">&mdash;</td></tr>
+                                <tr><th>{{ devicemonitor_t('Vendor') }}</th><td id="summary-vendor">&mdash;</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -69,11 +69,11 @@
                     <div class="col-md-6">
                         <table class="table table-condensed" style="margin-bottom:5px;">
                             <tbody>
-                                <tr><th style="width:135px;">{{ lang._('Status') }}</th><td id="summary-status">&mdash;</td></tr>
-                                <tr><th>{{ lang._('VLAN') }}</th><td id="summary-vlan">&mdash;</td></tr>
-                                <tr><th>{{ lang._('First Seen') }}</th><td id="summary-first-seen">&mdash;</td></tr>
-                                <tr><th>{{ lang._('Last Seen') }}</th><td id="summary-last-seen">&mdash;</td></tr>
-                                <tr><th>{{ lang._('Current Lifecycle') }}</th><td id="summary-lifecycle">&mdash;</td></tr>
+                                <tr><th style="width:135px;">{{ devicemonitor_t('Status') }}</th><td id="summary-status">&mdash;</td></tr>
+                                <tr><th>{{ devicemonitor_t('VLAN') }}</th><td id="summary-vlan">&mdash;</td></tr>
+                                <tr><th>{{ devicemonitor_t('First Seen') }}</th><td id="summary-first-seen">&mdash;</td></tr>
+                                <tr><th>{{ devicemonitor_t('Last Seen') }}</th><td id="summary-last-seen">&mdash;</td></tr>
+                                <tr><th>{{ devicemonitor_t('Current Lifecycle') }}</th><td id="summary-lifecycle">&mdash;</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -83,9 +83,9 @@
 
         <div class="panel panel-default" id="device-service-alerts">
             <div class="panel-heading">
-                <strong><i class="fa fa-bell-o"></i> {{ lang._('Service Email Alerts') }}</strong>
-                <button type="button" class="dm-info" aria-label="{{ lang._('About Service Email Alerts') }}"
-                        data-content="{{ lang._('Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings.') }}">
+                <strong><i class="fa fa-bell-o"></i> {{ devicemonitor_t('Service Email Alerts') }}</strong>
+                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Service Email Alerts') }}"
+                        data-content="{{ devicemonitor_t('Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings.') }}">
                     <i class="fa fa-info-circle" aria-hidden="true"></i>
                 </button>
             </div>
@@ -97,41 +97,41 @@
                     <a id="service-alert-settings-link" class="btn btn-default btn-sm"
                        href="/ui/devicemonitor/index/settings#tab-email">
                         <i class="fa fa-envelope-o" aria-hidden="true"></i>
-                        {{ lang._('Go to Email Notifications') }}
+                        {{ devicemonitor_t('Go to Email Notifications') }}
                     </a>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-condensed" id="service-alert-preferences">
                         <thead><tr>
-                            <th>{{ lang._('Service event') }}</th>
-                            <th>{{ lang._('Preference') }}</th>
-                            <th>{{ lang._('Effective') }}</th>
+                            <th>{{ devicemonitor_t('Service event') }}</th>
+                            <th>{{ devicemonitor_t('Preference') }}</th>
+                            <th>{{ devicemonitor_t('Effective') }}</th>
                         </tr></thead>
                         <tbody>
                             <tr data-alert-field="service_new">
-                                <td>{{ lang._('New service') }}</td>
-                                <td><select class="selectpicker" data-style="btn-default btn-sm" data-width="190px" aria-label="{{ lang._('New service email preference') }}">
-                                    <option value="inherit">{{ lang._('Use global setting') }}</option>
-                                    <option value="on">{{ lang._('On') }}</option>
-                                    <option value="off">{{ lang._('Off') }}</option>
+                                <td>{{ devicemonitor_t('New service') }}</td>
+                                <td><select class="selectpicker" data-style="btn-default btn-sm" data-width="190px" aria-label="{{ devicemonitor_t('New service email preference') }}">
+                                    <option value="inherit">{{ devicemonitor_t('Use global setting') }}</option>
+                                    <option value="on">{{ devicemonitor_t('On') }}</option>
+                                    <option value="off">{{ devicemonitor_t('Off') }}</option>
                                 </select></td>
                                 <td class="alert-effective">&mdash;</td>
                             </tr>
                             <tr data-alert-field="service_unavailable">
-                                <td>{{ lang._('Service unavailable') }}</td>
-                                <td><select class="selectpicker" data-style="btn-default btn-sm" data-width="190px" aria-label="{{ lang._('Service unavailable email preference') }}">
-                                    <option value="inherit">{{ lang._('Use global setting') }}</option>
-                                    <option value="on">{{ lang._('On') }}</option>
-                                    <option value="off">{{ lang._('Off') }}</option>
+                                <td>{{ devicemonitor_t('Service unavailable') }}</td>
+                                <td><select class="selectpicker" data-style="btn-default btn-sm" data-width="190px" aria-label="{{ devicemonitor_t('Service unavailable email preference') }}">
+                                    <option value="inherit">{{ devicemonitor_t('Use global setting') }}</option>
+                                    <option value="on">{{ devicemonitor_t('On') }}</option>
+                                    <option value="off">{{ devicemonitor_t('Off') }}</option>
                                 </select></td>
                                 <td class="alert-effective">&mdash;</td>
                             </tr>
                             <tr data-alert-field="service_recovered">
-                                <td>{{ lang._('Service recovered') }}</td>
-                                <td><select class="selectpicker" data-style="btn-default btn-sm" data-width="190px" aria-label="{{ lang._('Service recovered email preference') }}">
-                                    <option value="inherit">{{ lang._('Use global setting') }}</option>
-                                    <option value="on">{{ lang._('On') }}</option>
-                                    <option value="off">{{ lang._('Off') }}</option>
+                                <td>{{ devicemonitor_t('Service recovered') }}</td>
+                                <td><select class="selectpicker" data-style="btn-default btn-sm" data-width="190px" aria-label="{{ devicemonitor_t('Service recovered email preference') }}">
+                                    <option value="inherit">{{ devicemonitor_t('Use global setting') }}</option>
+                                    <option value="on">{{ devicemonitor_t('On') }}</option>
+                                    <option value="off">{{ devicemonitor_t('Off') }}</option>
                                 </select></td>
                                 <td class="alert-effective">&mdash;</td>
                             </tr>
@@ -139,7 +139,7 @@
                     </table>
                 </div>
                 <button type="button" id="save-service-alerts" class="btn btn-primary btn-sm" disabled>
-                    {{ lang._('Save alert preferences') }}
+                    {{ devicemonitor_t('Save alert preferences') }}
                 </button>
             </div>
         </div>
@@ -148,12 +148,12 @@
             <div class="panel-heading">
                 <strong>
                     <i class="fa fa-sitemap"></i>
-                    {{ lang._('Device Profile') }}
+                    {{ devicemonitor_t('Device Profile') }}
                 </strong>
             </div>
             <div class="panel-body" id="physical-device-content">
                 <div class="text-muted">
-                    {{ lang._('Loading device profile...') }}
+                    {{ devicemonitor_t('Loading device profile...') }}
                 </div>
             </div>
         </div>
@@ -162,14 +162,14 @@
             <div class="panel-heading">
                 <strong>
                     <i class="fa fa-history"></i>
-                    {{ lang._('Lifecycle History') }}
+                    {{ devicemonitor_t('Lifecycle History') }}
                 </strong>
-                <button type="button" class="dm-info" aria-label="{{ lang._('About Lifecycle History') }}"
-                        data-content="{{ lang._('A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below.') }}">
+                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Lifecycle History') }}"
+                        data-content="{{ devicemonitor_t('A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below.') }}">
                     <i class="fa fa-info-circle" aria-hidden="true"></i>
                 </button>
                 <span class="text-muted" style="margin-left:10px;">
-                    {{ lang._('MAC address') }}:
+                    {{ devicemonitor_t('MAC address') }}:
                     <span id="device-history-mac"></span>
                 </span>
             </div>
@@ -180,10 +180,10 @@
                         type="button"
                         class="btn btn-sm btn-primary">
                     <i class="fa fa-plus-circle"></i>
-                    {{ lang._('Start New Lifecycle') }}
+                    {{ devicemonitor_t('Start New Lifecycle') }}
                 </button>
                 <span class="text-muted" style="margin-left:8px;">
-                    {{ lang._('Use this when the returning device should be treated as new.') }}
+                    {{ devicemonitor_t('Use this when the returning device should be treated as new.') }}
                 </span>
             </div>
 
@@ -192,23 +192,23 @@
                        id="grid-device-history">
                     <thead>
                         <tr>
-                            <th>{{ lang._('Lifecycle') }}</th>
-                            <th>{{ lang._('Status') }}</th>
-                            <th>{{ lang._('IP Address') }}</th>
-                            <th>{{ lang._('Friendly Name') }}</th>
-                            <th>{{ lang._('Hostname') }}</th>
-                            <th>{{ lang._('Vendor') }}</th>
-                            <th>{{ lang._('VLAN') }}</th>
-                            <th>{{ lang._('First Seen') }}</th>
-                            <th>{{ lang._('Last Seen') }}</th>
-                            <th>{{ lang._('Notes') }}</th>
-                            <th class="text-center">{{ lang._('Actions') }}</th>
+                            <th>{{ devicemonitor_t('Lifecycle') }}</th>
+                            <th>{{ devicemonitor_t('Status') }}</th>
+                            <th>{{ devicemonitor_t('IP Address') }}</th>
+                            <th>{{ devicemonitor_t('Friendly Name') }}</th>
+                            <th>{{ devicemonitor_t('Hostname') }}</th>
+                            <th>{{ devicemonitor_t('Vendor') }}</th>
+                            <th>{{ devicemonitor_t('VLAN') }}</th>
+                            <th>{{ devicemonitor_t('First Seen') }}</th>
+                            <th>{{ devicemonitor_t('Last Seen') }}</th>
+                            <th>{{ devicemonitor_t('Notes') }}</th>
+                            <th class="text-center">{{ devicemonitor_t('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td colspan="11" class="text-muted">
-                                {{ lang._('Loading device history...') }}
+                                {{ devicemonitor_t('Loading device history...') }}
                             </td>
                         </tr>
                     </tbody>
@@ -220,7 +220,7 @@
             <div class="panel-heading">
                 <strong>
                     <i class="fa fa-comment-o"></i>
-                    {{ lang._('Notes') }}
+                    {{ devicemonitor_t('Notes') }}
                 </strong>
                 <span id="current-lifecycle-badge"
                       class="label label-success"
@@ -231,27 +231,27 @@
                 <div id="notes-no-active"
                      class="alert alert-info"
                      style="display:none;margin-bottom:10px;">
-                    {{ lang._('There is no active lifecycle. Resolve the returning device in Lifecycle History before adding notes.') }}
+                    {{ devicemonitor_t('There is no active lifecycle. Resolve the returning device in Lifecycle History before adding notes.') }}
                 </div>
 
                 <div id="notes-editor" style="display:none;margin-bottom:15px;">
-                    <label for="new-note-text">{{ lang._('Add Note') }}</label>
+                    <label for="new-note-text">{{ devicemonitor_t('Add Note') }}</label>
                     <textarea id="new-note-text"
                               class="form-control"
                               rows="3"
                               style="width:100%;max-width:none;box-sizing:border-box;resize:vertical;"
-                              placeholder="{{ lang._('Enter a new note...') }}"></textarea>
+                              placeholder="{{ devicemonitor_t('Enter a new note...') }}"></textarea>
                     <button id="btn-add-note"
                             type="button"
                             class="btn btn-xs btn-primary"
                             style="margin-top:8px;">
                         <i class="fa fa-plus"></i>
-                        {{ lang._('Add Note') }}
+                        {{ devicemonitor_t('Add Note') }}
                     </button>
                 </div>
 
                 <div id="current-notes">
-                    <div class="text-muted">{{ lang._('Loading notes...') }}</div>
+                    <div class="text-muted">{{ devicemonitor_t('Loading notes...') }}</div>
                 </div>
             </div>
         </div>

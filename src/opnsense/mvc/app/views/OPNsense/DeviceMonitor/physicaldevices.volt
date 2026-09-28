@@ -5,15 +5,15 @@
         <ul class="nav nav-tabs" role="tablist" style="margin:10px 0 0 0;">
             <li role="presentation">
                 <a href="/ui/devicemonitor/index/devices">
-                    <i class="fa fa-list"></i> {{ lang._('Network Identities') }}
+                    <i class="fa fa-list"></i> {{ devicemonitor_t('Network Identities') }}
                 </a>
             </li>
             <li role="presentation" class="active dm-tab-with-info">
                 <a href="/ui/devicemonitor/index/physicaldevices">
-                    <i class="fa fa-sitemap"></i> {{ lang._('Device Profiles') }}
+                    <i class="fa fa-sitemap"></i> {{ devicemonitor_t('Device Profiles') }}
                 </a>
-                <button type="button" class="dm-info" aria-label="{{ lang._('About Device Profiles') }}"
-                        data-content="{{ lang._('Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters.') }}">
+                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Device Profiles') }}"
+                        data-content="{{ devicemonitor_t('Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters.') }}">
                     <i class="fa fa-info-circle" aria-hidden="true"></i>
                 </button>
             </li>
@@ -23,15 +23,15 @@
             <div class="physical-devices-header">
                 <div class="physical-devices-stats">
                     <span>
-                        {{ lang._('Profiles') }}:
+                        {{ devicemonitor_t('Profiles') }}:
                         <strong id="stat-devices">&mdash;</strong>
                     </span>
                     <span>
-                        {{ lang._('Current') }}:
+                        {{ devicemonitor_t('Current') }}:
                         <strong id="stat-current">&mdash;</strong>
                     </span>
                     <span>
-                        {{ lang._('Archived') }}:
+                        {{ devicemonitor_t('Archived') }}:
                         <strong id="stat-archived">&mdash;</strong>
                     </span>
                 </div>
@@ -41,7 +41,7 @@
                 <button id="btn-refresh"
                         type="button"
                         class="btn btn-default btn-sm"
-                        title="{{ lang._('Refresh') }}">
+                        title="{{ devicemonitor_t('Refresh') }}">
                     <i class="fa fa-refresh"></i>
                 </button>
 
@@ -49,25 +49,25 @@
                         type="button"
                         class="btn btn-primary btn-sm">
                     <i class="fa fa-plus"></i>
-                    {{ lang._('Create Profile') }}
+                    {{ devicemonitor_t('Create Profile') }}
                 </button>
 
                 <select id="filter-state"
                         class="selectpicker"
                         data-style="btn-default btn-sm"
                         data-width="170px">
-                    <option value="all">{{ lang._('All Profiles') }}</option>
-                    <option value="current">{{ lang._('Current Profiles') }}</option>
-                    <option value="archived">{{ lang._('Archived Profiles') }}</option>
+                    <option value="all">{{ devicemonitor_t('All Profiles') }}</option>
+                    <option value="current">{{ devicemonitor_t('Current Profiles') }}</option>
+                    <option value="archived">{{ devicemonitor_t('Archived Profiles') }}</option>
                 </select>
 
                 <input id="physical-devices-search"
                        type="text"
                        class="form-control input-sm"
-                       placeholder="{{ lang._('Search by name or MAC') }}" />
+                       placeholder="{{ devicemonitor_t('Search by name or MAC') }}" />
 
                 <span class="text-muted">
-                    {{ lang._('Showing') }}
+                    {{ devicemonitor_t('Showing') }}
                     <strong id="stat-visible">0</strong>
                 </span>
             </div>
@@ -77,10 +77,10 @@
             <div class="panel-heading">
                 <strong>
                     <i class="fa fa-plus-circle"></i>
-                    {{ lang._('Create Profile') }}
+                    {{ devicemonitor_t('Create Profile') }}
                 </strong>
-                <button type="button" class="dm-info" aria-label="{{ lang._('About Creating Profiles') }}"
-                        data-content="{{ lang._('Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history.') }}">
+                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Creating Profiles') }}"
+                        data-content="{{ devicemonitor_t('Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history.') }}">
                     <i class="fa fa-info-circle" aria-hidden="true"></i>
                 </button>
             </div>
@@ -89,7 +89,7 @@
                     <input id="create-name"
                            type="text"
                            class="form-control input-sm"
-                           placeholder="{{ lang._('Profile name') }}"
+                           placeholder="{{ devicemonitor_t('Profile name') }}"
                            style="margin-right:6px;" />
                     <input id="create-mac"
                            type="text"
@@ -101,14 +101,14 @@
                             type="button"
                             class="btn btn-xs btn-primary">
                         <i class="fa fa-plus"></i>
-                        {{ lang._('Create') }}
+                        {{ devicemonitor_t('Create') }}
                     </button>
                 </div>
             </div>
         </div>
 
         <div id="physical-devices-list">
-            <div class="text-muted">{{ lang._('Loading devices...') }}</div>
+            <div class="text-muted">{{ devicemonitor_t('Loading devices...') }}</div>
         </div>
 
     </div>

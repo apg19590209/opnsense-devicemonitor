@@ -7,49 +7,49 @@
                 <div class="change-summary-controls">
                     <label for="change-summary-window"
                            style="margin:0;font-size:12px;font-weight:600;">
-                        {{ lang._('Period') }}
+                        {{ devicemonitor_t('Period') }}
                     </label>
 
                     <select id="change-summary-window"
                             class="selectpicker"
                             data-style="btn-default btn-sm"
                             data-width="170px">
-                        <option value="since_last_review">{{ lang._('Since last review') }}</option>
-                        <option value="24h" selected>{{ lang._('Last 24 hours') }}</option>
-                        <option value="7d">{{ lang._('Last 7 days') }}</option>
-                        <option value="30d">{{ lang._('Last 30 days') }}</option>
-                        <option value="custom">{{ lang._('Custom range') }}</option>
+                        <option value="since_last_review">{{ devicemonitor_t('Since last review') }}</option>
+                        <option value="24h" selected>{{ devicemonitor_t('Last 24 hours') }}</option>
+                        <option value="7d">{{ devicemonitor_t('Last 7 days') }}</option>
+                        <option value="30d">{{ devicemonitor_t('Last 30 days') }}</option>
+                        <option value="custom">{{ devicemonitor_t('Custom range') }}</option>
                     </select>
 
                     <label for="change-summary-category"
                            style="margin:0;font-size:12px;font-weight:600;margin-left:10px;">
-                        {{ lang._('Category') }}
+                        {{ devicemonitor_t('Category') }}
                     </label>
 
                     <select id="change-summary-category"
                             class="selectpicker"
                             data-style="btn-default btn-sm"
                             data-width="150px">
-                        <option value="all" selected>{{ lang._('All categories') }}</option>
-                        <option value="device">{{ lang._('Device') }}</option>
-                        <option value="lifecycle">{{ lang._('Lifecycle') }}</option>
-                        <option value="identity">{{ lang._('Identity') }}</option>
-                        <option value="physical_device">{{ lang._('Device Profile') }}</option>
-                        <option value="user_history">{{ lang._('Notes / History') }}</option>
-                        <option value="infrastructure">{{ lang._('Infrastructure') }}</option>
+                        <option value="all" selected>{{ devicemonitor_t('All categories') }}</option>
+                        <option value="device">{{ devicemonitor_t('Device') }}</option>
+                        <option value="lifecycle">{{ devicemonitor_t('Lifecycle') }}</option>
+                        <option value="identity">{{ devicemonitor_t('Identity') }}</option>
+                        <option value="physical_device">{{ devicemonitor_t('Device Profile') }}</option>
+                        <option value="user_history">{{ devicemonitor_t('Notes / History') }}</option>
+                        <option value="infrastructure">{{ devicemonitor_t('Infrastructure') }}</option>
                     </select>
 
                     <button id="btn-change-summary-refresh"
                             class="btn btn-default btn-sm"
-                            title="{{ lang._('Refresh') }}">
+                            title="{{ devicemonitor_t('Refresh') }}">
                         <i class="fa fa-refresh"></i>
                     </button>
 
                     <button id="btn-mark-reviewed"
                             class="btn btn-default btn-sm"
-                            title="{{ lang._('Mark reviewed now') }}">
+                            title="{{ devicemonitor_t('Mark reviewed now') }}">
                         <i class="fa fa-check"></i>
-                        {{ lang._('Mark reviewed now') }}
+                        {{ devicemonitor_t('Mark reviewed now') }}
                     </button>
                 </div>
             </div>
@@ -59,7 +59,7 @@
                  style="display:none;">
                 <label for="change-summary-start"
                        style="margin:0;font-size:12px;font-weight:600;">
-                    {{ lang._('Start') }} (UTC)
+                    {{ devicemonitor_t('Start') }} (UTC)
                 </label>
                 <input type="datetime-local"
                        id="change-summary-start"
@@ -68,7 +68,7 @@
 
                 <label for="change-summary-end"
                        style="margin:0;font-size:12px;font-weight:600;margin-left:10px;">
-                    {{ lang._('End') }} (UTC)
+                    {{ devicemonitor_t('End') }} (UTC)
                 </label>
                 <input type="datetime-local"
                        id="change-summary-end"
@@ -79,32 +79,32 @@
             <div id="change-summary-fallback"
                  class="change-summary-fallback"
                  style="display:none;">
-                {{ lang._('No previous review marker; showing the last 24 hours.') }}
+                {{ devicemonitor_t('No previous review marker; showing the last 24 hours.') }}
             </div>
 
             <div class="panel-body change-summary-counters" id="change-summary-counters">
                 <span class="change-summary-counter" data-category="all">
-                    <span class="change-summary-counter-label">{{ lang._('Total Changes') }}</span>
+                    <span class="change-summary-counter-label">{{ devicemonitor_t('Total Changes') }}</span>
                     <span class="badge" id="change-summary-count-total">0</span>
                 </span>
                 <span class="change-summary-counter" data-category="device">
-                    <span class="change-summary-counter-label">{{ lang._('New Devices') }}</span>
+                    <span class="change-summary-counter-label">{{ devicemonitor_t('New Devices') }}</span>
                     <span class="badge" id="change-summary-count-new_devices">0</span>
                 </span>
                 <span class="change-summary-counter" data-category="lifecycle">
-                    <span class="change-summary-counter-label">{{ lang._('Returned Devices') }}</span>
+                    <span class="change-summary-counter-label">{{ devicemonitor_t('Returned Devices') }}</span>
                     <span class="badge" id="change-summary-count-returned_devices">0</span>
                 </span>
                 <span class="change-summary-counter" data-category="identity">
-                    <span class="change-summary-counter-label">{{ lang._('Identity Changes') }}</span>
+                    <span class="change-summary-counter-label">{{ devicemonitor_t('Identity Changes') }}</span>
                     <span class="badge" id="change-summary-count-identity">0</span>
                 </span>
                 <span class="change-summary-counter" data-category="infrastructure">
-                    <span class="change-summary-counter-label">{{ lang._('Infrastructure Changes') }}</span>
+                    <span class="change-summary-counter-label">{{ devicemonitor_t('Infrastructure Changes') }}</span>
                     <span class="badge" id="change-summary-count-infrastructure">0</span>
                 </span>
                 <span class="change-summary-counter" data-category="lifecycle">
-                    <span class="change-summary-counter-label">{{ lang._('Lifecycle Changes') }}</span>
+                    <span class="change-summary-counter-label">{{ devicemonitor_t('Lifecycle Changes') }}</span>
                     <span class="badge" id="change-summary-count-lifecycle">0</span>
                 </span>
             </div>
@@ -119,19 +119,19 @@
                     <thead>
                         <tr>
                             <th class="change-summary-row-number" style="width:40px;">#</th>
-                            <th style="width:170px;">{{ lang._('Time') }}</th>
-                            <th style="width:120px;">{{ lang._('Category') }}</th>
-                            <th>{{ lang._('Device / Subject') }}</th>
-                            <th style="width:200px;">{{ lang._('Change') }}</th>
-                            <th>{{ lang._('Previous') }}</th>
-                            <th>{{ lang._('Current') }}</th>
-                            <th style="width:130px;">{{ lang._('Action') }}</th>
+                            <th style="width:170px;">{{ devicemonitor_t('Time') }}</th>
+                            <th style="width:120px;">{{ devicemonitor_t('Category') }}</th>
+                            <th>{{ devicemonitor_t('Device / Subject') }}</th>
+                            <th style="width:200px;">{{ devicemonitor_t('Change') }}</th>
+                            <th>{{ devicemonitor_t('Previous') }}</th>
+                            <th>{{ devicemonitor_t('Current') }}</th>
+                            <th style="width:130px;">{{ devicemonitor_t('Action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td colspan="8" class="text-muted">
-                                {{ lang._('Loading changes...') }}
+                                {{ devicemonitor_t('Loading changes...') }}
                             </td>
                         </tr>
                     </tbody>
@@ -145,11 +145,11 @@
                       style="font-size:12px;margin-right:10px;"></span>
                 <button id="btn-change-summary-prev"
                         class="btn btn-default btn-xs">
-                    {{ lang._('Previous') }}
+                    {{ devicemonitor_t('Previous') }}
                 </button>
                 <button id="btn-change-summary-next"
                         class="btn btn-default btn-xs">
-                    {{ lang._('Next') }}
+                    {{ devicemonitor_t('Next') }}
                 </button>
             </div>
         </div>
