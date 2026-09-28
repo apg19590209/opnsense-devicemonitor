@@ -47,6 +47,7 @@
     "nmap_timing": "4",
     "nmap_host_timeout": "45",
     "nmap_version_detection": "1",
-    "nmap_max_per_cycle": "2"
+    "nmap_max_per_cycle": "2",
+    "sidecar_translation_enabled": "1"
   }
 }

@@ -91,11 +91,13 @@ while read -r hash mode source target; do
     [ ! -L "$target" ] || { echo "ABORT: target symlink $target" >&2; exit 1; }
     printf '%s %s %s %s\n' "$hash" "$mode" "$source" "$target" >> "$STAGE/items"
 done < "$MANIFEST"
-for lang in en_US cs_CZ; do
-    source=src/opnsense/mvc/app/languages/${lang}_devicemonitor.po
-    output=$STAGE/${lang}_devicemonitor.mo
-    msgfmt --check -o "$output" "$source" >/dev/null || { echo "ABORT: gettext $lang" >&2; exit 1; }
-    printf '%s %s %s %s\n' "$(sha256 -q "$output")" 644 "$output" "/usr/local/opnsense/mvc/app/languages/${lang}_devicemonitor.mo" >> "$STAGE/items"
+for lang in cs_CZ en_US; do
+    pofile=src/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.po
+    modir=$STAGE/${lang}/LC_MESSAGES
+    mkdir -p "$modir"
+    output=$modir/devicemonitor.mo
+    msgfmt --check -o "$output" "$pofile" >/dev/null || { echo "ABORT: gettext $lang" >&2; exit 1; }
+    printf '%s %s %s %s\n' "$(sha256 -q "$output")" 644 "$output" "/usr/local/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.mo" >> "$STAGE/items"
 done
 python3 - <<'PY'
 import ast,glob,json,xml.etree.ElementTree as ET

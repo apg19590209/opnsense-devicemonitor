@@ -1894,3 +1894,40 @@ Production promotion is COMPLETE.
   Production data preservation: PASS.
 
 Next step: none required — v2.9 is promoted to production and validated.
+
+## O3 / DM-BL-008c — sidecar translation framework (2026-09-28)
+
+Splits Device Monitor translations out of the core `OPNsense` text domain so plugin
+strings can be translated without touching `/usr/local/share/locale`.
+
+Status: IMPLEMENTED on the testbed `192.168.20.23`; not pushed.
+
+- Catalogue layout migrated from flat `<locale>_devicemonitor.{po,mo}` to
+  `<locale>/LC_MESSAGES/devicemonitor.{po,mo}` in 11 locales. The flat layout was
+  unreachable by `bindtextdomain`, which resolves `<dir>/<locale>/LC_MESSAGES/<domain>.mo`.
+- `src/etc/inc/devicemonitor_locale.inc` (new): registers the `devicemonitor` domain and
+  provides `devicemonitor_t()` with the chain sidecar -> core `OPNsense` -> msgid.
+- `IndexController::initialize()` binds the sidecar after `parent::initialize()`, guarded on
+  `is_file()` so an undeployed binder cannot fatal the page.
+- Toggle `sidecar_translation_enabled` (default `"1"`) in `defaults.json`, saved by
+  `ConfigController::setAction()` only when posted, surfaced as a checkbox in the Settings
+  About tab. Disabled or absent key -> stock core behaviour.
+- `install-unattended.sh` updated for the new layout; it already does
+  `mkdir -p "$(dirname "$target")"`, and the `expected=39` target count is unchanged.
+
+Correction to the audit that motivated this: the reported "D3 stale `.mo` gap" of 23 entries
+**does not exist**. It was an artifact of parsing multi-line msgids with
+`grep | sed | sort -u`. Round-tripping the compiled `.mo` back through `msgunfmt` gives an
+msgid set **identical** to the `.po` (452 translated messages). Recompiling changed no
+content, as the before/after counts confirm. The real defect was D2 only.
+
+Verified: `php -l` clean on every PHP file; `defaults.json` valid JSON; per-process
+`devicemonitor_t("Device Monitor")` matches each `.po` exactly for fr_FR, de_DE, it_IT,
+nl_NL and zh_CN. All 19 core catalogues plus `authgui.inc` and `ControllerRoot.php` retain
+their exact pre-change sha256, so core language files are unaltered.
+
+Open: the testbed carries ~280 lines of uncommitted local work in `ConfigController.php`
+(a new `sendEmailAction()`), `settings.volt` (a tab redesign) and `defaults.json`
+(`version` 2.10). A pre-flight hash check caught this and blocked the wholesale file copy, so
+the toggle was hand-merged additively onto the live files instead. Those changes remain
+uncommitted upstream and should be reconciled.

@@ -421,6 +421,16 @@ class ConfigController extends ApiControllerBase
         $config['nmap_version_detection'] = $nmap_version_detection;
         $config['nmap_max_per_cycle'] = $nmap_max_per_cycle;
 
+        /* O3 / DM-BL-008c - sidecar translation toggle.
+         * Written only when the form actually posts the field, so an older
+         * settings page or a partial API call can never silently switch the
+         * sidecar off. A missing key is treated as enabled by the binder. */
+        $sidecar_translation_enabled = $this->request->getPost('sidecar_translation_enabled', 'string', null);
+        if ($sidecar_translation_enabled !== null) {
+            $config['sidecar_translation_enabled'] =
+                ((string)$sidecar_translation_enabled === '1') ? '1' : '0';
+        }
+
         if ($model->setConfig($config)) {
             return ['result' => 'saved', 'message' => 'Configuration saved'];
         }

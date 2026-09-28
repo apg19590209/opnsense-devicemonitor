@@ -4,6 +4,26 @@ namespace OPNsense\DeviceMonitor;
 
 class IndexController extends \OPNsense\Base\IndexController
 {
+    /*
+     * O3 / DM-BL-008c - sidecar catalogue binding.
+     *
+     * Registers the plugin's own "devicemonitor" text domain so this plugin's
+     * strings can be translated without ever touching the OPNsense core
+     * catalogues under /usr/local/share/locale.
+     *
+     * Guarded on purpose: if the binder has not been deployed, the page must
+     * still render with stock behaviour rather than fatal on a missing include.
+     */
+    public function initialize()
+    {
+        parent::initialize();
+
+        if (is_file('/usr/local/etc/inc/devicemonitor_locale.inc')) {
+            require_once 'devicemonitor_locale.inc';
+            devicemonitor_bind_sidecar();
+        }
+    }
+
     public function devicesAction()
     {
         $this->view->pick('OPNsense/DeviceMonitor/devices');

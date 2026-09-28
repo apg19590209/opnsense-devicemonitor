@@ -462,6 +462,19 @@
                             <td>&ge; 26.1.5</td>
                         </tr>
                     </table>
+
+                    <h4 style="margin-top:22px;">{{ lang._('Language') }}</h4>
+                    <table class="table table-condensed">
+                        <tr>
+                            <td style="width:40%;color:#888;">{{ lang._('Plugin translations (sidecar catalogue)') }}</td>
+                            <td>
+                                <input type="checkbox" id="sidecar_translation_enabled" />
+                                <div class="text-muted" style="margin-top:6px;max-width:520px;">
+                                    {{ lang._('Translate Device Monitor strings from the plugin sidecar catalogue. When disabled, the plugin uses the stock OPNsense core catalogues only. The core language files under /usr/local/share/locale are never modified in either case.') }}
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
                 </div>
             </div>
 
@@ -579,6 +592,15 @@ $().ready(function() {
                     d.targeted_nmap_enabled !== undefined &&
                     d.targeted_nmap_enabled !== null
                         ? d.targeted_nmap_enabled
+                        : '1'
+                ) === '1'
+            );
+            $('#sidecar_translation_enabled').prop(
+                'checked',
+                String(
+                    d.sidecar_translation_enabled !== undefined &&
+                    d.sidecar_translation_enabled !== null
+                        ? d.sidecar_translation_enabled
                         : '1'
                 ) === '1'
             );
@@ -706,7 +728,8 @@ $().ready(function() {
             nmap_timing: $('#nmap_timing').val(),
             nmap_host_timeout: $('#nmap_host_timeout').val(),
             nmap_version_detection: $('#nmap_version_detection').is(':checked')?'1':'0',
-            nmap_max_per_cycle: $('#nmap_max_per_cycle').val()
+            nmap_max_per_cycle: $('#nmap_max_per_cycle').val(),
+            sidecar_translation_enabled: $('#sidecar_translation_enabled').is(':checked')?'1':'0'
         };
     }
 
