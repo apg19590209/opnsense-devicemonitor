@@ -178,7 +178,21 @@ language, zero failures), and the `nl_NL` GUI-selectability limitation. `release
 is not one of the 37 files in `release/v2.10-runtime.manifest`, so the review changed no guarded
 hash and `tests/test_release_manifest.py`, `sh -n install-unattended.sh` and `git diff --check`
 stayed PASS. `PRODUCT_BACKLOG.md` DM-BL-008b records the same review as resolved on 28 September
-2026 and keeps only the French and Italian browser confirmation open for that item.
+2026 and now records the French text-stream verification described below, with only the Italian
+confirmation still open for that item.
+
+French text-stream verification (28 September 2026): the French translation stream was verified on
+the target UI by an operator-run remote Selenium text-stream assertion against
+`https://192.168.20.23`, which found `Résumé des modifications` (`Change Summary`) and
+`Surveillance des appareils` (`Device Monitor`) in the rendered text; both match the deployed
+`/usr/local/share/locale/fr_FR/LC_MESSAGES/OPNsense.mo` and `fr_FR_devicemonitor.po`. This replaces
+the former French browser-dialog confirmation for DM-BL-008b, because there is no dialog to confirm
+on OPNsense 26.7.4: `showToast()` in the Change Summary view guards on `$.fn.notify` and
+`window.bootbox`, neither of which the core page loads (`/ui/js/theme.js` is an empty placeholder,
+no bootbox or notify file exists under either web root, and the plugin calls no dialog API at all),
+so that toast path is inert and the core dialog API is `BootstrapDialog`, exposed as
+`stdDialogInform()` in `opnsense_ui.js` (F1). The verifying Selenium script and its output were not
+archived in this checkout or on the testbed, so this result is recorded as operator-reported.
 
 Push and CI confirmed: the local-only statements this section originally carried were resolved
 by the push of `3eeb78b` and `3fc9dfc` (GitHub Actions Device Monitor CI run `36323794636`,
@@ -187,14 +201,19 @@ head `3fc9dfc`, job `validate` — PASS), of the record commit `02a1eba` (CI run
 `e6443bc` (CI run `36355695028`, head `e6443bc` — PASS). Local and remote `v2.10-development` are
 the same commit; nothing on this branch is local-only.
 
-Still outstanding: the one French and one Italian browser dialog need human confirmation
-(DM-BL-008b), and DM-BL-008c (the shared-catalogue merge that makes the installed plugin
-catalogues readable by the GUI) remains an open decision — the release notes do not state that
-limitation.
+Still outstanding: the Italian text stream has not been verified (DM-BL-008b; the French stream is
+resolved above), F1 is an open decision — the Change Summary toast renders nothing because the core
+ships `BootstrapDialog` and neither `$.fn.notify` nor `bootbox` — and DM-BL-008c (the
+shared-catalogue merge that makes the installed plugin catalogues readable by the GUI) remains open
+but is formally deferred as of 28 September 2026: documentation only, no installer, manifest,
+release-note or Makefile change, because the candidate branch cannot be adopted into v2.10 unchanged
+and its `--languages` default is still an open sub-decision.
 
-Next recommended step: decide DM-BL-008c — merge the pushed `feature/optional-locale-installer-20260927`
-branch or implement the equivalent merge for v2.10 — because until that merge ships, the nine
-translations are inert on a firewall installed from the release asset alone.
+Next recommended step: confirm the remaining language acceptance by running the Italian text-stream
+assertion for `it_IT` (expected `Riepilogo modifiche`, `Monitoraggio dispositivi`), the counterpart
+of the French verification above, and record an F1 decision — leave the inert toast as documented
+behaviour, or move `showToast()` to `BootstrapDialog`/`stdDialogInform()`. DM-BL-008c is deferred
+and is not the next action.
 
 ## 27 September 2026 Settings delivery-action acceptance attempt
 

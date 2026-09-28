@@ -141,8 +141,33 @@ GUI-selectability limitation. The file is not one of the 37 guarded files in
 `tests/test_release_manifest.py`, `sh -n install-unattended.sh` and `git diff --check` stayed
 PASS.
 
-**Still open:** one browser dialog in French and one in Italian still need visual confirmation,
-because the defect is only visible in the browser.
+**Resolved (28 September 2026): French verified as rendered page text, not as a dialog.** An
+operator-run remote Selenium script asserted the rendered text stream of the target UI at
+`https://192.168.20.23` and found the core French UI strings, including `Résumé des modifications`
+(`Change Summary`) and `Surveillance des appareils` (`Device Monitor`). Both match the deployed
+`/usr/local/share/locale/fr_FR/LC_MESSAGES/OPNsense.mo` and
+`src/opnsense/mvc/app/languages/fr_FR_devicemonitor.po`, so the French translation stream is
+verified on the target UI. Evidence status: the Selenium script and its output were not archived
+in this repository or on the testbed, so the observation is recorded as operator-reported and is
+not reproducible from the checkout.
+
+**Re-scoped (28 September 2026):** the earlier "one browser dialog in French and one in Italian"
+wording is withdrawn. There is no dialog to confirm on OPNsense 26.7.4 (see F1), so this item is
+verified against observable rendered text instead of a dialog popup. The three French strings that
+a `lang._()` regression would have escaped (`Voir l'appareil`, `Voir l'infrastructure`,
+`Aucun changement Device Monitor significatif n'a été enregistré pendant cette période.`) all reach
+the DOM through `.text()`, where no entity leak is possible.
+
+**F1 (open, new):** the Change Summary toast path is inert. `showToast()` in `changesummary.volt`
+guards on `$.fn.notify` and `window.bootbox`, and neither exists on this build: the core
+`templateJSIncludes()` list loads no bootbox and no notify plugin, no such file exists under
+`/usr/local/opnsense/www` or `/usr/local/www`, `/ui/js/theme.js` is an empty placeholder, and the
+plugin calls no dialog API at all. Clicking `Mark reviewed now` therefore renders nothing. The core
+dialog API on 26.7.4 is `BootstrapDialog`, wrapped by `stdDialogInform()` in `opnsense_ui.js`.
+
+**Still open (Italian):** the Italian text stream has not been verified. The same assertion must be
+run for `it_IT`, whose expected strings are `Riepilogo modifiche` (`Change Summary`) and
+`Monitoraggio dispositivi` (`Device Monitor`).
 
 **Resolved (27 September 2026):** the installer pin that `0708239` left stale is corrected by
 commit `3eeb78b`, which pins the current `release/v2.10-runtime.manifest` SHA256
@@ -152,8 +177,8 @@ commit `3eeb78b`, which pins the current `release/v2.10-runtime.manifest` SHA256
 `install-unattended.sh --host OPNsense.internal --check` reports
 `CHECK_OK version=2.10 predecessor=2.10 files=48 daemon_running=1`.
 
-**Deferred:** the browser confirmation, which needs a browser session against the deployed views
-and stays outside the local checkout work.
+**Deferred:** the Italian text-stream confirmation and the F1 dialog decision, both of which need a
+browser session or a source change and stay outside the local checkout work.
 
 ### DM-BL-008c — Installed plugin catalogues are invisible to the GUI without the shared merge
 
@@ -183,10 +208,9 @@ candidate fix exists on the unmerged but pushed branch
 `release/merge-opnsense-catalog.sh`, `tests/test_locale_merge.py`,
 `install-unattended.sh --languages`, README/Makefile changes).
 
-**Options (decision required):** merge the locale-installer branch after review, or
-implement the equivalent merge in the v2.10 installer. Either way the merge must
-tolerate a missing core catalogue (`nl_NL`), which the branch currently treats as
-an abort.
+**Options (to be decided when the item is taken up):** merge the locale-installer branch after
+review, or implement the equivalent merge in the v2.10 installer. Either way the merge must
+tolerate a missing core catalogue (`nl_NL`), which the branch currently treats as an abort.
 
 **Validation when implemented:** installer `--check` and a testbed install followed
 by `python3 tests/test_language_acceptance.py` (runtime engine) for the nine
@@ -195,8 +219,20 @@ must fall back to English. `tests/test_locale_merge.py` covers the merge mechani
 if the branch is merged. `docs/USER_MANUAL.md` must state which languages are
 actually selectable once the delivered set is final.
 
-**Deferred:** the merge was deliberately made opt-in, and adopting it changes the
-installer, manifest and release notes, so it needs its own change and decision.
+**Decided (28 September 2026) — deferred; documentation only.** DM-BL-008c stays open and no
+installer, manifest, release-note or Makefile change is made now. Reason: the candidate branch is a
+v2.9-era change and cannot be adopted unchanged. Its `install-unattended.sh` check still prints
+`version=2.9` and stages `install-v29.XXXXXX` backups, and its `--languages` default of `none` would
+ship no catalogues at all, taking the default target count from the recorded `files=48` to `37` and
+invalidating the "eleven installed catalogues" statements in the release notes and the review
+record. Its reusable parts carry no v2.9 coupling and are the starting point when the item is taken
+up: `release/merge-opnsense-catalog.sh` (core-first `msgcat --use-first`, then asserts that no core
+translation changed and that every plugin string is present), `tests/test_locale_merge.py` (pure
+gettext fixtures in a temporary directory) and the two CI steps. The open sub-decision is the
+default of `--languages`: `all` to preserve today's 48-file state, `none` for the branch's opt-in
+default, or no flag at all. Until it ships, the nine translations remain inert on a firewall
+installed from the release asset alone, and the `nl_NL` missing-core-catalogue case must be handled
+rather than aborted.
 
 ## O3/O4 sidecar translation — 28 September 2026
 
@@ -250,6 +286,7 @@ sections above.
   therefore closed. The instruction's `isset($backendConfig->webhook_url)` shape does not exist in
   this checkout; the equivalent strict check is implemented against the request parameter and the
   `DeviceMonitor::getConfig()` array, and the response keeps the established `result` key.
+
 
 ### Deployment — 28 September 2026
 
