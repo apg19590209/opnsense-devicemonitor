@@ -342,12 +342,12 @@ HTML;
 HTML;
             
             foreach ($devices as $d) {
-                $mac = htmlspecialchars($d['mac']);
-                $vendor = htmlspecialchars($d['vendor']);
+                $mac = htmlspecialchars($d['mac'] ?? '');
+                $vendor = htmlspecialchars($d['vendor'] ?? '');
                 $ip = htmlspecialchars($d['ip'] ?? 'No IP');
                 $hostname_val = htmlspecialchars($d['hostname'] ?? 'Unknown');
                 $vlan = htmlspecialchars($d['vlan'] ?? '-');
-                $first_seen = htmlspecialchars($d['first_seen']);
+                $first_seen = htmlspecialchars($d['first_seen'] ?? '');
                 
                 $html .= <<<ROW
                     <tr>

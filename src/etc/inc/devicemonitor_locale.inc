@@ -130,7 +130,7 @@ function devicemonitor_t($message_id, array $placeholders = [])
 {
     $text = devicemonitor_raw($message_id, $placeholders);
 
-    return str_replace("\n", '&#10;', htmlspecialchars($text, ENT_QUOTES | ENT_HTML401));
+    return str_replace("\n", '&#10;', htmlspecialchars($text ?? '', ENT_QUOTES | ENT_HTML401));
 }
 
 /*
