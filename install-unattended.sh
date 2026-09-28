@@ -25,7 +25,7 @@ done
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 cd "$SCRIPT_DIR"
 MANIFEST=release/v2.10-runtime.manifest
-[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = ee688415eb586abec361b84cd54ac75d5fe45a4fddb136f89bfcda610894ce69 ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
+[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = dda5db1eb8f5341bc3dbf78d471cc85779a717b36d575f01b87ad2bbd3663638 ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 38 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
 [ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = 2.10 ] || { echo 'ABORT: source version' >&2; exit 1; }
 LIVE_DEFAULTS=/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
@@ -196,7 +196,17 @@ elif [ "$FRESH" = 1 ]; then
     service devicemonitor start
 fi
 if [ "$WAS_RUNNING" = 1 ] || [ "$FRESH" = 1 ]; then
-    pgrep -f '^/usr/local/bin/python3 /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py$' >/dev/null || { echo 'ABORT: daemon not running' >&2; exit 1; }
+    # rc starts the daemon in the background and it can take a moment to appear, so poll
+    # instead of testing once: an immediate pgrep can fail on a healthy restart and abort an
+    # otherwise complete installation. That happened on 2026-09-28 and rolled back a good
+    # deployment even though the daemon came up moments later.
+    waited=0
+    while [ "$waited" -lt 30 ]; do
+        pgrep -f '^/usr/local/bin/python3 /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py$' >/dev/null && break
+        sleep 1
+        waited=$((waited + 1))
+    done
+    pgrep -f '^/usr/local/bin/python3 /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py$' >/dev/null || { echo 'ABORT: daemon not running after 30s' >&2; exit 1; }
 fi
 while read -r id old new mode source target; do
     [ "$(sha256 -q "$target")" = "$new" ] || { echo "ABORT: final hash $target" >&2; exit 1; }
