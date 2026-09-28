@@ -18,7 +18,7 @@
 
 | Locale | Target | Status | Record |
 | --- | --- | --- | --- |
-| `fr_FR` | — | referenced by commit message; record file not present in this tree | `verification/locales/REPORT-fr_FR-2026-09-28.md` (missing) |
+| `fr_FR` | OPNsense UI (address not stated in log) | `OPERATOR-REPORTED` | `verification/locales/REPORT-fr_FR-2026-09-28.md` |
 | `it_IT` | `192.168.20.23` (OPNsense UI) | `OPERATOR-REPORTED` | `verification/locales/REPORT-it_IT-2026-09-28.md` |
 
 ## DM-BL-008 epic

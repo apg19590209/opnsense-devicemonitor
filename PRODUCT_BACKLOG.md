@@ -36,5 +36,6 @@ Status legend: `OPEN`, `DEFERRED`, `PENDING-EVIDENCE`, `RESOLVED`, `WONTFIX`.
 
 - Status: **`DEFERRED`** — unchanged
 - Description unknown to this repository; the identifier appears in the French
-  verification commit message without an in-tree definition. Supply the tracking-system
-  description, owner, and revisit trigger to make this entry actionable.
+  verification commit message and in `verification/locales/REPORT-fr_FR-2026-09-28.md`,
+  with no in-tree definition. Supply the tracking-system description, owner, and revisit
+  trigger to make this entry actionable.

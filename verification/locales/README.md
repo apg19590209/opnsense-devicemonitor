@@ -16,7 +16,7 @@ them.
 
 | Record | Locale | Target | Status |
 | --- | --- | --- | --- |
-| `REPORT-fr_FR-2026-09-28.md` | `fr_FR` | — | referenced by commit message; **file not present in this tree** |
+| `REPORT-fr_FR-2026-09-28.md` | `fr_FR` | OPNsense UI (address not stated in the supplied log) | `OPERATOR-REPORTED` |
 | `REPORT-it_IT-2026-09-28.md` | `it_IT` | `192.168.20.23` (OPNsense UI) | `OPERATOR-REPORTED` |
 
 See `deferrals.md` for F1, `DM-BL-008b`, `DM-BL-008c`.
@@ -56,7 +56,7 @@ pointing at a locally installed `chromedriver` or `geckodriver`.
 
 ## Note on scope
 
-The `it_IT` record targets an OPNsense firewall UI, which lives outside this repository.
-Verification that touches a remote device must record the device build and its
-before/after state, because restored locale settings are infrastructure state rather
-than documentation.
+The `fr_FR` and `it_IT` records both target an OPNsense firewall UI, which lives outside
+this repository. Verification that touches a remote device must record the device build
+and its before/after state, because restored locale settings are infrastructure state
+rather than documentation.
