@@ -240,12 +240,25 @@ def catalogue_values(catalogue, keys):
 
 
 def audit_catalogue(language, catalogue, keys):
-    """Completeness of the source catalogue and agreement of every installed file with it."""
+    """Completeness of the source catalogue and agreement of every installed file with it.
+
+    The plugin catalogue is the domain the migrated views resolve through
+    (devicemonitor_t()), so drift there is a stale deployment and fails.
+
+    The shared core catalogue is now only the second step of the fallback chain: for any key
+    the plugin catalogue covers, its value is never what a page renders, and the two differ
+    by design - the legacy merged plugin strings are older than the plugin's own catalogue,
+    and for a word the core GUI also uses (for example "Language") the core wording is the
+    core GUI's own choice. Drift on those keys is therefore a warning, still fatal under
+    --strict. A key the plugin catalogue does not cover can only come from the shared
+    catalogue, so drift there remains a failure.
+    """
     missing = sorted(key for key in keys
                      if key not in catalogue['source'] or catalogue['source'][key] == '')
     if missing:
         fail(f'{language}: {len(missing)} page strings absent from the source catalogue, e.g. {missing[0]}')
     identical = sorted(key for key in keys if catalogue['source'].get(key) == key)
+    plugin = catalogue['plugin']
     for installed in ('plugin', 'shared'):
         values = catalogue[installed]
         if values is None:
@@ -254,10 +267,26 @@ def audit_catalogue(language, catalogue, keys):
         # so any other difference from the source is a wrongly installed catalogue
         drift = sorted(key for key in keys
                        if values[key] != catalogue['source'].get(key, key))
-        if drift:
-            fail(f'{language}: installed {installed} catalogue differs from the source for '
-                 f'{len(drift)} strings, e.g. {drift[0]}: {values[drift[0]]!r} instead of '
-                 f'{catalogue["source"].get(drift[0], drift[0])!r}')
+        if not drift:
+            continue
+        if installed == 'shared' and plugin is not None:
+            uncovered = [key for key in drift if plugin.get(key, '') in ('', key)]
+            covered = [key for key in drift if key not in uncovered]
+            if covered:
+                warn(f'{language}: shared core catalogue differs from the source for '
+                     f'{len(covered)} string(s) the plugin catalogue resolves, e.g. '
+                     f'{covered[0]}: {values[covered[0]]!r} instead of '
+                     f'{catalogue["source"].get(covered[0], covered[0])!r}; the sidecar '
+                     f'catalogue takes precedence in the deployed chain, so pages are unaffected')
+            if uncovered:
+                fail(f'{language}: installed shared catalogue differs from the source for '
+                     f'{len(uncovered)} strings the plugin catalogue does not cover, e.g. '
+                     f'{uncovered[0]}: {values[uncovered[0]]!r} instead of '
+                     f'{catalogue["source"].get(uncovered[0], uncovered[0])!r}')
+            continue
+        fail(f'{language}: installed {installed} catalogue differs from the source for '
+             f'{len(drift)} strings, e.g. {drift[0]}: {values[drift[0]]!r} instead of '
+             f'{catalogue["source"].get(drift[0], drift[0])!r}')
     return identical, missing
 
 
