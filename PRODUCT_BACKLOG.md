@@ -15,7 +15,7 @@ or approved for future development.
 
 ## Open backlog
 
-### DM-BL-008a — Dutch (nl_NL) is not selectable in the GUI language list
+### DM-BL-008a — Dutch (nl_NL) is not selectable in the GUI language list: **`CLOSED`**
 
 **Description:** Make the Dutch Device Monitor catalogue usable through the normal
 OPNsense language setting, or withdraw Dutch from the delivered language set until
@@ -60,6 +60,26 @@ pages render Dutch after selection. For option 2, run the acceptance with
 
 **Deferred:** the GUI language list is core-owned; the correct option depends on
 whether OPNsense will support Dutch, which is outside this project.
+
+**Closed (28 September 2026) — dropped: upstream limitation.** Closed for the same reason the
+parallel locale-verification track recorded its `O2` decision: the GUI language list is core-owned
+and Dutch selectability cannot be delivered from this repository. Evidence (live testbed, 28
+September 2026): `/usr/local/etc/inc/system.inc` is SHA256
+`3347f8761fd70498d0a4cb32b7b06b4eeda6647a076853eaf5a9ede0d972041f`, byte identical to upstream
+`opnsense/core` master and `stable/26.7`, and contains no `nl_NL` entry — nothing is commented out
+— so there is no menu entry to restore; `/usr/local/share/locale/nl_NL` does not exist, so there is
+no shipped Dutch core catalogue to attach one to. Option 1 (core support) remains outside this
+repository's control. Option 3 (plugin-side language selection) was considered and not adopted: a
+Device Monitor-only language picker would bypass the OPNsense language setting and duplicate core
+behaviour. The binder that O3/O4 shipped is a text-*domain* binder, not a selector —
+`src/etc/inc/devicemonitor_locale.inc` binds `devicemonitor` and resolves the active locale through
+the core setting, so it renders Dutch once Dutch can be selected and cannot make it selectable.
+Scope boundary: what ships is the rendering path — the `nl_NL` catalogue stays in the
+eleven-catalogue payload and all 372 HTML-context view call sites route through
+`devicemonitor_t()` — not the selector. Re-open only if upstream adds `nl_NL` to
+`get_locale_list()` and publishes a Dutch core catalogue, or if a Dutch GUI is commissioned as a
+non-upstream change; `python3 tests/test_language_acceptance.py --strict` is the gate for that
+case. This closure changes no installer, manifest, catalogue, release-note or Makefile content.
 
 ### DM-BL-008b — JavaScript strings receive HTML entities
 
@@ -308,5 +328,7 @@ confirmation only.
 - **Sidecar dialogue domain switching: `SUCCESSFUL`** — `fr_FR` and `it_IT` runtime validation
   matched the expected values in `verification/O4-HUMAN-ACCEPTANCE-RUNBOOK.md`, including the
   precedence case with the toggle on and the core-domain fallback with it off.
-- `O3` (installer catalogue layout) remains `RESOLVED` and deployed. `DM-BL-008a` (Dutch
-  selectability) and the `DM-BL-008c` merge decision are unaffected by this sign-off and stay open.
+- `O3` (installer catalogue layout) remains `RESOLVED` and deployed. The `DM-BL-008c` merge decision
+  is unaffected by this sign-off and stays open. `DM-BL-008a` (Dutch selectability) was closed as
+  dropped on 28 September 2026 — an inherited `get_locale_list()` limitation, not a result of this
+  work; see the `DM-BL-008a` entry above.
