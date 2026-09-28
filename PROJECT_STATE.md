@@ -2481,3 +2481,53 @@ Production promotion is COMPLETE.
   Production data preservation: PASS.
 
 Next step: none required — v2.9 is promoted to production and validated.
+
+## 28 September 2026 — O3 installer layout and O4 view migration (sidecar translation)
+
+Branch `feature/o4-sidecar-views-20260928`, cut from `origin/v2.10-development`. Code changes are
+commit `43891db`, followed by the layout change recorded here and this record. Nothing was deployed
+and no host was contacted.
+
+- **O4 view migration — CODE-COMPLETE.** All 372 HTML-context `lang._()` call sites across the nine
+  Device Monitor views now call `devicemonitor_t()`; the 241 `lang.query()` call sites inside inline
+  script bodies are unchanged, because those need the raw value. The argument text of every call site
+  is byte-identical to before, so no msgid changed. Remaining dependency: **human browser
+  confirmation** of the rendered pages, which cannot be produced from this checkout (no
+  Selenium/WebDriver here, and the change is not deployed).
+- **O3 installer layout — RESOLVED.** The eleven catalogues moved from the flat
+  `languages/<locale>_devicemonitor.po` layout, which `bindtextdomain()` cannot resolve, to
+  `languages/<locale>/LC_MESSAGES/devicemonitor.po`. `install-unattended.sh` compiles each into
+  `<locale>/LC_MESSAGES/devicemonitor.mo` under the path `devicemonitor_locale.inc` binds;
+  `uninstall.sh` removes the nested catalogue and the legacy flat pair; the CI catalogue step mirrors
+  the layout. The `en_US`/`cs_CZ` manifest rows were repathed, the manifest stays at 38 rows, and its
+  new SHA256 `ee688415eb586abec361b84cd54ac75d5fe45a4fddb136f89bfcda610894ce69` is the pin in
+  `install-unattended.sh`. With this, `devicemonitor_t()` stops falling through to the core domain on
+  a firewall installed from the release asset: the sidecar is behaviour-changing, not merely
+  behaviour-preserving.
+- **`devicemonitor_locale.inc` is now a guarded payload file.** `IndexController::initialize()`
+  requires it and binds the domain before any view renders, because the views call a global function
+  that this file defines; a missing binder is a deployment error, not a silent English fallback.
+- **Webhook guard bypass — CLOSED** (commit `43891db`). `ConfigController::sendWebhookAction()`
+  passed `''` when the caller omitted `webhook_url`, and the handler only short-circuits on `null`,
+  so the "Webhook disabled" guard was skipped and delivery was attempted to an empty URL. Absent,
+  null, empty and whitespace-only values are now all detected in the controller and normalised again
+  inside `NotificationHandler::sendWebhook()`; a whitespace-only configured URL is treated as absent,
+  and `testWebhookAction()` rejects an empty URL instead of attempting it.
+- **New gate: `tests/test_sidecar_catalogue.py` (+ `tests/sidecar_translate_probe.php`, new CI step).**
+  It compiles the real catalogues into the bound layout, adds a stand-in core OPNsense domain with
+  hostile content, and asserts sidecar precedence, the core fallback for a locale with no plugin
+  catalogue, the `sidecar_translation_enabled = "0"` toggle, the msgid fallback, and that HTML
+  escaping matches `htmlspecialchars(ENT_QUOTES | ENT_HTML401)` while the raw path stays unescaped.
+- **Verification.** `php -l` and `sh -n` clean on every changed file; `git diff --check` clean;
+  `test_release_manifest.py`, `test_translated_javascript.py`, `test_sidecar_catalogue.py` PASS; the
+  language acceptance run PASSED 9 languages / 10 pages / 451 keys with the three new settings
+  strings present in all eleven catalogues; the full local CI-mirroring battery is 97/97 PASS.
+- **Deployment lag observed, not a defect.** Run against the *installed* tree, the acceptance test
+  reports the deployment behind the checkout: the installed views differ from source and the eleven
+  legacy flat catalogues lack the three new strings. That is the check working as designed and it
+  clears when the v2.10 payload is deployed. `--installed-po` was added so a staged tree can be
+  checked without touching a live deployment.
+
+Next step: obtain human browser confirmation of the migrated views (sidecar toggle on and off), then
+deploy the v2.10 payload to the testbed through the guarded installer under explicit authorisation.
+No product-backlog feature is designated as the next implementation task.

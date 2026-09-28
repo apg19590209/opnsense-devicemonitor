@@ -197,3 +197,56 @@ actually selectable once the delivered set is final.
 
 **Deferred:** the merge was deliberately made opt-in, and adopting it changes the
 installer, manifest and release notes, so it needs its own change and decision.
+
+## O3/O4 sidecar translation — 28 September 2026
+
+Recorded by the O4 view-migration workstream (branch `feature/o4-sidecar-views-20260928`, branch
+commit `43891db` plus the installer-layout change and this record). Appended, not merged into the
+sections above.
+
+### `O3` — installer catalogue layout: **`RESOLVED`**
+
+- The eleven catalogues moved from the flat `src/opnsense/mvc/app/languages/<locale>_devicemonitor.po`
+  layout, which `bindtextdomain()` cannot resolve, to
+  `src/opnsense/mvc/app/languages/<locale>/LC_MESSAGES/devicemonitor.po`.
+- `install-unattended.sh` compiles each catalogue into
+  `/usr/local/opnsense/mvc/app/languages/<locale>/LC_MESSAGES/devicemonitor.mo`, the path
+  `devicemonitor_locale.inc` binds; `uninstall.sh` removes the nested catalogue and the legacy flat
+  pair of files from v2.9/v2.10 release-asset installs; the CI catalogue step mirrors the layout.
+- The `en_US` and `cs_CZ` manifest rows were repathed to the nested sources. The manifest stays at 38
+  rows; its new SHA256 is
+  `ee688415eb586abec361b84cd54ac75d5fe45a4fddb136f89bfcda610894ce69`, pinned in
+  `install-unattended.sh`.
+- Standing consequence: on a firewall installed from the release asset the sidecar catalogue now
+  resolves, so `devicemonitor_t()` is behaviour-changing rather than a pass-through to the core
+  domain. `DM-BL-008c`'s whole-payload condition remains unaffected: the nine languages become
+  readable through the plugin's own domain instead of a merged core catalogue, so no core language
+  file is read or written.
+
+### `O4` — route the GUI through the sidecar text domain: **`CODE-COMPLETE`** (not closed)
+
+- All 372 HTML-context `lang._()` call sites in the nine views call `devicemonitor_t()`; the 241
+  `lang.query()` call sites inside inline script bodies are unchanged, because those need the raw
+  value. Every call site's argument text is byte-identical, so no message id changed.
+- `src/etc/inc/devicemonitor_locale.inc` is now a guarded payload row: `IndexController::initialize()`
+  requires it and binds the domain before a view renders, with a sidecar -> core `OPNsense` -> msgid
+  fallback and the `sidecar_translation_enabled` toggle (default `"1"`, Settings -> About checkbox).
+- Remaining dependency before this item can close: **human browser confirmation** that the rendered
+  pages are correct with the sidecar toggle both on and off. It cannot be produced from the
+  development checkout (no Selenium/WebDriver there and the change is not deployed).
+- New gate: `tests/test_sidecar_catalogue.py` with `tests/sidecar_translate_probe.php` and a CI step.
+  It proves sidecar precedence, the core fallback, the toggle, the msgid fallback and HTML escaping
+  without a browser or a network.
+
+### Webhook guard bypass: **`CLOSED`** (fixed, commit `43891db`)
+
+- `ConfigController::sendWebhookAction()` passed `''` when the caller omitted `webhook_url`; the
+  handler only short-circuits on `null`, so the "Webhook disabled" guard was skipped and delivery was
+  attempted to an empty URL. Absent, null, empty and whitespace-only values are now detected in the
+  controller, normalised again inside `NotificationHandler::sendWebhook()`, and a whitespace-only
+  configured URL is treated as absent. `testWebhookAction()` rejects an empty URL instead of
+  attempting delivery.
+- The observation first recorded in `PROJECT_STATE.md` on 27 September 2026 under *Limits* is
+  therefore closed. The instruction's `isset($backendConfig->webhook_url)` shape does not exist in
+  this checkout; the equivalent strict check is implemented against the request parameter and the
+  `DeviceMonitor::getConfig()` array, and the response keeps the established `result` key.
