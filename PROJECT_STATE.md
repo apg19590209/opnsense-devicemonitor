@@ -62,10 +62,15 @@ including the `Validate translated JavaScript` and `Validate language acceptance
 (DM-BL-008)` steps.
 
 Unresolved: one French and one Italian browser dialog still need visual confirmation
-(DM-BL-008b); Dutch cannot be selected through the current GUI language list (DM-BL-008a); and
-DM-BL-008c (the shared-catalogue merge that makes the installed plugin catalogues readable by
-the GUI) is still an open decision. The `release/v2.10-notes.md` review that was outstanding
-here was completed on 28 September 2026 (see the end of the DM-BL-008 section below).
+(DM-BL-008b); and DM-BL-008c (the shared-catalogue merge that makes the installed plugin
+catalogues readable by the GUI) is still an open decision. `DM-BL-008a` (Dutch cannot be
+selected through the current GUI language list) was **`CLOSED`** as dropped on 28 September
+2026: the language list is core-owned and cannot be changed from this repository — the live
+`/usr/local/etc/inc/system.inc` (SHA256 `3347f876…`, byte identical to upstream) carries no
+`nl_NL` entry, nothing is commented out, and no Dutch core catalogue ships — which is the same
+conclusion the parallel locale-verification track recorded for `O2`. The
+`release/v2.10-notes.md` review that was outstanding here was completed on 28 September 2026
+(see the end of the DM-BL-008 section below).
 
 Next recommended step: decide DM-BL-008c — merge the pushed
 `feature/optional-locale-installer-20260927` branch or implement the equivalent merge for
