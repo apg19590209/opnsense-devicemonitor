@@ -2531,3 +2531,48 @@ and no host was contacted.
 Next step: obtain human browser confirmation of the migrated views (sidecar toggle on and off), then
 deploy the v2.10 payload to the testbed through the guarded installer under explicit authorisation.
 No product-backlog feature is designated as the next implementation task.
+
+## 28 September 2026 — v2.10 payload deployed to the testbed (deployment lag cleared)
+
+Deployed from the authoritative checkout with the guarded unattended installer:
+
+```
+CHECK_OK version=2.10 predecessor=2.10 files=49 daemon_running=1 host=OPNsense.internal
+BACKUP_READY=/var/backups/devicemonitor/install-v210.UmZ7ze
+INSTALL_OK version=2.10 files=49 backup=/var/backups/devicemonitor/install-v210.UmZ7ze daemon_restarted=1
+```
+
+- Command: `sh install-unattended.sh --host OPNsense.internal`. This installer has no
+  `--execute` flag - an unknown argument aborts with exit 2 - because applying is the default;
+  `--check` is its read-only mode, run before the change (`CHECK_OK ... files=49`) and after it
+  (`CHECK_OK ... files=49`). The target count is 49 for an update (38 manifest rows plus eleven
+  catalogues) and 50 for a fresh install.
+- Payload: the 38 manifest rows, now including the sidecar binder
+  `src/etc/inc/devicemonitor_locale.inc`, plus the eleven catalogues compiled into
+  `<locale>/LC_MESSAGES/devicemonitor.mo`. The hand-deployed binder from the O3 investigation
+  was replaced by the committed payload copy.
+- Post-deployment integrity: all 38 manifest targets verified on disk, 0 missing, 0 mismatched;
+  catalogue msgid counts identical to source for all eleven locales (fr_FR 456/456), so the
+  three-string asset variance is gone across the live tree.
+- Service state: `configd` restarted once; the Device Monitor daemon restarted (pid 653 ->
+  85147) and its log records `Monitoring DISABLED`. `config.json` is unchanged, `enabled` is
+  still `0` on `opt1`, so no scan ran and `re0` on the live `192.168.20.0/24` LAN was not
+  touched. The sidecar key is absent from the deployed configuration, which the binder treats as
+  enabled (its documented default), so plugin strings now resolve through the sidecar catalogue.
+- Database unchanged: 3 devices (49 deleted), 52 known MACs, 52 lifecycles, 46 activity events,
+  89 services, 1 physical device, 3 memberships; `PRAGMA quick_check` = ok.
+- Live resolution proof without a browser, run against the deployed directories with the domain
+  bound: fr_FR `Total des appareils` / `Résumé des modifications` / `Surveillance des appareils`,
+  de_DE `Geräte gesamt` / `Änderungsübersicht` / `Geräteüberwachung`, it_IT `Dispositivi totali` /
+  `Riepilogo modifiche` / `Monitoraggio dispositivi`. The French and Italian strings match the
+  operator reports of 28 September 2026 from this repository's locale track.
+- Acceptance gate after deployment: 0 failures, 9 languages, 10 pages, 451 keys. Both
+  pre-deployment finding classes are gone (installed views and installed plugin catalogues now
+  match the source). The gate now models the deployed chain: drift in the plugin catalogue still
+  fails, drift in the shared core catalogue is a warning when the plugin catalogue resolves the
+  key (still fatal under `--strict`) and a failure when it cannot. That leaves one warning class:
+  the legacy shared core catalogue from the 26 September out-of-band merge is behind the source
+  for the plugin's new strings, and for `Language` it carries the core GUI's own wording.
+- Still open: human browser confirmation of the migrated pages with the sidecar toggle both on
+  and off (Settings -> About). That is the only unmet condition of `O4`; no browser or WebDriver
+  is installed on this host.

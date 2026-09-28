@@ -250,3 +250,13 @@ sections above.
   therefore closed. The instruction's `isset($backendConfig->webhook_url)` shape does not exist in
   this checkout; the equivalent strict check is implemented against the request parameter and the
   `DeviceMonitor::getConfig()` array, and the response keeps the established `result` key.
+
+### Deployment — 28 September 2026
+
+The v2.10 payload was deployed to `OPNsense.internal` with the guarded unattended installer
+(`INSTALL_OK version=2.10 files=49`, backup `/var/backups/devicemonitor/install-v210.UmZ7ze`,
+configd and the Device Monitor daemon restarted). That clears the deployment lag recorded above
+for `O3`: the nested catalogues, the committed sidecar binder and the migrated views are now the
+installed ones, all 38 manifest targets verify on disk, and the eleven catalogues match the
+source. Monitoring remains disabled, so no scan ran. `O4` stays open for human browser
+confirmation only.
