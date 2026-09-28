@@ -40,7 +40,7 @@ class NotificationHandler
             $db->close();
             return $devices;
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return null;
         }
     }
@@ -204,7 +204,7 @@ class NotificationHandler
                 'message' => $detail,
                 'transport' => $email_method,
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->fLog(
                 "FAILED: Custom email exception - " . $e->getMessage(),
                 'EMAIL'
@@ -411,7 +411,7 @@ HTML;
                 'message' => $error_detail,
                 'transport' => $email_method,
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->fLog("FAILED: Exception - " . $e->getMessage(), 'EMAIL');
             return ['result' => 'failed', 'message' => $e->getMessage(), 'transport' => $email_method];
         }
@@ -435,6 +435,16 @@ HTML;
             }
             
             $webhook_url = $config['webhook_url'];
+        }
+
+        // Reject malformed URLs before they reach curl_init(): it returns false for
+        // invalid input, and the following curl_setopt() would then raise a TypeError
+        // that surfaces as an HTTP 500 instead of a reportable failure.
+        // The rejected value is deliberately not echoed back into the message.
+        $webhook_url = (string)$webhook_url;
+        if (!filter_var($webhook_url, FILTER_VALIDATE_URL) ||
+            !preg_match('#^https?://#i', $webhook_url)) {
+            return ['result' => 'failed', 'message' => 'Invalid webhook URL'];
         }
         
         
@@ -617,7 +627,7 @@ HTML;
                 return ['result' => 'failed', 'message' => "HTTP $http_code"];
             }
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ['result' => 'failed', 'message' => $e->getMessage()];
         }
     }

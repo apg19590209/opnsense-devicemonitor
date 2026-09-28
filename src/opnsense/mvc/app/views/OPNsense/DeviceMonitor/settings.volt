@@ -33,9 +33,11 @@
 
             <!-- TAB 3: Email -->
             <div role="tabpanel" class="tab-pane" id="tab-email">
-                <div class="alert alert-info">
-                    {{ lang._('Configure email notifications from Device Monitor') }}
-                </div>
+                <a id="return-to-device-details" class="btn btn-default btn-sm"
+                   href="#" style="display:none;margin-bottom:12px;">
+                    <i class="fa fa-arrow-left" aria-hidden="true"></i>
+                    {{ lang._('Back to Network Identity Details') }}
+                </a>
                 <table class="table table-striped">
                     <tbody>
                         <tr>
@@ -50,12 +52,10 @@
 
                                     <label>{{ lang._('Email Recipient') }}:</label>
                                     <input type="email" id="email_to" class="form-control" placeholder="admin@example.com" style="max-width:400px;" />
-                                    <small class="text-muted">{{ lang._('Where to send notifications') }}</small>
                                     <br><br>
 
                                     <label>{{ lang._('Email Sender') }}:</label>
                                     <input type="email" id="email_from" class="form-control" placeholder="devicemonitor@opnsense.local" style="max-width:400px;" />
-                                    <small class="text-muted">{{ lang._('From address') }}</small>
                                     <br><br>
 
                                     <label>{{ lang._('Email delivery method') }}:</label>
@@ -63,17 +63,16 @@
                                         <option value="sendmail">{{ lang._('Local Sendmail / Postfix') }}</option>
                                         <option value="smtp">{{ lang._('Direct SMTP (built into Device Monitor)') }}</option>
                                     </select>
-                                    <small class="text-muted">{{ lang._('Choose the mail transport that matches your OPNsense installation') }}</small>
-
-                                    <div id="email_sendmail_config" class="alert alert-info" style="margin-top:12px;max-width:600px;">
-                                        <strong>{{ lang._('Local Sendmail / Postfix') }}</strong><br>
-                                        {{ lang._('Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured.') }}
-                                    </div>
+                                    <button type="button" id="email_sendmail_config" class="dm-info" aria-label="{{ lang._('About Email Delivery') }}"
+                                            data-content="{{ lang._('Choose the mail transport that matches your OPNsense installation') }} {{ lang._('Uses /usr/local/sbin/sendmail. This is suitable when a local mailer such as the os-postfix plugin is installed and configured.') }}">
+                                        <i class="fa fa-info-circle" aria-hidden="true"></i>
+                                    </button>
 
                                     <div id="email_smtp_config" style="margin-top:14px;max-width:600px;display:none;">
-                                        <div class="alert alert-info">
-                                            {{ lang._('Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit.') }}
-                                        </div>
+                                        <button type="button" class="dm-info" aria-label="{{ lang._('About Direct SMTP') }}"
+                                                data-content="{{ lang._('Direct SMTP uses the Python standard library and does not require Postfix, sendmail or Monit.') }}">
+                                            <i class="fa fa-info-circle" aria-hidden="true"></i>
+                                        </button>
 
                                         <label>{{ lang._('SMTP Server') }}:</label>
                                         <input type="text" id="smtp_host" class="form-control" placeholder="smtp.example.com" style="max-width:400px;" />
@@ -97,7 +96,10 @@
 
                                         <label>{{ lang._('SMTP Username') }}:</label>
                                         <input type="text" id="smtp_username" class="form-control" autocomplete="username" style="max-width:400px;" />
-                                        <small class="text-muted">{{ lang._('Leave empty if the SMTP server does not require authentication') }}</small>
+                                        <button type="button" class="dm-info" aria-label="{{ lang._('About SMTP Username') }}"
+                                                data-content="{{ lang._('Leave empty if the SMTP server does not require authentication') }}">
+                                            <i class="fa fa-info-circle" aria-hidden="true"></i>
+                                        </button>
                                         <br><br>
 
                                         <label>{{ lang._('SMTP Password') }}:</label>
@@ -107,7 +109,10 @@
                                     <button type="button" id="btn-test-email" class="btn btn-default btn-sm" style="margin-top:14px;">
                                         🧪 {{ lang._('Test Email') }}
                                     </button>
-                                    <small class="text-muted" style="margin-left:8px;">{{ lang._('The current email settings are saved before the test is sent') }}</small>
+                                    <button type="button" class="dm-info" aria-label="{{ lang._('About Test Email') }}"
+                                            data-content="{{ lang._('The current email settings are saved before the test is sent') }}">
+                                        <i class="fa fa-info-circle" aria-hidden="true"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -121,7 +126,10 @@
                                     <strong>{{ lang._('Email high-severity conflict alerts') }}</strong>
                                 </label>
                                 <br>
-                                <small class="text-muted">{{ lang._('Send an email when a new high-severity IPv4 or IPv6 address conflict is detected.') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('About Conflict Alerts') }}"
+                                        data-content="{{ lang._('Send an email when a new high-severity IPv4 or IPv6 address conflict is detected.') }}">
+                                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                                </button>
                             </td>
                         </tr>
                         <tr>
@@ -134,7 +142,10 @@
                                     <strong>{{ lang._('Email infrastructure service alerts') }}</strong>
                                 </label>
                                 <br>
-                                <small class="text-muted">{{ lang._('Alert only on verified or authoritative infrastructure-service evidence.') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('About Infrastructure Service Alerts') }}"
+                                        data-content="{{ lang._('Alert only on verified or authoritative infrastructure-service evidence.') }} {{ lang._('Generic service-changed events remain history-only in this version.') }}">
+                                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                                </button>
                                 <div id="service_email_options" style="margin-top:10px;margin-left:20px;">
                                     <label style="display:block;font-weight:normal;">
                                         <input type="checkbox" id="service_email_new" />
@@ -148,7 +159,6 @@
                                         <input type="checkbox" id="service_email_recovered" />
                                         {{ lang._('Unavailable service recovered') }}
                                     </label>
-                                    <small class="text-muted">{{ lang._('Generic service-changed events remain history-only in this version.') }}</small>
                                 </div>
                             </td>
                         </tr>
@@ -157,7 +167,10 @@
                                 <strong>{{ lang._('Notify for interfaces') }}</strong>
                             </td>
                             <td>
-                                <small class="text-muted">{{ lang._('Leave empty to receive notifications from all interfaces') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('About Notification Interfaces') }}"
+                                        data-content="{{ lang._('Leave empty to receive notifications from all interfaces') }}">
+                                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                                </button>
                                 <div style="margin-top:6px;border:1px solid #444;border-radius:4px;padding:8px;max-width:350px;max-height:180px;overflow-y:auto;" id="email-vlan-list"></div>
                             </td>
                         </tr>
@@ -172,9 +185,10 @@
 
             <!-- TAB 4: Webhook -->
             <div role="tabpanel" class="tab-pane" id="tab-webhook">
-                <div class="alert alert-info">
-                    {{ lang._('Configure webhook notifications for new devices on the network') }}
-                </div>
+                <button type="button" class="dm-info" aria-label="{{ lang._('About Webhook Notifications') }}"
+                        data-content="{{ lang._('Configure webhook notifications for new devices on the network') }}">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                </button>
                 <table class="table table-striped">
                     <tbody>
                         <tr>
@@ -188,12 +202,20 @@
                                 <div id="webhook_config">
                                     <label>{{ lang._('Webhook URL') }}:</label>
                                     <input type="text" id="webhook_url" class="form-control" placeholder="https://ntfy.sh/your_topic" style="max-width:500px;" />
-                                    <div style="margin-top:10px;padding:12px;background:#f8f9fa;border-left:4px solid #007bff;border-radius:4px;max-width:500px;">
-                                        <div style="font-weight:600;color:#495057;margin-bottom:8px;">💡 Examples:</div>
-                                        <div style="display:flex;flex-direction:column;gap:6px;">
-                                            <div><span style="display:inline-block;background:#e3f2fd;color:#1976d2;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;margin-right:8px;">ntfy.sh</span><code>https://ntfy.sh/opnsense_monitor</code></div>
-                                            <div><span style="display:inline-block;background:#ede7f6;color:#5e35b1;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;margin-right:8px;">Discord</span><code>https://discord.com/api/webhooks/...</code></div>
-                                            <div><span style="display:inline-block;background:#e8f5e9;color:#388e3c;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;margin-right:8px;">Custom</span><code>https://your-server.com/webhook</code></div>
+                                    <div style="margin-top:10px;max-width:500px;">
+                                        <a href="#webhook-examples" id="webhook-examples-toggle" role="button"
+                                           data-toggle="collapse" aria-expanded="false" aria-controls="webhook-examples"
+                                           style="display:inline-block;font-size:12px;font-weight:600;text-decoration:none;">
+                                            💡 {{ lang._('Show Examples') }}
+                                        </a>
+                                        <div class="collapse" id="webhook-examples">
+                                            <div style="margin-top:8px;padding:12px;background:#f8f9fa;border-left:4px solid #007bff;border-radius:4px;">
+                                                <div style="display:flex;flex-direction:column;gap:6px;">
+                                                    <div><span style="display:inline-block;background:#e3f2fd;color:#1976d2;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;margin-right:8px;">ntfy.sh</span><code>https://ntfy.sh/opnsense_monitor</code></div>
+                                                    <div><span style="display:inline-block;background:#ede7f6;color:#5e35b1;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;margin-right:8px;">Discord</span><code>https://discord.com/api/webhooks/...</code></div>
+                                                    <div><span style="display:inline-block;background:#e8f5e9;color:#388e3c;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;margin-right:8px;">Custom</span><code>https://your-server.com/webhook</code></div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <br>
@@ -210,7 +232,7 @@
                                 <strong>{{ lang._('Notify for interfaces') }}</strong>
                             </td>
                             <td>
-                                <small class="text-muted">{{ lang._('Leave empty to receive notifications from all interfaces') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Notify for interfaces') }}" data-content="{{ lang._('Leave empty to receive notifications from all interfaces') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                                 <div style="margin-top:6px;border:1px solid #444;border-radius:4px;padding:8px;max-width:350px;max-height:180px;overflow-y:auto;" id="webhook-vlan-list"></div>
                             </td>
                         </tr>
@@ -231,7 +253,7 @@
                             <td style="width:30%;"><strong>{{ lang._('Enable Monitoring') }}</strong></td>
                             <td>
                                 <input type="checkbox" id="enabled" />
-                                <small class="text-muted" style="margin-left:8px;">{{ lang._('Enable automatic network monitoring') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Enable Monitoring') }}" data-content="{{ lang._('Enable automatic network monitoring') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
                         <tr>
@@ -239,7 +261,7 @@
                                 <strong>{{ lang._('Monitored Interfaces') }}</strong>
                             </td>
                             <td>
-                                <small class="text-muted">{{ lang._('Only devices on selected interfaces are scanned. With no selection, scanning is refused.') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Monitored Interfaces') }}" data-content="{{ lang._('Only devices on selected interfaces are scanned. With no selection, scanning is refused.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                                 <div style="margin-top:6px;border:1px solid #444;border-radius:4px;padding:8px;max-width:450px;max-height:200px;overflow-y:auto;" id="monitored-interface-list"></div>
                                 <div id="monitored-interface-warning" class="text-danger" style="margin-top:6px;display:none;">
                                     <i class="fa fa-exclamation-triangle"></i> {{ lang._('Monitoring is enabled but no interface is selected. Scans will be refused.') }}
@@ -253,7 +275,7 @@
                                     <input type="number" id="scan_interval" class="form-control" value="300" min="60" max="3600" style="max-width:120px;" />
                                     <span class="text-muted">{{ lang._('seconds') }}</span>
                                 </div>
-                                <small class="text-muted">{{ lang._('Seconds between scans (60-3600)') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Scan Interval') }}" data-content="{{ lang._('Seconds between scans (60-3600)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
@@ -267,14 +289,12 @@
                                     <strong>{{ lang._('Enable AdGuard DNS rewrite hostname enrichment') }}</strong>
                                 </label>
                                 <br>
-                                <small class="text-muted">
-                                    {{ lang._('Uses manually configured AdGuard Home DNS rewrites as a high-confidence hostname source. Enable this only if you use AdGuard Home.') }}
-                                </small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('AdGuard DNS Rewrites') }}" data-content="{{ lang._('Uses manually configured AdGuard Home DNS rewrites as a high-confidence hostname source. Enable this only if you use AdGuard Home.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
 
                                 <div id="adguard_rewrite_config" style="margin-top:14px;max-width:600px;display:none;">
                                     <label>{{ lang._('AdGuard URL') }}:</label>
                                     <input type="text" id="adguard_url" class="form-control" placeholder="https://192.168.1.2" style="max-width:400px;" />
-                                    <small class="text-muted">{{ lang._('HTTPS base URL of your AdGuard Home server') }}</small>
+                                    <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('AdGuard URL') }}" data-content="{{ lang._('HTTPS base URL of your AdGuard Home server') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                                     <br><br>
 
                                     <label>{{ lang._('Username') }}:</label>
@@ -298,19 +318,17 @@
                                     <strong>{{ lang._('Enable Pi-hole hostname enrichment') }}</strong>
                                 </label>
                                 <br>
-                                <small class="text-muted">
-                                    {{ lang._('Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default.') }}
-                                </small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Pi-hole Hostnames') }}" data-content="{{ lang._('Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
 
                                 <div id="pihole_config" style="margin-top:14px;max-width:600px;display:none;">
                                     <label>{{ lang._('Pi-hole URL') }}:</label>
                                     <input type="text" id="pihole_url" class="form-control" placeholder="https://192.168.1.3" style="max-width:400px;" />
-                                    <small class="text-muted">{{ lang._('HTTPS base URL of your Pi-hole server') }}</small>
+                                    <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Pi-hole URL') }}" data-content="{{ lang._('HTTPS base URL of your Pi-hole server') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                                     <br><br>
 
                                     <label>{{ lang._('App password') }}:</label>
                                     <input type="password" id="pihole_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
-                                    <small class="text-muted">{{ lang._('Pi-hole app password generated in the Pi-hole web interface') }}</small>
+                                    <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('App password') }}" data-content="{{ lang._('Pi-hole app password generated in the Pi-hole web interface') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                                 </div>
                             </td>
                         </tr>
@@ -326,9 +344,7 @@
                                     <strong>{{ lang._('Enable Unbound hostname enrichment') }}</strong>
                                 </label>
                                 <br>
-                                <small class="text-muted">
-                                    {{ lang._('Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default.') }}
-                                </small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Unbound Hostnames') }}" data-content="{{ lang._('Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
@@ -351,7 +367,7 @@
                         <tr>
                             <td colspan="2">
                                 <h4 style="margin:5px 0;">{{ lang._('Targeted Nmap Scanning') }}</h4>
-                                <small class="text-muted">{{ lang._('Optional detailed scan performed for newly detected devices after notification.') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Targeted Nmap Scanning') }}" data-content="{{ lang._('Optional detailed scan performed for newly detected devices after notification.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
@@ -359,7 +375,7 @@
                             <td><strong>{{ lang._('Enable Targeted Nmap') }}</strong></td>
                             <td>
                                 <input type="checkbox" id="targeted_nmap_enabled" />
-                                <small class="text-muted" style="margin-left:8px;">{{ lang._('Automatically scan newly detected devices') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Enable Targeted Nmap') }}" data-content="{{ lang._('Automatically scan newly detected devices') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
@@ -367,7 +383,7 @@
                             <td><strong>{{ lang._('Top TCP Ports') }}</strong></td>
                             <td>
                                 <input type="number" id="nmap_top_ports" class="form-control" value="100" min="1" max="1000" style="max-width:120px;" />
-                                <small class="text-muted">{{ lang._('Number of most common TCP ports to scan (1-1000)') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Top TCP Ports') }}" data-content="{{ lang._('Number of most common TCP ports to scan (1-1000)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
@@ -382,7 +398,7 @@
                                     <option value="4">T4</option>
                                     <option value="5">T5</option>
                                 </select>
-                                <small class="text-muted">{{ lang._('Nmap timing template. T4 is the default.') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Timing Template') }}" data-content="{{ lang._('Nmap timing template. T4 is the default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
@@ -393,7 +409,7 @@
                                     <input type="number" id="nmap_host_timeout" class="form-control" value="45" min="10" max="300" style="max-width:120px;" />
                                     <span class="text-muted">{{ lang._('seconds') }}</span>
                                 </div>
-                                <small class="text-muted">{{ lang._('Maximum Nmap scan time per device (10-300 seconds)') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Host Timeout') }}" data-content="{{ lang._('Maximum Nmap scan time per device (10-300 seconds)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
@@ -401,7 +417,7 @@
                             <td><strong>{{ lang._('Version Detection') }}</strong></td>
                             <td>
                                 <input type="checkbox" id="nmap_version_detection" />
-                                <small class="text-muted" style="margin-left:8px;">{{ lang._('Detect services and versions using light detection') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Version Detection') }}" data-content="{{ lang._('Detect services and versions using light detection') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
@@ -409,7 +425,7 @@
                             <td><strong>{{ lang._('Maximum Scans Per Cycle') }}</strong></td>
                             <td>
                                 <input type="number" id="nmap_max_per_cycle" class="form-control" value="2" min="1" max="10" style="max-width:120px;" />
-                                <small class="text-muted">{{ lang._('Maximum queued targeted scans processed during one monitoring cycle (1-10)') }}</small>
+                                <button type="button" class="dm-info" aria-label="{{ lang._('More information') }}: {{ lang._('Maximum Scans Per Cycle') }}" data-content="{{ lang._('Maximum queued targeted scans processed during one monitoring cycle (1-10)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
                     </tbody>
@@ -440,7 +456,7 @@
                         </tr>
 
                         <tr>
-                            <th colspan="2" style="padding-top:18px;">{{ lang._('v2.9 Features and Enhancements') }}</th>
+                            <th colspan="2" style="padding-top:18px;">{{ lang._('v2.10 Features and Enhancements') }}</th>
                         </tr>
                         <tr>
                             <td style="color:#888;">{{ lang._('Developer') }}</td>
@@ -469,14 +485,49 @@
     </div>
 </div>
 
+<style>
+.dm-info { border:0; background:transparent; color:#337ab7; padding:0 3px; cursor:pointer; }
+</style>
 <script>
 $().ready(function() {
+    // Keep guidance beside the setting it explains, clear of the form control.
+    $('#tab-monitoring, #tab-nmap, #tab-email, #tab-webhook').each(function() {
+        $(this).find('table > tbody > tr').each(function() {
+            var $cells = $(this).children('td');
+            if ($cells.length !== 2) return;
+            var $heading = $cells.first().find('strong').first();
+            var $help = $cells.last().children('.dm-info').first();
+            if ($heading.length && $help.length) $help.insertAfter($heading);
+        });
+    });
+    $('#tab-nmap h4').first().append($('#tab-nmap h4').first().next('.dm-info'));
+    $('#tab-webhook > .dm-info').insertAfter(
+        $('#tab-webhook table > tbody > tr').first().children('td').first().find('label').first()
+    );
+    $('#email_sendmail_config').insertAfter($('#email_method').prev('label'));
+    $('#email_smtp_config > .dm-info').insertAfter($('#smtp_host').prev('label'));
+    $('#smtp_username').next('.dm-info').insertAfter($('#smtp_username').prev('label'));
+    ['adguard_url', 'pihole_url', 'pihole_password'].forEach(function(id) {
+        var $field = $('#' + id);
+        $field.next('.dm-info').insertAfter($field.prev('label'));
+    });
+    $('.dm-info').popover({container:'body', placement:'auto bottom', trigger:'focus'});
+    $('.dm-info').on('keydown', function(event) {
+        if (event.key === 'Escape') { $(this).popover('hide').trigger('blur'); }
+    });
+    var returnPath = new URLSearchParams(window.location.search).get('return');
+    if (returnPath && /^\/ui\/devicemonitor\/index\/devicehistory\?mac=[0-9a-fA-F:%]+$/.test(returnPath)) {
+        $('#return-to-device-details').attr('href', returnPath).show();
+    }
+    if (window.location.hash === '#tab-email' || returnPath) {
+        $('a[href="#tab-email"]').tab('show');
+    }
     var translations = {
-        config_saved:  '{{ lang._('Configuration saved') }}',
-        config_error:  '{{ lang._('Error saving configuration') }}',
-        test_sent:     '{{ lang._('Test email sent to') }}',
-        test_failed:   '{{ lang._('Failed to send email') }}',
-        saving:        '{{ lang._('Saving...') }}'
+        config_saved:  {{ lang.query('Configuration saved')|json_encode(15) }},
+        config_error:  {{ lang.query('Error saving configuration')|json_encode(15) }},
+        test_sent:     {{ lang.query('Test email sent to')|json_encode(15) }},
+        test_failed:   {{ lang.query('Failed to send email')|json_encode(15) }},
+        saving:        {{ lang.query('Saving...')|json_encode(15) }}
     };
 
     var allVlanNames = {};
@@ -504,7 +555,7 @@ $().ready(function() {
         var $c = $('#'+containerId).empty();
         var vlans = Object.keys(allVlanNames).sort();
         if (!vlans.length) {
-            $c.html('<em style="color:#888;font-size:12px;">{{ lang._('No interfaces found') }}</em>');
+            $c.html(('<em style="color:#888;font-size:12px;">' + {{ lang.query('No interfaces found')|json_encode(15) }} + '</em>'));
             return;
         }
         var sel = selectedVlans ? selectedVlans.split(',').map(function(v){return v.trim();}).filter(Boolean) : [];
@@ -529,7 +580,7 @@ $().ready(function() {
         var $c = $('#monitored-interface-list').empty();
         var names = Object.keys(monitoredInterfaces).sort();
         if (!names.length) {
-            $c.html('<em style="color:#888;font-size:12px;">{{ lang._('No enabled IPv4 interfaces found') }}</em>');
+            $c.html(('<em style="color:#888;font-size:12px;">' + {{ lang.query('No enabled IPv4 interfaces found')|json_encode(15) }} + '</em>'));
             updateMonitoredWarning();
             return;
         }
@@ -664,6 +715,17 @@ $().ready(function() {
     $('#service_email_enabled').change(toggleServiceEmailOptions);
     $('#email_method').change(toggleEmailMethod);
     $('#webhook_enabled').change(toggleWebhookConfig);
+
+    // The Examples helper panel is a plain Bootstrap collapse wired through
+    // data-toggle; this guard only matters if the collapse plugin is missing on
+    // the page, so the toggle still expands/collapses in place instead of
+    // following the anchor and leaving the panel closed.
+    $('#webhook-examples-toggle').on('click', function(e) {
+        if (!$.fn.collapse) {
+            e.preventDefault();
+            $('#webhook-examples').toggle();
+        }
+    });
     $('#adguard_rewrite_enabled').change(toggleAdGuardConfig);
     $('#pihole_enabled').change(togglePiHoleConfig);
     $('#unbound_enabled').change(toggleUnboundConfig);
@@ -734,7 +796,7 @@ $().ready(function() {
 
     $('#btn-test-email').click(function() {
         var email=$('#email_to').val();
-        if (!email) { showToast('{{ lang._('Please enter recipient email first') }}','error'); return; }
+        if (!email) { showToast({{ lang.query('Please enter recipient email first')|json_encode(15) }},'error'); return; }
         var $b=$(this), orig=$b.html();
 
         // Save the current form first so the test always uses the selected
@@ -755,13 +817,58 @@ $().ready(function() {
 
     $('#test_webhook').click(function() {
         var url=$('#webhook_url').val();
-        if (!url) { $('#webhook_test_result').html('<span style="color:red;">❌ {{ lang._('Enter webhook URL first') }}</span>'); return; }
-        $('#webhook_test_result').html('<span style="color:blue;">⏳ {{ lang._('Sending...') }}</span>');
+        var $b=$(this), orig=$b.html();
+
+        // Single write point for the #webhook_test_result node. stop(true,true)
+        // plus show() cancels any dismissal still in flight before the new text
+        // lands, and a failed validation schedules its own cleanup with
+        // delay(4000) + fadeOut(400) instead of staying on screen indefinitely.
+        function injectTestResult(html, isError) {
+            var $r = $('#webhook_test_result').stop(true, true).show().html(html);
+            if (isError) {
+                $r.delay(4000).fadeOut(400);
+            }
+            return $r;
+        }
+
+        if (!url) { injectTestResult(('<span style="color:red;">❌ ' + {{ lang.query('Enter webhook URL first')|json_encode(15) }} + '</span>'), true); return; }
+
+        function failedHtml(msg) {
+            return '<span style="color:red;">❌ '+(msg||{{ lang.query('Failed')|json_encode(15) }})+'</span>';
+        }
+
+        // Every outcome funnels through settle() so the button can never be left
+        // showing a stale spinner or a stale "Sending..." result.
+        var settled = false;
+        function settle(html, isError) {
+            if (settled) { return; }
+            settled = true;
+            $b.prop('disabled', false).html(orig);
+            injectTestResult(html, !!isError);
+        }
+
+        $b.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+        injectTestResult(('<span style="color:blue;">⏳ ' + {{ lang.query('Sending...')|json_encode(15) }} + '</span>'), false);
+
         $.ajax({ url:'/api/devicemonitor/config/testWebhook', type:'POST', data:{webhook_url:url},
             success:function(d) {
-                $('#webhook_test_result').html(d.result==='ok'
-                    ? '<span style="color:green;">✅ {{ lang._('Test sent!') }}</span>'
-                    : '<span style="color:red;">❌ '+(d.message||'{{ lang._('Failed') }}')+'</span>');
+                var ok = !!(d && d.result==='ok');
+                settle(ok
+                    ? ('<span style="color:green;">✅ ' + {{ lang.query('Test sent!')|json_encode(15) }} + '</span>')
+                    : failedHtml(d && d.message),
+                    !ok);
+            },
+            error:function(xhr) {
+                // Non-2xx (e.g. HTTP 500 from an uncaught server-side error),
+                // network failure, timeout, or an unparsable body all land here.
+                settle(failedHtml(xhr && xhr.responseJSON && xhr.responseJSON.message
+                    ? xhr.responseJSON.message
+                    : (xhr && xhr.status ? 'HTTP '+xhr.status : null)), true);
+            },
+            complete:function() {
+                // Last-resort net: if neither success nor error settled the UI,
+                // restore the button and report failure instead of a stale spinner.
+                settle(failedHtml(null), true);
             }
         });
     });

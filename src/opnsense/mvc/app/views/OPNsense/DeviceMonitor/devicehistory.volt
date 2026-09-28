@@ -8,6 +8,18 @@
     vertical-align: middle;
     display: inline-block;
 }
+#service-alert-preferences td {
+    vertical-align: middle !important;
+}
+#service-alert-preferences .bootstrap-select {
+    vertical-align: middle;
+}
+#service-alert-preferences .bootstrap-select > .dropdown-toggle {
+    display: flex;
+    align-items: center;
+    height: 30px;
+}
+.dm-info { border:0; background:transparent; color:#337ab7; padding:0 3px; cursor:pointer; }
 </style>
 
 <div class="content-box">
@@ -29,7 +41,7 @@
                 {{ lang._('Device Activity') }}
             </a>
             <h1 style="margin:0;font-size:20px;">
-                {{ lang._('Device Details') }}
+                {{ lang._('Network Identity Details') }}
             </h1>
         </div>
 
@@ -37,7 +49,7 @@
             <div class="panel-heading">
                 <strong>
                     <i class="fa fa-desktop"></i>
-                    {{ lang._('Device Summary') }}
+                    {{ lang._('Network Identity Summary') }}
                 </strong>
             </div>
             <div class="panel-body" style="padding-bottom:5px;">
@@ -69,6 +81,69 @@
             </div>
         </div>
 
+        <div class="panel panel-default" id="device-service-alerts">
+            <div class="panel-heading">
+                <strong><i class="fa fa-bell-o"></i> {{ lang._('Service Email Alerts') }}</strong>
+                <button type="button" class="dm-info" aria-label="{{ lang._('About Service Email Alerts') }}"
+                        data-content="{{ lang._('Choose whether this network identity sends service email alerts. Use global setting preserves the Settings defaults. Email delivery must be enabled in Settings.') }}">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="panel-body">
+                <div id="service-alert-delivery" class="alert alert-warning"
+                     role="status" style="display:none;padding:8px 12px;">
+                    <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+                    <span id="service-alert-delivery-reason"></span>
+                    <a id="service-alert-settings-link" class="btn btn-default btn-sm"
+                       href="/ui/devicemonitor/index/settings#tab-email">
+                        <i class="fa fa-envelope-o" aria-hidden="true"></i>
+                        {{ lang._('Go to Email Notifications') }}
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-condensed" id="service-alert-preferences">
+                        <thead><tr>
+                            <th>{{ lang._('Service event') }}</th>
+                            <th>{{ lang._('Preference') }}</th>
+                            <th>{{ lang._('Effective') }}</th>
+                        </tr></thead>
+                        <tbody>
+                            <tr data-alert-field="service_new">
+                                <td>{{ lang._('New service') }}</td>
+                                <td><select class="selectpicker" data-style="btn-default btn-sm" data-width="190px" aria-label="{{ lang._('New service email preference') }}">
+                                    <option value="inherit">{{ lang._('Use global setting') }}</option>
+                                    <option value="on">{{ lang._('On') }}</option>
+                                    <option value="off">{{ lang._('Off') }}</option>
+                                </select></td>
+                                <td class="alert-effective">&mdash;</td>
+                            </tr>
+                            <tr data-alert-field="service_unavailable">
+                                <td>{{ lang._('Service unavailable') }}</td>
+                                <td><select class="selectpicker" data-style="btn-default btn-sm" data-width="190px" aria-label="{{ lang._('Service unavailable email preference') }}">
+                                    <option value="inherit">{{ lang._('Use global setting') }}</option>
+                                    <option value="on">{{ lang._('On') }}</option>
+                                    <option value="off">{{ lang._('Off') }}</option>
+                                </select></td>
+                                <td class="alert-effective">&mdash;</td>
+                            </tr>
+                            <tr data-alert-field="service_recovered">
+                                <td>{{ lang._('Service recovered') }}</td>
+                                <td><select class="selectpicker" data-style="btn-default btn-sm" data-width="190px" aria-label="{{ lang._('Service recovered email preference') }}">
+                                    <option value="inherit">{{ lang._('Use global setting') }}</option>
+                                    <option value="on">{{ lang._('On') }}</option>
+                                    <option value="off">{{ lang._('Off') }}</option>
+                                </select></td>
+                                <td class="alert-effective">&mdash;</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" id="save-service-alerts" class="btn btn-primary btn-sm" disabled>
+                    {{ lang._('Save alert preferences') }}
+                </button>
+            </div>
+        </div>
+
         <div class="panel panel-default" id="physical-device-grouping">
             <div class="panel-heading">
                 <strong>
@@ -89,14 +164,14 @@
                     <i class="fa fa-history"></i>
                     {{ lang._('Lifecycle History') }}
                 </strong>
+                <button type="button" class="dm-info" aria-label="{{ lang._('About Lifecycle History') }}"
+                        data-content="{{ lang._('A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below.') }}">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                </button>
                 <span class="text-muted" style="margin-left:10px;">
                     {{ lang._('MAC address') }}:
                     <span id="device-history-mac"></span>
                 </span>
-            </div>
-
-            <div class="text-muted" style="padding:10px 15px;">
-                {{ lang._('A lifecycle is one continuous period during which this MAC address is treated as the same known device. Earlier lifecycles are archived, not deleted, and remain available below.') }}
             </div>
 
             <div id="return-resolution-controls"
@@ -186,8 +261,102 @@
 
 <script>
 $(document).ready(function() {
+    $('.dm-info').popover({container:'body', placement:'auto right', trigger:'focus'});
+    $('.dm-info').on('keydown', function(event) {
+        if (event.key === 'Escape') { $(this).popover('hide').trigger('blur'); }
+    });
     var params = new URLSearchParams(window.location.search);
     var mac = (params.get('mac') || '').trim().toLowerCase();
+    $('#service-alert-settings-link').attr('href',
+        '/ui/devicemonitor/index/settings?return=' +
+        encodeURIComponent(window.location.pathname + window.location.search) +
+        '#tab-email');
+    function showServiceAlertToast(message, success) {
+        var $toast = $('<div>').attr({role: 'status', 'aria-live': 'polite'})
+            .css({position: 'fixed', top: '20px', right: '20px',
+                'background-color': success ? '#4CAF50' : '#f44336',
+                color: 'white', padding: '15px 20px', 'border-radius': '4px',
+                'box-shadow': '0 4px 8px rgba(0,0,0,.3)', 'z-index': 9999,
+                'min-width': '280px', display: 'none'});
+        $('<i>').addClass('fa ' + (success ? 'fa-check-circle' : 'fa-exclamation-circle'))
+            .appendTo($toast);
+        $toast.append(document.createTextNode(' ' + message)).appendTo('body')
+            .fadeIn(300);
+        setTimeout(function() {
+            $toast.fadeOut(300, function() { $toast.remove(); });
+        }, 3000);
+    }
+
+    function renderServiceAlertPreferences(response) {
+        $('#service-alert-preferences tbody tr').each(function() {
+            var field = $(this).attr('data-alert-field');
+            $(this).find('select').val(response.preferences[field])
+                .selectpicker('refresh');
+            $(this).find('.alert-effective').text(
+                response.effective[field]
+                    ? {{ lang.query('Enabled')|json_encode(15) }}
+                    : {{ lang.query('Disabled')|json_encode(15) }}
+            );
+        });
+        $('#save-service-alerts').prop('disabled', false);
+        var deliveryMessages = {
+            email_disabled: {{ lang.query('These preferences are saved, but this network identity’s service alert emails will not be sent because global email notifications are turned off.')|json_encode(15) }},
+            monitoring_disabled: {{ lang.query('These preferences are saved, but this network identity’s service alert emails will not be sent because monitoring is turned off.')|json_encode(15) }},
+            recipient_missing: {{ lang.query('These preferences are saved, but this network identity’s service alert emails will not be sent because no email recipient is configured in Settings.')|json_encode(15) }}
+        };
+        $('#service-alert-delivery-reason').text(
+            deliveryMessages[response.email_unavailable_reason] ||
+            {{ lang.query('These preferences are saved, but service alert email delivery is unavailable.')|json_encode(15) }}
+        );
+        $('#service-alert-delivery').toggle(!response.email_available);
+    }
+
+    function loadServiceAlertPreferences() {
+        $.getJSON('/api/devicemonitor/devices/alertpreferences', {mac: mac})
+            .done(function(response) {
+                if (response && response.result === 'ok') {
+                    renderServiceAlertPreferences(response);
+                } else {
+                    showServiceAlertToast({{ lang.query('Unable to load alert preferences')|json_encode(15) }}, false);
+                }
+            }).fail(function() {
+                showServiceAlertToast({{ lang.query('Unable to load alert preferences')|json_encode(15) }}, false);
+            });
+    }
+
+    $('#save-service-alerts').on('click', function() {
+        var $button = $(this);
+        var originalLabel = $button.html();
+        $button.prop('disabled', true).html(
+            ("<i class='fa fa-spinner fa-spin'></i> " + {{ lang.query('Saving...')|json_encode(15) }})
+        );
+        var values = {mac: mac};
+        $('#service-alert-preferences tbody tr').each(function() {
+            values[$(this).attr('data-alert-field')] = $(this).find('select').val();
+        });
+        $.post('/api/devicemonitor/devices/savealertpreferences', values)
+            .done(function(response) {
+                if (response && response.result === 'saved') {
+                    renderServiceAlertPreferences(response);
+                    showServiceAlertToast({{ lang.query('Alert preferences saved')|json_encode(15) }}, true);
+                } else {
+                    showServiceAlertToast(
+                        response && response.error
+                            ? response.error
+                            : {{ lang.query('Unable to save alert preferences')|json_encode(15) }},
+                        false
+                    );
+                }
+            }).fail(function() {
+                showServiceAlertToast({{ lang.query('Unable to save alert preferences')|json_encode(15) }}, false);
+            }).always(function() {
+                $button.prop('disabled', false).html(originalLabel);
+            });
+    });
+
+    if (mac) {
+        loadServiceAlertPreferences();
+    }
     var returnPending = false;
     var activeLifecycleId = 0;
 
@@ -361,7 +530,7 @@ $(document).ready(function() {
         if (active) {
             $('#summary-lifecycle').text('#' + active.id + ' (active)');
         } else if (returnPending) {
-            $('#summary-lifecycle').text('Pending decision');
+            $('#summary-lifecycle').text({{ lang.query('Pending decision')|json_encode(15) }});
         } else {
             $('#summary-lifecycle').text(
                 row.id
@@ -401,7 +570,7 @@ $(document).ready(function() {
 
     function updateNote(lifecycleId, comment) {
         var value = window.prompt(
-            'Edit note',
+            {{ lang.query('Edit note')|json_encode(15) }},
             comment.comment || ''
         );
 
@@ -412,7 +581,7 @@ $(document).ready(function() {
         value = value.trim();
 
         if (!value) {
-            showError('Note cannot be empty');
+            showError({{ lang.query('Note cannot be empty')|json_encode(15) }});
             return;
         }
 
@@ -426,21 +595,21 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response && response.result === 'saved') {
-                    showToast('Note updated', 'success');
+                    showToast({{ lang.query('Note updated')|json_encode(15) }}, 'success');
                     loadDeviceData();
                     return;
                 }
 
-                showError('Unable to update note');
+                showError({{ lang.query('Unable to update note')|json_encode(15) }});
             },
             error: function() {
-                showError('Unable to update note');
+                showError({{ lang.query('Unable to update note')|json_encode(15) }});
             }
         });
     }
 
     function deleteNote(lifecycleId, comment, commentNumber) {
-        if (!confirm('Archive Note #' + commentNumber + '?')) {
+        if (!confirm({{ lang.query('Archive Note #')|json_encode(15) }} + commentNumber + '?')) {
             return;
         }
 
@@ -453,15 +622,15 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response && response.result === 'deleted') {
-                    showToast('Note archived', 'success');
+                    showToast({{ lang.query('Note archived')|json_encode(15) }}, 'success');
                     loadDeviceData();
                     return;
                 }
 
-                showError('Unable to archive note');
+                showError({{ lang.query('Unable to archive note')|json_encode(15) }});
             },
             error: function() {
-                showError('Unable to archive note');
+                showError({{ lang.query('Unable to archive note')|json_encode(15) }});
             }
         });
     }
@@ -472,7 +641,7 @@ $(document).ready(function() {
         if (!Array.isArray(comments) || !comments.length) {
             $('<div>')
                 .addClass('text-muted')
-                .text('No notes')
+                .text({{ lang.query('No notes')|json_encode(15) }})
                 .appendTo($container);
             return;
         }
@@ -485,7 +654,7 @@ $(document).ready(function() {
                 .css('margin-bottom', '10px');
 
             var $titleCell = $('<th>')
-                .text('Note #' + commentNumber);
+                .text({{ lang.query('Note #')|json_encode(15) }} + commentNumber);
 
             var $head = $('<thead>').append(
                 $('<tr>')
@@ -494,10 +663,10 @@ $(document).ready(function() {
                         $titleCell,
                         $('<th>')
                             .css('width', '90px')
-                            .text('Action'),
+                            .text({{ lang.query('Action')|json_encode(15) }}),
                         $('<th>')
                             .css('width', '220px')
-                            .text('Date / time')
+                            .text({{ lang.query('Date / time')|json_encode(15) }})
                     )
             );
 
@@ -650,7 +819,7 @@ $(document).ready(function() {
                 .append(
                     $('<div>')
                         .addClass('text-muted')
-                        .text('No active lifecycle notes')
+                        .text({{ lang.query('No active lifecycle notes')|json_encode(15) }})
                 );
             return;
         }
@@ -661,7 +830,7 @@ $(document).ready(function() {
             .append(
                 $('<div>')
                     .addClass('text-muted')
-                    .text('Loading notes...')
+                    .text({{ lang.query('Loading notes...')|json_encode(15) }})
             );
 
         $.ajax({
@@ -677,7 +846,7 @@ $(document).ready(function() {
                     $container
                         .empty()
                         .addClass('text-danger')
-                        .text('Unable to load notes');
+                        .text({{ lang.query('Unable to load notes')|json_encode(15) }});
                     return;
                 }
 
@@ -692,7 +861,7 @@ $(document).ready(function() {
                 $container
                     .empty()
                     .addClass('text-danger')
-                    .text('Unable to load notes');
+                    .text({{ lang.query('Unable to load notes')|json_encode(15) }});
             }
         });
     }
@@ -705,7 +874,7 @@ $(document).ready(function() {
                 $('<td>')
                     .attr('colspan', 11)
                     .addClass('text-muted')
-                    .text('No lifecycle history recorded')
+                    .text({{ lang.query('No lifecycle history recorded')|json_encode(15) }})
             ).appendTo($tbody);
             return;
         }
@@ -717,16 +886,16 @@ $(document).ready(function() {
                 $('<button>')
                     .attr({
                         type: 'button',
-                        title: 'Relink returning device to this lifecycle'
+                        title: {{ lang.query('Relink returning device to this lifecycle')|json_encode(15) }}
                     })
                     .addClass('btn btn-xs btn-warning')
-                    .html('<i class="fa fa-link"></i> Relink')
+                    .html(('<i class="fa fa-link"></i> ' + {{ lang.query('Relink')|json_encode(15) }}))
                     .on('click', function() {
                         if (
                             !confirm(
-                                'Relink ' +
+                                ({{ lang.query('Relink')|json_encode(15) }} + " ") +
                                 mac +
-                                ' to lifecycle #' +
+                                (" " + {{ lang.query('to lifecycle #')|json_encode(15) }}) +
                                 row.id +
                                 '?'
                             )
@@ -772,7 +941,7 @@ $(document).ready(function() {
                     .addClass(
                         'btn btn-xs btn-default command-history-comments'
                     )
-                    .text('View (' + commentCount + ')')
+                    .text({{ lang.query('View (')|json_encode(15) }} + commentCount + ')')
                     .appendTo($commentsCell);
             } else {
                 $('<span>')
@@ -824,7 +993,7 @@ $(document).ready(function() {
             $detailRow.append($detailCell);
             $row.after($detailRow);
 
-            $detailCell.text('Loading notes...');
+            $detailCell.text({{ lang.query('Loading notes...')|json_encode(15) }});
 
             $.ajax({
                 url: '/api/devicemonitor/devices/comments',
@@ -839,7 +1008,7 @@ $(document).ready(function() {
                         $detailCell
                             .empty()
                             .addClass('text-danger')
-                            .text('Unable to load notes');
+                            .text({{ lang.query('Unable to load notes')|json_encode(15) }});
                         return;
                     }
 
@@ -854,7 +1023,7 @@ $(document).ready(function() {
                     $detailCell
                         .empty()
                         .addClass('text-danger')
-                        .text('Unable to load notes');
+                        .text({{ lang.query('Unable to load notes')|json_encode(15) }});
                 }
             });
         });
@@ -864,12 +1033,12 @@ $(document).ready(function() {
         var value = $('#new-note-text').val().trim();
 
         if (!activeLifecycleId) {
-            showError('No active lifecycle');
+            showError({{ lang.query('No active lifecycle')|json_encode(15) }});
             return;
         }
 
         if (!value) {
-            showError('Enter a note first');
+            showError({{ lang.query('Enter a note first')|json_encode(15) }});
             return;
         }
 
@@ -887,16 +1056,16 @@ $(document).ready(function() {
 
                 if (response && response.result === 'saved') {
                     $('#new-note-text').val('');
-                    showToast('Note added', 'success');
+                    showToast({{ lang.query('Note added')|json_encode(15) }}, 'success');
                     loadDeviceData();
                     return;
                 }
 
-                showError('Unable to add note');
+                showError({{ lang.query('Unable to add note')|json_encode(15) }});
             },
             error: function() {
                 $button.prop('disabled', false);
-                showError('Unable to add note');
+                showError({{ lang.query('Unable to add note')|json_encode(15) }});
             }
         });
     });
@@ -904,7 +1073,7 @@ $(document).ready(function() {
     $('#btn-start-new-lifecycle').on('click', function() {
         if (
             !confirm(
-                'Start a new lifecycle for returning device ' +
+                ({{ lang.query('Start a new lifecycle for returning device')|json_encode(15) }} + " ") +
                 mac +
                 '?'
             )
@@ -934,7 +1103,7 @@ $(document).ready(function() {
             .append(
                 $('<div>')
                     .addClass('text-muted')
-                    .text('Loading device profile...')
+                    .text({{ lang.query('Loading device profile...')|json_encode(15) }})
             );
 
         $.ajax({
@@ -983,7 +1152,7 @@ $(document).ready(function() {
 
         $tbody.append(
             $('<tr>').append(
-                $('<th>').css('width', '160px').text('Device'),
+                $('<th>').css('width', '160px').text({{ lang.query('Device')|json_encode(15) }}),
                 $('<td>').text(physicalDeviceName || '\u2014')
             )
         );
@@ -991,7 +1160,7 @@ $(document).ready(function() {
         if (physicalDevice) {
             $tbody.append(
                 $('<tr>').append(
-                    $('<th>').text('Identities'),
+                    $('<th>').text({{ lang.query('Identities')|json_encode(15) }}),
                     $('<td>').text(memberCount + ' current')
                 )
             );
@@ -1006,24 +1175,24 @@ $(document).ready(function() {
                 .attr({
                     href: '/ui/devicemonitor/index/physicaldevices?group=' +
                         encodeURIComponent(physicalDeviceId),
-                    title: 'Open this profile'
+                    title: {{ lang.query('Open this profile')|json_encode(15) }}
                 })
                 .addClass('btn btn-xs btn-primary')
                 .html(
                     '<i class="fa fa-sitemap"></i> ' +
-                    'Open Profile'
+                    {{ lang.query('Open Profile')|json_encode(15) }}
                 )
                 .appendTo($actions);
         } else {
             $('<a>')
                 .attr({
                     href: '/ui/devicemonitor/index/physicaldevices',
-                    title: 'Add this network identity to a device profile'
+                    title: {{ lang.query('Add this network identity to a device profile')|json_encode(15) }}
                 })
                 .addClass('btn btn-xs btn-primary')
                 .html(
                     '<i class="fa fa-sitemap"></i> ' +
-                    'Add to Profile'
+                    {{ lang.query('Add to Profile')|json_encode(15) }}
                 )
                 .appendTo($actions);
         }

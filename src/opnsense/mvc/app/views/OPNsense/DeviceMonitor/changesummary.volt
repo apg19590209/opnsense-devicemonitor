@@ -414,7 +414,7 @@ $(document).ready(function() {
             FRIENDLY_NAME_CHANGED: 'Friendly name changed',
             NOTE_CREATED: 'Note created',
             NOTE_UPDATED: 'Note edited',
-            NOTE_ARCHIVED: 'Note archived',
+            NOTE_ARCHIVED: {{ lang.query('Note archived')|json_encode(15) }},
             NOTE_CHANGED: 'Note changed',
             IP_CHANGED: 'IP address changed',
             HOSTNAME_CHANGED: 'Hostname changed',
@@ -502,14 +502,14 @@ $(document).ready(function() {
 
     function actionLabel(type) {
         if (type === 'infrastructure') {
-            return 'View Infrastructure';
+            return {{ lang.query('View Infrastructure')|json_encode(15) }};
         }
 
         if (type === 'identity') {
-            return 'View Conflict';
+            return {{ lang.query('View Conflict')|json_encode(15) }};
         }
 
-        return 'View Device';
+        return {{ lang.query('View Device')|json_encode(15) }};
     }
 
     function computeRange() {
@@ -643,7 +643,7 @@ $(document).ready(function() {
                 if (!result || result.result !== 'ok') {
                     showLoadError(
                         (result && result.error) ||
-                        'Unable to load changes'
+                        {{ lang.query('Unable to load changes')|json_encode(15) }}
                     );
                     return;
                 }
@@ -657,7 +657,7 @@ $(document).ready(function() {
                 );
             },
             error: function() {
-                showLoadError('Unable to load changes');
+                showLoadError({{ lang.query('Unable to load changes')|json_encode(15) }});
             }
         });
     }
@@ -671,8 +671,7 @@ $(document).ready(function() {
                     .attr('colspan', 8)
                     .addClass('text-muted')
                     .text(
-                        'No meaningful Device Monitor changes were ' +
-                        'recorded in this period.'
+                        {{ lang.query('No meaningful Device Monitor changes were recorded in this period.')|json_encode(15) }}
                     )
             ).appendTo($tbody);
             return;
@@ -738,7 +737,7 @@ $(document).ready(function() {
         var to = Math.min(offset + limit, total);
 
         $('#change-summary-pagination-info').text(
-            'Showing ' + from + '\u2013' + to + ' of ' + total
+            ({{ lang.query('Showing')|json_encode(15) }} + " ") + from + '\u2013' + to + (" " + {{ lang.query('of')|json_encode(15) }} + " ") + total
         );
 
         $('#btn-change-summary-prev').prop('disabled', offset <= 0);
@@ -778,7 +777,7 @@ $(document).ready(function() {
 
     $('#btn-mark-reviewed').on('click', function() {
         localStorage.setItem(LS_KEY, new Date().toISOString());
-        showToast('Marked as reviewed');
+        showToast({{ lang.query('Marked as reviewed')|json_encode(15) }});
 
         if (state.window === 'since_last_review') {
             state.offset = 0;

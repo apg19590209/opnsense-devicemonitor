@@ -131,11 +131,13 @@
                 <div class="panel panel-default infrastructure-recent-changes">
                     <div class="panel-heading">
                         {{ lang._('Port Discovery') }}
+                        <button type="button" class="dm-info" aria-label="{{ lang._('About Port Discovery') }}"
+                                data-content="{{ lang._('Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned.') }}">
+                            <i class="fa fa-info-circle" aria-hidden="true"></i>
+                        </button>
                     </div>
                     <div class="panel-body">
-                        <p class="text-muted">
-                            {{ lang._('Use Run Now on a device row to scan TCP ports 1–65535, including standard and nonstandard ports. Open ports and identified services appear on the Scans tab. Select multiple devices for optional weekly scans, then save. Scans run one host at a time and stop after 120 seconds; incomplete scans are marked failed. UDP ports, including WireGuard, are not scanned.') }}
-                        </p>
+                        <p class="text-muted">{{ lang._('TCP only · 120-second limit per host') }}</p>
                         <ul class="nav nav-tabs port-discovery-tabs" role="tablist">
                             <li role="presentation" class="active">
                                 <a href="#tab-port-discovery-devices"
@@ -584,10 +586,15 @@ header.page-content-head {
         background: #fff;
     }
 }
+.dm-info { border:0; background:transparent; color:#337ab7; padding:0 3px; cursor:pointer; }
 </style>
 
 <script>
 $(document).ready(function() {
+    $('.dm-info').popover({container:'body', placement:'auto bottom', trigger:'focus'});
+    $('.dm-info').on('keydown', function(event) {
+        if (event.key === 'Escape') { $(this).popover('hide').trigger('blur'); }
+    });
     var allServices = [];
 
     function dash(value) {
@@ -743,7 +750,7 @@ $(document).ready(function() {
             $('<div>')
                 .addClass('text-muted')
                 .css('padding', '10px')
-                .text('No verified infrastructure service changes recorded yet.')
+                .text({{ lang.query('No verified infrastructure service changes recorded yet.')|json_encode(15) }})
                 .appendTo($root);
             return;
         }
@@ -756,13 +763,13 @@ $(document).ready(function() {
         $('<thead>')
             .append(
                 $('<tr>').append(
-                    $('<th>').text('Date / Time'),
-                    $('<th>').text('Change'),
-                    $('<th>').text('Service'),
-                    $('<th>').text('Device'),
-                    $('<th>').text('Endpoint'),
-                    $('<th>').text('Evidence'),
-                    $('<th>').text('History')
+                    $('<th>').text({{ lang.query('Date / Time')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Change')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Service')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Device')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Endpoint')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Evidence')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('History')|json_encode(15) }})
                 )
             )
             .appendTo($table);
@@ -1231,7 +1238,7 @@ $(document).ready(function() {
         if (!rows.length) {
             $('<div>')
                 .addClass('alert alert-info')
-                .text('No infrastructure services match the current filter.')
+                .text({{ lang.query('No infrastructure services match the current filter.')|json_encode(15) }})
                 .appendTo($pane);
 
             return;
@@ -1253,15 +1260,15 @@ $(document).ready(function() {
         $('<thead>')
             .append(
                 $('<tr>').append(
-                    $('<th>').text('IP Address'),
-                    $('<th>').text('Hostname'),
-                    $('<th>').text('Status'),
-                    $('<th>').text('Port / Protocol'),
-                    $('<th>').text('Interface / VLAN'),
-                    $('<th>').text('Detection'),
-                    $('<th>').text('Confidence'),
-                    $('<th>').text('Product / Version'),
-                    $('<th>').text('Last Verified')
+                    $('<th>').text({{ lang.query('IP Address')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Hostname')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Status')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Port / Protocol')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Interface / VLAN')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Detection')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Confidence')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Product / Version')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Last Verified')|json_encode(15) }})
                 )
             )
             .appendTo($table);
@@ -1342,11 +1349,11 @@ $(document).ready(function() {
                                     loadServices();
                                 } else {
                                     alert(data && data.error ||
-                                          'Unable to save service.');
+                                          {{ lang.query('Unable to save service.')|json_encode(15) }});
                                     $button.prop('disabled', false);
                                 }
                             }).fail(function() {
-                                alert('Unable to save service.');
+                                alert({{ lang.query('Unable to save service.')|json_encode(15) }});
                                 $button.prop('disabled', false);
                             });
                         }))
@@ -1445,7 +1452,7 @@ $(document).ready(function() {
                         $('<div>')
                             .addClass('alert alert-danger')
                             .text(
-                                'Unable to load recent service changes.'
+                                {{ lang.query('Unable to load recent service changes.')|json_encode(15) }}
                             )
                     );
 
@@ -1454,7 +1461,7 @@ $(document).ready(function() {
                         $('<div>')
                             .addClass('alert alert-danger')
                             .text(
-                                'Unable to load infrastructure services.'
+                                {{ lang.query('Unable to load infrastructure services.')|json_encode(15) }}
                             )
                     );
             },
@@ -1487,7 +1494,7 @@ $(document).ready(function() {
                     alert(
                         data && data.error
                             ? data.error
-                            : 'Infrastructure discovery failed.'
+                            : {{ lang.query('Infrastructure discovery failed.')|json_encode(15) }}
                     );
                     return;
                 }
@@ -1496,7 +1503,7 @@ $(document).ready(function() {
             },
 
             error: function() {
-                alert('Infrastructure discovery failed.');
+                alert({{ lang.query('Infrastructure discovery failed.')|json_encode(15) }});
             },
 
             complete: function() {
@@ -1607,7 +1614,7 @@ $(document).ready(function() {
                 });
             var $button = $('<button type="button">')
                 .addClass('btn btn-primary btn-sm')
-                .text('Run Now')
+                .text({{ lang.query('Run Now')|json_encode(15) }})
                 .prop('disabled', portDiscoveryBusy ||
                                   !!portDiscoveryRunningMac)
                 .on('click', function() {
@@ -1617,7 +1624,7 @@ $(document).ready(function() {
                 ? (last.success === null ? 'Running' :
                    last.success == 1 ? 'Complete' :
                    last.error || 'Failed')
-                : 'Not scanned';
+                : {{ lang.query('Not scanned')|json_encode(15) }};
             var $status = $('<td>')
                 .addClass('port-discovery-row-status')
                 .attr('role', 'status')
@@ -1686,7 +1693,7 @@ $(document).ready(function() {
         if (!$body.children().length) {
             $('<tr>').append($('<td colspan="4">')
                 .addClass('text-muted')
-                .text('No scans match the current filters.'))
+                .text({{ lang.query('No scans match the current filters.')|json_encode(15) }}))
                 .appendTo($body);
         }
     }
@@ -1709,14 +1716,14 @@ $(document).ready(function() {
                     $('#port-discovery-status').text(data.error);
                 } else if (!data.devices || !data.devices.length) {
                     $('#port-discovery-status')
-                        .text('No devices on the selected monitored interfaces.');
+                        .text({{ lang.query('No devices on the selected monitored interfaces.')|json_encode(15) }});
                 } else {
                     $('#port-discovery-status').text('');
                 }
             })
             .fail(function() {
                 $('#port-discovery-status')
-                    .text('Unable to load port discovery.');
+                    .text({{ lang.query('Unable to load port discovery.')|json_encode(15) }});
             });
     }
     $('#port-discovery-search').on('input', renderPortDiscoveryDevices);
@@ -1773,10 +1780,10 @@ $(document).ready(function() {
             type: 'POST', data: {mac: mac}, timeout: 135000
         }).done(function(data) {
             setPortDiscoveryRowStatus(mac, data && data.result === 'ok'
-                ? 'Scan complete'
-                : (data && data.error || 'Scan failed'), true);
+                ? {{ lang.query('Scan complete')|json_encode(15) }}
+                : (data && data.error || {{ lang.query('Scan failed')|json_encode(15) }}), true);
         }).fail(function() {
-            setPortDiscoveryRowStatus(mac, 'Scan request failed', true);
+            setPortDiscoveryRowStatus(mac, {{ lang.query('Scan request failed')|json_encode(15) }}, true);
         }).always(function() {
             portDiscoveryRunningMac = null;
             renderPortDiscoveryDevices();

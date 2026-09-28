@@ -8,15 +8,16 @@
                     <i class="fa fa-list"></i> {{ lang._('Network Identities') }}
                 </a>
             </li>
-            <li role="presentation" class="active">
+            <li role="presentation" class="active dm-tab-with-info">
                 <a href="/ui/devicemonitor/index/physicaldevices">
                     <i class="fa fa-sitemap"></i> {{ lang._('Device Profiles') }}
                 </a>
+                <button type="button" class="dm-info" aria-label="{{ lang._('About Device Profiles') }}"
+                        data-content="{{ lang._('Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters.') }}">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                </button>
             </li>
         </ul>
-        <p class="text-muted" style="margin:8px 0 0 0;">
-            {{ lang._('Real-world devices linked to one or more network identities, such as wired and Wi-Fi adapters.') }}
-        </p>
 
         <div id="physical-devices-sticky-controls">
             <div class="physical-devices-header">
@@ -78,6 +79,10 @@
                     <i class="fa fa-plus-circle"></i>
                     {{ lang._('Create Profile') }}
                 </strong>
+                <button type="button" class="dm-info" aria-label="{{ lang._('About Creating Profiles') }}"
+                        data-content="{{ lang._('Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history.') }}">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                </button>
             </div>
             <div class="panel-body">
                 <div class="form-inline">
@@ -98,9 +103,6 @@
                         <i class="fa fa-plus"></i>
                         {{ lang._('Create') }}
                     </button>
-                </div>
-                <div class="text-muted" style="margin-top:8px;">
-                    {{ lang._('Start with one MAC address for this profile. It must belong to a currently online network identity. Adding identities is explicit and never merges or rewrites device, lifecycle or identity history.') }}
                 </div>
             </div>
         </div>
@@ -163,10 +165,21 @@
     font-weight: 600;
     margin: 12px 0 4px 0;
 }
+.dm-info { border:0; background:transparent; color:#337ab7; padding:0 3px; cursor:pointer; }
+.dm-tab-with-info { position:relative; }
+.dm-tab-with-info > a { padding-right:30px !important; }
+.dm-tab-with-info > .dm-info {
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    z-index:2; line-height:1;
+}
 </style>
 
 <script>
 $(document).ready(function() {
+    $('.dm-info').popover({container:'body', placement:'auto bottom', trigger:'focus'});
+    $('.dm-info').on('keydown', function(event) {
+        if (event.key === 'Escape') { $(this).popover('hide').trigger('blur'); }
+    });
     var allDevices = [];
     var stateFilter = 'all';
     var searchText = '';
@@ -245,7 +258,7 @@ $(document).ready(function() {
             .append(
                 $('<div>')
                     .addClass('text-muted')
-                    .text('Loading devices...')
+                    .text({{ lang.query('Loading devices...')|json_encode(15) }})
             );
 
         $.ajax({
@@ -354,7 +367,7 @@ $(document).ready(function() {
             $list.append(
                 $('<div>')
                     .addClass('text-muted')
-                    .text('No devices found.')
+                    .text({{ lang.query('No devices found.')|json_encode(15) }})
             );
         }
 
@@ -424,14 +437,14 @@ $(document).ready(function() {
         $('<span>')
             .addClass('text-muted')
             .css({'margin-left': '8px', 'font-size': '12px'})
-            .text('Last Seen: ' + dash(device.last_seen))
+            .text(({{ lang.query('Last Seen')|json_encode(15) }} + ": ") + dash(device.last_seen))
             .appendTo($heading);
 
         if (isArchived) {
             $('<span>')
                 .addClass('label label-default')
                 .css('margin-left', '8px')
-                .text('Archived')
+                .text({{ lang.query('Archived')|json_encode(15) }})
                 .appendTo($heading);
         }
 
@@ -467,7 +480,7 @@ $(document).ready(function() {
 
         $('<div>')
             .addClass('member-section-title text-muted')
-            .text('Profile Summary')
+            .text({{ lang.query('Profile Summary')|json_encode(15) }})
             .appendTo($section);
 
         var $table = $('<table>')
@@ -478,23 +491,23 @@ $(document).ready(function() {
 
         $tbody.append(
             $('<tr>').append(
-                $('<th>').css('width', '170px').text('Profile Name'),
+                $('<th>').css('width', '170px').text({{ lang.query('Profile Name')|json_encode(15) }}),
                 $('<td>').text(device.name || '\u2014')
             ),
             $('<tr>').append(
-                $('<th>').text('Status'),
+                $('<th>').text({{ lang.query('Status')|json_encode(15) }}),
                 $('<td>').text(statusLabel(device.status))
             ),
             $('<tr>').append(
-                $('<th>').text('Current Identities'),
+                $('<th>').text({{ lang.query('Current Identities')|json_encode(15) }}),
                 $('<td>').text(device.current_identity_count || 0)
             ),
             $('<tr>').append(
-                $('<th>').text('Previous Identities'),
+                $('<th>').text({{ lang.query('Previous Identities')|json_encode(15) }}),
                 $('<td>').text(device.previous_identity_count || 0)
             ),
             $('<tr>').append(
-                $('<th>').text('Created'),
+                $('<th>').text({{ lang.query('Created')|json_encode(15) }}),
                 $('<td>').text(dash(device.created_at))
             )
         );
@@ -502,7 +515,7 @@ $(document).ready(function() {
         if (isArchived) {
             $tbody.append(
                 $('<tr>').append(
-                    $('<th>').text('Archived'),
+                    $('<th>').text({{ lang.query('Archived')|json_encode(15) }}),
                     $('<td>').text(dash(device.archived_at))
                 )
             );
@@ -518,7 +531,7 @@ $(document).ready(function() {
 
         $('<div>')
             .addClass('member-section-title text-muted')
-            .text('Current Identities')
+            .text({{ lang.query('Current Identities')|json_encode(15) }})
             .appendTo($section);
 
         var $table = $('<table>')
@@ -528,16 +541,16 @@ $(document).ready(function() {
         $('<thead>')
             .append(
                 $('<tr>').append(
-                    $('<th>').text('IP Address'),
-                    $('<th>').text('Friendly Name'),
-                    $('<th>').text('Hostname'),
-                    $('<th>').text('MAC Address'),
-                    $('<th>').text('Status'),
-                    $('<th>').text('Last Seen'),
+                    $('<th>').text({{ lang.query('IP Address')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Friendly Name')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Hostname')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('MAC Address')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Status')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Last Seen')|json_encode(15) }}),
                     $('<th>')
                         .addClass('text-center')
                         .css('width', '180px')
-                        .text('Actions')
+                        .text({{ lang.query('Actions')|json_encode(15) }})
                 )
             )
             .appendTo($table);
@@ -550,7 +563,7 @@ $(document).ready(function() {
                     $('<td>')
                         .attr('colspan', 7)
                         .addClass('text-muted')
-                        .text('No current identities')
+                        .text({{ lang.query('No current identities')|json_encode(15) }})
                 )
                 .appendTo($tbody);
         }
@@ -562,20 +575,20 @@ $(document).ready(function() {
                 .attr({
                     href: '/ui/devicemonitor/index/devicehistory?mac=' +
                         encodeURIComponent(member.mac || ''),
-                    title: 'Open Device Details'
+                    title: {{ lang.query('Open Network Identity Details')|json_encode(15) }}
                 })
                 .addClass('btn btn-xs btn-default')
-                .html('<i class="fa fa-external-link"></i> View Device Details')
+                .html(("<i class='fa fa-external-link'></i> " + {{ lang.query('View Network Identity Details')|json_encode(15) }}))
                 .appendTo($actions);
 
             if (!isArchived) {
                 $('<button>')
                     .attr({
                         type: 'button',
-                        title: 'Unlink this identity from the profile'
+                        title: {{ lang.query('Unlink this identity from the profile')|json_encode(15) }}
                     })
                     .addClass('btn btn-xs btn-danger')
-                    .html('<i class="fa fa-unlink"></i> Unlink Identity')
+                    .html(('<i class="fa fa-unlink"></i> ' + {{ lang.query('Unlink Identity')|json_encode(15) }}))
                     .on('click', function() {
                         removePhysicalDeviceIdentity(
                             device.id,
@@ -609,7 +622,7 @@ $(document).ready(function() {
 
         $('<div>')
             .addClass('member-section-title text-muted')
-            .text('Previous Identities')
+            .text({{ lang.query('Previous Identities')|json_encode(15) }})
             .appendTo($section);
 
         var $table = $('<table>')
@@ -619,16 +632,16 @@ $(document).ready(function() {
         $('<thead>')
             .append(
                 $('<tr>').append(
-                    $('<th>').text('MAC Address'),
-                    $('<th>').text('Friendly Name'),
-                    $('<th>').text('IP Address'),
-                    $('<th>').text('Hostname'),
-                    $('<th>').text('Linked'),
-                    $('<th>').text('Removed'),
+                    $('<th>').text({{ lang.query('MAC Address')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Friendly Name')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('IP Address')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Hostname')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Linked')|json_encode(15) }}),
+                    $('<th>').text({{ lang.query('Removed')|json_encode(15) }}),
                     $('<th>')
                         .addClass('text-center')
                         .css('width', '80px')
-                        .text('Actions')
+                        .text({{ lang.query('Actions')|json_encode(15) }})
                 )
             )
             .appendTo($table);
@@ -642,10 +655,10 @@ $(document).ready(function() {
                 .attr({
                     href: '/ui/devicemonitor/index/devicehistory?mac=' +
                         encodeURIComponent(member.mac || ''),
-                    title: 'Open Device Details'
+                    title: {{ lang.query('Open Network Identity Details')|json_encode(15) }}
                 })
                 .addClass('btn btn-xs btn-default')
-                .html('<i class="fa fa-external-link"></i> View Device Details')
+                .html(("<i class='fa fa-external-link'></i> " + {{ lang.query('View Network Identity Details')|json_encode(15) }}))
                 .appendTo($actions);
 
             $('<tr>')
@@ -685,7 +698,7 @@ $(document).ready(function() {
         var $addButton = $('<button>')
             .attr('type', 'button')
             .addClass('btn btn-xs btn-primary')
-            .html('<i class="fa fa-plus"></i> Add Identity')
+            .html(('<i class="fa fa-plus"></i> ' + {{ lang.query('Add Identity')|json_encode(15) }}))
             .on('click', function() {
                 addPhysicalDeviceIdentity(
                     device.id,
@@ -704,18 +717,18 @@ $(document).ready(function() {
         mac = (mac || '').trim().toLowerCase();
 
         if (!name) {
-            showError('Enter a profile name');
+            showError({{ lang.query('Enter a profile name')|json_encode(15) }});
             return;
         }
 
         if (!validMac(mac)) {
-            showError('Enter a valid MAC address');
+            showError({{ lang.query('Enter a valid MAC address')|json_encode(15) }});
             return;
         }
 
         if (
             !confirm(
-                'Create profile "' + name + '" with MAC address ' + mac + '?'
+                ({{ lang.query('Create profile')|json_encode(15) }} + " ") + '"' + name + '"' + (" " + {{ lang.query('with MAC address')|json_encode(15) }} + " ") + mac + '?'
             )
         ) {
             return;
@@ -729,7 +742,7 @@ $(document).ready(function() {
             data: {name: name, mac: mac},
             success: function(result) {
                 if (result && result.result === 'saved') {
-                    showToast('Profile created', 'success');
+                    showToast({{ lang.query('Profile created')|json_encode(15) }}, 'success');
                     $('#create-form').hide();
                     $('#create-name').val('');
                     $('#create-mac').val('');
@@ -764,20 +777,20 @@ $(document).ready(function() {
         relatedMac = (relatedMac || '').trim().toLowerCase();
 
         if (!validMac(relatedMac)) {
-            showError('Enter a valid MAC address');
+            showError({{ lang.query('Enter a valid MAC address')|json_encode(15) }});
             return;
         }
 
         if (
             !confirm(
-                'Add ' +
+                ({{ lang.query('Add')|json_encode(15) }} + " ") +
                 relatedMac +
-                ' to profile "' +
+                (" " + {{ lang.query('to profile')|json_encode(15) }} + " ") + '"' +
                 deviceName +
                 '"?\n\n' +
-                'Only continue if this MAC belongs to the same device profile. ' +
-                'Do not add separate devices merely because ' +
-                'they are the same type, model or vendor.'
+                ({{ lang.query('Only continue if this MAC belongs to the same device profile.')|json_encode(15) }} + " ") +
+                ({{ lang.query('Do not add separate devices merely because')|json_encode(15) }} + " ") +
+                {{ lang.query('they are the same type, model or vendor.')|json_encode(15) }}
             )
         ) {
             return;
@@ -794,7 +807,7 @@ $(document).ready(function() {
             },
             success: function(result) {
                 if (result && result.result === 'saved') {
-                    showToast('Identity added', 'success');
+                    showToast({{ lang.query('Identity added')|json_encode(15) }}, 'success');
                     loadPhysicalDevices();
                     return;
                 }
@@ -803,7 +816,7 @@ $(document).ready(function() {
                 showError(
                     result && result.error
                         ? result.error
-                        : 'Unable to add identity'
+                        : {{ lang.query('Unable to add identity')|json_encode(15) }}
                 );
             },
             error: function(xhr) {
@@ -811,7 +824,7 @@ $(document).ready(function() {
                 showError(
                     xhr.responseJSON && xhr.responseJSON.error
                         ? xhr.responseJSON.error
-                        : 'Unable to add identity'
+                        : {{ lang.query('Unable to add identity')|json_encode(15) }}
                 );
             }
         });
@@ -825,11 +838,11 @@ $(document).ready(function() {
     ) {
         if (
             !confirm(
-                'Unlink ' +
+                ({{ lang.query('Unlink')|json_encode(15) }} + " ") +
                 relatedMac +
-                ' from profile "' +
+                (" " + {{ lang.query('from profile')|json_encode(15) }} + " ") + '"' +
                 deviceName +
-                '"? Identity history will be preserved.'
+                '"? ' + {{ lang.query('Identity history will be preserved.')|json_encode(15) }}
             )
         ) {
             return;
@@ -846,7 +859,7 @@ $(document).ready(function() {
             },
             success: function(result) {
                 if (result && result.result === 'removed') {
-                    showToast('Identity unlinked', 'success');
+                    showToast({{ lang.query('Identity unlinked')|json_encode(15) }}, 'success');
                     loadPhysicalDevices();
                     return;
                 }

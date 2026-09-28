@@ -8,10 +8,14 @@
 
             <!-- Device navigation tabs -->
             <ul class="nav nav-tabs" role="tablist" style="margin:0;">
-                <li role="presentation" class="active">
+                <li role="presentation" class="active dm-tab-with-info">
                     <a href="/ui/devicemonitor/index/devices">
                         <i class="fa fa-list"></i> {{ lang._('Network Identities') }}
                     </a>
+                    <button type="button" class="dm-info" aria-label="{{ lang._('About Network Identities') }}"
+                            data-content="{{ lang._('Automatically discovered network identities. Each row represents one MAC address.') }}">
+                        <i class="fa fa-info-circle" aria-hidden="true"></i>
+                    </button>
                 </li>
                 <li role="presentation">
                     <a href="/ui/devicemonitor/index/physicaldevices">
@@ -19,15 +23,11 @@
                     </a>
                 </li>
             </ul>
-            <p class="text-muted" style="margin:8px 0 0 0;">
-                {{ lang._('Automatically discovered network identities. Each row represents one MAC address.') }}
-            </p>
-
             <!-- Header with statistics -->
             <div id="devices-sticky-summary" class="devices-header">
                 <div class="devices-stats">
                     <span>
-                        {{ lang._('Total Devices') }}:
+                        {{ lang._('Total Identities') }}:
                         <strong id="stat-total">—</strong>
                     </span>
                     <span>
@@ -305,6 +305,13 @@ main.page-content > .row {
     height: auto;
     min-height: 100%;
 }
+.dm-info { border:0; background:transparent; color:#337ab7; padding:0 3px; cursor:pointer; }
+.dm-tab-with-info { position:relative; }
+.dm-tab-with-info > a { padding-right:30px !important; }
+.dm-tab-with-info > .dm-info {
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    z-index:2; line-height:1;
+}
 </style>
 
 <script>
@@ -396,21 +403,25 @@ main.page-content > .row {
     }
 
 $(document).ready(function() {
+    $('.dm-info').popover({container:'body', placement:'auto bottom', trigger:'focus'});
+    $('.dm-info').on('keydown', function(event) {
+        if (event.key === 'Escape') { $(this).popover('hide').trigger('blur'); }
+    });
 
     var translations = {
-        deleted:        '{{ lang._('Device deleted') }}',
-        delete_error:   '{{ lang._('Error deleting device') }}',
-        db_cleared:     '{{ lang._('Database cleared') }}',
-        db_clear_error: '{{ lang._('Error clearing database') }}',
-        hostname_saved: '{{ lang._('Friendly name saved') }}',
-        hostname_cleared: '{{ lang._('Friendly name cleared') }}',
-        hostname_error: '{{ lang._('Error saving friendly name') }}',
-        confirm_delete: '{{ lang._('Delete device') }}',
-        confirm_clear:  '{{ lang._('Really delete all devices from database?') }}',
-        all_vlans:      '{{ lang._('All VLANs') }}',
-        select_vlan:    '{{ lang._('Select a VLAN') }}',
-        identity:       '{{ lang._('identity') }}',
-        identities:     '{{ lang._('identities') }}'
+        deleted:        {{ lang.query('Device deleted')|json_encode(15) }},
+        delete_error:   {{ lang.query('Error deleting device')|json_encode(15) }},
+        db_cleared:     {{ lang.query('Database cleared')|json_encode(15) }},
+        db_clear_error: {{ lang.query('Error clearing database')|json_encode(15) }},
+        hostname_saved: {{ lang.query('Friendly name saved')|json_encode(15) }},
+        hostname_cleared: {{ lang.query('Friendly name cleared')|json_encode(15) }},
+        hostname_error: {{ lang.query('Error saving friendly name')|json_encode(15) }},
+        confirm_delete: {{ lang.query('Delete device')|json_encode(15) }},
+        confirm_clear:  {{ lang.query('Really delete all devices from database?')|json_encode(15) }},
+        all_vlans:      {{ lang.query('All VLANs')|json_encode(15) }},
+        select_vlan:    {{ lang.query('Select a VLAN')|json_encode(15) }},
+        identity:       {{ lang.query('identity')|json_encode(15) }},
+        identities:     {{ lang.query('identities')|json_encode(15) }}
     };
 
     var allRows = [], activeVlans = [], activeStatus = '', vlanNames = {};
@@ -658,7 +669,7 @@ $(document).ready(function() {
                     'color': '#f0ad4e',
                     'font-weight': 'bold',
                     'white-space': 'nowrap'
-                }).text('Retry ' + attempts + '/5')
+                }).text(({{ lang.query('Retry')|json_encode(15) }} + " ") + attempts + '/5')
             );
 
             if (row.nmap_next_attempt) {
@@ -666,7 +677,7 @@ $(document).ready(function() {
                     $('<small>').addClass('text-muted').css({
                         'display': 'block',
                         'white-space': 'nowrap'
-                    }).text('Next: ' + row.nmap_next_attempt)
+                    }).text(({{ lang.query('Next:')|json_encode(15) }} + " ") + row.nmap_next_attempt)
                 );
             }
 
@@ -777,11 +788,11 @@ $(document).ready(function() {
     }
     function hostnameSourceLabel(source) {
         var labels = {
-            adguard: '{{ lang._('AdGuard DNS rewrite') }}',
-            dnsmasq: '{{ lang._('Dnsmasq') }}',
-            kea: '{{ lang._('Kea DHCP') }}',
-            isc: '{{ lang._('ISC DHCP') }}',
-            hostwatch: '{{ lang._('Hostwatch') }}'
+            adguard: {{ lang.query('AdGuard DNS rewrite')|json_encode(15) }},
+            dnsmasq: {{ lang.query('Dnsmasq')|json_encode(15) }},
+            kea: {{ lang.query('Kea DHCP')|json_encode(15) }},
+            isc: {{ lang.query('ISC DHCP')|json_encode(15) }},
+            hostwatch: {{ lang.query('Hostwatch')|json_encode(15) }}
         };
         return labels[source] || source || '';
     }
@@ -877,10 +888,10 @@ $(document).ready(function() {
                 $('<td>').text(row.last_seen||'').addClass('devices-col-secondary devices-col-sec-5'),
                 $('<td>').html(
                 (row.return_pending === 1 || row.return_pending === '1'
-                    ? '<a class="btn btn-xs btn-primary" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+'#lifecycle-history" title="Resolve returning device / lifecycle history" style="margin-right:2px;"><i class="fa fa-history"></i> History</a>'
-                    : '<a class="btn btn-xs btn-default" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+'" title="Device details and notes" style="margin-right:2px;"><i class="fa fa-comment-o"></i></a>') +
-                '<button class="btn btn-xs btn-warning command-check" data-row-mac="'+row.mac+'" data-row-ip="'+row.ip+'" title="Check online" style="margin-right:2px;"><i class="fa fa-plug"></i></button>' +
-                '<button class="btn btn-xs btn-info command-nmap" data-row-mac="'+row.mac+'" title="Run targeted Nmap scan" style="margin-right:2px;"><i class="fa fa-search"></i></button>' +
+                    ? '<a class="btn btn-xs btn-primary" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+('#lifecycle-history" title="' + {{ lang.query('Resolve returning device / lifecycle history')|json_encode(15) }} + '" style="margin-right:2px;"><i class="fa fa-history"></i> ' + {{ lang.query('History')|json_encode(15) }} + '</a>')
+                    : '<a class="btn btn-xs btn-default" href="/ui/devicemonitor/index/devicehistory?mac='+encodeURIComponent(row.mac||'')+('" title="' + {{ lang.query('Network identity details and notes')|json_encode(15) }} + '" style="margin-right:2px;"><i class="fa fa-comment-o"></i></a>')) +
+                '<button class="btn btn-xs btn-warning command-check" data-row-mac="'+row.mac+'" data-row-ip="'+row.ip+('" title="' + {{ lang.query('Check online')|json_encode(15) }} + '" style="margin-right:2px;"><i class="fa fa-plug"></i></button>') +
+                '<button class="btn btn-xs btn-info command-nmap" data-row-mac="'+row.mac+('" title="' + {{ lang.query('Run targeted Nmap scan')|json_encode(15) }} + '" style="margin-right:2px;"><i class="fa fa-search"></i></button>') +
                 '<button class="btn btn-xs btn-danger command-delete" data-row-mac="'+row.mac+'"><i class="fa fa-trash"></i></button>')
             ).appendTo($tbody);
         });
@@ -976,7 +987,7 @@ $(document).ready(function() {
             var $btn = $(this);
 
             if (!ip) {
-                showToast('No IP address for this device', 'error');
+                showToast({{ lang.query('No IP address for this device')|json_encode(15) }}, 'error');
                 return;
             }
 
@@ -997,7 +1008,7 @@ $(document).ready(function() {
                 },
                 error: function() {
                     $btn.prop('disabled', false).html('<i class="fa fa-plug"></i>');
-                    showToast('Ping failed', 'error');
+                    showToast({{ lang.query('Ping failed')|json_encode(15) }}, 'error');
                 }
             });
         });
@@ -1075,7 +1086,7 @@ $(document).ready(function() {
         });
 
         if (!filtered.length) {
-            showToast('No data to export', 'error');
+            showToast({{ lang.query('No data to export')|json_encode(15) }}, 'error');
             return;
         }
 
@@ -1120,7 +1131,7 @@ $(document).ready(function() {
         $a.remove();
         URL.revokeObjectURL(url);
 
-        showToast('Exported ' + filtered.length + ' devices', 'success');
+        showToast(({{ lang.query('Exported')|json_encode(15) }} + " ") + filtered.length + (" " + {{ lang.query('devices')|json_encode(15) }}), 'success');
     });
 
     $('#btn-clear').on('click',function(){
