@@ -1894,3 +1894,43 @@ Production promotion is COMPLETE.
   Production data preservation: PASS.
 
 Next step: none required — v2.9 is promoted to production and validated.
+
+## Locale text-stream verification — records added 2026-09-28
+
+Supporting files live under `verification/locales/`. This section is additive: it records
+the locale-verification workstream without modifying or removing any existing project
+state, and nothing in it is closed.
+
+Status at the time of writing: `DM-BL-008b` is `PENDING-EVIDENCE`, `DM-BL-008c` and `F1`
+are `DEFERRED`, and `O2` is `CLOSED`.
+
+- Tracks: `fr_FR` and `it_IT`, both against the OPNsense UI on testbed `192.168.20.23`.
+  Both are `OPERATOR-REPORTED` — asserted by an operator with no artifact attached, which
+  is not a `PASS`. See `verification/locales/README.md`.
+- `DM-BL-008b` — `PENDING-EVIDENCE`, **not resolved**. The reported Italian pass showed both
+  check strings passing (`[Riepilogo modifiche]`, `[Monitoraggio dispositivi]`) and a
+  reported teardown restoring the OPNsense layout parameter to `en_US`, but no harness
+  output, result artifact, stream timeline, screenshot, page source, tool name/version, run
+  timestamp, OPNsense build, or pre/post locale state was supplied. Closes only against the
+  evidence checklist in `verification/locales/REPORT-it_IT-2026-09-28.md` → *Evidence gap*.
+- `DM-BL-008c` — `DEFERRED`, unchanged. Not covered by the Italian pass.
+- `F1` — `DEFERRED`, unchanged. The identifier has no in-tree definition; the description,
+  owner, and revisit trigger must come from the tracking system.
+- `O2` — Dutch (`nl_NL`) missing from the web GUI language selection: `CLOSED`, dropped.
+  Resolution: **Dropped: Upstream limitation / Non-native core locale**. OPNsense core
+  `get_locale_list()` defines 20 locales with no `nl_NL` key and no `'Dutch'` string, and
+  `opnsense-lang-26.1.7` ships no Dutch catalog, so no menu entry was missing and no
+  shipped translation existed to attach one to. The mislabelled `nl_NL` catalog found at
+  the core locale path was a copy of the Device Monitor plugin catalog rather than a core
+  catalog, and was removed. Evidence: `verification/locales/deferrals.md` → *Upstream
+  Environment Warnings*.
+- Harness: `verify_locale_stream.py` is **proposed, not committed**. The recording host
+  meets none of its prerequisites (Selenium not importable, `pip` absent, no browser or
+  WebDriver binary), so no run has been executed here.
+  `verification/locales/locale_cases/fr_FR.json` is `draft-unratified`, every field a run
+  would fill is `null`, and a non-`null` value in it is never a `PASS`.
+
+Next step: obtain the artifacts listed in `verification/locales/REPORT-it_IT-2026-09-28.md`
+to close `DM-BL-008b`. Note that `verification/locales/out/` is an evidence drop point that
+this repository's `.gitignore` does not currently ignore, so artifacts placed there appear
+as untracked rather than being excluded.
