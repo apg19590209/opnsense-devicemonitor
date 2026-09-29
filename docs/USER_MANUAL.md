@@ -549,7 +549,8 @@ identities, device profiles, notes/history, and infrastructure services.
   **Device Profile**, **Notes / History**, or **Infrastructure**.
 - **Refresh** — reload.
 - **Mark reviewed now** — sets the "last reviewed" marker to now (stored in your browser).
-  This anchors the **Since last review** period. **Read-only effect on data** (local only).
+  This anchors the **Since last review** period. Reports success as a toast message that
+  auto-fades after 4 seconds. **Read-only effect on data** (local only).
 
 ### 11.3 Summary counters
 
