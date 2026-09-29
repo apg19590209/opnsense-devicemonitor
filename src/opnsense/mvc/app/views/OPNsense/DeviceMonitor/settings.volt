@@ -275,75 +275,6 @@
                             </td>
                         </tr>
 
-                        <tr>
-                            <td style="vertical-align:top;">
-                                <strong>{{ devicemonitor_t('AdGuard DNS Rewrites') }}</strong>
-                            </td>
-                            <td>
-                                <label style="margin:0;">
-                                    <input type="checkbox" id="adguard_rewrite_enabled" />
-                                    <strong>{{ devicemonitor_t('Enable AdGuard DNS rewrite hostname enrichment') }}</strong>
-                                </label>
-                                <br>
-                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('AdGuard DNS Rewrites') }}" data-content="{{ devicemonitor_t('Uses manually configured AdGuard Home DNS rewrites as a high-confidence hostname source. Enable this only if you use AdGuard Home.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-
-                                <div id="adguard_rewrite_config" style="margin-top:14px;max-width:600px;display:none;">
-                                    <label>{{ devicemonitor_t('AdGuard URL') }}:</label>
-                                    <input type="text" id="adguard_url" class="form-control" placeholder="https://192.168.1.2" style="max-width:400px;" />
-                                    <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('AdGuard URL') }}" data-content="{{ devicemonitor_t('HTTPS base URL of your AdGuard Home server') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                                    <br><br>
-
-                                    <label>{{ devicemonitor_t('Username') }}:</label>
-                                    <input type="text" id="adguard_username" class="form-control" autocomplete="username" style="max-width:400px;" />
-                                    <br>
-
-                                    <label>{{ devicemonitor_t('Password') }}:</label>
-                                    <input type="password" id="adguard_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:top;">
-                                <strong>{{ devicemonitor_t('Pi-hole Hostnames') }}</strong>
-                                <span class="badge" style="background:#f0ad4e;color:#fff;margin-left:6px;font-weight:normal;">{{ devicemonitor_t('Experimental') }}</span>
-                            </td>
-                            <td>
-                                <label style="margin:0;">
-                                    <input type="checkbox" id="pihole_enabled" />
-                                    <strong>{{ devicemonitor_t('Enable Pi-hole hostname enrichment') }}</strong>
-                                </label>
-                                <br>
-                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Pi-hole Hostnames') }}" data-content="{{ devicemonitor_t('Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-
-                                <div id="pihole_config" style="margin-top:14px;max-width:600px;display:none;">
-                                    <label>{{ devicemonitor_t('Pi-hole URL') }}:</label>
-                                    <input type="text" id="pihole_url" class="form-control" placeholder="https://192.168.1.3" style="max-width:400px;" />
-                                    <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Pi-hole URL') }}" data-content="{{ devicemonitor_t('HTTPS base URL of your Pi-hole server') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                                    <br><br>
-
-                                    <label>{{ devicemonitor_t('App password') }}:</label>
-                                    <input type="password" id="pihole_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
-                                    <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('App password') }}" data-content="{{ devicemonitor_t('Pi-hole app password generated in the Pi-hole web interface') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:top;">
-                                <strong>{{ devicemonitor_t('Unbound Hostnames') }}</strong>
-                                <span class="badge" style="background:#f0ad4e;color:#fff;margin-left:6px;font-weight:normal;">{{ devicemonitor_t('Experimental') }}</span>
-                            </td>
-                            <td>
-                                <label style="margin:0;">
-                                    <input type="checkbox" id="unbound_enabled" />
-                                    <strong>{{ devicemonitor_t('Enable Unbound hostname enrichment') }}</strong>
-                                </label>
-                                <br>
-                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Unbound Hostnames') }}" data-content="{{ devicemonitor_t('Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                            </td>
-                        </tr>
-
                     </tbody>
                 </table>
 
@@ -439,6 +370,75 @@
                     <tbody>
                         <tr>
                             <td style="vertical-align:top;">
+                                <strong>{{ devicemonitor_t('AdGuard DNS Rewrites') }}</strong>
+                            </td>
+                            <td>
+                                <label style="margin:0;">
+                                    <input type="checkbox" id="adguard_rewrite_enabled" />
+                                    <strong>{{ devicemonitor_t('Enable AdGuard DNS rewrite hostname enrichment') }}</strong>
+                                </label>
+                                <br>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('AdGuard DNS Rewrites') }}" data-content="{{ devicemonitor_t('Uses manually configured AdGuard Home DNS rewrites as a high-confidence hostname source. Enable this only if you use AdGuard Home.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+
+                                <div id="adguard_rewrite_config" style="margin-top:14px;max-width:600px;display:none;">
+                                    <label>{{ devicemonitor_t('AdGuard URL') }}:</label>
+                                    <input type="text" id="adguard_url" class="form-control" placeholder="https://192.168.1.2" style="max-width:400px;" />
+                                    <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('AdGuard URL') }}" data-content="{{ devicemonitor_t('HTTPS base URL of your AdGuard Home server') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                    <br><br>
+
+                                    <label>{{ devicemonitor_t('Username') }}:</label>
+                                    <input type="text" id="adguard_username" class="form-control" autocomplete="username" style="max-width:400px;" />
+                                    <br>
+
+                                    <label>{{ devicemonitor_t('Password') }}:</label>
+                                    <input type="password" id="adguard_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:top;">
+                                <strong>{{ devicemonitor_t('Pi-hole Hostnames') }}</strong>
+                                <span class="badge" style="background:#f0ad4e;color:#fff;margin-left:6px;font-weight:normal;">{{ devicemonitor_t('Experimental') }}</span>
+                            </td>
+                            <td>
+                                <label style="margin:0;">
+                                    <input type="checkbox" id="pihole_enabled" />
+                                    <strong>{{ devicemonitor_t('Enable Pi-hole hostname enrichment') }}</strong>
+                                </label>
+                                <br>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Pi-hole Hostnames') }}" data-content="{{ devicemonitor_t('Uses Pi-hole v6 DHCP leases as a hostname source. Requires Pi-hole v6, HTTPS and an app password. Disabled by default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+
+                                <div id="pihole_config" style="margin-top:14px;max-width:600px;display:none;">
+                                    <label>{{ devicemonitor_t('Pi-hole URL') }}:</label>
+                                    <input type="text" id="pihole_url" class="form-control" placeholder="https://192.168.1.3" style="max-width:400px;" />
+                                    <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Pi-hole URL') }}" data-content="{{ devicemonitor_t('HTTPS base URL of your Pi-hole server') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                    <br><br>
+
+                                    <label>{{ devicemonitor_t('App password') }}:</label>
+                                    <input type="password" id="pihole_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
+                                    <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('App password') }}" data-content="{{ devicemonitor_t('Pi-hole app password generated in the Pi-hole web interface') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:top;">
+                                <strong>{{ devicemonitor_t('Unbound Hostnames') }}</strong>
+                                <span class="badge" style="background:#f0ad4e;color:#fff;margin-left:6px;font-weight:normal;">{{ devicemonitor_t('Experimental') }}</span>
+                            </td>
+                            <td>
+                                <label style="margin:0;">
+                                    <input type="checkbox" id="unbound_enabled" />
+                                    <strong>{{ devicemonitor_t('Enable Unbound hostname enrichment') }}</strong>
+                                </label>
+                                <br>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Unbound Hostnames') }}" data-content="{{ devicemonitor_t('Reads local OPNsense Unbound host overrides and host aliases only. No network queries are made. Disabled by default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:top;">
                                 <strong>{{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}</strong>
                             </td>
                             <td>
@@ -447,7 +447,7 @@
                                     <strong>Enable sidecar catalogue translations</strong>
                                 </label>
                                 <br>
-                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}" data-content="Forces the interface to use the plugin's dedicated translation file. If disabled, new labels may default to English."><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}" data-content="Forces the interface to use the plugin's dedicated translation file. If disabled, labels may default to English."><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
 
