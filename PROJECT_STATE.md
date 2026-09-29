@@ -17,6 +17,7 @@ Status:
 - Latest source fix `aa25fe7` and its guarded v2.10 runtime-manifest update `0708239` are pushed to `origin/v2.10-development`; full GitHub Actions CI run `36315636699` PASS. Those commits changed no testbed runtime file or service; the nine corrected views were deployed to the testbed separately on 27 September 2026 (deployment record under DM-BL-008 below). `0708239` left the manifest SHA256 pinned in `install-unattended.sh` at the pre-refresh value, so the guarded installer aborted; that pin is restored by `3eeb78b`, which with its documentation commit `3fc9dfc` is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36323794636`; the following record commit `02a1eba` is also pushed and green in CI run `36324231410`, so no commit on this branch is local-only (see the install-guard section below).
 - Device Monitor GUI repair (29 September 2026): the views' `devicemonitor_t()` macro was never registered with the Volt compiler, so every application tab aborted with `MacroNotFound` and rendered a blank content block. The plugin controller now wraps the framework's `.volt` engine and registers the sidecar translator; the pending PHP 8.1+ null guards and the three matching `release/v2.10-runtime.manifest` digests plus the installer pin are refreshed in the same commit `8faf09d`, which is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36501061119`, with its record commit `58b9628` pushed and green in CI run `36501202440` (see the 29 September 2026 section below).
 - Change Summary confirmation banner (`F1`) fixed and closed (29 September 2026): the Change Summary view's `showToast()` no longer guards on the absent `$.fn.notify`/`window.bootbox` plugins; it renders the same self-contained jQuery banner already used by `devices.volt`, with the icon and message appended as DOM nodes and a 4-second auto-dismiss. The refreshed view digest, `release/v2.10-runtime.manifest` row 17 and the `install-unattended.sh` line 28 manifest pin are in the same change set; the live operator check and the full record are in the `F1` closure section at the end of this file.
+- Testbed background scanner active (29 September 2026): the daemon (PID 94999, running unchanged since 28 September 2026 23:15) hot-loaded `"enabled": "1"` from `/var/db/devicemonitor/config.json` through its own 10 s config reload — no service restart and no web-GUI restart — polling every 60 s over the fail-closed scope `opt1` → `vlan0.50` (`192.168.50.0/24`, DMTEST), with two clean scan cycles and no database-lock or runtime errors observed; rollback copy `/var/backups/devicemonitor/scan-activation-20260929/`.
 - That v2.10 metadata is repository-only: no v2.10 tag, GitHub release or runtime package exists, the published `v2.9` release asset is unchanged, and no testbed or production install was performed.
 - Notification dispatch remains on configd permanently: the HTTP API integration for `apiEmailUrl`/`apiWebhookUrl` is not implemented (`DECISIONS.md` 33 supersedes the cutover gates recorded in `DECISIONS.md` 32); `scan_network.py` and the live notification path are unchanged. The `www` privilege claim originally recorded for the API path is corrected by `DECISIONS.md` 34 (the web GUI runs `php-cgi` as root).
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
@@ -2745,7 +2746,9 @@ PASS in 42 s, with local and remote `v2.10-development` at the same commit
 
 Unresolved: `F1` (the Change Summary toast is inert on 26.7.4 — decide documented-inert versus
 migration to `stdDialogInform()`/`BootstrapDialog`); `DM-BL-008c` deferred; background scanning on the
-testbed is still disabled (`"enabled": "0"`); the nine-language **runtime** matrix remains host-blocked
+testbed was re-enabled on 29 September 2026 and is running (see the activation record in the `F1`
+closure section at the end of this file and the Current state bullet above); the nine-language
+**runtime** matrix remains host-blocked
 by the missing `nl_NL` shared catalogue (`DM-BL-008a`), which CI now bypasses per language instead of
 hiding; CI integrates the repaired runtime branch as a guarded matrix (29 September 2026,
 `ci.yml:74-105`): the `Validate language acceptance (DM-BL-008)` step runs `--engine interpolate` for all
@@ -2803,7 +2806,13 @@ gap being the `nl_NL` GUI-list limitation, `DM-BL-008a`); source digests cross-c
 equals the manifest row (`b7aa5631344ea410326d18f6fc07a52e0a43ddf0a1e160c6c91f2f5326003d0c`) and the
 manifest's SHA256 equals the installer pin (`fc2669413c86c70b6bf4c72f0d1a014361cbe179e64ae50a7147d3d690b50ac2`).
 
-Unresolved: `DM-BL-008c` (deferred); background scanning on the testbed is still disabled (`"enabled": "0"`);
+Unresolved: `DM-BL-008c` (deferred); the testbed background scanner is **active** — on 29 September 2026
+15:02:14 AEST the daemon (PID 94999, running unchanged since 28 September 2026 23:15) hot-loaded
+`"enabled": "1"` from `/var/db/devicemonitor/config.json` without a service or web-GUI restart, polling
+every 60 s over the fail-closed scope `opt1` (the descriptor for `vlan0.50`, `192.168.50.0/24`, DMTEST),
+with two clean scan cycles and no database-lock or runtime errors, and rollback available at
+`/var/backups/devicemonitor/scan-activation-20260929/`; the notification transports stay enabled but
+broken (`sendmail` absent, malformed webhook URL) and will fail-log on the first new device;
 the nine-language **runtime** matrix remains host-blocked by the missing `nl_NL` shared catalogue
 (`DM-BL-008a`); CI now integrates the guarded runtime matrix (`ci.yml:74-105`, 29 September 2026), which
 runs the runtime branch for every language the runner can serve and reports each host-blocked language as
