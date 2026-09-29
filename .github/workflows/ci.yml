@@ -72,7 +72,37 @@ jobs:
         run: python3 tests/test_translated_javascript.py
 
       - name: Validate language acceptance (DM-BL-008)
-        run: python3 tests/test_language_acceptance.py --engine interpolate
+        run: |
+          set -eu
+          python3 tests/test_language_acceptance.py --engine interpolate
+
+          # Production-parity runtime matrix. The runtime engine reproduces the OPNsense MVC view
+          # path, so it needs the shared OPNsense.mo catalogues the GUI reads (DM-BL-008a lists the
+          # host-blocked ones) plus the Phalcon Volt compiler and OPNsense\Base\ViewTranslator. A
+          # runner without those assets aborts that engine by design, so the matrix is skipped with
+          # an explicit reason instead of failing the job, and host-blocked languages are bypassed
+          # while every language the runner can serve is still rendered and checked.
+          if [ ! -f /usr/local/opnsense/mvc/app/library/OPNsense/Base/ViewTranslator.php ] ||
+             [ "$(php -r 'echo class_exists("Phalcon\\Mvc\\View\\Engine\\Volt\\Compiler") ? "yes" : "no";')" != yes ]; then
+            echo 'SKIPPED runtime matrix: Phalcon Volt compiler and/or OPNsense ViewTranslator not installed on this runner'
+            exit 0
+          fi
+
+          available=''
+          for lang in de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN; do
+            if [ -f "/usr/local/share/locale/${lang}/LC_MESSAGES/OPNsense.mo" ]; then
+              available="${available:+${available},}${lang}"
+            else
+              echo "SKIPPED ${lang}: shared OPNsense.mo catalogue absent on this runner (host-blocked language)"
+            fi
+          done
+
+          if [ -z "$available" ]; then
+            echo 'SKIPPED runtime matrix: no shared OPNsense.mo catalogues on this runner'
+            exit 0
+          fi
+
+          python3 tests/test_language_acceptance.py --engine runtime --languages "$available"
 
       - name: Configure Host System Locales for Translation Probes
         run: |

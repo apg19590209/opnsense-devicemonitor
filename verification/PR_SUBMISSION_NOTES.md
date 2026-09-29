@@ -100,6 +100,7 @@ on all eleven catalogues, the node UI suites, the PHP and Python suites, `git di
 | `tests/test_release_manifest.py` | PASS (38 rows, hashes == working tree) |
 | `tests/test_translated_javascript.py` | PASS |
 | `tests/test_language_acceptance.py --engine interpolate` | PASS — 9 languages, 10 pages, 451 keys, 0 failures |
+| `tests/test_language_acceptance.py --engine runtime` | PASS — 8 languages whose host carries a shared `OPNsense.mo`; `nl_NL` is host-blocked (`DM-BL-008a`). CI now runs the same engine as a guarded matrix (`ci.yml:74-105`): `--engine runtime --languages <catalogues present>`, an explicit `SKIPPED` line per absent language, and a stated skip instead of a failure on a runner without the Phalcon Volt compiler or `OPNsense\Base\ViewTranslator`. |
 | `tests/test_sidecar_catalogue.py` | PASS — precedence, fallback, toggle, msgid fallback, escaping |
 | `install-unattended.sh --host OPNsense.internal --check` | `CHECK_OK version=2.10 predecessor=2.10 files=49 daemon_running=1` |
 

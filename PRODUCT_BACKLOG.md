@@ -240,6 +240,17 @@ identity=it_IT engine=runtime`, `failures=0`, and `PASS languages=8 gaps=0 failu
 languages whose shared catalogues exist; `--engine interpolate` stays `PASS languages=9 gaps=1
 failures=0`. No installer, manifest, catalogue or release-note content changed for this closure.
 
+**CI gate expanded to the guarded runtime matrix (29 September 2026):** the interpolate-only CI statement
+above is superseded. The `Validate language acceptance (DM-BL-008)` step (`.github/workflows/ci.yml:74-105`)
+now runs the interpolate baseline and then the production-parity runtime matrix: `--engine runtime` is
+invoked with `--languages <languages whose shared OPNsense.mo the runner carries>`, each host-blocked
+language is printed as `SKIPPED <lang>: shared OPNsense.mo catalogue absent on this runner (host-blocked
+language)`, and the matrix exits cleanly with a stated reason when the runner has no Phalcon Volt compiler
+or no `OPNsense\Base\ViewTranslator`. `nl_NL` (`DM-BL-008a`) therefore no longer removes the runtime path
+from continuous integration; it is reported as a skip. This is a workflow-and-record change only: no
+installer, manifest, catalogue, view, Makefile or release-note content changed, so no guarded digest and no
+installer pin moved.
+
 **Evidence status:** the dialog observation is an operator attestation recorded in this session;
 screenshots, DOM captures or browser/version details were not attached to this checkout, so the entry
 states the operator's reported result rather than an artifact-backed verification, matching the `O4`

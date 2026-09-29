@@ -2746,8 +2746,12 @@ PASS in 42 s, with local and remote `v2.10-development` at the same commit
 Unresolved: `F1` (the Change Summary toast is inert on 26.7.4 — decide documented-inert versus
 migration to `stdDialogInform()`/`BootstrapDialog`); `DM-BL-008c` deferred; background scanning on the
 testbed is still disabled (`"enabled": "0"`); the nine-language **runtime** matrix remains host-blocked
-by the missing `nl_NL` shared catalogue (`DM-BL-008a`); CI still runs only `--engine interpolate`, so
-the repaired runtime branch is not exercised there.
+by the missing `nl_NL` shared catalogue (`DM-BL-008a`), which CI now bypasses per language instead of
+hiding; CI integrates the repaired runtime branch as a guarded matrix (29 September 2026,
+`ci.yml:74-105`): the `Validate language acceptance (DM-BL-008)` step runs `--engine interpolate` for all
+nine languages and then `--engine runtime --languages <languages whose shared OPNsense.mo the runner
+carries>`, prints one `SKIPPED <lang>` line for each host-blocked language, and skips the matrix with a
+stated reason on a runner without the Phalcon Volt compiler or `OPNsense\Base\ViewTranslator`.
 
 Next recommended step: record the `F1` decision.
 
@@ -2801,10 +2805,13 @@ manifest's SHA256 equals the installer pin (`fc2669413c86c70b6bf4c72f0d1a014361c
 
 Unresolved: `DM-BL-008c` (deferred); background scanning on the testbed is still disabled (`"enabled": "0"`);
 the nine-language **runtime** matrix remains host-blocked by the missing `nl_NL` shared catalogue
-(`DM-BL-008a`); CI still runs only `--engine interpolate`, so the runtime branch of the language harness is
-not exercised there; `docs/USER_MANUAL.md` section 11.2 describes the **Mark reviewed now** control without
-mentioning a confirmation banner, so the user-facing documentation rule was reviewed but the manual was
-deliberately left unchanged inside this five-file commit set (see the `F1` report).
+(`DM-BL-008a`); CI now integrates the guarded runtime matrix (`ci.yml:74-105`, 29 September 2026), which
+runs the runtime branch for every language the runner can serve and reports each host-blocked language as
+an explicit `SKIPPED` line instead of failing the job — the managed `ubuntu-latest` runner reports the
+whole matrix as skipped, because it carries no Phalcon Volt compiler and no
+`OPNsense\Base\ViewTranslator`; `docs/USER_MANUAL.md` section 11.2 describes the **Mark reviewed now**
+control without mentioning a confirmation banner, so the user-facing documentation rule was reviewed but
+the manual was deliberately left unchanged inside this five-file commit set (see the `F1` report).
 
 Next recommended step: add the one-line banner note to `docs/USER_MANUAL.md` section 11.2, matching the
 "reports success/failure as a toast message" wording already used for the Devices **Check online** action.
