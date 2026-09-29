@@ -465,7 +465,31 @@ class ConfigController extends ApiControllerBase
             return ['result' => 'failed', 'message' => 'Webhook URL required'];
         }
 
-        $result = $handler->sendWebhook(true, $webhook_url);
+        /* The test frame carries explicit topic and message keys. sendWebhook()
+         * skips endpoint detection for a caller-owned frame and posts it as
+         * generic JSON, so the Discord-compatible "content" key is added here
+         * when the URL is a Discord webhook (Discord rejects a topic/message
+         * frame). hostname and timestamp are filled in by sendWebhook(). */
+        $test_message = 'Device Monitor webhook is working!';
+        $topic = gethostname() ?: 'Device Monitor';
+        if (stripos($webhook_url, 'ntfy') !== false) {
+            /* ntfy reads the destination topic from the JSON body, so it must
+             * match the topic in the URL the operator entered. */
+            $ntfy_topic = trim((string)parse_url($webhook_url, PHP_URL_PATH), '/');
+            if ($ntfy_topic !== '') {
+                $topic = $ntfy_topic;
+            }
+        }
+        $payload = [
+            'topic' => $topic,
+            'message' => $test_message,
+        ];
+        if (stripos($webhook_url, 'discord') !== false) {
+            $payload['content'] = $test_message;
+            $payload['username'] = 'OPNsense Device Monitor';
+        }
+
+        $result = $handler->sendWebhook(true, $webhook_url, $payload);
 
         $logMessage = "Test webhook result: " . (($result['result'] === 'sent' || $result['result'] === 'ok') ? "SUCCESS" : "FAILED");
         if ($result['result'] !== 'sent' && $result['result'] !== 'ok') {

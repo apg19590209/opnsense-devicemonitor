@@ -191,14 +191,14 @@
                                 <div id="webhook_config">
                                     <label>{{ devicemonitor_t('Webhook URL') }}:</label>
                                     <input type="text" id="webhook_url" class="form-control" placeholder="https://ntfy.sh/your_topic" style="max-width:500px;" />
-                                    <div style="margin-top:10px;padding:12px;background:#f8f9fa;border-left:4px solid #007bff;border-radius:4px;max-width:500px;">
-                                        <div style="font-weight:600;color:#495057;margin-bottom:8px;">💡 Examples:</div>
-                                        <div style="display:flex;flex-direction:column;gap:6px;">
+                                    <details style="margin-top:10px;padding:12px;background:#f8f9fa;border-left:4px solid #007bff;border-radius:4px;max-width:500px;">
+                                        <summary style="cursor:pointer;font-weight:600;color:#495057;">💡 Examples:</summary>
+                                        <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-top:8px;">
                                             <div><span style="display:inline-block;background:#e3f2fd;color:#1976d2;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;margin-right:8px;">ntfy.sh</span><code>https://ntfy.sh/opnsense_monitor</code></div>
                                             <div><span style="display:inline-block;background:#ede7f6;color:#5e35b1;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;margin-right:8px;">Discord</span><code>https://discord.com/api/webhooks/...</code></div>
                                             <div><span style="display:inline-block;background:#e8f5e9;color:#388e3c;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;margin-right:8px;">Custom</span><code>https://your-server.com/webhook</code></div>
                                         </div>
-                                    </div>
+                                    </details>
                                     <br>
                                     <button type="button" id="test_webhook" class="btn btn-default btn-sm">
                                         🧪 {{ devicemonitor_t('Send Test') }}

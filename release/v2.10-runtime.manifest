@@ -1,7 +1,7 @@
 cecdb6386624ca26de9cd5cdc5cd1454e88140b206464fa4d2f6ba9bf87b0cfd 644 src/etc/inc/plugins.inc.d/devicemonitor.inc /usr/local/etc/inc/plugins.inc.d/devicemonitor.inc
 724f74deb1c1343a26fb5d9fe796799ade471f2d765e95f9c68c9ee5872dfe7e 644 src/etc/inc/devicemonitor_locale.inc /usr/local/etc/inc/devicemonitor_locale.inc
 710f07212a5de5d0df98ab435073827801fef1d696b40587570d0069afc665df 755 src/etc/rc.d/devicemonitor /usr/local/etc/rc.d/devicemonitor
-e26c20c939c1bc2b8c2d716ee1e83aca0584d0cdacf51ed6d48410289b6cbc84 644 src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ConfigController.php /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ConfigController.php
+5f7e9a4e6cde07c5f6eb4246d55436382ea28e23fa6d692cfa726ecbe11c7737 644 src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ConfigController.php /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ConfigController.php
 c7ea3f501761b798b92ac49426900a771bd85c70f253bc67e7647884f322f5a1 644 src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/DevicesController.php /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/DevicesController.php
 93787dd9d1809bac2492d1ec731fa50110708d032098f638e3a587739be101c3 644 src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ServiceController.php /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ServiceController.php
 cb2d32001afb46af40158c9d4dd3456c050964e154c575da8a24e5510a630eaa 644 src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/IndexController.php /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/IndexController.php
@@ -22,7 +22,7 @@ b7aa5631344ea410326d18f6fc07a52e0a43ddf0a1e160c6c91f2f5326003d0c 644 src/opnsens
 997bdad955f390a060bb05c26dd4e4e8268d59e8df252b1b59fce8fe19f49861 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/physicaldevices.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/physicaldevices.volt
 5fd95a8c91e8a6155ea4e5e4ebf67acf89be8b9dbf25b77110bc65af072f6856 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/scanhistory.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/scanhistory.volt
 35f50befb3e57d8e2c3e382ea4851af3259b88f6dc474de19cc56b8b53efa3ed 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/service_widget.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/service_widget.volt
-7ded3349ba87227b7b63b27c54999a646c49ddf0ee762e12547671951707ceaf 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt
+16fb489656bb8a0136086747fb247901fb8489f4abffbda6771784d7fc9eb008 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt
 28e2d252e9bf22605fc9186fecba83acbd4417bc90739bf4129b6f5e370426b3 644 src/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php
 312ee0e8c1d1449f569052147eaa1fbfeefefae9315b220a8d1746fdd125fd2d 755 src/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
 4efd2dbd94808790479d21e07787fdde41204c1b785e50abe6f99680ae4dbc63 755 src/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py
