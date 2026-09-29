@@ -256,8 +256,8 @@ screenshots, DOM captures or browser/version details were not attached to this c
 states the operator's reported result rather than an artifact-backed verification, matching the `O4`
 sign-off and the 28 September French Selenium note. `F1` (the inert Change Summary toast) was a
 separate open decision at the time of this closure and was not affected by it; it was closed the same
-day — see the `F1` entry above and the `F1` closure section in `PROJECT_STATE.md`. `DM-BL-008c` stays
-deferred.
+day — see the `F1` entry above and the `F1` closure section in `PROJECT_STATE.md`. `DM-BL-008c` was resolved on
+29 September 2026 (see its entry below).
 
 **Resolved (27 September 2026):** the installer pin that `0708239` left stale is corrected by
 commit `3eeb78b`, which pins the current `release/v2.10-runtime.manifest` SHA256
@@ -280,9 +280,9 @@ are `release/v2.10-runtime.manifest` SHA256
 decision, both of which needed a browser session or a source change and stayed outside the local
 checkout work. Both were completed on 29 September 2026: the Italian confirmation as part of the
 `DM-BL-008b` closure above, and `F1` as the Change Summary banner change recorded in the `F1` entry
-above. The only item still deferred in this group is `DM-BL-008c`.
+above. The last item in this group, `DM-BL-008c`, was closed on 29 September 2026 (see its entry below).
 
-### DM-BL-008c — Installed plugin catalogues are invisible to the GUI without the shared merge
+### DM-BL-008c — Installed plugin catalogues are invisible to the GUI without the shared merge: **`CLOSED`**
 
 **Description:** Deliver the Device Monitor translations into the domain the GUI
 actually reads. The installer compiles each `<locale>_devicemonitor.po` into
@@ -322,7 +322,8 @@ if the branch is merged. `docs/USER_MANUAL.md` must state which languages are
 actually selectable once the delivered set is final.
 
 **Decided (28 September 2026) — deferred; documentation only.** DM-BL-008c stays open and no
-installer, manifest, release-note or Makefile change is made now. Reason: the candidate branch is a
+installer, manifest, release-note or Makefile change is made now (superseded on 29 September 2026 — see the
+resolution paragraph at the end of this entry). Reason: the candidate branch is a
 v2.9-era change and cannot be adopted unchanged. Its `install-unattended.sh` check still prints
 `version=2.9` and stages `install-v29.XXXXXX` backups, and its `--languages` default of `none` would
 ship no catalogues at all, taking the default target count from the recorded `files=48` to `37` and
@@ -335,6 +336,27 @@ default of `--languages`: `all` to preserve today's 48-file state, `none` for th
 default, or no flag at all. Until it ships, the nine translations remain inert on a firewall
 installed from the release asset alone, and the `nl_NL` missing-core-catalogue case must be handled
 rather than aborted.
+
+**Resolved (29 September 2026) — `CLOSED`; the v2.10 merge engine ships it.** `release/merge-opnsense-catalog.sh`
+implements the overlay the item asked for: core-first `msgcat --use-first` over the plugin catalogue with
+assertions that no existing OPNsense translation changed and that every plugin string is present, plus a
+`--plugin-only` mode for a locale whose core catalogue does not exist, which is how `nl_NL` is served without an
+abort. `install-unattended.sh:101-124` stages one merged
+`/usr/local/share/locale/<locale>/LC_MESSAGES/OPNsense.mo` per locale from the eleven catalogues (`en_US` is
+skipped as the reference language), reuses the existing mode where a core catalogue exists, and hands the items to
+the installer's own guard, backup, rollback and final-hash machinery. `uninstall.sh:107-154` restores the pristine
+catalogues from first-write-wins records under `/var/backups/devicemonitor/core-locale/`, or deletes the file the
+installer created (hash-verified) where no core catalogue existed, and refuses to touch a catalogue that is not
+the injected one. The update target count therefore rises from **49 to 59** (`60` fresh: 38 manifest rows + 11
+sidecar catalogues + 10 merged core catalogues, plus `rc.conf` when fresh), and `CHECK_OK`/`INSTALL_OK` report
+`core_locales=10`. `tests/test_locale_merge.py` plus the CI step `Validate core catalogue merge (DM-BL-008c)` cover
+both modes and the fail-closed guard; the installer dry run reports
+`CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10`. The candidate branch
+`feature/optional-locale-installer-20260927` stays unmerged and is superseded: shipping all eleven catalogues
+removes the `--languages` default sub-decision recorded above. **Residual validation:** no testbed install has been
+performed, so the runtime acceptance for the nine languages and the English-fallback negative check listed under
+"Validation when implemented" are still owed and need deployment authorisation; the merge also writes core
+package-owned files, so a core `pkg upgrade` can replace them until the installer is re-run.
 
 ## O3/O4 sidecar translation — 28 September 2026
 
@@ -359,7 +381,9 @@ sections above.
   resolves, so `devicemonitor_t()` is behaviour-changing rather than a pass-through to the core
   domain. `DM-BL-008c`'s whole-payload condition remains unaffected: the nine languages become
   readable through the plugin's own domain instead of a merged core catalogue, so no core language
-  file is read or written.
+  file is read or written. (Partly superseded on 29 September 2026: the `DM-BL-008c` merge engine now
+  also writes the core catalogues so the inline-script strings translate; the sidecar path itself still
+  reads and writes nothing under `/usr/local/share/locale`.)
 
 ### `O4` — route the GUI through the sidecar text domain: **`CODE-COMPLETE`** (not closed)
 
@@ -410,7 +434,7 @@ confirmation only.
 - **Sidecar dialogue domain switching: `SUCCESSFUL`** — `fr_FR` and `it_IT` runtime validation
   matched the expected values in `verification/O4-HUMAN-ACCEPTANCE-RUNBOOK.md`, including the
   precedence case with the toggle on and the core-domain fallback with it off.
-- `O3` (installer catalogue layout) remains `RESOLVED` and deployed. The `DM-BL-008c` merge decision
-  is unaffected by this sign-off and stays open. `DM-BL-008a` (Dutch selectability) was closed as
+- `O3` (installer catalogue layout) remains `RESOLVED` and deployed. The `DM-BL-008c` merge decision was
+  taken on 29 September 2026 (the v2.10 merge engine; see that entry above). `DM-BL-008a` (Dutch selectability) was closed as
   dropped on 28 September 2026 — an inherited `get_locale_list()` limitation, not a result of this
   work; see the `DM-BL-008a` entry above.

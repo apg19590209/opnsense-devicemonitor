@@ -128,9 +128,14 @@ manifest-pinned.
 - `O4` closure: human browser confirmation via `verification/O4-HUMAN-ACCEPTANCE-RUNBOOK.md`; the
   automated gate cannot replace it.
 - `DM-BL-008a`: Dutch (`nl_NL`) is still absent from `get_locale_list()`; an upstream decision.
-- `DM-BL-008c`: whether to merge the optional locale-installer branch is a separate decision, and no
-  longer required for the nine languages to render, because the sidecar ships its own catalogue and
-  never writes `/usr/local/share/locale`.
+- `DM-BL-008c`: **resolved after this submission** by the v2.10 merge engine. The expanded verification
+  boundary is now `tests/test_locale_merge.py` (core-first `msgcat --use-first` precedence, input catalogues
+  untouched, `--plugin-only` mode for a locale with no core catalogue, fail-closed guard, OUTPUT-overwrite
+  refusal) running as the CI step `Validate core catalogue merge (DM-BL-008c)`, plus the installer dry run
+  `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10` — **ten core catalogues merged successfully
+  and validated** on the testbed checkout alongside the eleven staged plugin catalogues. The nine GUI-selectable
+  languages therefore no longer depend on the sidecar alone for the inline-script strings; runtime acceptance
+  on an installed firewall and the English-fallback negative check remain outstanding.
 
 ## Reviewer checklist
 

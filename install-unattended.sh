@@ -19,7 +19,7 @@ command -v opnsense-version >/dev/null 2>&1 || { echo 'ABORT: OPNsense missing' 
 [ -x /usr/local/etc/rc.configure_plugins ] || { echo 'ABORT: OPNsense plugin registration unavailable' >&2; exit 1; }
 ver=$(opnsense-version | awk '{print $2}')
 printf '%s\n' "$ver" | awk -F'[.-]' '{if ($1+0>26 || ($1+0==26 && ($2+0>1 || ($2+0==1 && $3+0>=5)))) exit 0; exit 1}' || { echo 'ABORT: OPNsense 26.1.5+ required' >&2; exit 1; }
-for executable in sha256 stat install python3 php msgfmt nmap service; do
+for executable in sha256 stat install python3 php msgfmt msgcat msgunfmt nmap service; do
     command -v "$executable" >/dev/null 2>&1 || { echo "ABORT: missing dependency $executable" >&2; exit 1; }
 done
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
@@ -91,6 +91,9 @@ while read -r hash mode source target; do
     [ ! -L "$target" ] || { echo "ABORT: target symlink $target" >&2; exit 1; }
     printf '%s %s %s %s\n' "$hash" "$mode" "$source" "$target" >> "$STAGE/items"
 done < "$MANIFEST"
+# DM-BL-008c: number of core-domain catalogues staged by the loop below (used by the guards
+# and by the CHECK_OK/INSTALL_OK report).
+CORE_LOCALES=0
 for lang in en_US cs_CZ de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN; do
     pofile=src/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.po
     modir=$STAGE/${lang}/LC_MESSAGES
@@ -98,7 +101,27 @@ for lang in en_US cs_CZ de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN; d
     output=$modir/devicemonitor.mo
     msgfmt --check -o "$output" "$pofile" >/dev/null || { echo "ABORT: gettext $lang" >&2; exit 1; }
     printf '%s %s %s %s\n' "$(sha256 -q "$output")" 644 "$output" "/usr/local/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.mo" >> "$STAGE/items"
+    # DM-BL-008c: the inline-script strings resolve through the core domain
+    # (ControllerRoot::setLang -> ViewTranslator over /usr/local/share/locale), so the plugin
+    # keys are merged into <core>/<locale>/LC_MESSAGES/OPNsense.mo with a core-first msgcat.
+    # A locale whose core catalogue is absent (nl_NL on the current release) is not an error:
+    # it receives the plugin catalogue alone, which is the state the testbed already renders.
+    # en_US is the reference language, so no core catalogue is created for it.
+    if [ "$lang" = en_US ]; then continue; fi
+    core=/usr/local/share/locale/${lang}/LC_MESSAGES/OPNsense.mo
+    coreoutput=$STAGE/OPNsense-${lang}.mo
+    if [ -f "$core" ]; then
+        /bin/sh "$SCRIPT_DIR/release/merge-opnsense-catalog.sh" "$core" "$pofile" "$coreoutput" || { echo "ABORT: OPNsense catalogue merge $lang" >&2; exit 1; }
+        coremode=$(stat -f %Lp "$core")
+    else
+        /bin/sh "$SCRIPT_DIR/release/merge-opnsense-catalog.sh" --plugin-only "$pofile" "$coreoutput" || { echo "ABORT: plugin-only catalogue $lang" >&2; exit 1; }
+        coremode=644
+        printf 'NOTICE: no core catalogue for %s; installing the plugin catalogue alone\n' "$lang"
+    fi
+    printf '%s %s %s %s\n' "$(sha256 -q "$coreoutput")" "$coremode" "$coreoutput" "$core" >> "$STAGE/items"
+    CORE_LOCALES=$((CORE_LOCALES + 1))
 done
+printf 'NOTICE: merged the plugin keys into %s core catalogue(s); uninstall.sh restores the pristine files\n' "$CORE_LOCALES"
 python3 - <<'PY'
 import ast,glob,json,xml.etree.ElementTree as ET
 for p in glob.glob('src/opnsense/scripts/OPNsense/DeviceMonitor/*.py'):
@@ -136,10 +159,12 @@ while read -r hash mode source target; do
     id=$((id + 1))
 done < "$STAGE/items"
 count=$id
-expected=49
-[ "$FRESH" = 0 ] || expected=50
+# 38 manifest rows + 11 sidecar catalogues + one merged core-domain catalogue per locale that
+# can host one (all but en_US); a fresh install adds rc.conf.
+expected=59
+[ "$FRESH" = 0 ] || expected=60
 [ "$count" = "$expected" ] || { echo 'ABORT: target count' >&2; exit 1; }
-printf 'CHECK_OK version=2.10 predecessor=%s files=%s daemon_running=%s host=%s\n' "$installed" "$count" "$WAS_RUNNING" "$EXPECTED_HOST"
+printf 'CHECK_OK version=2.10 predecessor=%s files=%s core_locales=%s daemon_running=%s host=%s\n' "$installed" "$count" "$CORE_LOCALES" "$WAS_RUNNING" "$EXPECTED_HOST"
 [ "$CHECK_ONLY" = 0 ] || exit 0
 mkdir -p /var/backups/devicemonitor
 BACKUP=$(mktemp -d /var/backups/devicemonitor/install-v210.XXXXXX)
@@ -162,6 +187,43 @@ PY
 fi
 [ ! -f /var/db/devicemonitor/config.json ] || cp -p /var/db/devicemonitor/config.json "$BACKUP/config.json"
 printf 'BACKUP_READY=%s\n' "$BACKUP"
+# DM-BL-008c: preserve the pristine core catalogues once, before the first merge, so that
+# uninstall.sh can restore them exactly (or delete a file this installer created itself). The
+# record is first-write-wins per locale: a later install must never treat its own merged output
+# as the pristine state. This runs only on a real install, never during --check.
+CORE_LOCALE_STATE=/var/backups/devicemonitor/core-locale
+mkdir -p "$CORE_LOCALE_STATE"
+while read -r id old new mode source target; do
+    case "$target" in
+        /usr/local/share/locale/*/LC_MESSAGES/OPNsense.mo) :;;
+        *) continue;;
+    esac
+    lang=$(basename "$(dirname "$(dirname "$target")")")
+    state=$CORE_LOCALE_STATE/$lang.state
+    if [ ! -f "$state" ]; then
+        if [ "$old" = absent ]; then
+            pristine=absent
+        else
+            cp -p "$target" "$CORE_LOCALE_STATE/$lang.OPNsense.mo"
+            pristine=$old
+            [ "$(sha256 -q "$CORE_LOCALE_STATE/$lang.OPNsense.mo")" = "$pristine" ] || { echo "ABORT: pristine copy $target" >&2; exit 1; }
+        fi
+    else
+        pristine=$(sed -n 's/^pristine=//p' "$state")
+        # A catalogue that appeared from outside this installer (a core upgrade, for example) is
+        # recorded as pristine rather than mistaken for our own output.
+        if [ "$pristine" = absent ] && [ -f "$target" ] && [ "$(sha256 -q "$target")" != "$(sed -n 's/^installed=//p' "$state")" ]; then
+            cp -p "$target" "$CORE_LOCALE_STATE/$lang.OPNsense.mo"
+            pristine=$(sha256 -q "$target")
+        fi
+        if [ "$pristine" != absent ] && [ ! -f "$CORE_LOCALE_STATE/$lang.OPNsense.mo" ]; then
+            cp -p "$target" "$CORE_LOCALE_STATE/$lang.OPNsense.mo"
+            pristine=$(sha256 -q "$target")
+        fi
+    fi
+    printf 'pristine=%s\ntarget=%s\ninstalled=%s\n' "$pristine" "$target" "$new" > "$state"
+done < "$BACKUP/plan"
+printf 'CORE_LOCALE_STATE=%s\n' "$CORE_LOCALE_STATE"
 # Recheck all predecessors immediately before first replacement.
 while read -r id old new mode source target; do
     if [ "$old" = absent ]; then [ ! -e "$target" ] || { echo "ABORT: target appeared $target" >&2; exit 1; }
@@ -220,4 +282,4 @@ c.close()
 PY
 fi
 MUTATING=0
-printf 'INSTALL_OK version=2.10 files=%s backup=%s daemon_restarted=%s\n' "$count" "$BACKUP" "$WAS_RUNNING"
+printf 'INSTALL_OK version=2.10 files=%s core_locales=%s backup=%s daemon_restarted=%s\n' "$count" "$CORE_LOCALES" "$BACKUP" "$WAS_RUNNING"

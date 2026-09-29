@@ -106,6 +106,54 @@ done
 echo "  Translations removed"
 
 # ============================================
+# 5b. CORE DOMAIN CATALOGUES (DM-BL-008c)
+# ============================================
+
+echo "[5b/6] Restoring core domain catalogues..."
+# --- DM-BL-008c core catalogue restore: begin ---
+# The installer merges the plugin's keys into /usr/local/share/locale/<locale>/LC_MESSAGES/
+# OPNsense.mo, because the views' inline-script strings resolve through the core domain. Put the
+# pristine core catalogue back from the copy the installer recorded, or delete a file the
+# installer created itself; a catalogue that no longer matches what was injected is never removed.
+CORE_LOCALE_STATE=/var/backups/devicemonitor/core-locale
+SHA256=$(command -v sha256 2>/dev/null || :)
+core_restored=0
+core_removed=0
+if [ -z "$SHA256" ]; then
+    echo "  WARNING: sha256 unavailable; core domain catalogues left unchanged"
+elif [ -d "$CORE_LOCALE_STATE" ]; then
+    for state in "$CORE_LOCALE_STATE"/*.state; do
+        [ -f "$state" ] || continue
+        pristine=$(sed -n 's/^pristine=//p' "$state")
+        target=$(sed -n 's/^target=//p' "$state")
+        installed=$(sed -n 's/^installed=//p' "$state")
+        [ -n "$target" ] || continue
+        copy="$CORE_LOCALE_STATE/$(basename "$state" .state).OPNsense.mo"
+        if [ "$pristine" = absent ]; then
+            if [ -f "$target" ] && [ "$("$SHA256" -q "$target")" = "$installed" ]; then
+                rm -f "$target"
+                rmdir "$(dirname "$target")" 2>/dev/null || true
+                rmdir "$(dirname "$(dirname "$target")")" 2>/dev/null || true
+                core_removed=$((core_removed + 1))
+            else
+                echo "  WARNING: $target is not the catalogue this installer created; left in place"
+            fi
+        elif [ -f "$copy" ]; then
+            if [ "$("$SHA256" -q "$copy")" = "$pristine" ]; then
+                cp -p "$copy" "$target"
+                core_restored=$((core_restored + 1))
+            else
+                echo "  WARNING: pristine copy for $target does not match its recorded hash; kept at $copy"
+            fi
+        else
+            echo "  WARNING: no pristine copy recorded for $target; left unchanged"
+        fi
+    done
+fi
+echo "  Core catalogues: restored=$core_restored removed=$core_removed"
+# --- DM-BL-008c core catalogue restore: end ---
+
+# ============================================
 # 6. DATABASE AND DATA
 # ============================================
 

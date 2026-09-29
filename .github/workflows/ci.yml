@@ -71,6 +71,9 @@ jobs:
       - name: Validate translated JavaScript
         run: python3 tests/test_translated_javascript.py
 
+      - name: Validate core catalogue merge (DM-BL-008c)
+        run: python3 tests/test_locale_merge.py
+
       - name: Validate language acceptance (DM-BL-008)
         run: |
           set -eu
