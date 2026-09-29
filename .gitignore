@@ -102,3 +102,8 @@ apps/examples/desktop-app/.cursor/settings.json
 # records, not here.
 !verification/locales/out/
 !verification/locales/out/**
+
+# Bytecode from the locale verification self-test. Running
+# `python3 verification/locales/tests/test_verify_locale_stream.py` otherwise leaves
+# untracked build output in the tree.
+verification/locales/**/__pycache__/

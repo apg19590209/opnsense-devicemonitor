@@ -8,6 +8,10 @@
 ## Repository state
 
 - `verification/locales/` is new in this record set.
+- **Added 2026-09-29:** `verification/locales/verify_locale_stream.py` (harness, version
+  0.1.0), `verification/locales/tests/test_verify_locale_stream.py` (offline self-test, 13
+  cases), `verification/locales/locale_cases/it_IT.json` (draft-unratified, all run fields
+  `null`). No run artifact exists for any locale.
 - **Corrected 2026-09-28 — the earlier entry read "No git repository was present in the
   tree at the time of writing, so nothing here has been committed".** That is stale: a git
   repository is present at the tree root (`/usr/local/cline-freebsd/src/cline`, branch
@@ -20,9 +24,12 @@
   one completed `git push` whose branch was then deliberately deleted — see *Open
   blockers* item 3). The earlier sentence, "No remote is configured, so commits are local
   and cannot be pushed from this host", was accurate when written and is corrected here.
-- The `verification/locales/` Selenium harness remains a **proposal**: not written to
-  disk, and not runnable on the recording host (no Selenium, no `pip`, no browser or
-  WebDriver binary).
+- The `verification/locales/` harness (`verify_locale_stream.py`) **is written as of
+  2026-09-29 and committed with an offline self-test** (`tests/test_verify_locale_stream.py`).
+  It is **still not runnable on the recording host**: no Selenium, no `pip`, no browser or
+  WebDriver binary. The earlier sentence in this file — "remains a proposal: not written to
+  disk" — was accurate when written and is corrected here. Being written is not being run:
+  no locale has been through this harness, and `DM-BL-008b` stays `PENDING-EVIDENCE`.
 
 ## Locale verification tracks
 
@@ -78,7 +85,10 @@
    the alignment needs an explicit decision; a rebase by itself is **not**
    non-destructive. (Replaces the earlier stale claims that no git repository, and later
    that no remote, existed — see *Repository state*.)
-4. Harness not yet implemented, and its host prerequisites are unmet.
+4. Harness **implemented** as of 2026-09-29 and self-tested offline; its host prerequisites
+   are still unmet (no Selenium, no `pip`, no browser, no WebDriver binary), `target.base_url`
+   and `target.route` are `null` in every case file, and no locale has been run. Nothing about
+   this blocker is closed by the harness existing.
 
 ## Next actions
 

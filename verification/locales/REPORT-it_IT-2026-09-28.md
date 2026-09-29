@@ -22,6 +22,19 @@ disk, and it cannot run on the recording host, which has no Selenium installatio
 Nothing in this file asserts more than the operator reported. See
 [Evidence gap](#evidence-gap) for exactly what is missing.
 
+## Harness status (updated 2026-09-29)
+
+The paragraphs above describe 2026-09-28 and stay as written. As of **2026-09-29** the
+harness exists: `verification/locales/verify_locale_stream.py`, version 0.1.0, with an
+offline self-test at `verification/locales/tests/test_verify_locale_stream.py`. Its
+`--check-env` and `--dry-run` operations refuse to proceed on this host (`selenium` is not
+importable, `pip` is absent, no browser or WebDriver binary is installed), and
+`locale_cases/it_IT.json` carries `null` for `target.base_url` and `target.route`, so a run
+cannot be started for `it_IT` either.
+
+None of this changes the record: the harness **has not been run for `it_IT`**, no check in
+the table below was produced by it, and `DM-BL-008b` remains `PENDING-EVIDENCE`.
+
 ## Reported results
 
 Quoted verbatim as supplied by the operator:
