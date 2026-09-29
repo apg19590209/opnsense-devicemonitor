@@ -75,7 +75,10 @@ selected through the current GUI language list) was **`CLOSED`** as dropped on 2
 2026: the language list is core-owned and cannot be changed from this repository — the live
 `/usr/local/etc/inc/system.inc` (SHA256 `3347f876…`, byte identical to upstream) carries no
 `nl_NL` entry, nothing is commented out, and no Dutch core catalogue ships — which is the same
-conclusion the parallel locale-verification track recorded for `O2`. The
+conclusion the parallel locale-verification track recorded for `O2`. **GUI exposure for `nl_NL` is
+therefore withdrawn rather than pending**: the item is closed as dropped, this plugin neither patches nor
+wants a patch to the core language list, and it renders the Dutch catalogue whenever a session already
+uses `nl_NL`. The
 `release/v2.10-notes.md` review that was outstanding here was completed on 28 September 2026
 (see the end of the DM-BL-008 section below).
 
@@ -2932,14 +2935,18 @@ the English fallback the item predicted for a system without the merge.
 
 Unresolved: the merge rewrites OPNsense-core package-owned catalogues, so a core `pkg upgrade` can replace them
 until the installer is re-run (the pristine records keep the pre-merge files, which on this testbed are the
-26 September hand-merged copies rather than vendor-clean originals) and this trade-off is still not recorded in
-`DECISIONS.md`; the Settings help string "Translate Device Monitor strings from the plugin sidecar catalogue…"
-still states that the files under `/usr/local/share/locale` are never modified, which is now misleading and should
-be reviewed together with `docs/USER_MANUAL.md`; `--check` now takes about 43 s because it performs ten real
-merges; `DM-BL-008a` (`nl_NL` not selectable through the core language list) is unchanged and independent.
+26 September hand-merged copies rather than vendor-clean originals). That trade-off is now recorded as
+`DECISIONS.md` 35, together with the measured inert-orphan overhead (one retired message id per merged catalogue,
+ten keys in total) which the same decision accepts as structural overhead until the next upstream core-package
+replacement — a subtractive prune is explicitly not implemented and needs a new decision plus the
+provenance/vendor-baseline preconditions listed there. The Settings help string and the manual were corrected and
+deployed on 29 September 2026 (commit `d65eae4`). Also outstanding: `--check` takes about 43 s because it performs
+ten real merges; `DM-BL-008a` (`nl_NL` not selectable through the core language list) is unchanged and
+independent.
 
-Next recommended step: record the core-catalogue-ownership decision in `DECISIONS.md` and review that Settings
-help string (with the matching `docs/USER_MANUAL.md` wording) so the shipped text matches the merge behaviour.
+Next recommended step: settle the testbed notification transports (repair the recipient/method/webhook URL or
+disable them) so the active background scanner stops accumulating guaranteed failure lines on the first new
+device.
 
 Evidence status: the installation, the post-install catalogue comparison, the nine-language runtime acceptance
 (exit 0) and the English-fallback probe were executed on the testbed in this session and are reproducible from

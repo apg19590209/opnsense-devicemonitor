@@ -1114,6 +1114,48 @@ is in `.cline-reports/REPORT-20260929-152545.md` (engineering), `REPORT-20260929
 (testbed install, nine-language runtime acceptance with exit code 0, English-fallback check) and
 the deployment record in `PROJECT_STATE.md`.
 
+### Inert legacy message ids: accepted structural overhead
+
+The core-first merge is additive, so a message id that the plugin catalogue once carried and no longer carries
+stays in the merged catalogue. Measured on the testbed on 29 September 2026, after the second install replaced the
+sidecar help string: each of the ten merged catalogues holds **exactly one** such orphan — the retired
+`Translate Device Monitor strings … never modified in either case.` help id — that is ten dead keys, roughly
+1.5 KB in total, inside catalogues that hold between 457 (`nl_NL`, plugin-only) and 13,404 entries. Nothing
+renders them (the views reference the current ids only) and the acceptance harness ignores them because they are
+not page strings.
+
+**Decision: keep the additive merge; no subtractive pass.** The entries are accepted as structural overhead until
+the next upstream core-package replacement, which rewrites each catalogue vendor-clean and therefore clears them
+without any plugin action; the following install re-merges only the current plugin keys. The overhead is bounded
+by the number of retired ids per locale and is self-healing rather than cumulative.
+
+**Reason: a prune cannot be made safe from what the host can prove.** After a merge, the non-plugin keys of a
+catalogue are roughly 12,900 upstream strings that must survive untouched, and "keys that are not in the current
+plugin catalogue" is not a valid discriminator for them: it also matches upstream strings that a core
+`pkg upgrade` added *after* the merge. The recorded pristine copies are the pre-*install* state — on this testbed
+already hand-merged, as described above — not vendor-clean originals, so they cannot serve as the baseline either.
+A wrong prune would damage the whole core GUI in that language, and the merge's existing guard ("no upstream
+translation changed") was not designed to detect removals, so it would not catch it. Against that risk the gain is
+deleting ten invisible entries.
+
+### If a subtractive prune is ever revisited (requirements, not implemented)
+
+The route documented for a future decision, in preference to an installer/engine flag:
+
+1. **Provenance first.** The merge records the message ids it injects per locale (a `<locale>.injected` list
+   beside the existing state record), so "ours" is recorded data rather than inferred.
+2. **Vendor baseline required.** A prune runs only with an operator-supplied vendor-clean catalogue
+   (`--vendor <OPNsense.mo>`, available from the core package) and refuses to proceed when any non-injected key
+   differs from that baseline.
+3. **Separate script, not an engine flag.** `release/prune-opnsense-catalog.sh`, following the same discipline as
+   `merge-opnsense-catalog.sh`: stage-only output, rollback copy, per-key assertions that only injected ids were
+   removed and every other entry is byte-identical.
+4. **Gates.** A dedicated gettext-fixture test (upstream keys preserved, injected keys removed, missing vendor
+   file refused) with its own CI step; the installer and uninstaller stay additive unless a further decision says
+   otherwise.
+5. **Trigger.** Only when the overhead becomes material — for example many retired ids after repeated renames —
+   or when an operator needs vendor-identical catalogues for an audit.
+
 ### Non-negotiable compatibility
 
 The sidecar translation path still reads and writes nothing under `/usr/local/share/locale`, so
@@ -1121,4 +1163,5 @@ the Settings toggle `sidecar_translation_enabled` keeps its documented fallback 
 (sidecar → core → msgid). Changing the merge target set, the merge semantics, the pristine-record
 scheme or the restore boundary requires a new recorded decision, and any change to a manifest
 row must update `install-unattended.sh:28` in the same commit because the guarded installer
-validates the manifest digest before it does anything.
+validates the manifest digest before it does anything. Additive-only merging is the current policy: a subtractive
+prune requires a new recorded decision and the provenance plus vendor-baseline preconditions listed above.
