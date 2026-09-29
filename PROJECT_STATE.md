@@ -2,7 +2,7 @@
 
 ## Current state
 
-Last updated: 28 September 2026
+Last updated: 29 September 2026
 
 Branch: `v2.10-development`
 
@@ -15,6 +15,7 @@ Status:
 
 - Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
 - Latest source fix `aa25fe7` and its guarded v2.10 runtime-manifest update `0708239` are pushed to `origin/v2.10-development`; full GitHub Actions CI run `36315636699` PASS. Those commits changed no testbed runtime file or service; the nine corrected views were deployed to the testbed separately on 27 September 2026 (deployment record under DM-BL-008 below). `0708239` left the manifest SHA256 pinned in `install-unattended.sh` at the pre-refresh value, so the guarded installer aborted; that pin is restored by `3eeb78b`, which with its documentation commit `3fc9dfc` is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36323794636`; the following record commit `02a1eba` is also pushed and green in CI run `36324231410`, so no commit on this branch is local-only (see the install-guard section below).
+- Device Monitor GUI repair (29 September 2026): the views' `devicemonitor_t()` macro was never registered with the Volt compiler, so every application tab aborted with `MacroNotFound` and rendered a blank content block. The plugin controller now wraps the framework's `.volt` engine and registers the sidecar translator; the pending PHP 8.1+ null guards and the three matching `release/v2.10-runtime.manifest` digests plus the installer pin are refreshed in the same commit `8faf09d`, which is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36501061119` (see the 29 September 2026 section below).
 - That v2.10 metadata is repository-only: no v2.10 tag, GitHub release or runtime package exists, the published `v2.9` release asset is unchanged, and no testbed or production install was performed.
 - Notification dispatch remains on configd permanently: the HTTP API integration for `apiEmailUrl`/`apiWebhookUrl` is not implemented (`DECISIONS.md` 33 supersedes the cutover gates recorded in `DECISIONS.md` 32); `scan_network.py` and the live notification path are unchanged. The `www` privilege claim originally recorded for the API path is corrected by `DECISIONS.md` 34 (the web GUI runs `php-cgi` as root).
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
@@ -2628,3 +2629,62 @@ INSTALL_OK version=2.10 files=49 backup=/var/backups/devicemonitor/install-v210.
 - Note for the record: `--no-ff` is the opposite of a fast-forward test, because it forces a merge
   commit. The command that answers the question is `git merge-base --is-ancestor` followed by
   `git merge --ff-only`; `--no-ff --no-commit` only proves that a merge commit would apply cleanly.
+
+## 29 September 2026 — Device Monitor tabs repaired (Volt macro registration) and v2.10 payload refreshed
+
+Description: every Device Monitor application page (Devices, Physical Devices, Network Identities,
+Device History, Activity Timeline, Scan History, Change Summary, Settings, Infrastructure Services)
+rendered the outer OPNsense layout with an empty content block.
+
+Root cause (live evidence, not inference): `/var/log/php_errors.log` does not exist on the testbed;
+`php.ini` writes GUI errors to `/var/lib/php/tmp/PHP_errors.log`, which recorded
+`Phalcon\Mvc\View\Engine\Volt\Exceptions\MacroNotFound: Macro 'devicemonitor_t' does not exist`
+(Volt.zep:65) at 08:58:10, 09:02:01 and 09:07:49 on 29 September 2026, matching live GUI activity in
+the same minutes (menu, ACL and model caches refreshed at 09:00-09:07). The call path is proven, not
+assumed: an unregistered name compiles to `<?= $this->callMacro('devicemonitor_t', ['...']) ?>` and
+renders blank, while a compiler-registered name compiles to `<?= devicemonitor_t('...') ?>` and
+renders. Core `ControllerBase::__construct()` registers only `theme_file_or_default`, `file_exists`
+and `cache_safe`, and `ControllerBase::$volt_functions` is private, so a plugin cannot extend that
+list. The O4 migration moved nine views (340 call sites) onto `devicemonitor_t()` without registering
+it with the compiler, and `lang` is still supplied by core (`ControllerBase.php:422`), so that single
+unregistered name was the whole defect.
+
+Method: `IndexController::initialize()` now calls `registerVoltFunctions()`, which reads the engine
+the framework registered (`Phalcon\Mvc\View::getRegisteredEngines()`, verified callable on this build),
+re-registers `.volt` as a wrapper that adds `addFunction('devicemonitor_t', 'devicemonitor_t')` to its
+compiler, and falls back to `voltEngine()` mirroring the framework's own construction when no `.volt`
+engine exists. The same commit applies the pending PHP 8.1+ null guards (`devicemonitor_locale.inc`
+line 133; `NotificationHandler.php` lines 345/346/350), regenerates the three matching rows of
+`release/v2.10-runtime.manifest` and re-pins the manifest SHA256 on `install-unattended.sh` line 28
+from `dda5db1eb8f5341bc3dbf78d471cc85779a717b36d575f01b87ad2bbd3663638` to
+`ced20c442a28acb544b9b683549cb0f2553b0335ba44dd78682d3b4013b3cf4e`. The three files were deployed to
+the testbed behind the deployment guard (live pre-state hashes matched `f0003c4`; backups in
+`/var/backups/devicemonitor/repair-20260929-093444`), the Volt compile directory (`/var/lib/php/cache`;
+`/tmp/volt` and `/tmp/config.cache` do not exist on this build), the menu, ACL and model caches and
+`pluginctl cache_flush` were cleared, and the web configurator was restarted with
+`/usr/local/etc/rc.restart_webgui` (the configd `webgui restart` action; `pluginctl webgui` is not a
+pluginctl hook).
+
+Result (A/B on the production render path with a flushed compile cache): the pre-repair controller
+failed all nine tabs with `MacroNotFound`; the repaired controller rendered all nine
+(`devices` 49,541 B through `infrastructureservices` 53,716 B; `TAB_RENDER=PASS tabs=9`). Live state
+after the repair: GUI answering (302 on `/ui/`), daemon running, no new `MacroNotFound` entry, and
+background scanning still `"enabled": "0"`.
+
+Changed: `IndexController.php`, `devicemonitor_locale.inc`, `NotificationHandler.php`,
+`release/v2.10-runtime.manifest`, `install-unattended.sh`, plus this record and the
+`PRODUCT_BACKLOG.md` re-pin note (commit `8faf09d` and its documentation commit). No branch was
+switched, and no installer, `opnsense-bootstrap` or `pkg` command was run. The `count(Generator)` and
+`Model validation failed` errors in the triage input were traced to ad-hoc `php` stdin/direct-test
+runs (`Standard input code:9/20`, plus test scripts run without their stdin on 28 September); no such
+construct exists in `src/` or `tests/`, so no code was changed for them.
+
+Validation: `php -l` on the three patched files, `sh -n install-unattended.sh`,
+`python3 tests/test_release_manifest.py` (`V210_RELEASE_MANIFEST=PASS`, 38/38 payload hashes), the
+installer manifest gates in isolation (digest, 38 rows, source version 2.10), `git diff --check`, the
+live-versus-manifest hash comparison for the three deployed files and the A/B tab render above all
+PASS.
+
+Pushed and verified (29 September 2026): `8faf09d` is on `origin/v2.10-development` and green in
+GitHub Actions Device Monitor CI run `36501061119` (push event, branch `v2.10-development`, head
+`8faf09d`, job `validate`). The documentation commit carrying this record is pushed after it.

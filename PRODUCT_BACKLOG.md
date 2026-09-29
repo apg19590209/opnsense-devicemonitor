@@ -197,6 +197,15 @@ commit `3eeb78b`, which pins the current `release/v2.10-runtime.manifest` SHA256
 `install-unattended.sh --host OPNsense.internal --check` reports
 `CHECK_OK version=2.10 predecessor=2.10 files=48 daemon_running=1`.
 
+**Re-pinned (29 September 2026):** the manifest was regenerated again for the O4 view work and the
+29 September GUI repair, so the pin recorded in the paragraph above is historical. The current values
+are `release/v2.10-runtime.manifest` SHA256
+`ced20c442a28acb544b9b683549cb0f2553b0335ba44dd78682d3b4013b3cf4e`, with the three refreshed rows
+(`devicemonitor_locale.inc`, `IndexController.php`, `NotificationHandler.php`) and the matching pin on
+`install-unattended.sh` line 28 committed as `8faf09d`. `tests/test_release_manifest.py` passes
+(`V210_RELEASE_MANIFEST=PASS`) and the installer's manifest gates (digest, 38 rows, source version
+2.10) pass in isolation.
+
 **Deferred:** the Italian text-stream confirmation and the F1 dialog decision, both of which need a
 browser session or a source change and stay outside the local checkout work.
 
