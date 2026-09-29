@@ -438,9 +438,15 @@
                 <table class="table table-striped">
                     <tbody>
                         <tr>
-                            <td style="width:30%;"><strong>{{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}</strong></td>
+                            <td style="vertical-align:top;">
+                                <strong>{{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}</strong>
+                            </td>
                             <td>
-                                <input type="checkbox" id="sidecar_translation_enabled" />
+                                <label style="margin:0;">
+                                    <input type="checkbox" id="sidecar_translation_enabled" />
+                                    <strong>Enable sidecar catalogue translations</strong>
+                                </label>
+                                <br>
                                 <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}" data-content="Forces the interface to use the plugin's dedicated translation file. If disabled, new labels may default to English."><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                             </td>
                         </tr>
@@ -498,14 +504,6 @@
                             <td>&ge; 26.1.5</td>
                         </tr>
                     </table>
-
-                    <div style="padding:10px 0 0 0;">
-                        <button type="button"
-                                class="btn btn-primary btn-apply"
-                                id="btn-apply-about">
-                            <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
-                        </button>
-                    </div>
                 </div>
             </div>
 
