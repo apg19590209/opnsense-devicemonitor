@@ -2,3 +2,6 @@
 __pycache__/
 *.pyc
 *.pyo
+
+# Cline engineering reports (local-only artifacts, never committed)
+.cline-reports/

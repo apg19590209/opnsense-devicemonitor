@@ -98,6 +98,11 @@ if ($engine === 'runtime') {
     bind_textdomain_codeset('OPNsense', $locale);
     $lang = new DeviceMonitorRecordingTranslator($translator);
     $compiler = new Phalcon\Mvc\View\Engine\Volt\Compiler(new Phalcon\Mvc\View());
+    /* Mirror the production binding exactly (IndexController::registerVoltFunctions, line 44).
+       Without it the views' 340 devicemonitor_t() call sites compile to
+       $this->callMacro('devicemonitor_t', [...]), which is an uncaught Error outside an object
+       context on PHP 8.5 and aborts the render of every page in the runtime engine. */
+    $compiler->addFunction('devicemonitor_t', 'devicemonitor_t');
     $renderable = $compiler->compileString($template);
 } else {
     $translations = $input['translations'] ?? [];
