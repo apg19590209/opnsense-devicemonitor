@@ -520,13 +520,13 @@ msgstr "Sin resolver"
 msgid "Resolved"
 msgstr "Resuelto"
 
-#: settings.volt - IP and MAC conflict email alerts
-msgid "Email high-severity conflict alerts"
-msgstr "Alertas por correo de conflictos de alta gravedad"
+#: settings.volt - IP and MAC conflict webhook alerts
+msgid "Identity conflict alerts"
+msgstr "Alertas de conflictos de identidad"
 
-#: settings.volt - IP and MAC conflict email alerts
-msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
-msgstr "Enviar un correo cuando se detecte un nuevo conflicto de dirección IPv4 o IPv6 de alta gravedad."
+#: settings.volt - IP and MAC conflict webhook alerts
+msgid "Send a high-severity IPv4 or IPv6 address conflict alert to the webhook endpoint."
+msgstr "Enviar una alerta de nuevo conflicto de dirección IPv4 o IPv6 de alta gravedad al punto final del webhook."
 
 msgid "IP and MAC Conflicts"
 msgstr "Conflictos de IP y MAC"
@@ -926,9 +926,6 @@ msgstr "Acerca del nombre de usuario SMTP"
 
 msgid "About Test Email"
 msgstr "Acerca del correo de prueba"
-
-msgid "About Conflict Alerts"
-msgstr "Acerca de las alertas de conflicto"
 
 msgid "About Infrastructure Service Alerts"
 msgstr "Acerca de las alertas de servicios de infraestructura"

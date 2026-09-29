@@ -484,6 +484,7 @@ jobs:
 
           defaults = json.loads(DEFAULTS.read_text(encoding="utf-8"))
           assert defaults["config"]["identity_email_enabled"] == "0"
+          assert defaults["config"]["identity_webhook_enabled"] == "0"
 
           spec = importlib.util.spec_from_file_location(
               "devicemonitor_scan_network",
@@ -698,10 +699,12 @@ jobs:
                   "enabled": True,
                   "email_enabled": True,
                   "email_to": "admin@example.test",
+                  "webhook_enabled": True,
+                  "webhook_url": "https://example.test/dm-webhook",
               }
 
               off_config = dict(base_config)
-              off_config["identity_email_enabled"] = False
+              off_config["identity_webhook_enabled"] = False
 
               assert not module.should_send_identity_email(
                   off_config,
@@ -709,10 +712,45 @@ jobs:
               )
 
               on_config = dict(base_config)
-              on_config["identity_email_enabled"] = True
+              on_config["identity_webhook_enabled"] = True
 
               assert module.should_send_identity_email(
                   on_config,
+                  sample_events
+              )
+
+              # The webhook transport still gates the leg (DECISIONS.md 36).
+              no_webhook_config = dict(on_config)
+              no_webhook_config["webhook_enabled"] = False
+
+              assert not module.should_send_identity_email(
+                  no_webhook_config,
+                  sample_events
+              )
+
+              no_url_config = dict(on_config)
+              no_url_config["webhook_url"] = ""
+
+              assert not module.should_send_identity_email(
+                  no_url_config,
+                  sample_events
+              )
+
+              # The email settings no longer gate the leg.
+              email_off_config = dict(on_config)
+              email_off_config["email_enabled"] = False
+              email_off_config["email_to"] = ""
+
+              assert module.should_send_identity_email(
+                  email_off_config,
+                  sample_events
+              )
+
+              monitoring_off_config = dict(on_config)
+              monitoring_off_config["enabled"] = False
+
+              assert not module.should_send_identity_email(
+                  monitoring_off_config,
                   sample_events
               )
 

@@ -519,13 +519,13 @@ msgstr "Nevyřešené"
 msgid "Resolved"
 msgstr "Vyřešené"
 
-#: settings.volt - upozornění na konflikty IP a MAC
-msgid "Email high-severity conflict alerts"
-msgstr "E-mailová upozornění na závažné konflikty IP a MAC"
+#: settings.volt - upozornění na konflikty identit (webhook)
+msgid "Identity conflict alerts"
+msgstr "Upozornění na konflikty identit"
 
-#: settings.volt - upozornění na konflikty IP a MAC
-msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
-msgstr "Odeslat e-mail při zjištění nového závažného konfliktu adres IPv4 nebo IPv6."
+#: settings.volt - upozornění na konflikty identit (webhook)
+msgid "Send a high-severity IPv4 or IPv6 address conflict alert to the webhook endpoint."
+msgstr "Upozornění na nový závažný konflikt adres IPv4 nebo IPv6 odesílat na koncový bod webhooku."
 
 msgid "IP and MAC Conflicts"
 msgstr "Konflikty IP a MAC"
@@ -925,9 +925,6 @@ msgstr "O uživatelském jménu SMTP"
 
 msgid "About Test Email"
 msgstr "O testovacím e-mailu"
-
-msgid "About Conflict Alerts"
-msgstr "O upozorněních na konflikty"
 
 msgid "About Infrastructure Service Alerts"
 msgstr "O upozorněních na služby infrastruktury"

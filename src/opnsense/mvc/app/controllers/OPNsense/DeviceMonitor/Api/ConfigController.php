@@ -125,6 +125,7 @@ class ConfigController extends ApiControllerBase
         $enabled = $this->request->getPost('enabled', 'string', '0');
         $email_enabled = $this->request->getPost('email_enabled', 'string', '0');
         $identity_email_enabled = $this->request->getPost('identity_email_enabled', 'string', '0');
+        $identity_webhook_enabled = $this->request->getPost('identity_webhook_enabled', 'string', '0');
         $service_email_enabled = $this->request->getPost('service_email_enabled', 'string', '0');
         $service_email_new = $this->request->getPost('service_email_new', 'string', '1');
         $service_email_unavailable = $this->request->getPost('service_email_unavailable', 'string', '1');
@@ -165,6 +166,10 @@ class ConfigController extends ApiControllerBase
 
         if (!in_array($identity_email_enabled, ['0', '1'], true)) {
             return ['result' => 'failed', 'message' => 'Invalid identity email enabled value'];
+        }
+
+        if (!in_array($identity_webhook_enabled, ['0', '1'], true)) {
+            return ['result' => 'failed', 'message' => 'Invalid identity webhook enabled value'];
         }
 
         foreach ([
@@ -410,6 +415,7 @@ class ConfigController extends ApiControllerBase
         $config['unbound_enabled'] = $unbound_enabled;
         $config['webhook_enabled'] = $webhook_enabled;
         $config['webhook_url'] = $webhook_url;
+        $config['identity_webhook_enabled'] = $identity_webhook_enabled;
         $config['scan_interval'] = (int)$scan_interval;
         $config['email_vlans'] = $email_vlans;
         $config['webhook_vlans'] = $webhook_vlans;

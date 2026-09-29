@@ -688,7 +688,6 @@ rejected with an error message.
   all.
 - **Webhook VLANs** — restrict webhook notifications to selected VLANs/interfaces. Empty
   means all.
-- **Identity email** — enable email notifications for identity-conflict events.
 - **Service email** — enable email notifications for infrastructure-service changes, with
   three sub-options:
   - **New** — notify when a service is first discovered.
@@ -739,6 +738,9 @@ Pi-hole requires Pi-hole v6, HTTPS and an app password.
 
 - **Enable Webhook** — master switch for webhook notifications (default: off).
 - **Webhook URL** — the HTTP(S) endpoint that receives JSON notifications.
+- **Identity conflict alerts** — send a high-severity IPv4 or IPv6 address conflict alert to
+  the configured endpoint (default: off). Requires **Enable Webhook** and a webhook URL;
+  identity-conflict alerts are webhook-only.
 - **Test webhook** — send a test payload to the configured URL and show the result.
   **Changes state** (sends a real request).
 

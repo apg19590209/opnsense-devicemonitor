@@ -118,22 +118,6 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:top;padding-top:16px;">
-                                <strong>{{ devicemonitor_t('IP and MAC Conflicts') }}</strong>
-                            </td>
-                            <td style="padding-top:16px;">
-                                <label style="margin:0;">
-                                    <input type="checkbox" id="identity_email_enabled" />
-                                    <strong>{{ devicemonitor_t('Email high-severity conflict alerts') }}</strong>
-                                </label>
-                                <br>
-                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Conflict Alerts') }}"
-                                        data-content="{{ devicemonitor_t('Send an email when a new high-severity IPv4 or IPv6 address conflict is detected.') }}">
-                                    <i class="fa fa-info-circle" aria-hidden="true"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:top;padding-top:16px;">
                                 <strong>{{ devicemonitor_t('Infrastructure Services') }}</strong>
                             </td>
                             <td style="padding-top:16px;">
@@ -216,6 +200,21 @@
                                     </button>
                                     <span id="webhook_test_result" style="margin-left:10px;font-weight:bold;"></span>
                                 </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:top;padding-top:16px;">
+                                <label style="margin:0;">
+                                    <input type="checkbox" id="identity_webhook_enabled" />
+                                    <strong>{{ devicemonitor_t('Identity conflict alerts') }}</strong>
+                                </label>
+                            </td>
+                            <td style="padding-top:16px;">
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('Identity conflict alerts') }}"
+                                        data-content="{{ devicemonitor_t('Send a high-severity IPv4 or IPv6 address conflict alert to the webhook endpoint.') }}">
+                                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                                </button>
                             </td>
                         </tr>
 
@@ -674,7 +673,7 @@ $().ready(function() {
                 ) === '1'
             );
             $('#email_enabled').prop('checked', d.email_enabled==='1');
-            $('#identity_email_enabled').prop('checked', d.identity_email_enabled==='1');
+            $('#identity_webhook_enabled').prop('checked', d.identity_webhook_enabled==='1');
             $('#service_email_enabled').prop('checked', d.service_email_enabled==='1');
             $('#service_email_new').prop('checked', d.service_email_new===undefined ? true : d.service_email_new==='1');
             $('#service_email_unavailable').prop('checked', d.service_email_unavailable===undefined ? true : d.service_email_unavailable==='1');
@@ -755,7 +754,6 @@ $().ready(function() {
             pihole_password: $('#pihole_password').val(),
             unbound_enabled: $('#unbound_enabled').is(':checked')?'1':'0',
             email_enabled:    $('#email_enabled').is(':checked')?'1':'0',
-            identity_email_enabled: $('#identity_email_enabled').is(':checked')?'1':'0',
             service_email_enabled: $('#service_email_enabled').is(':checked')?'1':'0',
             service_email_new: $('#service_email_new').is(':checked')?'1':'0',
             service_email_unavailable: $('#service_email_unavailable').is(':checked')?'1':'0',
@@ -771,6 +769,7 @@ $().ready(function() {
             email_vlans:      getSelectedVlans('email-vlan-list'),
             webhook_enabled:  $('#webhook_enabled').is(':checked')?'1':'0',
             webhook_url:      $('#webhook_url').val(),
+            identity_webhook_enabled: $('#identity_webhook_enabled').is(':checked')?'1':'0',
             webhook_vlans:    getSelectedVlans('webhook-vlan-list'),
             monitored_interfaces: getSelectedMonitoredInterfaces(),
             scan_interval: $('#scan_interval').val(),

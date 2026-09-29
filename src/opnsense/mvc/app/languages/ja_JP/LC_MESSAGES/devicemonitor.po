@@ -520,13 +520,13 @@ msgstr "未解決"
 msgid "Resolved"
 msgstr "解決済み"
 
-#: settings.volt - IP and MAC conflict email alerts
-msgid "Email high-severity conflict alerts"
-msgstr "高重大度の競合メールアラート"
+#: settings.volt - IP and MAC conflict webhook alerts
+msgid "Identity conflict alerts"
+msgstr "ID競合アラート"
 
-#: settings.volt - IP and MAC conflict email alerts
-msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
-msgstr "高重大度の新しいIPv4またはIPv6アドレス競合が検出されたときにメールを送信します。"
+#: settings.volt - IP and MAC conflict webhook alerts
+msgid "Send a high-severity IPv4 or IPv6 address conflict alert to the webhook endpoint."
+msgstr "新たな高重大度のIPv4またはIPv6アドレス競合のアラートをWebhookエンドポイントに送信します。"
 
 msgid "IP and MAC Conflicts"
 msgstr "IP/MAC競合"
@@ -926,9 +926,6 @@ msgstr "SMTPユーザー名について"
 
 msgid "About Test Email"
 msgstr "テストメールについて"
-
-msgid "About Conflict Alerts"
-msgstr "競合アラートについて"
 
 msgid "About Infrastructure Service Alerts"
 msgstr "インフラサービスアラートについて"

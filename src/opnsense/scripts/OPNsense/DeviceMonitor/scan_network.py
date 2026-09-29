@@ -72,6 +72,7 @@ def load_config():
             'monitored_interfaces': DEFAULT_CONFIG.get('monitored_interfaces', ''),
             'email_enabled': DEFAULT_CONFIG.get('email_enabled', '1') == '1',
             'identity_email_enabled': DEFAULT_CONFIG.get('identity_email_enabled', '0') == '1',
+            'identity_webhook_enabled': DEFAULT_CONFIG.get('identity_webhook_enabled', '0') == '1',
             'service_email_enabled': DEFAULT_CONFIG.get('service_email_enabled', '0') == '1',
             'service_email_new': DEFAULT_CONFIG.get('service_email_new', '1') == '1',
             'service_email_unavailable': DEFAULT_CONFIG.get('service_email_unavailable', '1') == '1',
@@ -110,6 +111,7 @@ def load_config():
                 'monitored_interfaces': config.get('monitored_interfaces', DEFAULT_CONFIG.get('monitored_interfaces', '')),
                 'email_enabled': config.get('email_enabled', '1') == '1',
                 'identity_email_enabled': config.get('identity_email_enabled', '0') == '1',
+                'identity_webhook_enabled': config.get('identity_webhook_enabled', DEFAULT_CONFIG.get('identity_webhook_enabled', '0')) == '1',
                 'service_email_enabled': config.get('service_email_enabled', DEFAULT_CONFIG.get('service_email_enabled', '0')) == '1',
                 'service_email_new': config.get('service_email_new', DEFAULT_CONFIG.get('service_email_new', '1')) == '1',
                 'service_email_unavailable': config.get('service_email_unavailable', DEFAULT_CONFIG.get('service_email_unavailable', '1')) == '1',
@@ -146,6 +148,7 @@ def load_config():
             'monitored_interfaces': '',
             'email_enabled': True,
             'identity_email_enabled': False,
+            'identity_webhook_enabled': False,
             'service_email_enabled': False,
             'service_email_new': True,
             'service_email_unavailable': True,
@@ -6226,13 +6229,20 @@ def get_new_high_identity_events(conn, start_id):
 
 
 def should_send_identity_email(config, events):
-    """Return whether this scan cycle should emit an identity alert."""
+    """Return whether this scan cycle should emit an identity conflict alert.
+
+    The identity leg dispatches to the webhook endpoint (DECISIONS.md 36), so it is
+    gated by the identity webhook subcategory switch together with the webhook
+    transport, not by the email master switch, recipient or method. The function
+    name is retained because the helper script it drives is still
+    notify_identity_email.php.
+    """
     return bool(
         events
         and config.get('enabled')
-        and config.get('email_enabled')
-        and config.get('identity_email_enabled')
-        and config.get('email_to')
+        and config.get('identity_webhook_enabled')
+        and config.get('webhook_enabled')
+        and config.get('webhook_url')
     )
 
 

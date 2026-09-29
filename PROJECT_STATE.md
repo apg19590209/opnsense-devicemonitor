@@ -2999,3 +2999,291 @@ Evidence status: the installation, the post-install catalogue comparison, the ni
 this checkout; the counts, digests and hashes above are quoted from that live run, and the full transcript is in
 `.cline-reports/`.
 
+## 29 September 2026 — Identity conflicts re-routed to the webhook transport (direct payload override)
+
+Description: the notification layer gained a queue-free dispatch path so a caller can post its own JSON frame,
+and the identity consumer was re-routed from email to that path. `notify_identity_email.php` no longer builds an
+HTML email; it forwards the scan cycle's high-severity identity conflicts to the configured webhook endpoint as an
+`identity_conflict` frame.
+
+Work completed:
+- `NotificationHandler::sendWebhook()` now takes the optional third parameter `$payloadOverride = null`. When it is
+  supplied the `notification_pending` queue is not read, the endpoint-keyword type detection is skipped (type
+  forced to `generic`), `hostname`/`timestamp` are filled in only when the caller omitted them, and the caller's
+  array is posted as `application/json` directly through the existing curl engine. A non-array override fails with
+  `Webhook payload override must be an array` instead of silently falling back to the queue, and the new branch
+  guards `curl_init()` returning `false`.
+- `notify_identity_email.php` is now a webhook forwarder: the STDIN contract `{"events":[…]}` and the
+  high-severity `IP_IDENTITY_CHANGED`/`IPV6_IDENTITY_CHANGED` filter are preserved, the email HTML builder and the
+  `sendCustomEmail()` call are removed, the frame
+  `{"event":"identity_conflict","hostname":…,"timestamp":…,"severity":"high","conflict_count":N,"conflicts":[…]}` is
+  constructed, and the dispatch uses `$handler->sendWebhook(false, null, $identityPayload)`. Exit codes are
+  unchanged: `0` for `sent`/`skipped`, `1` for `failed`, `2` for malformed STDIN.
+- Files changed: `src/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php` (+61/−1),
+  `src/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_email.php` (200 → 71 lines),
+  `docs/USER_MANUAL.md` (`Identity email` entry re-described as webhook-delivered).
+- Tests performed (29 September 2026, testbed, loopback only): `php -l` on both scripts → no syntax errors;
+  `git diff --check` → clean; forwarder run with a three-event STDIN sample against a loopback receiver on
+  `127.0.0.1:8777` → `{"result":"sent","message":"Webhook sent (HTTP 200)","type":"generic","test":false,"count":0}`
+  with exit 0 and the delivered body keyed
+  `conflict_count, conflicts, event, hostname, severity, timestamp` (`conflict_count = 2`; the low-severity
+  `MAC_MULTI_IP` event was filtered out; no `devices` key, proving the queue was not pulled); malformed STDIN and
+  `{"events":"nope"}` → exit 2; an all-low-severity sample → `skipped`, exit 0; harness checks: non-array override →
+  `failed`, override against an `ntfy`-keyword URL → `type` still `generic`, caller frame without hostname/timestamp
+  → both filled in; regression checks of the two-argument calls → real mode `skipped` ("No pending notifications"),
+  test mode `ok`/`type=generic` with the original placeholder frame.
+- Hook engine: `.githooks/pre-commit` executed directly → exit 0; the run completed on Tuesday 20:03 AEST, i.e.
+  outside both peak windows (11:00–14:00 and 16:00–20:00 AEST weekdays), so the work ran in the off-peak tier.
+
+Unresolved: `scan_network.py::should_send_identity_email()` still gates the identity leg on `email_enabled`,
+`email_to` and `identity_email_enabled` (testbed value `0`), so on this testbed the new identity→webhook path
+cannot fire yet even though no email is sent (the replacement gate is now recorded as `DECISIONS.md` 36 and is not
+implemented yet, pending sign-off); the Settings label and help (`Email high-severity conflict alerts`,
+"Send an email when a new high-severity IPv4 or IPv6 address conflict is detected.") still describe email delivery
+and are translated in eleven locales, so correcting them needs a catalogue regeneration step; the changed scripts
+are committed to neither the repository nor `/usr/local` (no commit or deployment was instructed, so the live
+installation still contains the old email-forwarding copy); `webhook_url` still points at the stopped loopback mock
+(`http://127.0.0.1:8777/dm-webhook`).
+
+Next recommended step: obtain sign-off on `DECISIONS.md` 36 — the dedicated `identity_webhook_enabled` subcategory
+switch gating the identity leg — and then implement that decision (gate in `scan_network.py`, config key plus
+validation, checkbox in the Webhook Notifications tab, catalogue labels, Settings wording, manual).
+
+## 29 September 2026 — Identity gating policy evaluated: a dedicated webhook subcategory switch is selected
+
+Description: the open question left by the identity re-route — which configuration switch should authorise
+identity-conflict alerts — was evaluated against the two candidate routing policies and decided. This entry records
+a policy decision only: no implementation file was changed and the Git index was left unmutated, pending sign-off.
+
+Work completed:
+- **Option A (map identity alerts onto the generic `webhook_enabled`/`webhook_url` gate) evaluated and rejected.**
+  `webhook_enabled` is the documented master switch for new-device webhook notifications, so mapping identity
+  alerts onto it widens the administrative permission set as a side effect of an unrelated action. The only
+  existing webhook scope control, `webhook_vlans`, filters the new-device leg only, and identity events carry an
+  `interface` rather than a VLAN, so the category would be delivered with no scope filter at all. The two
+  categories could not be enabled or disabled independently, and the identity leg would light up on installations
+  that never opted into conflict alerting, contrary to the fail-closed `"0"` defaults used by every other category.
+- **Option B (`identity_webhook_enabled`, an isolated subcategory checkbox in the Webhook Notifications option
+  tree) selected.** It keeps the administrative permission discrete and consistent with the existing per-category
+  precedent (`identity_email_enabled`, `service_email_enabled` with its three sub-options), defaults to `"0"`, and
+  stays independent of the email recipient and method that this testbed does not have.
+- **Option C (reuse `identity_email_enabled` as the webhook gate) considered and rejected** as a third variant: an
+  email-named key governing webhook delivery misleads operators, breaks the terminology rule, and would have to be
+  split again when an email channel returns.
+- Effective gate recorded as a three-part condition: `enabled`; `identity_webhook_enabled`; and `webhook_enabled`
+  with a non-empty `webhook_url` (the precondition already enforced by `ConfigController::save` and
+  `NotificationHandler::sendWebhook()`), with `identity_email_enabled` no longer consulted by the identity leg.
+- `DECISIONS.md` 36 records the decision, the rejected alternatives and the accepted consequences; the previous
+  ledger entry's `Unresolved` and `Next recommended step` records were updated to this path.
+- Files changed (documentation only): `DECISIONS.md` (new decision 36), `PROJECT_STATE.md` (this entry plus the
+  two updated records above).
+
+Tests performed: `git --no-pager diff --cached --stat` → empty output (nothing staged, index unmutated);
+`git --no-pager diff --check` → clean; no source, configuration, view or installer file modified in this task
+(`git --no-pager diff --stat` lists only the two ledger files from this task, plus the still-uncommitted re-route
+changes from the previous one, all unstaged). No runtime change exists to test, so no runtime evidence is claimed.
+
+Unresolved: implementation of decision 36 has not started (gate predicate and call site in `scan_network.py`,
+`identity_webhook_enabled` in `defaults.json`, read/validation/assignment in `ConfigController::save`, the checkbox
+row in the Webhook Notifications tab with its JS load/save wiring, the label in 11 locale catalogues plus `en_US`,
+and the manual section). Until then the identity leg stays dark wherever the email settings are unsatisfied, and
+`identity_email_enabled` remains stored and displayed while no longer being consulted, so its label needs the same
+correction step. Interface/VLAN scoping of identity frames is still undecided. The re-route itself remains
+uncommitted and undeployed, and `webhook_url` still points at the stopped loopback mock.
+
+Next recommended step: sign off `DECISIONS.md` 36, then implement it as one step (gate, config key, UI row, labels,
+manual wording).
+
+Evidence status: the evaluation is based on the checked-in sources inspected in this session — `settings.volt`
+tabs at lines 35–240 with the JS load/save blocks at 677–773, `defaults.json`, `ConfigController::save`,
+`scan_network.py`'s identity gate and notification section, and the eleven `docs`-referenced `.po` catalogues — and
+is reproducible from this checkout without modifying it.
+
+## 29 September 2026 — `identity_webhook_enabled` implemented: schema, backend, Webhook-tab switch and catalogues
+
+Description: decision 36 was implemented end to end. The identity-conflict leg is now authorised by its own
+Webhook-tab subcategory switch instead of the email settings, and the inert email-side control and its catalogue
+strings were decommissioned.
+
+Work completed:
+- `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json`: `"identity_webhook_enabled": "0"` added
+  (36 → 37 config keys; fail-closed default).
+- `.../Api/ConfigController.php`: the field is fetched (`:128`), validated as `"0"`/`"1"` (`:171`, message
+  `Invalid identity webhook enabled value`) and written (`:418`) inside the same save transaction as the other
+  webhook keys.
+- `scan_network.py`: `should_send_identity_email()` now gates on `enabled` **and** `identity_webhook_enabled`
+  **and** `webhook_enabled` **and** a non-empty `webhook_url` (`:6231`–`:6245`), with the legacy email variables
+  removed from the predicate; the new key is populated in all three `load_config()` branches (`:75`, `:114`,
+  `:151`); the legacy `identity_email_enabled` key stays in the loaded dict for schema compatibility but gates
+  nothing.
+- `settings.volt`: the Email-tab "Email high-severity conflict alerts" row and its help button were removed
+  (lines 119–134 of the previous revision) and a "Identity conflict alerts" checkbox row with its help was added
+  to the Webhook Notifications tab (`:209`); the JS load (`:676`) and save (`:772`) now use
+  `identity_webhook_enabled`, and the dead `identity_email_enabled` post field was dropped.
+- 11 catalogues (`cs_CZ`, `de_DE`, `en_US`, `es_ES`, `fr_FR`, `it_IT`, `ja_JP`, `nl_NL`, `pt_BR`, `ru_RU`,
+  `zh_CN`): `Email high-severity conflict alerts`, `Send an email when a new high-severity IPv4 or IPv6 address
+  conflict is detected.` and the now-unused `About Conflict Alerts` were removed, and
+  `Identity conflict alerts` plus `Send a high-severity IPv4 or IPv6 address conflict alert to the webhook
+  endpoint.` were added to each (1584 → 1581 lines per file).
+- `.github/workflows/ci.yml`: the identity-leg step asserts the new default and drives the new gate, with added
+  negative cases (transport off, empty URL, monitoring off, no events, missing key fails closed) and a positive
+  case proving the email settings no longer gate the leg.
+- `docs/USER_MANUAL.md`: the "Identity email" entry left section 14.2 and "Identity conflict alerts" is now
+  documented in 14.3; `DECISIONS.md` 36 gained an amendment recording the control removal, the inert stored key
+  and the retained `should_send_identity_email()`/`notify_identity_email.php` names.
+- `release/v2.10-runtime.manifest` and `install-unattended.sh:28`: eight stale rows refreshed (the two
+  notification scripts from the previous change set plus the six files changed here), row count still 38, manifest
+  digest `ccdfe4c6555dc3537257159ea37c332e1aa648ff95b607d5738d2b56fa4905d8` →
+  `b99d9ed0b9a3dbf8cde28fff904e8e012f1a7f8e6e04b4e8ffa1eb1a7a020c5f`, and the pinned digest on line 28 updated
+  in the same step.
+
+Tests performed and results (29 September 2026, testbed):
+- `msgfmt --check` on all eleven catalogues → `OK` for each.
+- `php -l` over every `src/**/*.php` → no syntax errors; `python3 -m py_compile` over every `src/**/*.py` → exit 0
+  (bytecode caches removed afterwards).
+- Identity-gate harness mirroring the CI block → `IDENTITY_GATE_HARNESS=PASS checks=9`: subcategory on → send;
+  subcategory off → no send; webhook master off → no send; empty URL → no send; monitoring off → no send; no
+  events → no send; `identity_email_enabled=False` ignored → still send; `email_enabled=False` with an empty
+  recipient ignored → still send; key absent → fail closed. `load_config()` on this testbed reports the key as
+  `False`.
+- Language acceptance: `--engine runtime --views <source views> --installed-po <staged .mo>` →
+  `LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 failures=0`, exit 0; the interpolate engine →
+  `LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 failures=0`, exit 0. The only new warnings are the shared core
+  catalogue still carrying the retired wording for the two new ids, because the deployment was not refreshed.
+- `python3 tests/test_release_manifest.py` → `V210_RELEASE_MANIFEST=PASS` (it was failing before the regeneration,
+  because the previous change set had already left two rows stale); `python3 tests/test_sidecar_catalogue.py` →
+  `SIDECAR_CATALOGUE=PASS`; `sh -n install-unattended.sh` → clean; `git --no-pager diff --check` → clean.
+
+Unresolved: nothing is deployed, so the live testbed still runs the previous view, catalogue, controller and
+scanner; the acceptance test therefore used its documented staged mode (`--views` + `--installed-po`) and would
+fail its installed-versus-source comparison until deployment; `identity_email_enabled` survives as a stored key
+nothing posts, so it settles to `"0"` on the next save; the `email`-named function and helper file are recorded
+naming residuals; interface/VLAN scoping of identity frames is still undecided; `webhook_url` still points at the
+stopped loopback mock (`http://127.0.0.1:8777/dm-webhook`).
+
+Next recommended step: deploy this change set on the testbed with the guarded installer, re-run the acceptance
+test without the staged override so the installed artefacts are compared, and capture the identity-frame delivery
+evidence with `identity_webhook_enabled = "1"`.
+
+Evidence status: the catalogue, PHP, Python, gettext, manifest and acceptance results above were produced in this
+session on the testbed and are reproducible from this checkout; nothing was committed or deployed.
+
+## 29 September 2026 — Identity webhook tier deployed to the testbed and live delivery verified
+
+Description: the `identity_webhook_enabled` change set was installed on the testbed with the guarded installer, the
+deployed tree was accepted against the source by the language test, and the identity leg was then exercised end to
+end against a loopback receiver.
+
+Work completed:
+- `sh install-unattended.sh --check --host OPNsense.internal` → `CHECK_OK version=2.10 predecessor=2.10 files=59
+  core_locales=10 daemon_running=1 host=OPNsense.internal`, exit 0 (no mutation).
+- `sh install-unattended.sh --host OPNsense.internal` → `INSTALL_OK version=2.10 files=59 core_locales=10
+  backup=/var/backups/devicemonitor/install-v210.vVNqNB daemon_restarted=1`, exit 0; configd was restarted, the
+  daemon stopped and started (now pid 12099).
+- Deployed-versus-source comparison (`cmp -s`) reports byte-identical files for `settings.volt`,
+  `Api/ConfigController.php`, `defaults.json`, `scan_network.py`, `notify_identity_email.php` and
+  `NotificationHandler.php`; the installed view carries the three `identity_webhook_enabled` references, the
+  installed defaults the key itself, and the installed controller five occurrences.
+- Deployed-tree acceptance with no staged overrides: `python3 tests/test_language_acceptance.py --engine runtime` →
+  `LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`, exit 0. No installed-view or
+  installed-catalogue drift is reported, and the two previous new-key warnings are gone because the merge installed
+  the strings. The single gap remains the known `nl_NL`/`DM-BL-008a` omission from `get_locale_list()`; the only
+  other warnings are the pre-existing core wording differences for the shared `Language` id (`es_ES`, `pt_BR`).
+- Merge evidence: `msgunfmt` on the deployed core catalogues returns `Identity conflict alerts` →
+  `Warnungen bei Identitätskonflikten` (`de_DE`) and `ID競合アラート` (`ja_JP`); the deployed plugin catalogue
+  carries the new help string.
+- Configuration tier: guarded rewrite of `/var/db/devicemonitor/config.json` setting
+  `identity_webhook_enabled = "1"` (35 → 36 keys, only that key changed, mode 0600 preserved, sha256
+  `dcec072b46da65953af113c4c946cd706ea8dae6b64172a60dbff7a92f6ef8a8` →
+  `b96575bf7cfaf5ab2043cd388a88e0a29f9c7ee1c5f6e7ea7464ba63c44d8f20`, backup
+  `/var/backups/devicemonitor/identity-webhook-20260929-202526/config.json`).
+- Delivery against the loopback receiver on `127.0.0.1:8777` (the configured `webhook_url`):
+  - Direct backend utility: `/usr/local/bin/php .../notify_identity_email.php` fed a three-event sample (two
+    high-severity IP/IPv6 identity events plus one low-severity `MAC_MULTI_IP`) → `{"result":"sent","message":
+    "Webhook sent (HTTP 200)","type":"generic","test":false,"count":0}`, exit 0. The received frame is 662 B with
+    keys `conflict_count, conflicts, event, hostname, severity, timestamp`, `event=identity_conflict`,
+    `severity=high`, `conflict_count=2` equal to the `conflicts` array length, `hostname=OPNsense.internal`, and
+    **no `devices` key**; the low-severity sample was filtered out.
+  - Scanner path: the deployed `scan_network.send_identity_email()` — the function the new gate authorises —
+    returned `True`, logged `[IDENTITY-EMAIL] Sent batched alert for 2 high-severity event(s)`, and delivered a
+    frame with `conflict_count=1` (only the high-severity event, the low-severity one filtered) and again no
+    `devices` key.
+  - Live gate check against the deployed module: `load_config()['identity_webhook_enabled']` is `True`,
+    `webhook_enabled` is `True` with a non-empty `webhook_url`, `should_send_identity_email(cfg, events)` is `True`
+    and `False` with an empty event list.
+  - `/var/log/devicemonitor.log` contains zero `FAILED`/`Failed`/`Invalid webhook URL` lines in the whole
+    post-install window (20:22–20:26).
+- Receivers stopped afterwards; nothing is bound to `127.0.0.1:8777`.
+
+Unresolved: `identity_webhook_enabled` is now `"1"` on the testbed while `webhook_url` still points at the
+temporary loopback mock, so the next genuine conflict will log a delivery failure until a permanent receiver
+exists or the flag returns to `"0"`; the change set is still uncommitted, so no CI run id exists; interface/VLAN
+scoping of identity frames stays undecided; the inert `identity_email_enabled` key remains stored and unexposed;
+`DM-BL-008a` (`nl_NL`) is unchanged.
+
+Next recommended step: settle the endpoint tier — point `webhook_url` at a permanent receiver and keep
+`identity_webhook_enabled = "1"`, or set the flag back to `"0"` — and record the resulting recipient/message
+evidence.
+
+Evidence status: the installer output, the deployed-versus-source comparisons, the installed-catalogue inspection,
+the accepted language run and both delivery captures were produced in this session on the testbed and are
+reproducible from the transcript in `.cline-reports/`; the change set itself is still uncommitted.
+
+## 29 September 2026 — Identity webhook tier redeployed and live delivery re-verified
+
+Description: the same `identity_webhook_enabled` change set was redeployed on the testbed with the guarded installer,
+the deployed tree was re-accepted against source with no staged overrides, and the identity leg was re-exercised end
+to end against the loopback receiver.
+
+Work completed:
+- `sh install-unattended.sh --host OPNsense.internal` (21:20) → `NOTICE: merged the plugin keys into 10 core
+  catalogue(s)`, `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1
+  host=OPNsense.internal`, then `INSTALL_OK version=2.10 files=59 core_locales=10
+  backup=/var/backups/devicemonitor/install-v210.c6EzNx daemon_restarted=1` as the final output line; no `ABORT` or
+  rollback path ran. `configd` was restarted and the daemon stopped and started (now pid 56372).
+- Deployed-versus-source `cmp -s` reports byte-identical files for `settings.volt`, `Api/ConfigController.php`,
+  `defaults.json`, `scan_network.py`, `notify_identity_email.php`, `NotificationHandler.php` and the `cs_CZ`/`en_US`
+  `.po` files.
+- Deployed-tree acceptance with no staged overrides: `python3 tests/test_language_acceptance.py --engine runtime` →
+  `LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`, exit 0. The single gap remains the known
+  `nl_NL`/`DM-BL-008a` omission; the other warnings are the pre-existing core wording differences for the shared
+  `Language` id (`es_ES`, `pt_BR`).
+- Observation recorded, not a defect: `release/v2.10-runtime.manifest` packages only the `cs_CZ` and `en_US` `.po`
+  files, so the nine other installed plugin `.po` files still carry 2026-09-26 timestamps and the pre-webhook wording;
+  the runtime chain resolves the compiled `.mo`, which the installer stages for all eleven locales and which the
+  acceptance engine audits, so no drift is reported. Nothing was changed.
+- Configuration tier (idempotent guarded re-assert): `/var/db/devicemonitor/config.json` still carries
+  `identity_webhook_enabled = "1"` (36 keys, mode 0600 preserved, sha256 unchanged
+  `b96575bf7cfaf5ab2043cd388a88e0a29f9c7ee1c5f6e7ea7464ba63c44d8f20`, `changed_keys = []`), backup
+  `/var/backups/devicemonitor/identity-webhook-20260929-212213/config.json`; `webhook_enabled = "1"` and
+  `webhook_url = http://127.0.0.1:8777/dm-webhook`.
+- Delivery against the loopback receiver on `127.0.0.1:8777` (receiver self-check `200`):
+  - Direct backend utility: `/usr/local/bin/php .../notify_identity_email.php` fed the three-event sample (two
+    high-severity IP/IPv6 identity events plus one low-severity `MAC_MULTI_IP`) →
+    `{"result":"sent","message":"Webhook sent (HTTP 200)","type":"generic","test":false,"count":0}`, exit 0. The frame
+    is 662 B, `application/json`, from `127.0.0.1`, with keys exactly
+    `conflict_count, conflicts, event, hostname, severity, timestamp`, `conflict_count=2` equal to the `conflicts`
+    array length, `hostname=OPNsense.internal`, and **no `devices` key**; the low-severity sample was filtered.
+  - Scanner path: the deployed `scan_network.load_config()` resolves `identity_webhook_enabled` to `True`,
+    `should_send_identity_email(cfg, events)` is `True` and `False` for an empty list, and the deployed
+    `send_identity_email()` returned `True`, logged `[IDENTITY-EMAIL] Sent batched alert for 2 high-severity
+    event(s)` at 21:22:34, and delivered a 409 B frame with `conflict_count=1` (low-severity event filtered) and no
+    `devices` key. The log count is `len(events)` (`scan_network.py:6299–6302`) and matches the batch the production
+    call site passes (`:7131` passes only high-severity events); the harness added the low-severity event on purpose
+    to prove the helper filters it.
+  - `/var/log/devicemonitor.log` contains zero `FAILED`/`Failed`/`ROLLBACK`/`ABORT`/`Invalid webhook URL` lines in the
+    post-install window (21:21–21:23), and the daemon completed a normal scan at 21:22:40.
+- Receivers stopped afterwards; nothing is bound to `127.0.0.1:8777`. Report: `.cline-reports/REPORT-20260929-212316.md`.
+
+Unresolved: `identity_webhook_enabled` is `"1"` while `webhook_url` still points at the temporary loopback mock, so
+the next genuine conflict will log a delivery failure until a permanent receiver exists or the flag returns to `"0"`;
+the change set is still uncommitted, so no CI run id exists; interface/VLAN scoping of identity frames stays
+undecided; the inert `identity_email_enabled` key remains stored and unexposed; `DM-BL-008a` (`nl_NL`) is unchanged.
+
+Next recommended step: settle the endpoint tier — point `webhook_url` at a permanent receiver and keep
+`identity_webhook_enabled = "1"`, or set the flag back to `"0"` — and record the resulting recipient/message evidence.
+
+Evidence status: the installer output, the deployed-versus-source comparisons, the accepted language run and both
+delivery captures were produced in this session on the testbed and are reproducible from
+`.cline-reports/REPORT-20260929-212316.md`; the change set itself is still uncommitted.
+

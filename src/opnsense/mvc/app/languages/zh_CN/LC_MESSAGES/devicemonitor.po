@@ -520,13 +520,13 @@ msgstr "未解决"
 msgid "Resolved"
 msgstr "已解决"
 
-#: settings.volt - IP and MAC conflict email alerts
-msgid "Email high-severity conflict alerts"
-msgstr "高严重性冲突邮件警报"
+#: settings.volt - IP and MAC conflict webhook alerts
+msgid "Identity conflict alerts"
+msgstr "标识冲突警报"
 
-#: settings.volt - IP and MAC conflict email alerts
-msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
-msgstr "当检测到新的高严重性 IPv4 或 IPv6 地址冲突时发送电子邮件。"
+#: settings.volt - IP and MAC conflict webhook alerts
+msgid "Send a high-severity IPv4 or IPv6 address conflict alert to the webhook endpoint."
+msgstr "将新的高严重性 IPv4 或 IPv6 地址冲突警报发送到 Webhook 端点。"
 
 msgid "IP and MAC Conflicts"
 msgstr "IP 和 MAC 冲突"
@@ -926,9 +926,6 @@ msgstr "关于 SMTP 用户名"
 
 msgid "About Test Email"
 msgstr "关于测试邮件"
-
-msgid "About Conflict Alerts"
-msgstr "关于冲突警报"
 
 msgid "About Infrastructure Service Alerts"
 msgstr "关于基础设施服务警报"

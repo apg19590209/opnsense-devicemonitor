@@ -420,8 +420,14 @@ HTML;
     /**
      * UNIVERSAL WEBHOOK - TEST AND REAL
      * POST /api/devicemonitor/config/sendWebhook
+     *
+     * @param bool        $is_test         Test mode: post a placeholder frame instead of the queue.
+     * @param string|null $webhook_url     Explicit endpoint; the configured URL is used when omitted.
+     * @param array|null  $payloadOverride Complete caller-supplied frame. When given, the
+     *                                     notification_pending table is not read, the detected type is
+     *                                     forced to generic, and this array is posted as-is.
      */
-    public function sendWebhook($is_test = false, $webhook_url = null)
+    public function sendWebhook($is_test = false, $webhook_url = null, $payloadOverride = null)
     {
         /* Strict normalisation: null, '' and whitespace-only all mean "not supplied".
          * Anything else is trimmed. The previous `=== null` test let an empty string
@@ -429,6 +435,12 @@ HTML;
         $webhook_url = ($webhook_url === null || trim((string)$webhook_url) === '')
             ? null
             : trim((string)$webhook_url);
+
+        /* A payload override is a complete frame owned by the caller. A non-array
+         * override is a programming error, so fail loudly instead of queueing it. */
+        if ($payloadOverride !== null && !is_array($payloadOverride)) {
+            return ['result' => 'failed', 'message' => 'Webhook payload override must be an array'];
+        }
 
         // Load webhook_url from configuration if it was not supplied
         if ($webhook_url === null) {
@@ -449,15 +461,52 @@ HTML;
         
         
         // DETEKCE TYPU WEBHOOKU
+        /* A caller-supplied frame is posted as generic JSON, so keyword detection on the
+         * endpoint URL is skipped for it (forced generic). */
         $type = 'generic';
-        if (stripos($webhook_url, 'ntfy') !== false) {
-            $type = 'ntfy';
-        } elseif (stripos($webhook_url, 'discord') !== false) {
-            $type = 'discord';
+        if ($payloadOverride === null) {
+            if (stripos($webhook_url, 'ntfy') !== false) {
+                $type = 'ntfy';
+            } elseif (stripos($webhook_url, 'discord') !== false) {
+                $type = 'discord';
+            }
         }
         
         try {
-            if ($is_test) {
+            if ($payloadOverride !== null) {
+                // === DIRECT PAYLOAD OVERRIDE ===
+                /* The caller owns the whole frame: the notification_pending queue is not
+                 * pulled and the array is bound straight to curl as generic JSON.
+                 * hostname/timestamp are filled in only when the caller omitted them. */
+                $frame = $payloadOverride;
+
+                if (!isset($frame['hostname'])) {
+                    $frame['hostname'] = gethostname();
+                }
+                if (!isset($frame['timestamp'])) {
+                    $frame['timestamp'] = date('Y-m-d H:i:s');
+                }
+
+                $frame_json = json_encode($frame);
+
+                if ($frame_json === false) {
+                    return ['result' => 'failed', 'message' => 'Cannot encode webhook payload override'];
+                }
+
+                $ch = curl_init($webhook_url);
+
+                if ($ch === false) {
+                    return ['result' => 'failed', 'message' => 'Cannot initialise cURL'];
+                }
+
+                curl_setopt($ch, CURLOPT_POST, 1);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $frame_json);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+            } elseif ($is_test) {
                 // === TEST MODE ===
                 
                 if ($type === 'ntfy') {

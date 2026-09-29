@@ -1165,3 +1165,72 @@ scheme or the restore boundary requires a new recorded decision, and any change 
 row must update `install-unattended.sh:28` in the same commit because the guarded installer
 validates the manifest digest before it does anything. Additive-only merging is the current policy: a subtractive
 prune requires a new recorded decision and the provenance plus vendor-baseline preconditions listed above.
+
+## 36. Identity-conflict alerts are gated by their own webhook subcategory switch
+
+### Decision
+
+Identity-conflict alerts (`identity_conflict` frames produced by `notify_identity_email.php`) are gated by a
+dedicated configuration switch of their own, `identity_webhook_enabled`, not by the generic webhook master switch
+and not by the email settings. The switch belongs to the Webhook Notifications option tree as an isolated
+subcategory checkbox, alongside the existing per-category precedent (`identity_email_enabled`,
+`service_email_enabled` plus `service_email_new`/`service_email_unavailable`/`service_email_recovered`).
+
+The effective gate for producing an identity frame is, in this order:
+
+1. `enabled` (monitoring master switch),
+2. `identity_webhook_enabled` (the new subcategory switch, default `"0"`),
+3. `webhook_enabled` **and** a non-empty `webhook_url` (the transport precondition that
+   `ConfigController::save` and `NotificationHandler::sendWebhook()` already enforce).
+
+The default is fail-closed: an installation that upgrades gains no identity webhook traffic by itself.
+
+`identity_email_enabled` is no longer consulted by the identity leg, because that leg no longer sends email
+(28/29 September 2026 re-route). Its key and stored value stay in place for backward compatibility and the
+Settings control keeps working as a stored preference, but it must not be described as delivering email while
+the identity leg dispatches to the webhook: retiring or repurposing it is a separate change that requires its own
+recorded decision once an email channel exists again.
+
+### Reason
+
+**Reusing the generic webhook gate was rejected (`Option A`).** `webhook_enabled` is the documented master switch
+for *new-device* webhook notifications, and it is the only switch an operator consents to when that category is
+enabled. Mapping identity alerts onto it would widen the permission set as a side effect of an unrelated action
+(risk: broadcasting conflict alerts to an endpoint whose operator only opted into new-device alerts). It would
+also ignore the only existing webhook scope control: `webhook_vlans` filters the new-device leg
+(`scan_network.py`, notification section) and identity events carry an `interface`, not a VLAN, so the identity
+category would be delivered with no scope filter at all. Finally, the two categories could not be separated: a
+site wanting new-device alerts but not conflict alerts (or the reverse) has no way to express it, and turning the
+endpoint off silences both.
+
+**A dedicated switch is consistent with the established pattern and with the fail-closed defaults.** Identity
+and service notification categories already have their own switches with a `"0"` default, and the identity leg's
+current activation state on a fresh installation is effectively `"0"`. A dedicated key keeps the administrative
+permission discrete, keeps identity alerts independent of the email recipient and method (which this testbed does
+not have), and leaves the generic webhook switch meaning exactly what it says.
+
+**Reusing `identity_email_enabled` as the identity gate was also rejected (`Option C`).** An email-named key
+governing webhook delivery is misleading in the GUI, contradicts the terminology rule, and would have to be split
+again when an email channel returns; a dedicated key costs one setting and one label instead.
+
+**Consequences accepted:**
+
+- The implementation step must add the key (`defaults.json`, `ConfigController::save` read plus `"0"`/`"1"`
+  validation plus assignment), the checkbox row in the Webhook Notifications tab, the JS load/save wiring, the
+  label in every shipped catalogue, and the manual entry; and it must correct the Settings wording that still
+  promises email delivery for conflict alerts.
+- Until that implementation lands, the identity leg stays dark on any installation whose email settings are not
+  satisfied — which is the current, accepted state, not a regression.
+- VLAN/interface scoping of identity frames is not solved by this decision. If identity alerts need to respect a
+  scope, that is a new decision, because identity events are keyed by interface rather than VLAN.
+- Adding one label does not change the language acceptance threshold: that test derives the expected translated
+  string set from the shipped catalogues rather than from a fixed count.
+
+### Amendment (29 September 2026)
+
+The implementation step removed the Email-tab control for `identity_email_enabled` instead of leaving an inert
+switch in place, because a control that no longer delivers anything misleads the operator. The stored key remains
+in `defaults.json` with its `"0"` default and `ConfigController::save` keeps accepting, validating and writing it,
+but no view posts it any more, so the stored value settles to `"0"` on the next save. The names that still carry
+"email" — `should_send_identity_email()` and `notify_identity_email.php` — were retained because the helper's path
+is part of the installer manifest; they are naming residuals, not behaviour.
