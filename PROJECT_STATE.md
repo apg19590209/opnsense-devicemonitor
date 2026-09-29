@@ -18,7 +18,7 @@ Status:
 - Device Monitor GUI repair (29 September 2026): the views' `devicemonitor_t()` macro was never registered with the Volt compiler, so every application tab aborted with `MacroNotFound` and rendered a blank content block. The plugin controller now wraps the framework's `.volt` engine and registers the sidecar translator; the pending PHP 8.1+ null guards and the three matching `release/v2.10-runtime.manifest` digests plus the installer pin are refreshed in the same commit `8faf09d`, which is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36501061119`, with its record commit `58b9628` pushed and green in CI run `36501202440` (see the 29 September 2026 section below).
 - Change Summary confirmation banner (`F1`) fixed and closed (29 September 2026): the Change Summary view's `showToast()` no longer guards on the absent `$.fn.notify`/`window.bootbox` plugins; it renders the same self-contained jQuery banner already used by `devices.volt`, with the icon and message appended as DOM nodes and a 4-second auto-dismiss. The refreshed view digest, `release/v2.10-runtime.manifest` row 17 and the `install-unattended.sh` line 28 manifest pin are in the same change set; the live operator check and the full record are in the `F1` closure section at the end of this file.
 - Testbed background scanner active (29 September 2026): the daemon (PID 94999, running unchanged since 28 September 2026 23:15) hot-loaded `"enabled": "1"` from `/var/db/devicemonitor/config.json` through its own 10 s config reload — no service restart and no web-GUI restart — polling every 60 s over the fail-closed scope `opt1` → `vlan0.50` (`192.168.50.0/24`, DMTEST), with two clean scan cycles and no database-lock or runtime errors observed; rollback copy `/var/backups/devicemonitor/scan-activation-20260929/`.
-- DM-BL-008c **resolved** (29 September 2026): the v2.10 installer now merges the plugin's text keys into the core catalogues (`/usr/local/share/locale/<locale>/LC_MESSAGES/OPNsense.mo`) so the inline-script strings translate too, using `release/merge-opnsense-catalog.sh` (core-first `msgcat --use-first`, with `--plugin-only` for a locale that has no core catalogue such as `nl_NL`), first-write-wins pristine records that `uninstall.sh` restores, and a new CI gate (`python3 tests/test_locale_merge.py`). The update target count rises from **49 to 59** (`60` fresh: 38 manifest rows + 11 sidecar catalogues + 10 merged core catalogues, plus `rc.conf` when fresh); no testbed install has been run yet — see the closure section at the end of this file.
+- DM-BL-008c **resolved** (29 September 2026): the v2.10 installer now merges the plugin's text keys into the core catalogues (`/usr/local/share/locale/<locale>/LC_MESSAGES/OPNsense.mo`) so the inline-script strings translate too, using `release/merge-opnsense-catalog.sh` (core-first `msgcat --use-first`, with `--plugin-only` for a locale that has no core catalogue such as `nl_NL`), first-write-wins pristine records that `uninstall.sh` restores, and a new CI gate (`python3 tests/test_locale_merge.py`). The update target count rises from **49 to 59** (`60` fresh: 38 manifest rows + 11 sidecar catalogues + 10 merged core catalogues, plus `rc.conf` when fresh); the installer was then executed on the testbed the same day (`INSTALL_OK version=2.10 files=59 core_locales=10`, backup `install-v210.O1Tggb`) and the nine-language runtime acceptance passes with exit code 0 — see the deployment record in the closure section at the end of this file.
 - That v2.10 metadata is repository-only: no v2.10 tag, GitHub release or runtime package exists, the published `v2.9` release asset is unchanged, and no testbed or production install was performed.
 - Notification dispatch remains on configd permanently: the HTTP API integration for `apiEmailUrl`/`apiWebhookUrl` is not implemented (`DECISIONS.md` 33 supersedes the cutover gates recorded in `DECISIONS.md` 32); `scan_network.py` and the live notification path are unchanged. The `www` privilege claim originally recorded for the API path is corrected by `DECISIONS.md` 34 (the web GUI runs `php-cgi` as root).
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
@@ -2902,21 +2902,47 @@ pruned, 2 unsafe cases refused with warnings). The new `Validate core catalogue 
 part of the wake of this change set; its run ID is recorded in the accompanying `.cline-reports/` report,
 because a commit cannot name the CI run it triggers.
 
-Unresolved: no testbed install has been performed, so the runtime acceptance the item prescribes
-(`python3 tests/test_language_acceptance.py --engine runtime` for the nine languages) and the negative
-check on a system without the merge (pages must fall back to English) are still owed and need deployment
-authorisation; the merge rewrites files owned by the OPNsense core package, so a core `pkg upgrade` can
-replace them until the installer is re-run (the pristine record keeps the pre-merge file, and this trade-off
-should be recorded in `DECISIONS.md`); `--check` now takes about 43 s because it performs ten real merges;
-`DM-BL-008a` (`nl_NL` not selectable through the core language list) is unchanged and independent.
+Deployment (29 September 2026): the installer was executed on the testbed
+(`sh install-unattended.sh --host OPNsense.internal`) after a passing pre-flight
+(`CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal`) and
+reported `INSTALL_OK version=2.10 files=59 core_locales=10 backup=/var/backups/devicemonitor/install-v210.O1Tggb
+daemon_restarted=1`. All nine previously existing core catalogues moved from UNCHANGED to MERGED (hashes differ
+from the pre-state recorded in this session), the tenth (`nl_NL`) was created from the plugin catalogue alone
+(`/usr/local/share/locale/nl_NL/LC_MESSAGES/OPNsense.mo`, 34,727 B, mode 644), and
+`/var/backups/devicemonitor/core-locale/` now holds ten `.state` records plus nine pristine copies whose hashes
+equal the recorded pre-state. The fr_FR core catalogue grew from 13,398 to 13,400 keys — exactly the two
+plugin-only strings the out-of-band 26 September merge had missed — with no existing core entry altered. configd
+and the Device Monitor daemon were restarted by the installer (daemon PID 94999 → 12810); the web GUI was not
+restarted.
 
-Next recommended step: run the installer on the testbed with explicit authorisation, then
-`python3 tests/test_language_acceptance.py --engine runtime` for the nine languages plus the
-English-fallback negative check, and record the resulting counts (`files=59 core_locales=10`) in the
-deployment section.
+Post-merge runtime acceptance (29 September 2026): `python3 tests/test_language_acceptance.py --engine runtime`
+over the nine target languages reports every language `PASS pages=10 keys=451 … engine=runtime`
+(`de_DE 435/451 translated`, `fr_FR 433`, `es_ES 443`, `it_IT 442`, `pt_BR 438`, `nl_NL 431`, `ru_RU 446`,
+`ja_JP 443`, `zh_CN 443`) and the summary
+`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0` with **exit code 0**; the single gap is
+`nl_NL`'s absence from `get_locale_list()` (`DM-BL-008a`), and the two shared-catalogue drift warnings (`es_ES`,
+`pt_BR`, one key each) are pre-existing core wording differences that the plugin catalogue resolves.
 
-Evidence status: the implementation and its local matrix are reproducible from this checkout; the dry run
-and the sandbox calibration were executed here, and the change set is committed and pushed with its CI run
-recorded — but no live install, browser check or post-merge runtime acceptance was performed in this step,
-as `.cline-reports/REPORT-20260929-152545.md` states.
+English-fallback negative check (29 September 2026): the pre-merge fr_FR core catalogue — preserved by the
+installer as the pristine copy — lacks the two plugin keys added after the 26 September hand merge, and the real
+translator chain returns the English message id for them
+(`dgettext('OPNsense','Plugin translations (sidecar catalogue)')` → `Plugin translations (sidecar catalogue)` with
+the pristine catalogue versus `Traductions du plugin (catalogue sidecar)` with the merged one), which is exactly
+the English fallback the item predicted for a system without the merge.
+
+Unresolved: the merge rewrites OPNsense-core package-owned catalogues, so a core `pkg upgrade` can replace them
+until the installer is re-run (the pristine records keep the pre-merge files, which on this testbed are the
+26 September hand-merged copies rather than vendor-clean originals) and this trade-off is still not recorded in
+`DECISIONS.md`; the Settings help string "Translate Device Monitor strings from the plugin sidecar catalogue…"
+still states that the files under `/usr/local/share/locale` are never modified, which is now misleading and should
+be reviewed together with `docs/USER_MANUAL.md`; `--check` now takes about 43 s because it performs ten real
+merges; `DM-BL-008a` (`nl_NL` not selectable through the core language list) is unchanged and independent.
+
+Next recommended step: record the core-catalogue-ownership decision in `DECISIONS.md` and review that Settings
+help string (with the matching `docs/USER_MANUAL.md` wording) so the shipped text matches the merge behaviour.
+
+Evidence status: the installation, the post-install catalogue comparison, the nine-language runtime acceptance
+(exit 0) and the English-fallback probe were executed on the testbed in this session and are reproducible from
+this checkout; the counts, digests and hashes above are quoted from that live run, and the full transcript is in
+`.cline-reports/`.
 

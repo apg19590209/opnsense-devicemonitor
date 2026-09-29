@@ -353,10 +353,15 @@ sidecar catalogues + 10 merged core catalogues, plus `rc.conf` when fresh), and 
 both modes and the fail-closed guard; the installer dry run reports
 `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10`. The candidate branch
 `feature/optional-locale-installer-20260927` stays unmerged and is superseded: shipping all eleven catalogues
-removes the `--languages` default sub-decision recorded above. **Residual validation:** no testbed install has been
-performed, so the runtime acceptance for the nine languages and the English-fallback negative check listed under
-"Validation when implemented" are still owed and need deployment authorisation; the merge also writes core
-package-owned files, so a core `pkg upgrade` can replace them until the installer is re-run.
+removes the `--languages` default sub-decision recorded above. **Validation completed (29 September 2026):** the
+testbed install ran as `INSTALL_OK version=2.10 files=59 core_locales=10` (ten core catalogues merged, `nl_NL`
+served plugin-only, backup `install-v210.O1Tggb`), the installer `--check` gate reports
+`CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10`, and
+`python3 tests/test_language_acceptance.py --engine runtime` passes for the nine languages with **exit code 0**
+(`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`); the English-fallback negative check is
+evidenced by the preserved pre-merge fr_FR core catalogue returning the English message id for a plugin key that
+the merged catalogue translates. Remaining caveat: the merge writes core package-owned files, so a core
+`pkg upgrade` can replace them until the installer is re-run.
 
 ## O3/O4 sidecar translation — 28 September 2026
 

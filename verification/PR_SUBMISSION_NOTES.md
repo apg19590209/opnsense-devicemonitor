@@ -100,9 +100,9 @@ on all eleven catalogues, the node UI suites, the PHP and Python suites, `git di
 | `tests/test_release_manifest.py` | PASS (38 rows, hashes == working tree) |
 | `tests/test_translated_javascript.py` | PASS |
 | `tests/test_language_acceptance.py --engine interpolate` | PASS — 9 languages, 10 pages, 451 keys, 0 failures |
-| `tests/test_language_acceptance.py --engine runtime` | PASS — 8 languages whose host carries a shared `OPNsense.mo`; `nl_NL` is host-blocked (`DM-BL-008a`). CI now runs the same engine as a guarded matrix (`ci.yml:74-105`): `--engine runtime --languages <catalogues present>`, an explicit `SKIPPED` line per absent language, and a stated skip instead of a failure on a runner without the Phalcon Volt compiler or `OPNsense\Base\ViewTranslator`. |
+| `tests/test_language_acceptance.py --engine runtime` | PASS — **9 languages, 10 pages, 451 keys, 0 failures** on the testbed after the DM-BL-008c merge install (`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`, exit 0; the gap is `nl_NL` absent from `get_locale_list()`, `DM-BL-008a`). CI runs the same engine as a guarded matrix (`ci.yml:74-105`): `--engine runtime --languages <catalogues present>`, an explicit `SKIPPED` line per absent language, and a stated skip instead of a failure on a runner without the Phalcon Volt compiler or `OPNsense\Base\ViewTranslator`. |
 | `tests/test_sidecar_catalogue.py` | PASS — precedence, fallback, toggle, msgid fallback, escaping |
-| `install-unattended.sh --host OPNsense.internal --check` | `CHECK_OK version=2.10 predecessor=2.10 files=49 daemon_running=1` |
+| `install-unattended.sh --host OPNsense.internal --check` | `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal`; the install itself reported `INSTALL_OK version=2.10 files=59 core_locales=10 backup=/var/backups/devicemonitor/install-v210.O1Tggb daemon_restarted=1` |
 
 Run against the *installed* tree the acceptance gate reports no failures; its remaining warnings name
 the legacy shared core catalogue from the 26 September merge as behind the source, which the sidecar
@@ -134,8 +134,12 @@ manifest-pinned.
   refusal) running as the CI step `Validate core catalogue merge (DM-BL-008c)`, plus the installer dry run
   `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10` — **ten core catalogues merged successfully
   and validated** on the testbed checkout alongside the eleven staged plugin catalogues. The nine GUI-selectable
-  languages therefore no longer depend on the sidecar alone for the inline-script strings; runtime acceptance
-  on an installed firewall and the English-fallback negative check remain outstanding.
+  languages therefore no longer depend on the sidecar alone for the inline-script strings, and both follow-ups
+  named here are now complete on the testbed: the installer ran as
+  `INSTALL_OK version=2.10 files=59 core_locales=10` (ten core catalogues merged, `nl_NL` served
+  plugin-only) and `python3 tests/test_language_acceptance.py --engine runtime` passed for all nine languages with
+  exit code 0, while the English-fallback negative check is evidenced by the preserved pre-merge fr_FR core
+  catalogue returning the English message id for a plugin key that the merged catalogue translates.
 
 ## Reviewer checklist
 
