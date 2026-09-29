@@ -3456,3 +3456,73 @@ Evidence status: the installer output, the deployed-versus-source comparisons, t
 log windows were produced in this session on the testbed and are reproducible from
 `.cline-reports/REPORT-20260929-215027.md`.
 
+## 29 September 2026 — Identity-webhook VLAN-bypass request closed as already implemented; testbed left safe-dark
+
+Description: a request to modify `should_send_identity_email()` (or the adjacent identity alert block) in `scan_network.py`
+so identity conflict webhooks bypass the `webhook_vlans` filter and alert on all interfaces was investigated and **closed
+without a code change**: the requested behaviour is already the implemented behaviour, and the requested follow-ons
+(installer deploy, language acceptance, manifest regeneration) are mutually inconsistent. The user then decided to leave
+the tier safe-dark.
+
+Work completed:
+- Source inspection, read-only: `scan_network.py:6228-6243` (`should_send_identity_email()`) gates only on a non-empty
+  `events`, `enabled`, `identity_webhook_enabled`, `webhook_enabled` and `webhook_url`, and contains **no reference to
+  `webhook_vlans`**. Runtime proof with the function extracted via `ast` and executed against a synthetic high-severity
+  event: `webhook_vlans` absent → `True`; `'LAN10'` → `True`; `'NOPE,OTHER'` → `True` (event VLAN deliberately outside
+  every allow-list).
+- `webhook_vlans` is enforced at exactly one site, `:7143`/`:7145`, and only over `new_devices` for the *new-device*
+  webhook (`send_webhook_via_php_api()`, `:6151`) — a different notification leg from the identity conflict leg, whose
+  chain (`:6197` → `:6228` → `:6246` → `notify_identity_email.php` → `NotificationHandler::sendWebhook()`) is VLAN-free
+  end to end. `grep -i identity | grep -i vlan` over the file returns nothing, so there is no "adjacent identity alert
+  block" carrying VLAN logic to edit. The docstring names `DECISIONS.md` 36 as the authority, i.e. the bypass is
+  intentional by design.
+- Follow-on inconsistency (why the requested chain could not be run): `install-unattended.sh:28` pins the manifest's own
+  digest — `sha256 -q release/v2.10-runtime.manifest` must equal
+  `0abe6065ac290523bf5396c226e7a63d4b2ab09a1ec96ebf7eb28ebed8a70b32` with 38 rows. The on-disk manifest matches that pin
+  today, so regenerating it to "match the updated file signatures" changes the digest and the installer aborts at line 28
+  — **before** the `--check` early exit, so even a read-only `--check` would fail. Regeneration would also have blessed
+  pre-existing drift rather than this session's work: the deployed `scan_network.py` is byte-identical to the upstream
+  working tree (`4fd87dc7…fce5e3ed`) while the v2.9 manifest on `origin/main` expects `02d1e265…`, and the live
+  `defaults.json` is `version 2.10` against a v2.9 installer that refuses any predecessor other than `2.8|2.9`.
+- Checkout correction: `install-unattended.sh`, `release/v2.10-runtime.manifest` and `tests/test_language_acceptance.py`
+  all exist in `/root/src/opnsense-devicemonitor-upstream` (branch `v2.10-development`). They are absent from
+  `/usr/local/cline-freebsd/src/cline` (`master`, a 5-path record set) and from `origin/main` (the older v2.9 tier). That
+  checkout, not the record set, is the target for any future work of this kind.
+- Safe-dark rationale recorded, not changed: `defaults.json:19` ships `"identity_webhook_enabled": "0"` and
+  `.github/workflows/ci.yml:487` asserts that value; `PROJECT_STATE.md:3297-3300` already classifies the live `"1"` as
+  "testbed operator state, not the baseline"; and commit `4613ae9` (21:40:59) recorded the deliberate reversion at
+  21:37:18 with `SAFE_DARK_TIER=PASS`.
+- Zero-mutation proof: `/var/db/devicemonitor/config.json` sha256 is `52f7bdda…b6d8a`, **byte-identical to the digest**
+  that commit `4613ae9` recorded after the reversion, and its mtime is still 21:37; the deployed `scan_network.py`
+  (`4fd87dc7…fce5e3ed`) and `NotificationHandler.php` (`28e2d252…`) are unchanged; `find -mmin -25` over the plugin and
+  config directories shows only the daemon-written `devices.db`.
+- Live read-only gate check through the deployed function: `should_send_identity_email(live_cfg, high-severity event)` →
+  `False` (tier safe-dark), and the same config with only the flag forced to `True` → `True`, confirming the flag is the
+  single gate holding the tier dark.
+- Prior-session log lines re-interpreted, not disputed: the two `[IDENTITY-EMAIL] Sent batched alert for 2 high-severity
+  event(s)` lines (`/var/log/devicemonitor.log:3498` 20:25:53, `:4133` 21:22:34) are **not** production dispatches.
+  `REPORT-20260929-212316.md` §6 discloses that the deployed `send_identity_email()` was called directly with a synthetic
+  sample against a temporary loopback mock and that the message counts the batch given rather than the filtered subset.
+  Recorded so a future reader does not mistake them for genuine delivery evidence.
+- Not done, deliberately: no installer run (mutating or `--check`), no language acceptance run, no manifest regeneration,
+  no source or manifest edit, no config write, no commit, no CI run, no delivery against the configured endpoint. No tool
+  failed, so the "stop only if a tool fails twice" condition never applied.
+- Report: `.cline-reports/REPORT-20260929-221652.md`.
+
+Unresolved: the endpoint tier is the remaining open decision — `webhook_url` still points at the stopped loopback mock
+`http://127.0.0.1:8777/dm-webhook` (nothing bound; `http_code=000`), so the safe-dark reversion removed the failure
+symptom but not the underlying gap, and enabling the flag requires a permanent verified receiver first; no high-severity
+identity event exists to dispatch in any case (`device_identity_events` holds 2 rows, both `medium`/`MAC_MULTI_IP`).
+Interface/VLAN scoping of identity frames stays undecided — if that was the real requirement it is a new feature, since
+the identity path has never consulted `webhook_vlans`. The inert `identity_email_enabled` key remains stored in the live
+`config.json`; nine stale installed plugin `.po` files remain outside the runtime manifest; `DM-BL-008a` (`nl_NL`) is
+unchanged; this ledger entry and its report are uncommitted.
+
+Next recommended step: settle the endpoint tier — point `webhook_url` at a permanent, verified receiver (and then keep
+the flag enabled) or leave `identity_webhook_enabled` at `"0"` as the shipped baseline and CI assert — and record the
+resulting decision.
+
+Evidence status: the function-execution proof, the `grep` results, the SQLite query, the endpoint probe and the
+before/after hashes were produced in this session on the testbed and are reproducible from
+`.cline-reports/REPORT-20260929-221652.md`; no external host was contacted and no state was mutated.
+
