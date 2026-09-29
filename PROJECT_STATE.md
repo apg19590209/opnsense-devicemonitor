@@ -3285,5 +3285,44 @@ Next recommended step: settle the endpoint tier — point `webhook_url` at a per
 
 Evidence status: the installer output, the deployed-versus-source comparisons, the accepted language run and both
 delivery captures were produced in this session on the testbed and are reproducible from
-`.cline-reports/REPORT-20260929-212316.md`; the change set itself is still uncommitted.
+`.cline-reports/REPORT-20260929-212316.md`; the change set was still uncommitted at that point (it was committed the next
+session as `57696ac`).
+
+## 29 September 2026 — Identity webhook tier committed on `v2.10-development`, pushed, CI green
+
+Description: the verified `identity_webhook_enabled` change set was committed and published to `origin`; the
+repository baseline already ships the feature dark.
+
+Work completed:
+- Baseline check (no source edit needed): `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json:20` is
+  `"identity_webhook_enabled": "0"`, and `.github/workflows/ci.yml:487–488` asserts that value. The `"1"` in
+  `/var/db/devicemonitor/config.json` is testbed operator state, not the baseline, and was left untouched; production
+  (`192.168.20.254`) was not contacted in this task.
+- Pre-commit inspection: `git --no-pager diff --stat` → 23 files, 591 insertions(+), 292 deletions(-);
+  `git diff --check` → clean.
+- Staging: `git add -u` staged exactly the 23 modified tracked files (`staged_files=23`); the instruction's bare
+  filenames were replaced by modification-status staging, and `.github/workflows/ci.yml` plus `install-unattended.sh`
+  (named by neither the example list nor excluded by the "all 23" criterion) were included.
+- Commit `57696ac` — "feat/docs: implement identity_webhook_enabled tier, remove dead email code, and record delivery
+  evidence" (23 files changed, 591 insertions(+), 292 deletions(-)); post-commit `git status` shows no modified
+  tracked file.
+- Push: `d37c261..57696ac v2.10-development -> v2.10-development` to
+  `git@github.com:apg19590209/opnsense-devicemonitor.git`; `git rev-parse HEAD origin/v2.10-development` → both
+  `57696acfb33f6d6c4f67d93f12742923f263808f`.
+- CI: push event run `36561954052` for head SHA `57696ac` → `status=completed`, `conclusion=success`, 45 s
+  (2026-09-29T11:28:25Z → 11:29:10Z), inspected with `gh run list`/`gh run view` per `.clinerules/90`.
+- Deliberately left untracked (outside this task's 23-file set): `.clineignore`,
+  `.clinerules/05-optimization-protocol.md`, `.clinerules/15-auto-capture-reports.md`.
+- Report: `.cline-reports/REPORT-20260929-212946.md`. This ledger entry itself is uncommitted at the time of writing.
+
+Unresolved: the testbed still runs `identity_webhook_enabled = "1"` while `webhook_url` points at the stopped loopback
+mock, so a genuine conflict would log a delivery failure until an operator supplies a verified destination or clears
+the flag; this `PROJECT_STATE.md` ledger update is uncommitted, so a docs-only commit is still pending; interface/VLAN
+scoping of identity frames stays undecided; the inert `identity_email_enabled` key remains stored and unexposed;
+`DM-BL-008a` (`nl_NL`) is unchanged.
+
+Next recommended step: commit this ledger update as a docs-only commit on `v2.10-development` and check its CI run.
+
+Evidence status: the diff statistics, staged-file count, commit, push and CI run id above were produced in this
+session on the testbed and are reproducible from `.cline-reports/REPORT-20260929-212946.md`.
 
