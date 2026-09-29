@@ -339,6 +339,14 @@
                             </td>
                         </tr>
 
+                        <tr>
+                            <td style="width:30%;"><strong>{{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}</strong></td>
+                            <td>
+                                <input type="checkbox" id="sidecar_translation_enabled" />
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}" data-content="Forces the interface to use the plugin's dedicated translation file. If disabled, new labels may default to English."><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                            </td>
+                        </tr>
+
                     </tbody>
                 </table>
 
@@ -467,19 +475,6 @@
                         <tr>
                             <td style="color:#888;">{{ devicemonitor_t('Requires OPNsense') }}</td>
                             <td>&ge; 26.1.5</td>
-                        </tr>
-                    </table>
-
-                    <h4 style="margin-top:22px;">{{ devicemonitor_t('Language') }}</h4>
-                    <table class="table table-condensed">
-                        <tr>
-                            <td style="width:40%;color:#888;">{{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}</td>
-                            <td>
-                                <input type="checkbox" id="sidecar_translation_enabled" />
-                                <div class="text-muted" style="margin-top:6px;max-width:520px;">
-                                    {{ devicemonitor_t('Translate Device Monitor strings from the plugin sidecar catalogue. When disabled, the plugin uses the stock OPNsense core catalogues only.') }}
-                                </div>
-                            </td>
                         </tr>
                     </table>
 
