@@ -578,15 +578,19 @@ $(document).ready(function() {
         };
     }
 
-    function showToast(message) {
-        if (typeof $.fn.notify !== 'undefined') {
-            $.notify(message, { type: 'success' });
-            return;
-        }
-
-        if (typeof window.bootbox !== 'undefined') {
-            window.bootbox.alert(message);
-        }
+    /* Self-contained banner (F1). Neither $.fn.notify nor window.bootbox exists on this build —
+       neither web root ships such an asset — so the previous guard chain rendered nothing when
+       the button was clicked. Same implementation as devices.volt, with a 4000 ms timeout. */
+    function showToast(message, type) {
+        var bg = type === 'error' ? '#f44336' : (type === 'info' ? '#2196F3' : '#4CAF50');
+        var ic = type === 'error' ? 'fa-exclamation-circle' : (type === 'info' ? 'fa-info-circle' : 'fa-check-circle');
+        var $t = $('<div>').css({position:'fixed',top:'20px',right:'20px','background-color':bg,color:'white',
+            padding:'15px 20px','border-radius':'4px','box-shadow':'0 4px 8px rgba(0,0,0,.3)',
+            'z-index':9999,'min-width':'280px',display:'none'})
+            .append($('<i>').addClass('fa ' + ic))
+            .append(document.createTextNode(' ' + message));
+        $('body').append($t); $t.fadeIn(300);
+        setTimeout(function(){ $t.fadeOut(300,function(){ $t.remove(); }); },4000);
     }
 
     function showLoadError(message) {

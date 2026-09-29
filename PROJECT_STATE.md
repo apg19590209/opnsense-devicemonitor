@@ -16,6 +16,7 @@ Status:
 - Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
 - Latest source fix `aa25fe7` and its guarded v2.10 runtime-manifest update `0708239` are pushed to `origin/v2.10-development`; full GitHub Actions CI run `36315636699` PASS. Those commits changed no testbed runtime file or service; the nine corrected views were deployed to the testbed separately on 27 September 2026 (deployment record under DM-BL-008 below). `0708239` left the manifest SHA256 pinned in `install-unattended.sh` at the pre-refresh value, so the guarded installer aborted; that pin is restored by `3eeb78b`, which with its documentation commit `3fc9dfc` is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36323794636`; the following record commit `02a1eba` is also pushed and green in CI run `36324231410`, so no commit on this branch is local-only (see the install-guard section below).
 - Device Monitor GUI repair (29 September 2026): the views' `devicemonitor_t()` macro was never registered with the Volt compiler, so every application tab aborted with `MacroNotFound` and rendered a blank content block. The plugin controller now wraps the framework's `.volt` engine and registers the sidecar translator; the pending PHP 8.1+ null guards and the three matching `release/v2.10-runtime.manifest` digests plus the installer pin are refreshed in the same commit `8faf09d`, which is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36501061119`, with its record commit `58b9628` pushed and green in CI run `36501202440` (see the 29 September 2026 section below).
+- Change Summary confirmation banner (`F1`) fixed and closed (29 September 2026): the Change Summary view's `showToast()` no longer guards on the absent `$.fn.notify`/`window.bootbox` plugins; it renders the same self-contained jQuery banner already used by `devices.volt`, with the icon and message appended as DOM nodes and a 4-second auto-dismiss. The refreshed view digest, `release/v2.10-runtime.manifest` row 17 and the `install-unattended.sh` line 28 manifest pin are in the same change set; the live operator check and the full record are in the `F1` closure section at the end of this file.
 - That v2.10 metadata is repository-only: no v2.10 tag, GitHub release or runtime package exists, the published `v2.9` release asset is unchanged, and no testbed or production install was performed.
 - Notification dispatch remains on configd permanently: the HTTP API integration for `apiEmailUrl`/`apiWebhookUrl` is not implemented (`DECISIONS.md` 33 supersedes the cutover gates recorded in `DECISIONS.md` 32); `scan_network.py` and the live notification path are unchanged. The `www` privilege claim originally recorded for the API path is corrected by `DECISIONS.md` 34 (the web GUI runs `php-cgi` as root).
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
@@ -227,6 +228,13 @@ Next recommended step: record the `F1` decision — leave the inert Change Summa
 behaviour, or move `showToast()` to `BootstrapDialog`/`stdDialogInform()`. The language acceptance was
 completed on 29 September 2026: the Italian text stream is verified and `DM-BL-008b` is `CLOSED` (see
 the closure section at the end of this file). DM-BL-008c is deferred and is not the next action.
+
+Correction (29 September 2026): the `F1` decision recorded above is settled — `showToast()` was not
+moved to `BootstrapDialog`/`stdDialogInform()`; it was replaced with the self-contained jQuery banner
+already used by `devices.volt`, with a 4-second auto-dismiss, and `F1` is `CLOSED`. The `F1` item is
+therefore no longer open or outstanding, and the later references in this file that still describe it as
+open or unresolved (including the `DM-BL-008b` closure section at the end of this file) are superseded by
+the `F1` closure section below. `DM-BL-008c` remains deferred.
 
 ## 27 September 2026 Settings delivery-action acceptance attempt
 
@@ -2746,4 +2754,63 @@ Next recommended step: record the `F1` decision.
 Evidence status: the dialog observation is an operator attestation from this session; no screenshot, DOM
 capture, browser/version or timestamp artifact was attached to this checkout, so it is recorded as
 operator-reported, exactly as the `O4` sign-off and the 28 September French Selenium note are.
+
+## 29 September 2026 — F1 closed: Change Summary confirmation banner with a 4-second auto-dismiss
+
+Description: closed `F1`, the finding that the Change Summary confirmation path rendered nothing on
+OPNsense 26.7.4. `showToast()` in `changesummary.volt` guarded on `$.fn.notify` and then on
+`window.bootbox`; the core page loads neither (no such asset exists under `/usr/local/opnsense/www` or
+`/usr/local/www`, and `/ui/js/theme.js` is an empty placeholder), so clicking **Mark reviewed now** produced
+no feedback at all and the button appeared inert.
+
+Work completed:
+- `changesummary.volt:581-593` now renders a self-contained jQuery banner — the same pattern already proven
+  in `devices.volt:435-444` — in place of the dead guard chain. Two deliberate differences from
+  `devices.volt`: the icon and the message are appended as DOM nodes (`$('<i>').addClass('fa ' + ic)` plus
+  `document.createTextNode(' ' + message)`) instead of being interpolated into `.html('<i …></i> ' + msg)`,
+  so a translation can never be parsed as markup; and the auto-dismiss timeout is `4000` ms
+  (`fadeIn(300)` → `setTimeout(4000)` → `fadeOut(300, remove)`) instead of `3000` ms. Geometry and palette
+  are unchanged from `devices.volt` (`position: fixed`, `top/right: 20px`, `z-index: 9999`,
+  `min-width: 280px`, `#4CAF50` success background, `fa-check-circle` icon).
+- The `$.fn.notify(message, { type: 'success' })` shape proposed on 28 September is withdrawn: it cannot
+  work on this build for the same reason the original guard chain was inert, so `showToast()` does not
+  depend on a plugin the core does not ship.
+- `release/v2.10-runtime.manifest` row 17 (view digest `0503e488…f527` → `b7aa5631…3d0c`) and the
+  `install-unattended.sh` line 28 manifest pin (`ced20c44…cf4e` → `fc2669413c86c70b6bf4c72f0d1a014361cbe179e64ae50a7147d3d690b50ac2`)
+  were refreshed in the same change set, so the guard and the manifest stay self-consistent; the manifest
+  is still 38 rows and the source version is still 2.10.
+- Operator live verification on `https://192.168.20.23/ui/devicemonitor/index/changesummary`: clicking
+  **Mark reviewed now** renders the success banner with a clean, unclipped icon layout, the message
+  appended as a text node, and the banner auto-dismisses after exactly four seconds; no new entry appeared
+  in the PHP error log for the request.
+
+Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/changesummary.volt` (`showToast()`
+replacement, +4 net lines), `release/v2.10-runtime.manifest` (1 digest row), `install-unattended.sh`
+(1 pin), `PRODUCT_BACKLOG.md` (the `F1` entry) and this file. No controller, model, catalogue, Makefile,
+service or documentation file changed, and no deploy, cache flush, installer or `pkg` command was run as
+part of this closure record.
+
+Tests performed and results (this session): `python3 tests/test_release_manifest.py` PASS
+(`V210_RELEASE_MANIFEST=PASS`); `sh -n install-unattended.sh` PASS; `git diff --check` PASS (no whitespace
+errors); `node tests/test_change_summary_ui.js` PASS (`DEVICE_CHANGE_SUMMARY_UI_STRUCTURE=PASS`,
+`DEVICE_CHANGE_SUMMARY_UI_JAVASCRIPT=PASS`); `python3 tests/test_language_acceptance.py --engine
+interpolate` PASS (`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=interpolate failures=0`, the single
+gap being the `nl_NL` GUI-list limitation, `DM-BL-008a`); source digests cross-checked — the view's SHA256
+equals the manifest row (`b7aa5631344ea410326d18f6fc07a52e0a43ddf0a1e160c6c91f2f5326003d0c`) and the
+manifest's SHA256 equals the installer pin (`fc2669413c86c70b6bf4c72f0d1a014361cbe179e64ae50a7147d3d690b50ac2`).
+
+Unresolved: `DM-BL-008c` (deferred); background scanning on the testbed is still disabled (`"enabled": "0"`);
+the nine-language **runtime** matrix remains host-blocked by the missing `nl_NL` shared catalogue
+(`DM-BL-008a`); CI still runs only `--engine interpolate`, so the runtime branch of the language harness is
+not exercised there; `docs/USER_MANUAL.md` section 11.2 describes the **Mark reviewed now** control without
+mentioning a confirmation banner, so the user-facing documentation rule was reviewed but the manual was
+deliberately left unchanged inside this five-file commit set (see the `F1` report).
+
+Next recommended step: add the one-line banner note to `docs/USER_MANUAL.md` section 11.2, matching the
+"reports success/failure as a toast message" wording already used for the Devices **Check online** action.
+
+Evidence status: the live banner observation is an operator attestation from this session; no screenshot,
+DOM capture, browser/version, PHP error-log transcript or timestamp artifact was attached to this checkout,
+so this section records the operator's reported result rather than an artifact-backed verification, exactly
+as the `O4` sign-off, the 28 September French Selenium note and the `DM-BL-008b` dialog closure do.
 

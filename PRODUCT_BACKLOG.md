@@ -185,6 +185,34 @@ guards on `$.fn.notify` and `window.bootbox`, and neither exists on this build: 
 plugin calls no dialog API at all. Clicking `Mark reviewed now` therefore renders nothing. The core
 dialog API on 26.7.4 is `BootstrapDialog`, wrapped by `stdDialogInform()` in `opnsense_ui.js`.
 
+**`F1` — `CLOSED` / `RESOLVED` (29 September 2026): the Change Summary confirmation banner is
+implemented and verified live.** The `$.fn.notify` shape cannot be the remedy on this build: the core
+page loads no notify plugin and no `bootbox` (neither asset exists under `/usr/local/opnsense/www` or
+`/usr/local/www`, and `/ui/js/theme.js` is an empty placeholder), so the 28 September wording that
+proposed `$.fn.notify(message, { type: 'success' })` is withdrawn for the same reason the original
+guard chain was inert. The committed implementation is `changesummary.volt:581-593` — the
+self-contained jQuery banner already proven in `devices.volt:435-444`, with two deliberate
+differences: the icon and the message are appended as DOM nodes (`$('<i>').addClass('fa ' + ic)` plus
+`document.createTextNode(' ' + message)`) instead of being interpolated into `.html('<i …></i> ' +
+msg)`, so a translation is never parsed as markup; and the auto-dismiss timeout is `4000` ms rather
+than `3000` ms (`fadeIn(300)` → `setTimeout(4000)` → `fadeOut(300, remove)`). The banner keeps the
+`devices.volt` geometry and palette (`position: fixed`, `top/right: 20px`, `z-index: 9999`,
+`min-width: 280px`, success background `#4CAF50`, `fa-check-circle` icon).
+
+Operator live verification (29 September 2026) on
+`https://192.168.20.23/ui/devicemonitor/index/changesummary`: clicking **Mark reviewed now** renders
+the success banner with a clean, unclipped icon layout, the message appended as a text node (no
+entity or markup leakage), and the banner auto-dismisses after exactly four seconds; no new entry
+appeared in the PHP error log for the request. Evidence status: operator attestation recorded in this
+session — no screenshot, DOM capture, browser version or log transcript was attached to this
+checkout, so the entry states the operator's reported result, exactly as the `O4` sign-off, the 28
+September French Selenium note and the `DM-BL-008b` dialog closure do. The view digest moved from
+`0503e488b0caff4dbe7727b9820ca1d58bc63f92850b748c403214c6bc94f527` to
+`b7aa5631344ea410326d18f6fc07a52e0a43ddf0a1e160c6c91f2f5326003d0c`, so
+`release/v2.10-runtime.manifest` row 17 and the `install-unattended.sh` line 28 manifest pin (now
+`fc2669413c86c70b6bf4c72f0d1a014361cbe179e64ae50a7147d3d690b50ac2`) were refreshed in the same change
+set; `python3 tests/test_release_manifest.py` passes (`V210_RELEASE_MANIFEST=PASS`, 38 rows).
+
 **Resolved (29 September 2026): live confirmation dialog verified in French and Italian —
 item `CLOSED`.** The row-1 confirmation dialog was checked by the operator on the live interface:
 `https://192.168.20.23/ui/devicemonitor/index/devices` (menu route
@@ -215,8 +243,10 @@ failures=0`. No installer, manifest, catalogue or release-note content changed f
 **Evidence status:** the dialog observation is an operator attestation recorded in this session;
 screenshots, DOM captures or browser/version details were not attached to this checkout, so the entry
 states the operator's reported result rather than an artifact-backed verification, matching the `O4`
-sign-off and the 28 September French Selenium note. `F1` (the inert Change Summary toast) is a
-separate open decision and is unaffected by this closure; `DM-BL-008c` stays deferred.
+sign-off and the 28 September French Selenium note. `F1` (the inert Change Summary toast) was a
+separate open decision at the time of this closure and was not affected by it; it was closed the same
+day — see the `F1` entry above and the `F1` closure section in `PROJECT_STATE.md`. `DM-BL-008c` stays
+deferred.
 
 **Resolved (27 September 2026):** the installer pin that `0708239` left stale is corrected by
 commit `3eeb78b`, which pins the current `release/v2.10-runtime.manifest` SHA256
@@ -235,8 +265,11 @@ are `release/v2.10-runtime.manifest` SHA256
 (`V210_RELEASE_MANIFEST=PASS`) and the installer's manifest gates (digest, 38 rows, source version
 2.10) pass in isolation.
 
-**Deferred:** the Italian text-stream confirmation and the F1 dialog decision, both of which need a
-browser session or a source change and stay outside the local checkout work.
+**Deferred (superseded 29 September 2026):** the Italian text-stream confirmation and the F1 dialog
+decision, both of which needed a browser session or a source change and stayed outside the local
+checkout work. Both were completed on 29 September 2026: the Italian confirmation as part of the
+`DM-BL-008b` closure above, and `F1` as the Change Summary banner change recorded in the `F1` entry
+above. The only item still deferred in this group is `DM-BL-008c`.
 
 ### DM-BL-008c — Installed plugin catalogues are invisible to the GUI without the shared merge
 
