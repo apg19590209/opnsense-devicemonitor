@@ -3415,3 +3415,44 @@ Next recommended step: redeploy on the testbed with `sh install-unattended.sh --
 Evidence status: the deletions, the document/AST/YAML/JSON checks, the release-manifest refresh, the `--check` run and
 the loader harness were produced in this session and are reproducible from the accompanying `.cline-reports/` artefact.
 
+## 29 September 2026 — Flag-deletion set deployed to the testbed; deployed-tree acceptance green; daemon cycles clean
+
+Description: the committed `identity_email_enabled` deletion set was installed on the testbed with the guarded installer
+and the deployed tree was re-accepted against source with the runtime language engine.
+
+Work completed:
+- `sh install-unattended.sh --host OPNsense.internal` (21:47:15 → 21:48:19) → `NOTICE: merged the plugin keys into 10 core
+  catalogue(s)`, `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1
+  host=OPNsense.internal`, `BACKUP_READY=/var/backups/devicemonitor/install-v210.lit1aY`, then
+  `INSTALL_OK version=2.10 files=59 core_locales=10 backup=/var/backups/devicemonitor/install-v210.lit1aY
+  daemon_restarted=1`, `install_rc=0`; no `ABORT` or rollback path ran. `configd` restarted and the daemon was
+  stopped/started (pid 56372 → 22823).
+- Manifest pin integrity: the installer accepted the regenerated manifest
+  (`sha256 = 0abe6065ac290523bf5396c226e7a63d4b2ab09a1ec96ebf7eb28ebed8a70b32`, 38 rows) and re-hashed all 59 targets.
+- Deployed-versus-source `cmp -s` → IDENTICAL for `Api/ConfigController.php`, `defaults.json`, `scan_network.py`,
+  `settings.volt`, `notify_identity_email.php`, `NotificationHandler.php`; deployed `defaults.json` and `scan_network.py`
+  contain 0 references to the deleted key.
+- Deployed-tree acceptance with no staged overrides: `python3 tests/test_language_acceptance.py --engine runtime` →
+  `LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`, exit 0 (gap = known `nl_NL`/`DM-BL-008a`; the
+  other warnings are the pre-existing core wording differences for the shared `Language` id in `es_ES`/`pt_BR`).
+- Daemon configuration-map acceptance: the restarted daemon completed full scans at 21:48:38 and 21:49:39 and started
+  one at 21:50:20; a `Traceback|KeyError|NameError|TypeError|ValueError|Exception|error|Error|FAILED|Failed` grep over
+  the 21:47–21:50 log window returned no lines.
+- Live configuration map through the deployed module: `load_config()` → 31 keys with `identity_email_enabled` absent and
+  no exception; `should_send_identity_email(cfg, high-severity event)` → `False`, so the identity tier remains
+  safe-dark. `/var/db/devicemonitor/config.json` still stores the inert `identity_email_enabled: "0"` and was not
+  modified.
+- Report: `.cline-reports/REPORT-20260929-215027.md`.
+
+Unresolved: this ledger entry is uncommitted; the live `config.json` still carries the inert key (a separate authorised
+cleanup); the generic `webhook_enabled = "1"` tier still points at the stopped loopback mock, now unreachable by the
+identity leg; interface/VLAN scoping of identity frames stays undecided; nine stale installed plugin `.po` files remain
+outside the runtime manifest; `DM-BL-008a` (`nl_NL`) is unchanged.
+
+Next recommended step: commit and publish this ledger entry as a docs-only commit on `v2.10-development` and check its
+CI run.
+
+Evidence status: the installer output, the deployed-versus-source comparisons, the accepted language run and the daemon
+log windows were produced in this session on the testbed and are reproducible from
+`.cline-reports/REPORT-20260929-215027.md`.
+
