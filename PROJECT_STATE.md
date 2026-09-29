@@ -2841,6 +2841,52 @@ DOM capture, browser/version, PHP error-log transcript or timestamp artifact was
 so this section records the operator's reported result rather than an artifact-backed verification, exactly
 as the `O4` sign-off, the 28 September French Selenium note and the `DM-BL-008b` dialog closure do.
 
+## 29 September 2026 — Notification transport: webhook endpoint repaired and live delivery verified
+
+Description: the testbed's webhook transport was enabled (`webhook_enabled = "1"`) but structurally
+unusable: `webhook_url` was `htp://broken-link)`, so every attempt failed validation with
+`Invalid webhook URL`. The endpoint was repaired to a reachable loopback mock on the testbed and the
+transport was then exercised end to end, satisfying the notification proof rule that requires recipient
+and message behaviour rather than configuration parsing.
+
+Work completed:
+- Guarded repair of `/var/db/devicemonitor/config.json`: `webhook_url` `htp://broken-link)` →
+  `http://127.0.0.1:8777/dm-webhook`, SHA256 `7126710d7491076876316f5d2a58ae400f16569ce293254dcb607048c2a54469`
+  → `dcec072b46da65953af113c4c946cd706ea8dae6b64172a60dbff7a92f6ef8a8`, mode 0600 preserved, 35 keys with
+  only `webhook_url` differing; rollback copy `/var/backups/devicemonitor/webhook-url-20260929/config.json`.
+- A loopback mock receiver (`127.0.0.1:8777`, POST-only, answers `200` with a JSON ack) was run for the test;
+  it exists only for the duration of this verification, so the URL is structurally valid and was proven
+  reachable, but its endpoint is not a permanent service.
+- Test-mode dispatch through the backend harness that mirrors `ConfigController::testWebhookAction`
+  (`$handler->sendWebhook(true, $url)`):
+  `{"result":"ok","message":"Webhook sent (HTTP 200)","type":"generic","test":true,"count":0}` with exit 0.
+- Real-mode dispatch through the configd action the plugin actually uses,
+  `configctl devicemonitor sendWebhookNotification` (exit 0, output
+  `{"result":"sent","message":"Webhook sent (HTTP 200)","type":"generic","test":false,"count":1}`), with one
+  device's `notification_pending` flag raised to 1 for the test and restored to 0 afterwards (all three
+  devices verified back at 0).
+- Payload evidence from the receiver: test payload `event/title/message/timestamp/hostname/test`
+  (`{"event":"test","title":"…OPNsense Device Monitor - Test","message":"This is a test notification!",
+  "timestamp":"2026-09-29 17:32:39","hostname":"OPNsense.internal","test":true}`, 188 B) and real payload
+  `{"event":"new_devices","hostname":"OPNsense.internal","timestamp":"2026-09-29 17:32:39","device_count":1,
+  "devices":[{… 20 fields …}]}` (535 B); both parsed as valid JSON with no serialization errors.
+- Plugin log: `[PHP-WEBHOOK-HARNESS] Test webhook result: SUCCESS`,
+  `[PHP-WEBHOOK] Preparing to send webhook`, `[PHP-NOTIFY_WEBHOOK.php] Webhook notification result: SUCCESS`;
+  no `Invalid webhook URL` line appears after the repair.
+- Command-name correction recorded: `configctl devicemonitor testWebhookAction` is **not** a configd action
+  (`Action not allowed or missing`) — that name is the MVC controller action; the dispatchable configd actions
+  are `scan`, `start`, `stop`, `restart`, `status`, `sendEmailNotification` and `sendWebhookNotification`.
+
+Unresolved: the webhook endpoint is a temporary loopback mock, so the URL now points at a port that no longer
+listens — the tier needs either a permanent receiver or `webhook_enabled = "0"`; the email leg is still
+unusable because no MTA exists (`sendmail`, `mail`, `postfix` and `/usr/local/sbin/sendmail` are all absent
+while `email_method = "sendmail"` and `smtp_host` is empty), so the first new device would log one delivery
+failure per enabled transport; `identity_email_enabled` and `service_email_enabled` remain `0`.
+
+Next recommended step: decide the permanent webhook receiver (or disable the webhook leg) and the email
+transport (`os-postfix`, direct SMTP, or disable), then record the resulting recipient/message evidence the
+same way.
+
 ## 29 September 2026 — DM-BL-008c closed: core catalogue merge engine in the v2.10 installer
 
 Description: closed `DM-BL-008c`, the item that kept the plugin's translations out of the domain the GUI
