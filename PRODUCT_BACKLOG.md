@@ -81,7 +81,7 @@ eleven-catalogue payload and all 372 HTML-context view call sites route through
 non-upstream change; `python3 tests/test_language_acceptance.py --strict` is the gate for that
 case. This closure changes no installer, manifest, catalogue, release-note or Makefile content.
 
-### DM-BL-008b — JavaScript strings receive HTML entities
+### DM-BL-008b — JavaScript strings receive HTML entities: **`CLOSED`**
 
 **Description:** Stop HTML-escaped text from reaching JavaScript string contexts.
 `OPNsense\Base\ViewTranslator::_()` HTML-escapes every translation
@@ -185,9 +185,38 @@ guards on `$.fn.notify` and `window.bootbox`, and neither exists on this build: 
 plugin calls no dialog API at all. Clicking `Mark reviewed now` therefore renders nothing. The core
 dialog API on 26.7.4 is `BootstrapDialog`, wrapped by `stdDialogInform()` in `opnsense_ui.js`.
 
-**Still open (Italian):** the Italian text stream has not been verified. The same assertion must be
-run for `it_IT`, whose expected strings are `Riepilogo modifiche` (`Change Summary`) and
-`Monitoraggio dispositivi` (`Device Monitor`).
+**Resolved (29 September 2026): live confirmation dialog verified in French and Italian —
+item `CLOSED`.** The row-1 confirmation dialog was checked by the operator on the live interface:
+`https://192.168.20.23/ui/devicemonitor/index/devices` (menu route
+`/ui/devicemonitor/index/devices`, `Menu.xml` line 4; per-row Delete, `devices.volt:895` button →
+handler `:939` → `confirm(translations.confirm_delete + ' ' + mac + '?')` at `:941`, payload
+`lang.query('Delete device')|json_encode(15)` at `:419`). French rendered exactly
+`Supprimer l'appareil <MAC>?` and Italian exactly `Elimina dispositivo <MAC>?` — no HTML-entity
+leakage (`&#039;`, `&amp;`, `\u0026#039;` all absent) and no layout or button-container clipping.
+Catalogue cross-check for the same message id: the source `.po` (`fr_FR`/`it_IT` lines 116-117), the
+deployed plugin catalogue
+(`/usr/local/opnsense/mvc/app/languages/<lang>/LC_MESSAGES/devicemonitor.mo`) and the shared core
+`OPNsense.mo` all agree, and the French apostrophe is the ASCII character U+0027 (`…6c2761…`). So the
+Italian text stream is verified as well, which closes the item left open by the 28 September entry
+above; the Italian core page text expected by that earlier note remains
+`Riepilogo modifiche` (`Change Summary`) and `Monitoraggio dispositivi` (`Device Monitor`).
+
+**Runtime-engine gate also satisfied (29 September 2026):** the harness previously could not certify
+any language on the production Volt path, because its own compiler was built without the sidecar
+binding and every page aborted with `Using $this when not in object context` (`failures=10`). Commit
+`7b4bb46` — pushed to `origin/v2.10-development`, CI run `36516155279` PASS — registers
+`devicemonitor_t` on that compiler (`tests/render_device_monitor_page.php:105`, mirroring
+`IndexController.php:44`). `python3 tests/test_language_acceptance.py --engine runtime` then reports
+`it_IT PASS pages=10 keys=451 translated=442 identical-to-english=9 selectable=True locale=True
+identity=it_IT engine=runtime`, `failures=0`, and `PASS languages=8 gaps=0 failures=0` for the eight
+languages whose shared catalogues exist; `--engine interpolate` stays `PASS languages=9 gaps=1
+failures=0`. No installer, manifest, catalogue or release-note content changed for this closure.
+
+**Evidence status:** the dialog observation is an operator attestation recorded in this session;
+screenshots, DOM captures or browser/version details were not attached to this checkout, so the entry
+states the operator's reported result rather than an artifact-backed verification, matching the `O4`
+sign-off and the 28 September French Selenium note. `F1` (the inert Change Summary toast) is a
+separate open decision and is unaffected by this closure; `DM-BL-008c` stays deferred.
 
 **Resolved (27 September 2026):** the installer pin that `0708239` left stale is corrected by
 commit `3eeb78b`, which pins the current `release/v2.10-runtime.manifest` SHA256

@@ -62,8 +62,10 @@ Actions Device Monitor CI run for that push is `36323794636` (`Device Monitor CI
 including the `Validate translated JavaScript` and `Validate language acceptance
 (DM-BL-008)` steps.
 
-Unresolved: one French and one Italian browser dialog still need visual confirmation
-(DM-BL-008b); and DM-BL-008c (the shared-catalogue merge that makes the installed plugin
+Resolved (29 September 2026): `DM-BL-008b` is **`CLOSED`** — the row-1 confirmation dialog
+(Devices → per-row Delete) was verified live in French and Italian, and the runtime test harness
+now certifies languages on the production Volt path (commit `7b4bb46`); see the closure section
+below. Unresolved: DM-BL-008c (the shared-catalogue merge that makes the installed plugin
 catalogues readable by the GUI) is still an open decision. `DM-BL-008a` (Dutch cannot be
 selected through the current GUI language list) was **`CLOSED`** as dropped on 28 September
 2026: the language list is core-owned and cannot be changed from this repository — the live
@@ -184,8 +186,8 @@ language, zero failures), and the `nl_NL` GUI-selectability limitation. `release
 is not one of the 37 files in `release/v2.10-runtime.manifest`, so the review changed no guarded
 hash and `tests/test_release_manifest.py`, `sh -n install-unattended.sh` and `git diff --check`
 stayed PASS. `PRODUCT_BACKLOG.md` DM-BL-008b records the same review as resolved on 28 September
-2026 and now records the French text-stream verification described below, with only the Italian
-confirmation still open for that item.
+2026, the French text-stream verification described below, and the item's closure on 29 September
+2026 after the runtime harness patch and the live French/Italian dialog pass.
 
 French text-stream verification (28 September 2026): the French translation stream was verified on
 the target UI by an operator-run remote Selenium text-stream assertion against
@@ -199,6 +201,13 @@ no bootbox or notify file exists under either web root, and the plugin calls no 
 so that toast path is inert and the core dialog API is `BootstrapDialog`, exposed as
 `stdDialogInform()` in `opnsense_ui.js` (F1). The verifying Selenium script and its output were not
 archived in this checkout or on the testbed, so this result is recorded as operator-reported.
+Correction (29 September 2026): the "no dialog to confirm" reasoning above covers the Change Summary
+`showToast()` path only. The plugin does use real browser dialogs elsewhere — native `confirm()` at
+`devices.volt:941`, `devicehistory.volt:612/895/1075`, `physicaldevices.volt:730/785/840`, and native
+`alert()` at `identityevents.volt:427/431` and
+`infrastructureservices.volt:1351/1356/1494/1506` — so the row-1 per-row Delete dialog is observable
+and was verified live in French and Italian on 29 September 2026 (see the DM-BL-008b closure section
+at the end of this file). `F1` remains open for the inert toast path.
 
 Push and CI confirmed: the local-only statements this section originally carried were resolved
 by the push of `3eeb78b` and `3fc9dfc` (GitHub Actions Device Monitor CI run `36323794636`,
@@ -207,19 +216,17 @@ head `3fc9dfc`, job `validate` — PASS), of the record commit `02a1eba` (CI run
 `e6443bc` (CI run `36355695028`, head `e6443bc` — PASS). Local and remote `v2.10-development` are
 the same commit; nothing on this branch is local-only.
 
-Still outstanding: the Italian text stream has not been verified (DM-BL-008b; the French stream is
-resolved above), F1 is an open decision — the Change Summary toast renders nothing because the core
+Still outstanding: F1 is an open decision — the Change Summary toast renders nothing because the core
 ships `BootstrapDialog` and neither `$.fn.notify` nor `bootbox` — and DM-BL-008c (the
 shared-catalogue merge that makes the installed plugin catalogues readable by the GUI) remains open
 but is formally deferred as of 28 September 2026: documentation only, no installer, manifest,
 release-note or Makefile change, because the candidate branch cannot be adopted into v2.10 unchanged
 and its `--languages` default is still an open sub-decision.
 
-Next recommended step: confirm the remaining language acceptance by running the Italian text-stream
-assertion for `it_IT` (expected `Riepilogo modifiche`, `Monitoraggio dispositivi`), the counterpart
-of the French verification above, and record an F1 decision — leave the inert toast as documented
-behaviour, or move `showToast()` to `BootstrapDialog`/`stdDialogInform()`. DM-BL-008c is deferred
-and is not the next action.
+Next recommended step: record the `F1` decision — leave the inert Change Summary toast as documented
+behaviour, or move `showToast()` to `BootstrapDialog`/`stdDialogInform()`. The language acceptance was
+completed on 29 September 2026: the Italian text stream is verified and `DM-BL-008b` is `CLOSED` (see
+the closure section at the end of this file). DM-BL-008c is deferred and is not the next action.
 
 ## 27 September 2026 Settings delivery-action acceptance attempt
 
@@ -2690,3 +2697,53 @@ GitHub Actions Device Monitor CI run `36501061119` (push event, branch `v2.10-de
 `8faf09d`, job `validate`), and the documentation commit `58b9628` carrying this record is pushed to
 `origin/v2.10-development` and green in CI run `36501202440` (head `58b9628`, job `validate`), so no
 commit on this branch is local-only.
+
+## 29 September 2026 — DM-BL-008b closed: runtime harness patch and live French/Italian dialog pass
+
+Description: the last open language-acceptance item, `DM-BL-008b`, was closed after two independent
+checks — the runtime test harness was repaired so the production Volt compiler path can certify
+languages again, and the row-1 confirmation dialog was verified on the live interface.
+
+Work completed:
+- `7b4bb46` — `tests/render_device_monitor_page.php:105` now registers `devicemonitor_t` on the
+  harness's own Volt compiler, mirroring `IndexController.php:44`. Before the patch every runtime-engine
+  acceptance run aborted with `Uncaught Error: Using $this when not in object context` on all ten pages
+  (`failures=10`); after it `--engine runtime --languages it_IT` reports `it_IT PASS pages=10 keys=451
+  translated=442 identical-to-english=9 selectable=True locale=True identity=it_IT engine=runtime`,
+  `failures=0`.
+- Runtime acceptance for the eight languages whose shared catalogues exist: `PASS languages=8 gaps=0
+  failures=0`; the CI engine `--engine interpolate` across all nine: `PASS languages=9 gaps=1
+  failures=0` (the single gap is the `nl_NL` GUI-list limitation, `DM-BL-008a`).
+- The same commit adds `.gitignore:7` (`.cline-reports/`) so captured engineering reports stay
+  local-only; the commit was verified before publication and pushed as `c22a8d8..7b4bb46`.
+- Operator-attested live dialog verification on
+  `https://192.168.20.23/ui/devicemonitor/index/devices` (per-row Delete): French renders exactly
+  `Supprimer l'appareil <MAC>?` and Italian exactly `Elimina dispositivo <MAC>?`, with no HTML-entity
+  leakage and no layout or button-container clipping. The message id resolves identically in the source
+  `.po`, the deployed plugin `.mo` and the shared core `OPNsense.mo`.
+
+Files changed: `tests/render_device_monitor_page.php` (runtime branch, +5 lines), `.gitignore` (+3
+lines, committed as `7b4bb46`), plus this closure record in `PROJECT_STATE.md` and
+`PRODUCT_BACKLOG.md`. No source, view, catalogue, manifest, installer, Makefile or service file changed,
+so no guarded hash and no installer pin needed updating; no installer, `opnsense-bootstrap` or `pkg`
+command was run and nothing was deployed.
+
+Tests performed and results (already verified in this session, not re-run for this record): `php -l
+tests/render_device_monitor_page.php` PASS; runtime Italian acceptance `failures=0`; runtime
+eight-language acceptance PASS; interpolate nine-language acceptance PASS; GitHub Actions Device
+Monitor CI run `36516155279` (branch `v2.10-development`, head `7b4bb46`, push event, job `validate`)
+PASS in 42 s, with local and remote `v2.10-development` at the same commit
+(`7b4bb463ab30546f97b5e51bf479205274f5f07d`).
+
+Unresolved: `F1` (the Change Summary toast is inert on 26.7.4 — decide documented-inert versus
+migration to `stdDialogInform()`/`BootstrapDialog`); `DM-BL-008c` deferred; background scanning on the
+testbed is still disabled (`"enabled": "0"`); the nine-language **runtime** matrix remains host-blocked
+by the missing `nl_NL` shared catalogue (`DM-BL-008a`); CI still runs only `--engine interpolate`, so
+the repaired runtime branch is not exercised there.
+
+Next recommended step: record the `F1` decision.
+
+Evidence status: the dialog observation is an operator attestation from this session; no screenshot, DOM
+capture, browser/version or timestamp artifact was attached to this checkout, so it is recorded as
+operator-reported, exactly as the `O4` sign-off and the 28 September French Selenium note are.
+
