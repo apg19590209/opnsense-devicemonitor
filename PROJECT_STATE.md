@@ -3326,3 +3326,48 @@ Next recommended step: commit this ledger update as a docs-only commit on `v2.10
 Evidence status: the diff statistics, staged-file count, commit, push and CI run id above were produced in this
 session on the testbed and are reproducible from `.cline-reports/REPORT-20260929-212946.md`.
 
+## 29 September 2026 — Testbed returned to safe-dark and `identity_email_enabled` storage footprint audited
+
+Description: the live testbed flag was reverted to the safe-dark baseline and the obsolete email key was traced through
+every parse and storage surface ahead of its deletion.
+
+Work completed:
+- Guarded one-key rewrite of `/var/db/devicemonitor/config.json` (helper `/tmp/dm-verify/disable_identity_webhook.py`,
+  backup `/var/backups/devicemonitor/identity-webhook-disable-20260929-213718/config.json`):
+  `identity_webhook_enabled` `"1"` → `"0"`, 36 keys before and after, `changed_keys = ['identity_webhook_enabled']`,
+  `mode_before = 600 mode_after = 600`, sha256 `b96575bf7cfaf5ab2043cd388a88e0a29f9c7ee1c5f6e7ea7464ba63c44d8f20` →
+  `52f7bdda6153d8aa31bb5a99b040ccef870857dcbebe56cf4a256179039b6d8a`, `SAFE_DARK_TIER=PASS`.
+- Read-only proof through the deployed module: `load_config()` → `identity_webhook_enabled = False`,
+  `should_send_identity_email(cfg, high-severity event)` → `False`. No restart was needed (`load_config()` runs per
+  scan cycle at `scan_network.py:7515`/`:7588`, `monitor_daemon.py:174`/`:183`) and the 21:37:34 scheduled scan ran
+  normally; the daemon (pid 56372) stayed healthy.
+- `identity_email_enabled` audit result: it is **never persisted to a storage table or structural array**. Parse sites:
+  `scan_network.py:74` (no-config branch), `:113` (normal branch), `:150` (exception fallback) — all `== '1'` bool
+  coercion into the transient `load_config()` dict. Persistence sites: `Api/ConfigController.php:127` (dead POST field
+  defaulting to `'0'`), `:167` (allow-list validation), `:395` (written to `config.json`). Baseline/CI:
+  `defaults.json:19`, `ci.yml:486`.
+- Negative evidence: `devices.db` has 19 tables and no `identity_email`/`config` column (the only `%identity%` value is
+  the table name `device_identity_events` in `sqlite_sequence`); `/conf/config.xml` 0 hits (also 0 `devicemonitor`
+  hits); `DeviceMonitor.xml` and `ACL/ACL.xml` 0 hits; live `settings.volt` 0 hits (stored but unexposed); `tests/`,
+  `Makefile`, `install-unattended.sh`, `uninstall.sh`, `release/` 0 hits; source catalogues and deployed `.mo` files
+  carry the replacement id (`Identity conflict alerts`) and 0 occurrences of the removed email string.
+- Live/historical residues: deployed `defaults.json`, deployed `scan_network.py` + its compiled
+  `__pycache__/scan_network.cpython-313.pyc`, deployed `Api/ConfigController.php` (3 sites), three stale view backups
+  (`settings.volt.orig`, `settings.volt.pre-webfix-20260928`, `settings.volt.pre-dmbl004c-20260928-202215`),
+  `/var/db/devicemonitor/config.json:5` and 17 `/var/backups/devicemonitor/*/config.json` copies.
+- No rule literally named "SAFE protocol" exists in the repository; the audit was run under the closest documented
+  discipline (`PROJECT_RULES.md:64` smallest safe change, read-only inspection) and nothing was deleted.
+- Report: `.cline-reports/REPORT-20260929-213828.md`.
+
+Unresolved: the `identity_email_enabled` deletion is prepared but not executed (it needs `defaults.json`,
+`ConfigController.php`, `scan_network.py` and `ci.yml` edits plus a decision on existing `config.json` values); this
+ledger entry is uncommitted; the generic `webhook_enabled = "1"` tier still points at the stopped loopback mock (no
+longer reachable by the now-dark identity leg); interface/VLAN scoping of identity frames stays undecided;
+`DM-BL-008a` (`nl_NL`) is unchanged.
+
+Next recommended step: authorise the docs-only commit of this ledger entry (and check its CI run), then treat the
+`identity_email_enabled` deletion as its own scoped task.
+
+Evidence status: the rewrite output, the deployed-gate re-check and the audit greps were produced in this session on
+the testbed and are reproducible from `.cline-reports/REPORT-20260929-213828.md`.
+
