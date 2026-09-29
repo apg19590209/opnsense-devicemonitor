@@ -22,7 +22,7 @@ b7aa5631344ea410326d18f6fc07a52e0a43ddf0a1e160c6c91f2f5326003d0c 644 src/opnsens
 997bdad955f390a060bb05c26dd4e4e8268d59e8df252b1b59fce8fe19f49861 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/physicaldevices.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/physicaldevices.volt
 5fd95a8c91e8a6155ea4e5e4ebf67acf89be8b9dbf25b77110bc65af072f6856 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/scanhistory.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/scanhistory.volt
 35f50befb3e57d8e2c3e382ea4851af3259b88f6dc474de19cc56b8b53efa3ed 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/service_widget.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/service_widget.volt
-0aaf767b0bc1cb234eb857868f36862cc0146b407681dd8b870b227433a0d4f0 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt
+f9f05b276172fc00880842c3dc5a9e9c24a8706c579a928fd3d76c0f653efd83 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt
 28e2d252e9bf22605fc9186fecba83acbd4417bc90739bf4129b6f5e370426b3 644 src/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php
 312ee0e8c1d1449f569052147eaa1fbfeefefae9315b220a8d1746fdd125fd2d 755 src/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
 4efd2dbd94808790479d21e07787fdde41204c1b785e50abe6f99680ae4dbc63 755 src/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py

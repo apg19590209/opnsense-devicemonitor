@@ -23,6 +23,11 @@
                 </a>
             </li>
             <li role="presentation">
+                <a href="#tab-pluginoptions" role="tab" data-toggle="tab">
+                    <i class="fa fa-cog"></i> Plugin Options
+                </a>
+            </li>
+            <li role="presentation">
                 <a href="#tab-about" role="tab" data-toggle="tab">
                     <i class="fa fa-info-circle"></i> {{ devicemonitor_t('About') }}
                 </a>
@@ -339,14 +344,6 @@
                             </td>
                         </tr>
 
-                        <tr>
-                            <td style="width:30%;"><strong>{{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}</strong></td>
-                            <td>
-                                <input type="checkbox" id="sidecar_translation_enabled" />
-                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}" data-content="Forces the interface to use the plugin's dedicated translation file. If disabled, new labels may default to English."><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                            </td>
-                        </tr>
-
                     </tbody>
                 </table>
 
@@ -436,7 +433,31 @@
                 </div>
             </div>
 
-            <!-- TAB 5: About -->
+            <!-- TAB 5: Plugin Options -->
+            <div role="tabpanel" class="tab-pane" id="tab-pluginoptions">
+                <table class="table table-striped">
+                    <tbody>
+                        <tr>
+                            <td style="width:30%;"><strong>{{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}</strong></td>
+                            <td>
+                                <input type="checkbox" id="sidecar_translation_enabled" />
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}" data-content="Forces the interface to use the plugin's dedicated translation file. If disabled, new labels may default to English."><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                            </td>
+                        </tr>
+
+                    </tbody>
+                </table>
+
+                <div style="padding:10px 0 0 0;">
+                    <button type="button"
+                            class="btn btn-primary btn-apply"
+                            id="btn-apply-pluginoptions">
+                        <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 6: About -->
             <div role="tabpanel" class="tab-pane" id="tab-about">
                 <div style="max-width:600px;padding:10px 0;">
                     <h3 style="margin-top:0;">{{ devicemonitor_t('Device Monitor') }} <span id="about-version" style="color:#888;font-size:16px;"></span></h3>
@@ -498,7 +519,7 @@
 <script>
 $().ready(function() {
     // Keep guidance beside the setting it explains, clear of the form control.
-    $('#tab-monitoring, #tab-nmap, #tab-email, #tab-webhook').each(function() {
+    $('#tab-monitoring, #tab-nmap, #tab-email, #tab-webhook, #tab-pluginoptions').each(function() {
         $(this).find('table > tbody > tr').each(function() {
             var $cells = $(this).children('td');
             if ($cells.length !== 2) return;
