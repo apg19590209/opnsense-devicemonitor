@@ -478,7 +478,7 @@
                             <td>
                                 <input type="checkbox" id="sidecar_translation_enabled" />
                                 <div class="text-muted" style="margin-top:6px;max-width:520px;">
-                                    {{ devicemonitor_t('Translate Device Monitor strings from the plugin sidecar catalogue. When disabled, the plugin uses the stock OPNsense core catalogues only. The core language files under /usr/local/share/locale are never modified in either case.') }}
+                                    {{ devicemonitor_t('Translate Device Monitor strings from the plugin sidecar catalogue. When disabled, the plugin uses the stock OPNsense core catalogues only.') }}
                                 </div>
                             </td>
                         </tr>

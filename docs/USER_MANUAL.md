@@ -757,6 +757,40 @@ Pi-hole requires Pi-hole v6, HTTPS and an app password.
 
 Displays the installed Device Monitor version and descriptive information. **Read-only.**
 
+### 14.6 Language and translations
+
+Device Monitor ships eleven catalogues (`en_US`, `cs_CZ`, `de_DE`, `fr_FR`, `es_ES`, `it_IT`,
+`pt_BR`, `nl_NL`, `ru_RU`, `ja_JP`, `zh_CN`). The GUI language itself is chosen in
+**System → Settings → General → Language**; `nl_NL` is not offered by that list, so the Dutch
+pages render but cannot be selected through the GUI.
+
+Translations reach a page through two paths, and the installer prepares both:
+
+1. **Page text** resolves from the plugin's own catalogue
+   (`/usr/local/opnsense/mvc/app/languages/<locale>/LC_MESSAGES/devicemonitor.mo`) first, then
+   the OPNsense core catalogue, then the English message id.
+2. **Text inside JavaScript** (confirmations, messages and table strings) resolves through the
+   **OPNsense core catalogues** under `/usr/local/share/locale/<locale>/LC_MESSAGES/OPNsense.mo`,
+   which is why the installer merges the plugin's strings into them: core-first, so every
+   existing OPNsense translation is preserved and only missing strings are added. For a locale
+   with no core catalogue (`nl_NL` here) the plugin catalogue is installed in that location
+   instead. The installer reports this as `core_locales=<count>` in its `CHECK_OK`/`INSTALL_OK`
+   output.
+
+**Language** (Settings → About tab) — the **Plugin translations (sidecar catalogue)** switch
+controls only step 1: enabled (default), the plugin's own catalogue is used first; disabled, the
+plugin uses the core catalogues only. **Changes state** (plugin behaviour, not stored data).
+The language files under `/usr/local/share/locale` belong to the OPNsense core package; the
+installer writes them (and keeps a pristine copy per locale under
+`/var/backups/devicemonitor/core-locale/`), so uninstalling Device Monitor restores the
+catalogues as they were just before it was installed — it does not remove OPNsense's own
+translations. A later OPNsense core upgrade can replace those files; re-run the Device Monitor
+installer afterwards to merge the plugin's strings again.
+
+> Without the merge, pages show the selected language for their own labels while strings that
+> come from JavaScript remain English. Both paths are covered by the acceptance tests
+> (`tests/test_language_acceptance.py`, `tests/test_locale_merge.py`).
+
 ---
 
 ## 15. Status indicators, badges and terminology

@@ -1068,3 +1068,57 @@ that root-only log. The correction keeps the authority order in
 This correction changes no decision outcome, no daemon transport and no
 notification behaviour. Decision 33's ban on moving dispatch to `apiEmailUrl`
 or `apiWebhookUrl` without a new recorded decision remains in force.
+
+## 35. Core catalogue ownership: the installer merges into OPNsense-owned language files
+
+### Decision
+
+`DM-BL-008c` is implemented by merging the plugin's message ids into the OPNsense core
+catalogues that the GUI actually reads — `/usr/local/share/locale/<locale>/LC_MESSAGES/
+OPNsense.mo` — for the ten plugin locales other than `en_US` (`en_US` is the reference set and
+OPNsense ships no catalogue for it). The merge is core-first (`msgcat --use-first`, with
+assertions that no existing OPNsense translation changed and that every plugin string is
+present, `release/merge-opnsense-catalog.sh`); a locale without a core catalogue (`nl_NL` on
+this release) receives the plugin catalogue alone instead of aborting. The staged results go
+through the installer's existing guard, backup, rollback and final-hash machinery, and the
+update target count is therefore 59 files (`60` fresh) with `core_locales=10`.
+
+**Ownership and the restore boundary are part of the decision.** Those catalogues are owned by
+the OPNsense core package, not by this plugin:
+
+- The installer records a pristine copy and a state record per locale under
+  `/var/backups/devicemonitor/core-locale/<locale>.state` (with `<locale>.OPNsense.mo` beside
+  it), first-write-wins, so a later install never records its own merged output as pristine.
+- `uninstall.sh` restores exactly that recorded pre-install catalogue, or deletes the file the
+  installer created when no core catalogue existed, and refuses to touch a catalogue that no
+  longer matches what it injected.
+- On the testbed those recorded copies are the **26 September 2026 hand-merged catalogues**, not
+  vendor-clean OPNsense originals: the boundary `uninstall.sh` restores to is "whatever was
+  installed before this plugin's install", which on this host already contained plugin strings
+  for the keys merged by hand at that time. The only route back to vendor-clean files is a
+  package-level reinstall or `pkg upgrade` of the core language files.
+- A core `pkg upgrade` can likewise replace the merged catalogues afterwards; the inline-script
+  strings then fall back to English until the installer is re-run. The plugin degrades, it does
+  not break.
+
+### Reason
+
+The inline-script call sites in the nine views use `lang.query()` → `ControllerRoot::setLang()`
+→ `ViewTranslator` over the core domain, so no plugin-side change can translate them: only the
+core catalogue can. Merging core-first preserves every existing OPNsense translation (asserted,
+and verified live: fr_FR grew from 13,398 to 13,400 keys with no core entry altered), while the
+plugin's own "sidecar" domain continues to serve page text. Recording the pre-install files is
+what makes the ownership trade-off reversible; treating "no core catalogue" as a supported case
+is what lets `nl_NL` work without a core catalogue to preserve. Evidence for the whole change
+is in `.cline-reports/REPORT-20260929-152545.md` (engineering), `REPORT-20260929-160427.md`
+(testbed install, nine-language runtime acceptance with exit code 0, English-fallback check) and
+the deployment record in `PROJECT_STATE.md`.
+
+### Non-negotiable compatibility
+
+The sidecar translation path still reads and writes nothing under `/usr/local/share/locale`, so
+the Settings toggle `sidecar_translation_enabled` keeps its documented fallback chain
+(sidecar → core → msgid). Changing the merge target set, the merge semantics, the pristine-record
+scheme or the restore boundary requires a new recorded decision, and any change to a manifest
+row must update `install-unattended.sh:28` in the same commit because the guarded installer
+validates the manifest digest before it does anything.
