@@ -1,7 +1,7 @@
 # OPNsense Device Monitor Plugin - Makefile
 # ==========================================
 
-.PHONY: help install uninstall reinstall status start stop restart scan test-email clean backup
+.PHONY: help install uninstall reinstall status start stop restart scan test-email clean backup restore bundle
 
 # Output colours
 RED    = \033[0;31m
@@ -41,6 +41,9 @@ help:
 	@echo "  make clean        - Clear cache"
 	@echo "  make backup       - Back up database"
 	@echo "  make restore      - Restore database"
+	@echo ""
+	@echo "$(GREEN)Release:$(NC)"
+	@echo "  make bundle       - Build the release bundle"
 	@echo ""
 
 install:
@@ -146,6 +149,13 @@ restore:
 	else \
 		echo "$(RED)File not found!$(NC)"; \
 	fi
+
+# Release / packaging
+bundle:
+	@echo "$(GREEN)Building release bundle...$(NC)"
+	@test -f release/build-bundle.sh || { echo "$(RED)ERROR: release/build-bundle.sh not found!$(NC)"; exit 1; }
+	@/bin/sh release/build-bundle.sh
+	@echo "$(GREEN)Bundle complete$(NC)"
 
 # Developer targets
 dev-watch:
