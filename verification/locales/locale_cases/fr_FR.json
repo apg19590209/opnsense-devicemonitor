@@ -1,0 +1,111 @@
+{
+  "schema_status": "draft-unratified",
+  "schema_version": null,
+  "schema_note": "No ratified schema exists in this repository. Keys below are limited to what verification/locales/README.md names explicitly (case data in locale_cases/<locale>.json; the nine emitted checks; --check-env, --dry-run, --headless, --out-dir, --write-markdown, --save-page-source, --driver-path; exit codes 0/1/2), plus one optional key: untranslated_probe, a list of English label strings that must not render. Corrected 2026-09-29: the harness that consumes this file is now written and committed (verification/locales/verify_locale_stream.py), and a sibling case file now exists (locale_cases/it_IT.json, also draft-unratified). Nothing in this file becomes a result: everything a run would produce is still null.",
+  "case_id": "fr_FR",
+  "locale": "fr_FR",
+  "expected_document_lang": "fr-FR",
+  "record": "verification/locales/REPORT-fr_FR-2026-09-28.md",
+  "status": "OPERATOR-REPORTED",
+  "resolution": "PENDING-EVIDENCE",
+  "harness_executed": false,
+  "untranslated_probe": [],
+  "untranslated_probe_note": "Empty on purpose. Until an English label list is supplied, no_untranslated_fallback is SKIP, never PASS.",
+  "target": {
+    "device_class": "OPNsense firewall admin UI (outside this repository)",
+    "address": "192.168.20.23",
+    "address_provenance": "operator-attested 2026-09-28; supplied as the same host as the it_IT testbed",
+    "address_in_supplied_log": false,
+    "address_corroborated_by_artifact": false,
+    "address_note": "The supplied fr_FR log transcript names no address, route, or build. This value is an operator statement and is not a verified fact; it closes nothing and must be corrected if an artifact shows a different host.",
+    "build": null,
+    "base_url": null,
+    "route": null
+  },
+  "checks": {
+    "stream_progressed": null,
+    "stream_lossless": null,
+    "no_replacement_char": null,
+    "no_mojibake": null,
+    "no_control_chars": null,
+    "localized_markers_present": null,
+    "no_untranslated_fallback": null,
+    "document_lang": null,
+    "diacritics_roundtrip": null
+  },
+  "checks_note": "null means not exercised by or attributable to this workstream. It never means PASS.",
+  "markers": {
+    "provenance": "operator-attested, quoted verbatim in REPORT-fr_FR-2026-09-28.md",
+    "expected": [
+      {
+        "text": "Résumé des modifications",
+        "reported_status": "PASS",
+        "artifact": null
+      },
+      {
+        "text": "Surveillance des appareils",
+        "reported_status": "PASS",
+        "artifact": null
+      }
+    ],
+    "mapped_check": null,
+    "mapped_check_note": "Neither marker maps to a check name emitted by the verification/locales harness."
+  },
+  "teardown": {
+    "reported": "layout restored to standard English (en_US)",
+    "provenance": "operator-attested",
+    "verified": false,
+    "pre_change_locale_state": null,
+    "post_change_locale_state": null,
+    "note": "A firewall locale change is infrastructure state, not a documentation fact. Confirming the restore needs the device's own state, which is not in this repository."
+  },
+  "artifacts": {
+    "raw_tool_output": null,
+    "result_json": null,
+    "report_html": null,
+    "stream_timeline": null,
+    "screenshot": null,
+    "page_source": null,
+    "tool_name_and_version": null,
+    "run_timestamp_and_duration": null,
+    "locale_pinning_method": null
+  },
+  "out_dir": "out/fr_FR",
+  "harness": {
+    "script": "verify_locale_stream.py",
+    "committed": true,
+    "present_on_disk": true,
+    "runnable_on_recording_host": false,
+    "status_note": "Corrected 2026-09-29: the script is written and committed (harness version 0.1.0) and passes its offline self-test. It is still not runnable on the recording host, and it has never been run for fr_FR: harness_executed stays false and every checks value stays null.",
+    "blocked_by": [
+      "selenium is not importable on the recording host",
+      "pip is absent",
+      "no browser or WebDriver binary installed"
+    ],
+    "invocation": [
+      "python3 verify_locale_stream.py --case locale_cases/fr_FR.json --check-env",
+      "python3 verify_locale_stream.py --case locale_cases/fr_FR.json --dry-run",
+      "python3 verify_locale_stream.py --case locale_cases/fr_FR.json --headless --out-dir out/fr_FR --write-markdown --save-page-source"
+    ],
+    "exit_codes": {
+      "0": "all checks passed",
+      "1": "at least one FAIL or ERROR",
+      "2": "configuration or environment error"
+    }
+  },
+  "governing_rules": {
+    "documents": [
+      "verification/locales/README.md",
+      "verification/locales/deferrals.md",
+      "verification/locales/out/README.md"
+    ],
+    "rules": [
+      "Case data carries boundaries and provenance only. No field may hold a value that no artifact supports; unsupported values are null.",
+      "A reported result with no artifact stays PENDING-EVIDENCE. It never becomes PASS or RESOLVED.",
+      "Run output belongs in out/<locale>/ and must be the tool's own output, never a transcription.",
+      "Closing a locale item requires the acceptance checklist in verification/locales/out/README.md.",
+      "A locale change on a firewall is infrastructure state. Record the device build and its before/after locale state.",
+      "Operator attestation is recorded as attestation, with its provenance stated, and is never promoted to verified fact."
+    ]
+  }
+}
