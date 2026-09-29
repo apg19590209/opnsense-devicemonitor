@@ -124,7 +124,6 @@ class ConfigController extends ApiControllerBase
 
         $enabled = $this->request->getPost('enabled', 'string', '0');
         $email_enabled = $this->request->getPost('email_enabled', 'string', '0');
-        $identity_email_enabled = $this->request->getPost('identity_email_enabled', 'string', '0');
         $identity_webhook_enabled = $this->request->getPost('identity_webhook_enabled', 'string', '0');
         $service_email_enabled = $this->request->getPost('service_email_enabled', 'string', '0');
         $service_email_new = $this->request->getPost('service_email_new', 'string', '1');
@@ -163,10 +162,6 @@ class ConfigController extends ApiControllerBase
         $nmap_host_timeout = (int)$this->request->getPost('nmap_host_timeout', 'int', 45);
         $nmap_version_detection = $this->request->getPost('nmap_version_detection', 'string', '1');
         $nmap_max_per_cycle = (int)$this->request->getPost('nmap_max_per_cycle', 'int', 2);
-
-        if (!in_array($identity_email_enabled, ['0', '1'], true)) {
-            return ['result' => 'failed', 'message' => 'Invalid identity email enabled value'];
-        }
 
         if (!in_array($identity_webhook_enabled, ['0', '1'], true)) {
             return ['result' => 'failed', 'message' => 'Invalid identity webhook enabled value'];
@@ -392,7 +387,6 @@ class ConfigController extends ApiControllerBase
         $config = $model->getConfig();
         $config['enabled'] = $enabled;
         $config['email_enabled'] = $email_enabled;
-        $config['identity_email_enabled'] = $identity_email_enabled;
         $config['service_email_enabled'] = $service_email_enabled;
         $config['service_email_new'] = $service_email_new;
         $config['service_email_unavailable'] = $service_email_unavailable;

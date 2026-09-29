@@ -16,7 +16,6 @@
     "enabled": "0",
     "monitored_interfaces": "",
     "email_enabled": "0",
-    "identity_email_enabled": "0",
     "identity_webhook_enabled": "0",
     "service_email_enabled": "0",
     "service_email_new": "1",

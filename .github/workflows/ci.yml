@@ -483,7 +483,6 @@ jobs:
           DEFAULTS = Path("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json")
 
           defaults = json.loads(DEFAULTS.read_text(encoding="utf-8"))
-          assert defaults["config"]["identity_email_enabled"] == "0"
           assert defaults["config"]["identity_webhook_enabled"] == "0"
 
           spec = importlib.util.spec_from_file_location(

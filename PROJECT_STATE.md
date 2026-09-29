@@ -3371,3 +3371,47 @@ Next recommended step: authorise the docs-only commit of this ledger entry (and 
 Evidence status: the rewrite output, the deployed-gate re-check and the audit greps were produced in this session on
 the testbed and are reproducible from `.cline-reports/REPORT-20260929-213828.md`.
 
+## 29 September 2026 — Dead `identity_email_enabled` key deleted from the schema, controller, scanner and CI guards
+
+Description: the obsolete identity email flag was removed from every code and CI surface, with the release manifest and
+its installer pin refreshed as a mechanical consequence.
+
+Work completed:
+- Ledger first: `PROJECT_STATE.md` (safe-dark reversion and footprint audit from the previous session) was committed as
+  `4613ae9` and pushed (`e23af5a..4613ae9`).
+- Deletions made (repository references now 0 in `src/`, `tests/`, `.github/`, `install.sh`, `install-unattended.sh`,
+  `uninstall.sh`, `release/`, `Makefile`):
+  - `defaults.json:19` — baseline row `"identity_email_enabled": "0"` removed (config keys 37 → 36).
+  - `Api/ConfigController.php` — POST read (`:127`), allow-list validation (`:167–169`) and storage write (`:395`)
+    removed; the `identity_webhook_enabled` validation block is untouched.
+  - `scan_network.py` — the three `load_config()` load sites removed (`:74` no-config branch, `:113` normal branch,
+    `:150` exception fallback); no adjacent boolean filter needed changing because the key had no consumer.
+  - `.github/workflows/ci.yml:486` — the baseline assertion for the dead key removed; the
+    `identity_webhook_enabled == "0"` assertion is retained.
+- Mechanical release hygiene: `tests/test_release_manifest.py` pins the SHA-256 of every packaged file, so the three
+  changed rows (`ConfigController.php`, `defaults.json`, `scan_network.py`) were refreshed in
+  `release/v2.10-runtime.manifest` (38 rows, 3 digests changed) and the manifest pin at `install-unattended.sh:28` was
+  re-pinned `b99d9ed0…` → `0abe6065ac290523bf5396c226e7a63d4b2ab09a1ec96ebf7eb28ebed8a70b32`.
+- Validation: `python3 -m py_compile` over all packaged Python → PASS; `php -l` over all packaged controllers/models/
+  scripts → PASS; `defaults.json` parses with 36 config keys, `identity_webhook_enabled` present and the dead key absent;
+  `ci.yml` parses as YAML → PASS; `tests/test_fresh_install_defaults.py` and `tests/test_release_manifest.py` → PASS;
+  guarded non-mutating `sh install-unattended.sh --check --host OPNsense.internal` → `CHECK_OK version=2.10
+  predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal`, exit 0.
+- Behavioural proof (`/tmp/dm-verify/legacy_key_removed.py`, test scaffolding): the live `config.json` still contains the
+  legacy key on disk, yet `load_config()` from source returns 31 keys with `identity_email_enabled` absent and
+  `should_send_identity_email()` still returns `True`/`False` correctly → no unresolved variable, no `KeyError`, and
+  existing configuration files keep working.
+- Historical mentions were deliberately **not** rewritten: `DECISIONS.md` (decision 36 records why the key is no longer
+  consulted), earlier `PROJECT_STATE.md` entries and the `.cline-reports/` artefacts describe the key as history.
+
+Unresolved: the testbed still runs the previously deployed copies (no installer run or deployment was requested) and its
+`/var/db/devicemonitor/config.json` still stores `identity_email_enabled: "0"` — the runtime ignores it and it would
+disappear on the next GUI save, but the deployed tree drifts from source until the next guarded install; interface/VLAN
+scoping of identity frames stays undecided; `DM-BL-008a` (`nl_NL`) is unchanged.
+
+Next recommended step: redeploy on the testbed with `sh install-unattended.sh --host OPNsense.internal` and re-run
+`python3 tests/test_language_acceptance.py --engine runtime` so the deployed tree matches source again.
+
+Evidence status: the deletions, the document/AST/YAML/JSON checks, the release-manifest refresh, the `--check` run and
+the loader harness were produced in this session and are reproducible from the accompanying `.cline-reports/` artefact.
+
