@@ -1294,6 +1294,27 @@ decision must be revisited: either drain in-process before the deadline, or make
 synchronous under a configuration flag. A bounded pre-exit drain in `main()` is the preferred
 remedy.
 
+**Update, 30 September 2026 — the preferred remedy is implemented.** `main()` in `scan_network.py` is
+now a thin wrapper whose `finally` calls `flush_db_writes(5.0)`, and the former body is
+`_main_dispatch()`. Every exit path drains, including the early `--discover-services` and
+`--list-targets` returns and the SIGINT/error handlers. The 5.0 s bound is half the 10.0 s default the
+`atexit` backstop uses, and `flush_db_writes()` logs and returns `False` rather than raising when the
+queue has not drained, so a stuck writer cannot hang the exit.
+
+The precondition above is no longer hypothetical: `monitor_daemon.py` has always run the scan as
+`subprocess.run(..., timeout=300)`, and Python escalates that timeout to SIGKILL, which no in-process
+hook — `atexit`, this drain or a signal handler — can intercept. That window is therefore still open
+and unchanged by this drain.
+
+Two further boundary facts were measured while implementing it, and they are recorded here so nobody
+reads the drain as broader than it is. **SIGTERM is not covered**: Python's default disposition for
+SIGTERM terminates the process without unwinding, so no `finally`, no `atexit` handler and no signal
+callback runs — and `service devicemonitor stop` sends SIGTERM. Measured in isolation on this host:
+`SIGINT -> finally ran`, `SIGTERM -> returncode -15, finally never reached`. **SIGINT is covered**,
+because `_main_dispatch()` catches the resulting `KeyboardInterrupt` and the wrapper's `finally` then
+runs. Closing the SIGTERM window needs an explicit `signal.signal(signal.SIGTERM, ...)` handler that
+drains and then re-raises the signal; that is a separate change and was deliberately not made here.
+
 ### Reason
 
 The completion write previously ran on the scan thread and acquired the SQLite write lock and

@@ -461,6 +461,76 @@ v2.11 checks ran on the `ubuntu-latest` runner:
 Open item remaining: the accepted data-loss risk of an empty rebuild is recorded as `DECISIONS.md` 40
 and should be revisited if the operator-visible cost ever proves too high.
 
+### Task 6 — Shutdown safety drain on the main exit path
+
+**Recorded 30 September 2026.** Shutdown micro-polish for the deferred writer, and the remedy named
+in `DECISIONS.md` 37.
+
+Audit first. `scan_network.py` has **no signal handlers and does not import `signal`** — there was
+nothing of that kind to refactor. Its termination hooks were: `atexit.register(flush_db_writes)` when
+the writer starts (`_ensure_db_writer`), the explicit `flush_db_writes()` at the end of `full_scan()`,
+and `main()`'s `except KeyboardInterrupt` / `except Exception` handlers. `atexit` runs on interpreter
+shutdown, so normal exits were covered, but it ran *last* rather than as part of the scan's own
+completion, and it used the 10.0 s default.
+
+Change — a wrapper so every exit path drains deterministically:
+
+- `main()` (**7855**) is now a thin wrapper whose `finally` calls `flush_db_writes(5.0)` (**7879**).
+- The former body is `_main_dispatch()` (**7882**), otherwise untouched: its 12 `return` statements,
+  including the early `--discover-services` and `--list-targets` returns that sit *outside* the old
+  `try`, now all flow through the drain.
+- The writer design comment (5817-5821) records the three drain levels.
+
+The 5.0 s bound is deliberate: it caps how long a finished scan can be held at the exit path, it is
+half the `atexit` backstop's 10.0 s default, and `flush_db_writes()` logs and returns `False` rather
+than raising when the queue has not drained, so a stuck writer cannot hang the exit.
+
+What this does **not** cover, and the distinction matters because the first version of this entry
+over-claimed it: **SIGTERM is not covered**. Python's default disposition for SIGTERM terminates the
+process without unwinding, so no `finally`, no `atexit` handler and no signal callback runs — and
+`service devicemonitor stop` sends SIGTERM. Measured in isolation on this host:
+`SIGINT -> finally ran`, `SIGTERM -> returncode -15, finally never reached`. **SIGKILL is not covered
+either**: `monitor_daemon.py` runs the scan as `subprocess.run(..., timeout=300)`, which Python
+escalates to SIGKILL, and no in-process hook can intercept it. What this change *does* cover: all 12
+normal/early returns, the `except Exception` handler, and SIGINT/KeyboardInterrupt, which
+`_main_dispatch()` catches so the wrapper's `finally` runs. Both uncovered windows are the accepted
+risk in `DECISIONS.md` 37; closing the SIGTERM one needs an explicit signal handler, which was
+deliberately not added here.
+
+Hash-chain bookkeeping: `scan_network.py` is a manifest row, so per `DECISIONS.md` 35 the manifest and
+the pin moved in the same change set — the row went `56735e62…` -> `40ed3f99…` -> `c232e26c…` and the
+manifest SHA256 `1904cc1f…` -> `81b558b7…` -> `b400c299…` (still 38 rows), with
+`install-unattended.sh:36` repinned each time. The second re-cut is not cosmetic: the first `main()`
+docstring over-claimed the signal coverage, correcting it changed the file again, and the hash chain
+had to follow. `release/v2.10-runtime.manifest` remains byte-unchanged.
+
+Validation:
+
+```
+python3 -m py_compile scan_network.py           -> OK
+ast check of main(): body = [docstring, Try]; try body = [return _main_dispatch()];
+                     finally = [flush_db_writes(5.0)]; _main_dispatch keeps 18 statements / 12 returns
+python3 tests/test_deferred_db_writes.py        -> DEFERRED_DB_WRITES=PASS     (writer loops unregressed)
+python3 tests/test_db_corruption_recovery.py    -> DB_CORRUPTION_RECOVERY=PASS
+python3 tests/test_device_activity_events.py    -> PASS
+python3 tests/test_device_lifecycle_return.py   -> PASS
+python3 tests/test_release_manifest.py          -> V211_RELEASE_MANIFEST=PASS
+sh -n install-unattended.sh                     -> OK
+git diff --check                                -> clean
+sh install-unattended.sh --host OPNsense.internal --check
+  CHECK_OK version=2.11 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal
+  EXIT=0
+```
+
+Coverage gap, stated rather than papered over: there is **no new test for the wrapper itself**. The
+drain semantics are covered by the six checks in `tests/test_deferred_db_writes.py`, but the *wiring*
+is not, and a portable end-to-end test of `main()` would need a way to inject the `defaults.json`
+path — the existing harness works around that with a `builtins.open` shim that cannot cross a
+subprocess boundary. Pinning the wiring needs either that injection path or a source-shape
+assertion, and both are separate decisions.
+
+Git state: uncommitted — the request asked for the change, the re-pin and the two local checks only.
+
 ## 27 September 2026 v2.10 install-guard pin restoration
 
 Description: restored the guarded v2.10 installer, which aborted with

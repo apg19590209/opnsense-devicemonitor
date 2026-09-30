@@ -5814,9 +5814,11 @@ def config_bool(value, default=False):
 #     needed for the port rows and for the abort path.
 #   * The abort/failure path is still written synchronously; the process
 #     is unwinding and the record must not depend on a background thread.
-#   * Queued work is drained before the process may exit (atexit, plus an
-#     explicit drain in the automatic queue loop) so history is never
-#     silently dropped.
+#   * Queued work is drained before the process may exit, on three levels so
+#     history is never silently dropped: an explicit drain in the automatic
+#     queue loop, a bounded 5.0 s drain on main()'s exit path (v2.11 Task 6,
+#     which also covers the early returns and the SIGINT/error handlers), and
+#     the atexit backstop registered by _ensure_db_writer().
 #   * If the writer cannot be started or a put() fails, the caller falls
 #     back to the original synchronous write.
 # ================================================================
@@ -7851,7 +7853,42 @@ def list_targets():
 
 
 def main():
-    """Main entry point with argument parsing"""
+    """Run the requested mode, draining queued writes before returning.
+
+    v2.11 Task 6 — shutdown safety drain. Every exit path of the scan leaves
+    through this wrapper, including the early returns for --discover-services
+    and --list-targets and the SIGINT/error handlers below, so records still
+    sitting in the deferred writer queue are committed before the process hands
+    control back to the interpreter.
+
+    The bound is deliberate: 5.0 s caps how long a finished scan can be held on
+    its exit path, and it is half the 10.0 s default that the atexit backstop in
+    _ensure_db_writer() uses. flush_db_writes() logs and returns False when the
+    queue has not drained in time, so a stuck writer delays the exit by at most
+    that bound instead of hanging it.
+
+    Signals are only partly covered, and the boundary is worth stating exactly
+    because it is easy to over-claim. A SIGINT (Ctrl-C) becomes
+    KeyboardInterrupt, which _main_dispatch() catches, so this drain runs.
+    **SIGTERM is not covered**: Python's default disposition terminates the
+    process without unwinding, so no finally, no atexit handler and no signal
+    callback runs — and `service devicemonitor stop` sends SIGTERM. Measured on
+    this host: SIGINT -> finally ran, SIGTERM -> returncode -15 with the finally
+    never reached. SIGKILL is equally out of reach, and monitor_daemon.py runs
+    this script with subprocess.run(timeout=300), which Python escalates to
+    SIGKILL. Both uncovered windows are the accepted risk recorded as
+    DECISIONS.md 37; closing the SIGTERM one needs an explicit
+    signal.signal(signal.SIGTERM, ...) handler, which this change deliberately
+    does not add.
+    """
+    try:
+        return _main_dispatch()
+    finally:
+        flush_db_writes(5.0)
+
+
+def _main_dispatch():
+    """Parse arguments and run the requested mode."""
 
     # Parsuj argumenty
     parser = argparse.ArgumentParser(
