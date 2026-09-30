@@ -212,7 +212,7 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:top;padding-top:16px;">
+                            <td style="width:30%;vertical-align:top;padding-top:16px;">
                                 <label style="margin:0;">
                                     <input type="checkbox" id="identity_webhook_enabled" />
                                     <strong>{{ devicemonitor_t('Enable immediate webhook identity conflict alerts') }}</strong>
@@ -227,7 +227,7 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:top;padding-top:16px;">
+                            <td style="width:30%;vertical-align:top;padding-top:16px;">
                                 <strong>{{ devicemonitor_t('Notify for interfaces') }}</strong>
                             </td>
                             <td>
@@ -390,17 +390,21 @@
                                 <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('AdGuard DNS Rewrites') }}" data-content="{{ devicemonitor_t('Uses manually configured AdGuard Home DNS rewrites as a high-confidence hostname source. Enable this only if you use AdGuard Home.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
 
                                 <div id="adguard_rewrite_config" style="margin-top:14px;max-width:600px;display:none;">
-                                    <label>{{ devicemonitor_t('AdGuard URL') }}:</label>
-                                    <input type="text" id="adguard_url" class="form-control" placeholder="https://192.168.1.2" style="max-width:400px;" />
-                                    <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('AdGuard URL') }}" data-content="{{ devicemonitor_t('HTTPS base URL of your AdGuard Home server') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                                    <br><br>
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                                        <label style="margin:0;white-space:nowrap;min-width:110px;">{{ devicemonitor_t('AdGuard URL') }}:</label>
+                                        <input type="text" id="adguard_url" class="form-control" placeholder="https://192.168.1.2" style="max-width:400px;" />
+                                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('AdGuard URL') }}" data-content="{{ devicemonitor_t('HTTPS base URL of your AdGuard Home server') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                    </div>
 
-                                    <label>{{ devicemonitor_t('Username') }}:</label>
-                                    <input type="text" id="adguard_username" class="form-control" autocomplete="username" style="max-width:400px;" />
-                                    <br>
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                                        <label style="margin:0;white-space:nowrap;min-width:110px;">{{ devicemonitor_t('Username') }}:</label>
+                                        <input type="text" id="adguard_username" class="form-control" autocomplete="username" style="max-width:400px;" />
+                                    </div>
 
-                                    <label>{{ devicemonitor_t('Password') }}:</label>
-                                    <input type="password" id="adguard_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        <label style="margin:0;white-space:nowrap;min-width:110px;">{{ devicemonitor_t('Password') }}:</label>
+                                        <input type="password" id="adguard_password" class="form-control" autocomplete="new-password" style="max-width:400px;" />
+                                    </div>
                                 </div>
                             </td>
                         </tr>
