@@ -3601,3 +3601,445 @@ represented as a release (for example a `v2.10.1`-style tag at `45e8c86`) rather
 the existing `v2.10` tag, and record that decision in `DECISIONS.md`.
 
 
+## 30 September 2026 — strict 500px box for both interface-selection lists in Settings
+
+Description: the Email and Webhook "Notify for interfaces" lists are the last two
+elements of the notification settings that did not share one geometry — the Email tab
+capped its list at `max-width:350px` while the Webhook tab used `max-width:500px`, so the
+two tabs drew different-sized boxes for the same control. Both containers in
+`src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt` now carry a strict box
+declaration, `width: 500px !important; display: block;` (lines 164 and 235), replacing the
+per-tab `max-width` values.
+
+Benefit: the Email and Webhook interface lists now draw the same structural box from the
+same declaration, so the two tabs are visually uniform instead of one being 350px wide.
+
+Deployment (testbed `OPNsense.internal`, OPNsense 26.7.4_1, installer run 30 September 2026
+16:38-16:41 +1000):
+
+- `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal`
+  (`/tmp/dm_check.log`, exit 0).
+- `INSTALL_OK version=2.10 files=59 core_locales=10 backup=/var/backups/devicemonitor/install-v210.a889Nj daemon_restarted=1`
+  (`/tmp/dm_install.log`, exit 0); `configd` and the Device Monitor daemon were each
+  restarted once, and the daemon was running as pid 4008 at verification time.
+- Deployed file digest re-derived on the testbed: `aae216858f64bf7f833b8c1669823bc435ba46a7293f3773099de414c34338c9`,
+  matching the manifest row for `settings.volt`.
+
+Hash-chain bookkeeping (the installer's guard chain requires all three to move together):
+
+- `release/v2.10-runtime.manifest` line 25 — `settings.volt` digest updated
+  `ce2c7715…` -> `aae21685…`; the file remains 38 rows, which `install-unattended.sh:29`
+  requires.
+- `install-unattended.sh` line 28 — manifest self-digest updated
+  `87f3f4db…` -> `412ac809…`, recomputed over the 38-row manifest.
+- `tests/test_release_manifest.py` (re-derives every row from the working tree):
+  `V210_RELEASE_MANIFEST=PASS`.
+
+Cache hygiene: `/var/lib/php/cache` held 3 compiled Volt templates (including
+`_usr_local_opnsense_mvc_app_views_opnsense_devicemonitor_settings.volt.php`) and was
+emptied; `/usr/local/opnsense/mvc/app/cache` does not exist on this release, so there was
+nothing to flush there. `configctl webgui restart` returned `OK` and the WebUI answered
+`200` on `https://127.0.0.1/` afterwards. The compiled template re-appears on the first
+authenticated load of the Settings page; it could not be regenerated from this session
+because the render path requires a logged-in WebUI session.
+
+Rendered-markup verification (not a browser measurement): `tests/render_device_monitor_page.php`
+with `--engine runtime` (real Phalcon Volt compiler plus the production
+`OPNsense\Base\ViewTranslator` over the installed `cs_CZ` catalogue) rendered
+`settings.volt` and emitted the new declaration twice, once per container, with
+`id="email-vlan-list"` and `id="webhook-vlan-list"` both reading
+`width: 500px !important; display: block;`.
+
+Broader regression check: `python3 tests/test_language_acceptance.py --engine runtime`
+(DM-BL-008, the nine UI languages) returned
+`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`, exit 0. That harness
+renders the *deployed* views by default and cross-checks their digests against the working
+tree first, so all ten Device Monitor pages of the installed plugin rendered in the
+production Phalcon path in all nine languages with the new container declaration in place.
+
+Limit: the WebUI box was **not** measured in a browser from this session — the testbed
+session has no GUI/browser, so the layout claim rests on the rendered CSS plus the strict
+`width`/`display` declaration rather than an Inspector readout. With the default
+`content-box` sizing, the drawn outer box of each list is 518px wide (500px content plus
+1px borders and 8px padding per side); the content box is 500px. If a literal 500px outer
+box is required, `box-sizing: border-box` would be needed — that was not requested and was
+not changed.
+
+Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`,
+`release/v2.10-runtime.manifest`, `install-unattended.sh`. The change is uncommitted;
+`git diff --check` is clean.
+
+Next recommended step: review the uncommitted three-file diff and commit it as the
+`style/ux` change that makes both interface lists draw the identical 500px box.
+
+
+
+## 30 September 2026 — Settings Email/Webhook panes re-scaffolded onto native grid rows
+
+Requested change: replace the bespoke `table.table-striped` scaffolding inside the
+**Email Notifications** and **Webhook Notifications** panes of
+`src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt` with the native
+Bootstrap grid row shape the rest of the form uses, so both panes read like ordinary
+OPNsense settings rows instead of a striped table.
+
+Implemented (view only — no PHP, API, schema or translation change):
+
+- Every setting in the two panes is now its own `.row` of `<div class="col-md-3">` (label or
+  heading, with that row's `dm-info` guidance button authored beside it) plus
+  `<div class="col-md-9">` (input, checkbox, select or list container). The rendered page
+  carries 17 rows, 17 `col-md-3` and 17 `col-md-9` columns.
+- Rows created — Email: Email Notifications (Enable Email), Email Recipient, Email Sender,
+  Email delivery method, SMTP Server, SMTP Port, Encryption, SMTP Username, SMTP Password,
+  Test Email action, Infrastructure Services, Notify for interfaces. Webhook: Webhook
+  Notifications (Enable Webhook), Webhook URL, Send Test action, Identity conflict alerts,
+  Notify for interfaces.
+- `#email-vlan-list` and `#webhook-vlan-list` now sit directly inside their `col-md-9`
+  column and fill the responsive column like every other control; the earlier
+  `width: 500px !important; display: block;` declarations are gone (0 occurrences in the
+  rendered page).
+- `#email_config`, `#email_smtp_config`, `#webhook_config` and `#service_email_options` remain
+  as show/hide wrappers, so the existing `slideDown()/slideUp()/show()/hide()` behaviour is
+  unchanged. The custom `max-width:600px` on `#email_smtp_config` was dropped so the SMTP rows
+  align with the rows above them.
+- JavaScript: the four now-dead guidance-relocation lines (`#tab-webhook > .dm-info`,
+  `#email_sendmail_config`, `#email_smtp_config > .dm-info`, the `#smtp_username` button) were
+  removed — those buttons are authored in their `col-md-3` label column. The generic
+  `table > tbody > tr` loop still serves Monitoring, Nmap Scanning and Plugin Options.
+- Message ids are unchanged: 113 used before and after, none added or removed, so no
+  catalogue, sidecar or installer locale work was required.
+
+Deployment (testbed `OPNsense.internal`, OPNsense 26.7.4_1, installer run 30 September 2026
+16:58–17:00 +1000):
+
+- `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal`
+  (`/tmp/dm_check.log`).
+- `INSTALL_OK version=2.10 files=59 core_locales=10 backup=/var/backups/devicemonitor/install-v210.ed0eyk daemon_restarted=1`
+  (`/tmp/dm_install.log`); the daemon was running as pid 76013 at verification time.
+- Deployed digest `f047b6bce0c45ceb4395884a9870de24d1bf056bcc829b2349116c2a58a667b4` matches the
+  manifest row for `settings.volt`.
+
+Hash-chain bookkeeping: `release/v2.10-runtime.manifest` line 25 `settings.volt` digest
+`aae21685…` -> `f047b6bc…` (file still 38 rows); `install-unattended.sh` line 28 manifest
+self-digest `412ac809…` -> `b642cfe8…`; `tests/test_release_manifest.py`
+`V210_RELEASE_MANIFEST=PASS`.
+
+Cache hygiene: `/var/lib/php/cache` emptied of compiled Volt templates (3 -> 0, including
+`_usr_local_opnsense_mvc_app_views_opnsense_devicemonitor_settings.volt.php`);
+`configctl webgui restart` -> `OK`; `https://127.0.0.1/` -> HTTP `200`.
+
+Validation: `sh -n install-unattended.sh`, `git diff --check`, `tests/test_release_manifest.py`,
+`tests/test_device_navigation.js` and `python3 tests/test_language_acceptance.py --engine runtime`
+(`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`) all PASS.
+`settings.volt` also compiled through the real Phalcon Volt compiler (`engine=runtime`, exit 0)
+emitting 17 rows / 17 `col-md-3` / 17 `col-md-9`, `table-striped` only in the three remaining
+table panes (Monitoring, Nmap Scanning, Plugin Options) and zero `width: 500px !important`.
+
+Limit: no browser/GUI in this session, so the alignment claim rests on the emitted markup and
+grid classes rather than an Inspector readout of the laid-out rows.
+
+Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt` (+226/-180),
+`release/v2.10-runtime.manifest`, `install-unattended.sh`. The change is uncommitted and
+`git diff --check` is clean.
+
+Next recommended step: review the uncommitted diff and commit it as the `style/ux` change that
+puts the Email and Webhook panes on native grid rows.
+
+## 30 September 2026 — Email Notifications pane spacing refinements
+
+Follow-up to the grid-row re-scaffold: once the Email pane stopped using
+`table.table-striped`, its rows lost the table-cell padding that used to separate them, so
+Recipient / Sender / Delivery Method ran together and the Infrastructure Services block had no
+break before Notify for interfaces.
+
+Implemented in `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt` (spacing only;
+no element ids, labels, message ids or behaviour changed):
+
+- `class="row form-group"` added to the Email Recipient (line 60), Email Sender (line 69) and
+  Email delivery method (line 78) row containers — Bootstrap 3's standard `margin-bottom:15px`
+  form-row spacing, i.e. the theme's own value, so no new CSS was introduced.
+- The `Email Notifications` / **Enable Email** heading row (line 47) received the same class so
+  the first field no longer touches the master-switch row above it.
+- `style="margin-bottom:25px;"` added to the Infrastructure Services row (line 166) — the
+  distinct break requested before the Notify for interfaces row. No `<hr>`/`clearfix` was
+  introduced: no view in the plugin uses one, and the other tabs separate categories through row
+  spacing alone.
+- The Direct SMTP sub-rows (Server, Port, Encryption, Username, Password) were left at their
+  current spacing: they are hidden unless the SMTP delivery method is selected and were not part
+  of the reported layout gap.
+
+Deployment (testbed `OPNsense.internal`, 30 September 2026 18:52–18:56 +1000):
+
+- `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal`
+  (`/tmp/dm_check.log`).
+- `INSTALL_OK version=2.10 files=59 core_locales=10 backup=/var/backups/devicemonitor/install-v210.sSgelp daemon_restarted=1`
+  (`/tmp/dm_install.log`); daemon running as pid 58567.
+- Deployed digest `782b87016fbd1003f4048641689de8f268be77f3ce03838adce50158fe28a6ae` equals the
+  manifest row.
+
+Hash chain: `release/v2.10-runtime.manifest` line 25 `f047b6bc…` -> `782b8701…` (still 38 rows);
+`install-unattended.sh` line 28 `b642cfe8…` -> `40c2f220…`; `V210_RELEASE_MANIFEST=PASS`.
+
+Cache hygiene: `/var/lib/php/cache` emptied (3 -> 0 compiled Volt templates);
+`configctl webgui restart` -> `OK`; `https://127.0.0.1/` -> HTTP `200`.
+
+Validation: `sh -n install-unattended.sh`, `git diff --check`, `tests/test_release_manifest.py`,
+`tests/test_device_navigation.js` and `python3 tests/test_language_acceptance.py --engine runtime`
+(`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`) PASS. The Volt render
+(`engine=runtime`, exit 0) emits 4 `row form-group` blocks, 17 rows / 17 `col-md-3` / 17 `col-md-9`,
+the `margin-bottom:25px` break in document order between `#service_email_options` and
+`#email-vlan-list`, and 0 `width: 500px !important`.
+
+Limit: spacing is verified from the emitted classes and markup, not from a browser measurement.
+
+Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`,
+`release/v2.10-runtime.manifest`, `install-unattended.sh`. Uncommitted.
+
+Next recommended step: review the uncommitted diff and commit the grid-row re-scaffold together
+with this spacing refinement as one `style/ux` change.
+
+## 30 September 2026 — Test Email action row spacing and redeploy
+
+Last spacing gap on the Email Notifications pane: the row holding the **Test Email** button and
+its guidance icon sat flush against the Infrastructure Services row below it.
+
+Implemented in `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt` (line 153):
+
+- `<div class="row">` -> `<div class="row form-group">` on the Test Email action row, so it
+  inherits the same standard 15px bottom margin as the Recipient/Sender/Delivery Method rows.
+  Nothing else changed — same ids, labels, message ids and JavaScript behaviour; the pane now has
+  five `row form-group` rows (lines 47, 60, 69, 78, 153).
+
+Deployment (testbed `OPNsense.internal`, 30 September 2026 19:00–19:03 +1000):
+
+- `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal` (`/tmp/dm_check.log`).
+- `INSTALL_OK version=2.10 files=59 core_locales=10 backup=/var/backups/devicemonitor/install-v210.RCfBNn daemon_restarted=1` (`/tmp/dm_install.log`); daemon running as pid 82146.
+- Deployed digest `ebe5068f107dfb8cd0e40cacd6cc428eab8b93817ad98e8b42d7fc3410634069` equals the working-tree source and the manifest row.
+
+Hash chain: `release/v2.10-runtime.manifest` line 25 `782b8701…` -> `ebe5068f…` (still 38 rows);
+`install-unattended.sh` line 28 `40c2f220…` -> `db664571…`; `V210_RELEASE_MANIFEST=PASS`.
+
+Cache hygiene: `/var/lib/php/cache` emptied (3 -> 0 compiled Volt templates);
+`configctl webgui restart` -> `OK`; `https://127.0.0.1/` -> HTTP `200`.
+
+Validation: `sh -n install-unattended.sh`, `git diff --check`, `tests/test_release_manifest.py`,
+`tests/test_device_navigation.js` and `python3 tests/test_language_acceptance.py --engine runtime`
+(`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`) PASS. The Volt render
+(`engine=runtime`, exit 0) emits 5 `row form-group` blocks with the Test Email row before the
+`margin-bottom:25px` Infrastructure Services row, 17 rows / 17 `col-md-3` / 17 `col-md-9`, and 0
+`width: 500px !important`.
+
+Limit: spacing is verified from the emitted classes and markup, not a browser measurement.
+
+Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`,
+`release/v2.10-runtime.manifest`, `install-unattended.sh`. Uncommitted.
+
+Next recommended step: commit the re-scaffold and the two spacing refinements together as one
+`style/ux` change.
+
+
+## 30 September 2026 — Interface list width match and redeploy
+
+The `Notify for interfaces` list boxes on the Email Notifications and Webhook Notifications
+panes filled the whole `col-md-9` column, so the bordered box ran past the right edge of the
+input fields above it.
+
+Implemented in `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`:
+
+- `#email-vlan-list` (line 205) and `#webhook-vlan-list` (line 286) gained a `max-width` in
+  their existing inline style so each bordered box ends where the field above it ends:
+  `max-width:400px;` on the Email pane (matching `#email_to`, `#email_from`, `#email_method`,
+  `#smtp_host`, `#smtp_username`, `#smtp_password`) and `max-width:500px;` on the Webhook pane
+  (matching `#webhook_url` and its Examples `<details>` box, and the same 500px the HEAD
+  commit `34ccabd` used for this list).
+- The width was set on the list container instead of inserting an inner wrapper `div`, so the
+  `#email-vlan-list` / `#webhook-vlan-list` ids, their `.notif-vlan-cb` children and
+  `buildVlanCheckList()` / `getSelectedVlans()` keep the identical DOM path. No other
+  attribute, id, label, message id or script changed.
+
+Deployment (testbed `OPNsense.internal`, 30 September 2026 19:42–19:47 +1000):
+
+- `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal`
+  (`/tmp/dm_check.log`).
+- `INSTALL_OK version=2.10 files=59 core_locales=10 backup=/var/backups/devicemonitor/install-v210.cCpfPu daemon_restarted=1`
+  (`/tmp/dm_install.log`); daemon restarted, now running as pid 5079.
+- Deployed digest `a85d4674c091bb82e32addb510bbcaf47af3caefee5695ff0b0297cbf3fb5496` equals the
+  working-tree source and the manifest row.
+
+Hash chain: `release/v2.10-runtime.manifest` line 25 `ebe5068f…` -> `a85d4674…` (still 38 rows);
+`install-unattended.sh` line 28 `db664571…` -> `ba1d58ec…`; `V210_RELEASE_MANIFEST=PASS`.
+
+Cache hygiene: `/var/lib/php/cache` emptied (3 -> 0 compiled Volt templates);
+`configctl webgui restart` -> `OK`; `https://127.0.0.1/` -> HTTP `200`.
+
+Validation: `sh -n install-unattended.sh`, `git diff --check`, `tests/test_release_manifest.py`,
+`tests/test_device_navigation.js` (7 checks) and
+`python3 tests/test_language_acceptance.py --engine runtime`
+(`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`; the same test reported
+the expected `installed view differs from the source: settings.volt` before the redeploy) PASS.
+The Volt render (`engine=runtime`, exit 0) emits both list boxes with their new
+`max-width:400px;` / `max-width:500px;` inline styles, 5 `row form-group` blocks, 17
+`class="col-md-3"` / 17 `class="col-md-9"` and 0 `width: 500px !important`.
+
+Limit: the widths are verified from the emitted inline styles and the sibling input
+`max-width` values, not from a browser measurement.
+
+Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`,
+`release/v2.10-runtime.manifest`, `install-unattended.sh`. Uncommitted.
+
+Next recommended step: review the uncommitted diff and commit the grid-row re-scaffold plus the
+spacing and width refinements together as one `style/ux` change.
+
+
+## 30 September 2026 — Full grid re-scaffold of Monitoring, Nmap Scanning and Plugin Options
+
+Alignment sweep completed: the three remaining table panes now use the same native grid rows as the
+Email and Webhook panes, and the Webhook pane received the last spacing refinements.
+
+Implemented in `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`:
+
+- Webhook pane: the Enable Webhook row, the Webhook URL row and the Send Test action row became
+  `<div class="row form-group">`; the Identity conflict alerts row became
+  `<div class="row" style="margin-bottom:25px;">` — the same break the Email pane already uses on its
+  Infrastructure Services row — so the interface list box is separated from the checkbox row above it.
+- Monitoring (3 rows), Nmap Scanning (7 rows) and Plugin Options (9 rows) were re-scaffolded from
+  `table class="table table-striped"` rows into `<div class="row form-group">` grid pairs:
+  headings and `.dm-info` guidance buttons in `col-md-3`, controls (checkbox, number, select,
+  text/password input, list box) in `col-md-9`. No striped table remains in any configuration pane.
+- The Nmap section heading is a `col-md-12` row and its guidance button is now authored inside the
+  `<h4>` instead of being moved there at runtime.
+- Plugin Options kept `#adguard_rewrite_config` and `#pihole_config` as show/hide wrappers, with the
+  AdGuard URL/Username/Password and Pi-hole URL/App password rows promoted to nested
+  `row form-group` col-md-3/col-md-9 pairs; the custom `max-width:600px` was dropped from both
+  wrappers for the same reason `#email_smtp_config` lost it earlier (sub-rows must align with the
+  rows above them). `#monitored-interface-list` keeps its `max-width:450px`.
+- JavaScript: the now-dead `table > tbody > tr` guidance-relocation loop, the `#tab-nmap h4` append
+  and the `['adguard_url','pihole_url','pihole_password']` relocation were removed and replaced by a
+  comment — all five configuration panes are authored in their final form, so no runtime DOM moves
+  are required.
+- Message ids, ids, labels and `data-content` strings are unchanged: `keys=450` per page before and
+  after, and the language-acceptance counts are identical.
+
+Deployment (testbed `OPNsense.internal`, 30 September 2026 19:53–20:00 +1000):
+
+- `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal`
+  (`/tmp/dm_check.log`).
+- `INSTALL_OK version=2.10 files=59 core_locales=10 backup=/var/backups/devicemonitor/install-v210.c18NcX daemon_restarted=1`
+  (`/tmp/dm_install.log`); daemon running as pid 51779.
+- Deployed digest `cc64ab42483a6a6cd422d78aaa20cd7251878da8d3fdb0145a9c862fb6236ea8` equals the
+  working-tree source and the manifest row.
+
+Hash chain: `release/v2.10-runtime.manifest` line 25 `a85d4674…` -> `cc64ab42…` (still 38 rows);
+`install-unattended.sh` line 28 `ba1d58ec…` -> `7c9cefa3…`; `V210_RELEASE_MANIFEST=PASS`.
+
+Cache hygiene: `/var/lib/php/cache` emptied (3 -> 0 compiled Volt templates);
+`configctl webgui restart` -> `OK`; `https://127.0.0.1/` -> HTTP `200`.
+
+Validation: `sh -n install-unattended.sh`, `git diff --check`, `tests/test_release_manifest.py`,
+`tests/test_device_navigation.js` (7 checks), `tests/test_selectpicker_static.js` and
+`python3 tests/test_language_acceptance.py --engine runtime`
+(`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`; before the redeploy the
+same run reported only the expected `installed view differs from the source: settings.volt`) PASS.
+The Volt render (`engine=runtime`, exit 0) emits, for both the working tree and the deployed file,
+27 `row form-group` rows, 35 `col-md-3` / 35 `col-md-9` columns, 0 `table-striped`, 2
+`margin-bottom:25px` breaks, 26 `.dm-info` buttons (22 in `col-md-3`; the Email Test action row and
+the Nmap section heading keep theirs in `col-md-9` / `col-md-12`) and one `table-condensed` left in
+the About pane.
+
+Limit: no browser/GUI in this session, so the alignment claim rests on the emitted grid markup, not
+an Inspector readout of the laid-out rows. The About pane was deliberately left as an information
+table — it is not one of the five configuration panes.
+
+Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`,
+`release/v2.10-runtime.manifest`, `install-unattended.sh`. Uncommitted.
+
+Next recommended step: review the uncommitted diff and commit the grid re-scaffold plus the spacing
+and width refinements together as one `style/ux` change.
+
+## 30 September 2026 — Email SMTP sub-panel grid rows and guidance-icon column conformity
+
+Closed the three residual items from the 20:01 report in
+`src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`: the hidden `#email_smtp_config`
+rows (SMTP Server, Port, Encryption, Username, Password) are now `row form-group` with labels in
+`col-xs-12 col-md-3` and controls in `col-xs-12 col-md-9`; the Email Test Email row and the Nmap
+heading row carry their guidance buttons in a `col-xs-12 col-md-3` label column, so the file's last
+`col-md-12` row is gone and no `.dm-info` button sits outside a `col-md-3` column. No
+`max-width:600px` remained inside the five configuration panes to strip (the About information
+wrapper keeps its one, unchanged); the sub-panel's uniform `max-width:400px` / `width:120px` /
+`width:180px` control widths were preserved so it matches the main mail rows. No JavaScript changed;
+the Test Email heading reuses the existing `Test Email` message id.
+
+Hash chain: `release/v2.10-runtime.manifest` line 25 `cc64ab42…` -> `c631fec9…` (still 38 rows);
+`install-unattended.sh` line 28 `7c9cefa3…` -> `ad7f4443…`; `V210_RELEASE_MANIFEST=PASS`.
+
+Deployment (testbed `OPNsense.internal`, 30 September 2026 20:08–20:13 +1000): `CHECK_OK version=2.10
+predecessor=2.10 files=59 core_locales=10 daemon_running=1`; `INSTALL_OK version=2.10 files=59
+core_locales=10 backup=/var/backups/devicemonitor/install-v210.YHi3be daemon_restarted=1`; daemon
+running as pid 80907. `/var/lib/php/cache` emptied (3 -> 0 compiled Volt templates);
+`configctl webgui restart` -> `OK`; `https://127.0.0.1/` -> HTTP `200`.
+
+Validation: `sh -n install-unattended.sh`, `git diff --check`, `tests/test_release_manifest.py`,
+`tests/test_device_navigation.js` (7 checks), `tests/test_selectpicker_static.js` and
+`python3 tests/test_language_acceptance.py --engine runtime` (`LANGUAGE_ACCEPTANCE=PASS languages=9
+gaps=1 engine=runtime failures=0`; before the redeploy only the expected `installed view differs from
+the source: settings.volt`). The Volt render (`engine=runtime`, exit 0) is byte-identical (54,242 B)
+for the working tree and the deployed file: 32 `row form-group`, 7 `col-xs-12 col-md-3`, 6
+`col-xs-12 col-md-9`, 37 `col-md-3`, 35 `col-md-9`, 0 `col-md-12`, 0 `table-striped`, 26 `.dm-info`
+buttons with 0 outside a `col-md-3` label column; `keys=450` per page before and after.
+
+Limit: no browser/GUI in this session, so the alignment claim rests on the emitted grid markup, not
+an Inspector readout. Residual, outside the scoped instruction: the Webhook "Send Test" row keeps an
+empty `col-md-3`, the two "Notify for interfaces" list rows remain plain `class="row"`, and
+`docs/USER_MANUAL.md` §14 still lists five tabs without Plugin Options.
+
+Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`,
+`release/v2.10-runtime.manifest`, `install-unattended.sh`. Uncommitted.
+
+Next recommended step: review the uncommitted diff and commit the grid re-scaffold plus these
+Email/Nmap refinements as one `style/ux` change.
+
+
+## 30 September 2026 — Webhook "Send Test" label column (final alignment pass)
+
+Closed the residual asymmetry recorded at the end of the 20:13 report: the Webhook pane's "Send Test"
+action row was the last `row form-group` in
+`src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt` whose `col-md-3` label column was
+empty. Line 256 `<div class="col-md-3"></div>` now reads `<div class="col-md-3"><strong>Send Test
+Webhook</strong></div>` (lines 256-258); the row's `col-md-9` column is untouched, so the
+`#test_webhook` button (🧪 `Send Test`) and the `#webhook_test_result` span keep their placement. The
+row never had a `.dm-info` button, so no guidance icon moved. The file now holds zero empty
+`col-md-3` cells, and the rendered grid is 29 plain `col-md-3` against 29 `col-md-9` columns.
+
+Message-id conflict reported, not silently resolved: `Send Test Webhook` is not an existing message id
+in any of the 12 catalogues, so wrapping it in `devicemonitor_t()` would add a page id and fail
+`tests/test_language_acceptance.py`, which rejects any page id missing from a language's source
+catalogue. The label is therefore literal markup, exactly as instructed, as the existing `Enable
+sidecar catalogue translations` heading at line 537 already is; rendered `keys=450` per page is
+unchanged, i.e. no message id was added or removed.
+
+Hash chain: `release/v2.10-runtime.manifest` line 25 `c631fec9…` -> `52d0aefa…` (still 38 rows,
+self-digest `ad7f4443…` -> `84087b44…`); `install-unattended.sh` line 28 `ad7f4443…` -> `84087b44…`.
+
+Deployment (testbed `OPNsense.internal`, 30 September 2026 20:31-20:34 +1000): `CHECK_OK version=2.10
+predecessor=2.10 files=59 core_locales=10 daemon_running=1`; `INSTALL_OK version=2.10 files=59
+core_locales=10 backup=/var/backups/devicemonitor/install-v210.I7kIss daemon_restarted=1`;
+`/var/lib/php/cache` emptied (3 -> 0 compiled Volt templates, including
+`_usr_local_opnsense_mvc_app_views_opnsense_devicemonitor_settings.volt.php`); `configctl webgui
+restart` -> `OK`; `https://127.0.0.1/` -> HTTP `200`. Deployed digest `52d0aefa…` = source = manifest
+row 25.
+
+Validation: `sh -n install-unattended.sh`, `git diff --check`, `V210_RELEASE_MANIFEST=PASS`,
+`DEVICE_NAVIGATION_*=PASS` (7 checks), `DEVICE_SELECTPICKER_STATIC=PASS`, `SIDECAR_CATALOGUE=PASS`,
+`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`. Volt render
+(`engine=runtime`, exit 0, `de_DE`): 54,246 bytes, `<strong>Send Test Webhook</strong>` once, 0 empty
+`col-md-3` cells, 26 `.dm-info` buttons; the row renders `<strong>Send Test Webhook</strong>` above
+`🧪 Test senden`.
+
+Limit: no browser/Inspector available, so the alignment claim rests on the emitted grid markup.
+Residual, outside the scoped instruction: the two "Notify for interfaces" list rows remain plain
+`class="row"`, and `docs/USER_MANUAL.md` §14 still lists five tabs without Plugin Options.
+
+Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`,
+`release/v2.10-runtime.manifest`, `install-unattended.sh`.
+
+Next recommended step: push `v2.10-development` and read the `ci.yml` run for the new commit.
+
