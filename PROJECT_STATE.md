@@ -150,6 +150,52 @@ Note for the next editor: the `## Current state` header above still reads
 `Branch: \`v2.10-development\`` and still names the v2.10.2 release seal as current. That header
 has not been rewritten for this v2.11 feature branch.
 
+### Task 1B — CI Test Suite Coverage for Async Database Operations
+
+**Initiated 30 September 2026.** Task 1's verification asset, `tests/test_deferred_db_writes.py`,
+was not executed by the CI runner, so a green remote run said nothing about the deferred-write code
+itself. A dedicated step now runs it, placed directly after `Validate opt-in port discovery` so it
+sits with the other scanner test:
+
+```yaml
+      - name: Validate deferred database writes (v2.11)
+        run: python3 tests/test_deferred_db_writes.py
+```
+
+Remote-runner suitability was **checked, not assumed**, because the change request asked for the
+thread and queue bounds to be handled "gracefully" on the cloud runner:
+
+- the test reads **no environment variable** (`grep -n 'environ\|getenv\|argv'` -> no match) and
+  accepts no arguments, so there is no ambient setting to configure;
+- it is pure standard library — `builtins`, `importlib`, `sqlite3`, `tempfile`, `threading`,
+  `pathlib` — needs no network, no `nmap` and no OPNsense host, and uses the Python `sqlite3` module
+  rather than the `sqlite3` CLI;
+- its drain bounds are **explicit parameters at the call site**, not ambient configuration:
+  `flush_db_writes(5.0)` for the five single-job checks, `flush_db_writes(15.0)` for the
+  4-thread x 16-enqueue concurrency case, and `flush_db_writes(1.0)` for the no-writer case.
+
+So no queue-size or runner-timeout variable was introduced: the required graciousness is already in
+the test's own bounds, and the whole file runs in about **1.3 s** locally (1.32 s real).
+
+Local validation:
+
+```
+python3 tests/test_deferred_db_writes.py   -> DEFERRED_DB_WRITES=PASS   (1.32s real)
+python3 yaml.safe_load(.github/workflows/ci.yml)  -> parses
+python3 tests/test_release_manifest.py     -> V211_RELEASE_MANIFEST=PASS
+git diff --check                           -> clean
+sh install-unattended.sh --host OPNsense.internal --check
+  CHECK_OK version=2.11 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal
+  EXIT=0
+```
+
+Neither `ci.yml` nor `tests/test_deferred_db_writes.py` is a manifest row, so this change is
+manifest-neutral: `release/v2.11-runtime.manifest` remains `df10e9e0…` and the installer digest pin
+on `install-unattended.sh:36` is unchanged.
+
+Remote verification: pending at commit time; recorded in the follow-up commit once the run for this
+change completes.
+
 ### Task 2 — Pull Request #2 retired as superseded (documentation only, no v2.11 code change)
 
 **Recorded 30 September 2026.** PR #2 (`Device Monitor: optional shared locale installation`,

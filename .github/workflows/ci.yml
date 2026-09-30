@@ -48,6 +48,12 @@ jobs:
       - name: Validate opt-in port discovery
         run: python3 tests/test_port_discovery.py
 
+      # v2.11 Task 1B: the deferred-write refactor's own verification asset. It carries its own
+      # drain bounds at the call site (flush_db_writes(5.0 / 15.0 / 1.0)) and reads no environment
+      # variable, so there is no queue-size or runner-timeout variable to set here.
+      - name: Validate deferred database writes (v2.11)
+        run: python3 tests/test_deferred_db_writes.py
+
       - name: Lint PHP sources
         run: |
           set -eu
