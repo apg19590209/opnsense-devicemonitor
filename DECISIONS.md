@@ -1234,3 +1234,76 @@ in `defaults.json` with its `"0"` default and `ConfigController::save` keeps acc
 but no view posts it any more, so the stored value settles to `"0"` on the next save. The names that still carry
 "email" — `should_send_identity_email()` and `notify_identity_email.php` — were retained because the helper's path
 is part of the installer manifest; they are naming residuals, not behaviour.
+
+## 37. Nmap scan-history writes are deferred to a single asynchronous writer thread
+
+### Decision
+
+`scan_network.py` no longer performs the completion write for a targeted Nmap scan on the scan
+thread. `run_targeted_scan_with_history()` builds a plain payload dictionary and hands it to
+`enqueue_db_write()`, which places it on a `queue.Queue` consumed by one process-wide daemon
+thread (`dm-db-writer`).
+
+- One writer thread owns one long-lived `sqlite3` connection and commits one transaction per job
+  (`with conn:`), so a job either commits completely or rolls back completely.
+- `_db_write_apply(conn, job)` is the only implementation of the completion write and is shared
+  verbatim by the writer thread and by the synchronous fallback, so the two paths cannot drift.
+- A `threading.Condition` counter (`_DB_WRITER_PENDING`) makes the queue drainable:
+  `flush_db_writes()` blocks until every accepted job has been committed.
+- Queued work is drained before the process may exit via `atexit.register` (registered when the
+  writer starts) and via an explicit `flush_db_writes()` in `full_scan()`, after the automatic
+  targeted-scan loop.
+- `stop_db_writer()` drains and stops the thread deterministically; the tests use it so no
+  connection is leaked between test modules.
+
+Two writes are deliberately **not** deferred:
+
+- the pre-scan `INSERT INTO nmap_scan_history`, whose `lastrowid` is required by the port rows
+  and by the abort path;
+- the abort/failure `UPDATE`, because the process is unwinding and the record must not depend on
+  a background thread.
+
+### Fallback
+
+`enqueue_db_write()` returns `False` when the writer thread cannot be started or the `put()`
+fails. On `False` the caller performs the original synchronous write inside
+`with sqlite3.connect(DB_FILE)`. Deferred writing is therefore an optimisation and never a
+precondition for recording history: a failure to defer degrades to the previous behaviour
+instead of dropping the row.
+
+### Accepted risk — the SIGKILL drain boundary
+
+**Accepted by architectural decision, 30 September 2026.** A history completion is durable only
+once the writer thread has committed it, so a drain boundary exists between
+`enqueue_db_write()` returning and that commit. If the process is killed without running
+`atexit` — `SIGKILL`, an OOM kill, or a supervisor timeout that escalates to `SIGKILL` — a job
+that was queued but not yet committed is lost, whereas the inline v2.10 code had already
+committed it by that point.
+
+This boundary is accepted for v2.11 because:
+
+- targeted Nmap history is periodic audit data, not transactional state; a lost row is a gap in
+  an audit trail, and the next scan rewrites the port set for that host;
+- every orderly exit path drains, and that is covered by test;
+- the exposure window is the write of a single job, not the whole scan;
+- only `nmap_scan_history` and `nmap_scan_ports` are deferred — no device, configuration or
+  notification state is affected.
+
+If the daemon is ever changed to enforce a hard `SIGKILL` timeout on scan subprocesses, this
+decision must be revisited: either drain in-process before the deadline, or make the writer
+synchronous under a configuration flag. A bounded pre-exit drain in `main()` is the preferred
+remedy.
+
+### Reason
+
+The completion write previously ran on the scan thread and acquired the SQLite write lock and
+its fsync there, once per scan, while the surrounding scan loop opened its own connections for
+queue bookkeeping. Moving the write behind a queue removes the lock acquisition and the disk IO
+from the scan path and consolidates the writes onto a single connection.
+
+### Verified
+
+`python3 tests/test_deferred_db_writes.py` -> `DEFERRED_DB_WRITES=PASS`, six checks:
+commit-and-drain; rescan replaces ports rather than duplicating them; a failed scan records its
+error and writes no ports; the asynchronous and synchronous paths produce identical rows; four
+threads x sixteen concurrent enqueues are all recorded; and an empty flush returns immediately.

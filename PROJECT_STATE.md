@@ -76,6 +76,77 @@ Status:
 - Current production OS version and runtime settings are not restated here; the
   historical sections below record what was known when they were written.
 
+## v2.11-development Lifecycle (October 2026 Tracking)
+
+### Task 1 — Asynchronous Deferred SQLite Writes: scaffolded, verified, staged
+
+**Recorded 30 September 2026** (the header label above says October; this entry is being written
+on the last day of September, which is when the work was actually done). Feature branch
+`feature/async-db-v2.11`, created from `5cca3c9` (`docs: route AdGuard/Pi-hole/Unbound
+hostname-source anchors to the Plugin Options tab (14.5)`), the pushed tip of `v2.10-development`.
+At the time of writing the work is **staged on that branch only** — not committed, not merged, not
+pushed.
+
+Scaffolded in `src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py` (**+292 / -87**):
+
+- `run_targeted_scan_with_history()` now builds a plain payload dictionary and calls
+  `enqueue_db_write()` instead of performing the completion write inline. The per-port
+  `INSERT INTO nmap_scan_ports` loop no longer runs on the scan thread.
+- One process-wide daemon writer thread (`dm-db-writer`) consumes a `queue.Queue`, owns a single
+  long-lived `sqlite3` connection, and commits one transaction per job (`with conn:`).
+- `_db_write_apply(conn, job)` is the single implementation of the completion write, shared
+  verbatim by the writer thread and the synchronous fallback, so the two paths cannot drift.
+- A `threading.Condition` counter (`_DB_WRITER_PENDING`) plus `flush_db_writes()` make the queue
+  drainable; `stop_db_writer()` drains and stops it deterministically.
+- Drain points: `atexit` (registered when the writer starts) and an explicit `flush_db_writes()`
+  in `full_scan()`, after the automatic targeted-scan loop.
+- The pre-scan history `INSERT` (its `lastrowid` is needed downstream) and the abort/failure
+  `UPDATE` (the process is unwinding) are deliberately still synchronous.
+- `enqueue_db_write()` returning `False` degrades to the original synchronous write, so history is
+  never lost by a failure to defer.
+
+New regression asset `tests/test_deferred_db_writes.py` (349 lines, six checks) reports
+`DEFERRED_DB_WRITES=PASS`.
+
+**Test framework result — 19 of 20 pass; the one failure is by design, not a regression.**
+
+```
+python3 tests/*.py  (20 files)  ->  19 x rc=0, 1 x rc=1
+tests/test_release_manifest.py  ->  rc=1  AssertionError: scan_network.py
+```
+
+`release/v2.10-runtime.manifest` pins the SHA256 of every shipped source file, so editing
+`scan_network.py` invalidates its row by construction. The same gate makes the installer
+pre-flight fail:
+
+```
+sh install-unattended.sh --host OPNsense.internal --check
+  ABORT: source hash src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py   (exit 1)
+```
+
+The v2.11 work therefore **cannot** present a green pre-flight on this branch. Restoring it needs
+a release re-cut: refreshing the manifest row changes the manifest's own SHA256, which breaks the
+installer's hard-coded `5d8101ba…` digest pin and its 38-row count, and the installer is itself a
+manifest row. The v2.10 manifest is the v2.10 release artifact and must not be rewritten for
+v2.11 work; the correct vehicle is a new v2.11 manifest at release time. The refactor's evidence
+is the test suite, not the installer check — that check verifies release-artifact integrity and
+says nothing about code correctness.
+
+Two defects were found and fixed by the new test while scaffolding: an `UnboundLocalError` from
+augmenting `_DB_WRITER_PENDING` without a `global` declaration in both `_db_writer_loop` and
+`enqueue_db_write`; and a stop-sentinel path that fell through a `finally` decrement, driving the
+counter negative so `wait_for(pending == 0)` could never succeed — which hung `flush_db_writes`
+to its timeout and cost 10 s per loaded module at `atexit`.
+
+The accepted design risk is recorded as `DECISIONS.md` 37: the **SIGKILL drain boundary** — a job
+queued but not yet committed is lost if the process is killed without running `atexit`, where the
+inline v2.10 code had already committed it. Accepted for periodic scan audit history; to be
+revisited if a hard `SIGKILL` scan timeout is ever enforced.
+
+Note for the next editor: the `## Current state` header above still reads
+`Branch: \`v2.10-development\`` and still names the v2.10.2 release seal as current. That header
+has not been rewritten for this v2.11 feature branch.
+
 ## 27 September 2026 v2.10 install-guard pin restoration
 
 Description: restored the guarded v2.10 installer, which aborted with

@@ -9,7 +9,10 @@ import os
 import json
 import sys
 import argparse
+import atexit
+import queue
 import subprocess
+import threading
 import re
 import time
 import select
@@ -5668,6 +5671,263 @@ def config_bool(value, default=False):
     return default
 
 
+# ================================================================
+# ASYNCHRONOUS DEFERRED SQLITE WRITES (v2.11 lifecycle, Task 1)
+#
+# A targeted Nmap scan finishes by writing one nmap_scan_history row
+# plus one nmap_scan_ports row per discovered port. Doing that inline
+# makes the Nmap result parser block on the database write lock and its
+# fsync for every scan, while churning a fresh connection per phase
+# (create row / abort row / finish row) alongside the connections the
+# surrounding scan loop opens for its own queue bookkeeping.
+#
+# The history completion is therefore handed to a single process-wide
+# writer thread through a thread-safe queue.Queue. The scan thread only
+# builds a plain payload and performs an in-memory put(), so the parser
+# never waits on disk IO, and each job is applied in one batched
+# transaction on one long-lived connection.
+#
+# Durability rules:
+#   * The history row is still created synchronously: its lastrowid is
+#     needed for the port rows and for the abort path.
+#   * The abort/failure path is still written synchronously; the process
+#     is unwinding and the record must not depend on a background thread.
+#   * Queued work is drained before the process may exit (atexit, plus an
+#     explicit drain in the automatic queue loop) so history is never
+#     silently dropped.
+#   * If the writer cannot be started or a put() fails, the caller falls
+#     back to the original synchronous write.
+# ================================================================
+
+_DB_WRITE_QUEUE = queue.Queue()
+_DB_WRITE_SENTINEL = object()
+_DB_WRITER_THREAD = None
+_DB_WRITER_START_LOCK = threading.Lock()
+_DB_WRITER_STATE = threading.Condition()
+_DB_WRITER_PENDING = 0
+_DB_WRITER_ERRORS = 0
+
+
+def _db_write_apply(conn, job):
+    """Apply one deferred Nmap history completion on `conn`.
+
+    Shared verbatim by the writer thread and by the synchronous fallback,
+    so both paths write identical rows in identical order.
+    """
+    services = job['services']
+
+    conn.execute(
+        '''
+        UPDATE nmap_scan_history
+        SET finished_at = ?,
+            success = ?,
+            error = ?,
+            nmap_version = ?,
+            nmap_elapsed = ?,
+            os_hint = ?,
+            open_port_count = ?,
+            email_sent = ?,
+            email_error = ?
+        WHERE id = ?
+        ''',
+        (
+            job['finished_at'],
+            1 if job['scan_success'] else 0,
+            job['scan_error'],
+            job['nmap_version'],
+            job['nmap_elapsed'],
+            job['os_hint'],
+            len(services),
+            job['email_sent'],
+            job['email_error'],
+            job['history_id'],
+        )
+    )
+
+    conn.execute(
+        'DELETE FROM nmap_scan_ports WHERE scan_history_id = ?',
+        (job['history_id'],)
+    )
+
+    if job['scan_success']:
+        discovered_count = update_service_inventory_from_nmap(
+            conn,
+            job['mac'],
+            job['ip'],
+            job['vlan'],
+            services,
+            job['finished_at']
+        )
+        if discovered_count:
+            log(
+                "[SERVICES] Updated "
+                f"{discovered_count} infrastructure service(s) "
+                f"for {job['mac']}"
+            )
+
+    for service in services:
+        try:
+            port_number = int(service.get('port'))
+        except (TypeError, ValueError):
+            continue
+
+        conn.execute(
+            '''
+            INSERT INTO nmap_scan_ports (
+                scan_history_id,
+                port,
+                protocol,
+                state,
+                service,
+                product,
+                version,
+                extra_info
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''',
+            (
+                job['history_id'],
+                port_number,
+                str(service.get('protocol') or ''),
+                str(service.get('state') or 'open'),
+                str(service.get('service') or 'unknown'),
+                str(service.get('product') or ''),
+                str(service.get('service_version') or ''),
+                str(service.get('extra_info') or ''),
+            )
+        )
+
+
+def _db_writer_loop():
+    """Own one connection and commit queued history completions in batches."""
+    global _DB_WRITER_ERRORS, _DB_WRITER_PENDING
+
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        conn.execute('PRAGMA foreign_keys = ON')
+
+        while True:
+            job = _DB_WRITE_QUEUE.get()
+
+            # The stop sentinel is not a queued write: returning here must not
+            # touch _DB_WRITER_PENDING, or the counter would go negative and
+            # no future flush_db_writes() could ever observe a drained queue.
+            if job is _DB_WRITE_SENTINEL:
+                return
+
+            try:
+                with conn:
+                    _db_write_apply(conn, job)
+            except Exception as e:
+                _DB_WRITER_ERRORS += 1
+                log(f"[NMAP] Unable to finish scan history row: {e}")
+            finally:
+                with _DB_WRITER_STATE:
+                    _DB_WRITER_PENDING -= 1
+                    _DB_WRITER_STATE.notify_all()
+    except Exception as e:
+        log(f"[NMAP] Deferred DB writer stopped: {e}")
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+def flush_db_writes(timeout=10.0):
+    """Block until every queued write is committed, or `timeout` expires."""
+    with _DB_WRITER_STATE:
+        drained = _DB_WRITER_STATE.wait_for(
+            lambda: _DB_WRITER_PENDING == 0,
+            timeout,
+        )
+        outstanding = _DB_WRITER_PENDING
+
+    if not drained:
+        log(
+            '[NMAP] Deferred DB writer still busy after '
+            f'{timeout:.0f}s; {outstanding} write(s) outstanding'
+        )
+
+    return drained
+
+
+def stop_db_writer(timeout=5.0):
+    """Drain queued writes and stop the writer thread.
+
+    The writer is a daemon thread, so an orderly exit is optional for the CLI
+    process; this exists so tests (and any graceful shutdown) can release the
+    writer's connection deterministically instead of leaking it.
+    """
+    global _DB_WRITER_THREAD
+
+    worker = _DB_WRITER_THREAD
+    if worker is None:
+        return True
+
+    flush_db_writes(timeout)
+    _DB_WRITE_QUEUE.put(_DB_WRITE_SENTINEL)
+    worker.join(timeout)
+
+    if worker.is_alive():
+        log('[NMAP] Deferred DB writer did not stop cleanly')
+        return False
+
+    _DB_WRITER_THREAD = None
+    return True
+
+
+def _ensure_db_writer():
+    """Start the writer thread on first use; return it, or None on failure."""
+    global _DB_WRITER_THREAD
+
+    if _DB_WRITER_THREAD is not None and _DB_WRITER_THREAD.is_alive():
+        return _DB_WRITER_THREAD
+
+    with _DB_WRITER_START_LOCK:
+        if _DB_WRITER_THREAD is not None and _DB_WRITER_THREAD.is_alive():
+            return _DB_WRITER_THREAD
+
+        worker = threading.Thread(
+            target=_db_writer_loop,
+            name='dm-db-writer',
+            daemon=True,
+        )
+        worker.start()
+        _DB_WRITER_THREAD = worker
+        atexit.register(flush_db_writes)
+        return worker
+
+
+def enqueue_db_write(job):
+    """Queue one history completion. False means: write it synchronously."""
+    global _DB_WRITER_PENDING
+
+    try:
+        worker = _ensure_db_writer()
+    except Exception as e:
+        log(f"[NMAP] Deferred DB writer unavailable: {e}")
+        return False
+
+    if worker is None or not worker.is_alive():
+        return False
+
+    try:
+        with _DB_WRITER_STATE:
+            _DB_WRITER_PENDING += 1
+        _DB_WRITE_QUEUE.put(job)
+    except Exception as e:
+        with _DB_WRITER_STATE:
+            _DB_WRITER_PENDING -= 1
+            _DB_WRITER_STATE.notify_all()
+        log(f"[NMAP] Deferred DB write enqueue failed: {e}")
+        return False
+
+    return True
+
+
 def run_targeted_scan_with_history(device, config, scan_type):
     """Run a targeted scan and record its scan and email audit history."""
     if scan_type not in ('manual', 'automatic'):
@@ -5776,94 +6036,34 @@ def run_targeted_scan_with_history(device, config, scan_type):
         if email_error:
             email_error = str(email_error)[:1000]
 
-        try:
-            with sqlite3.connect(DB_FILE) as history_conn:
-                history_conn.execute('PRAGMA foreign_keys = ON')
+        job = {
+            'history_id': history_id,
+            'mac': mac,
+            'ip': ip,
+            'vlan': device.get('vlan') or '',
+            'finished_at': finished_at,
+            'scan_success': scan_success,
+            'scan_error': scan_error,
+            'services': services,
+            'nmap_version': details.get('nmap_version') or None,
+            'nmap_elapsed': details.get('nmap_elapsed'),
+            'os_hint': details.get('os_hint') or None,
+            'email_sent': email_sent,
+            'email_error': email_error,
+        }
 
-                history_conn.execute(
-                    '''
-                    UPDATE nmap_scan_history
-                    SET finished_at = ?,
-                        success = ?,
-                        error = ?,
-                        nmap_version = ?,
-                        nmap_elapsed = ?,
-                        os_hint = ?,
-                        open_port_count = ?,
-                        email_sent = ?,
-                        email_error = ?
-                    WHERE id = ?
-                    ''',
-                    (
-                        finished_at,
-                        1 if scan_success else 0,
-                        scan_error,
-                        details.get('nmap_version') or None,
-                        details.get('nmap_elapsed'),
-                        details.get('os_hint') or None,
-                        len(services),
-                        email_sent,
-                        email_error,
-                        history_id,
-                    )
-                )
-
-                history_conn.execute(
-                    'DELETE FROM nmap_scan_ports '
-                    'WHERE scan_history_id = ?',
-                    (history_id,)
-                )
-
-                if scan_success:
-                    discovered_count = update_service_inventory_from_nmap(
-                        history_conn,
-                        mac,
-                        ip,
-                        device.get('vlan') or '',
-                        services,
-                        finished_at
-                    )
-                    if discovered_count:
-                        log(
-                            "[SERVICES] Updated "
-                            f"{discovered_count} infrastructure service(s) "
-                            f"for {mac}"
-                        )
-
-                for service in services:
-                    try:
-                        port_number = int(service.get('port'))
-                    except (TypeError, ValueError):
-                        continue
-
-                    history_conn.execute(
-                        '''
-                        INSERT INTO nmap_scan_ports (
-                            scan_history_id,
-                            port,
-                            protocol,
-                            state,
-                            service,
-                            product,
-                            version,
-                            extra_info
-                        )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        ''',
-                        (
-                            history_id,
-                            port_number,
-                            str(service.get('protocol') or ''),
-                            str(service.get('state') or 'open'),
-                            str(service.get('service') or 'unknown'),
-                            str(service.get('product') or ''),
-                            str(service.get('service_version') or ''),
-                            str(service.get('extra_info') or ''),
-                        )
-                    )
-
-        except Exception as e:
-            log(f"[NMAP] Unable to finish scan history row: {e}")
+        # v2.11 Task 1: hand the completion to the deferred writer. The Nmap
+        # result parser no longer runs the per-port INSERTs itself, so it never
+        # blocks on the database write lock or its fsync.
+        if not enqueue_db_write(job):
+            # The writer could not be started or the put() failed. Fall back to
+            # the original synchronous write so history is never lost.
+            try:
+                with sqlite3.connect(DB_FILE) as history_conn:
+                    history_conn.execute('PRAGMA foreign_keys = ON')
+                    _db_write_apply(history_conn, job)
+            except Exception as e:
+                log(f"[NMAP] Unable to finish scan history row: {e}")
 
     # Preserve existing operational semantics:
     # email failure still causes automatic retry/backoff.
@@ -7258,6 +7458,11 @@ def full_scan():
                     f"[NMAP] Targeted scan attempt {attempts} failed for "
                     f"{device['mac']}; retry scheduled for {next_attempt}: {error}"
                 )
+
+        # v2.11 Task 1: every targeted scan above handed its history completion
+        # to the deferred writer. Drain it before the loop's closing reads so
+        # this process observes exactly what a synchronous write would leave.
+        flush_db_writes()
 
         with sqlite3.connect(DB_FILE) as queue_conn:
             remaining_scans = queue_conn.execute(
