@@ -9,20 +9,31 @@ Branch: `v2.10-development`
 Authoritative development checkout: `/root/src/opnsense-devicemonitor-upstream`
 (FreeBSD 15.1-RELEASE amd64; OPNsense testbed host `192.168.20.23`)
 
-Latest released implementation commit: `5e2073425d03b613867a53aa4157bde45d43b2fc` — tag `v2.10.1`,
-`docs: record the v2.10 production deployment to 45e8c86` (the newest tag on `origin`; no GitHub release is
-published for it).
+Latest released implementation commit: `1b7e42c278182c214fa465cea13ef1a2bc51623b` — tag `v2.10.2`,
+`docs: update PROJECT_STATE metadata header to align with v2.10/v2.10.1 release reality`. The tag was cut
+from the verified development HEAD on 30 September 2026 and published to `origin`; its history carries
+`0c1950bb6c4a62f180dad9a19245e7c6845e9607` (`fix/installer: install the nmap package dependency when it is
+absent (issue #4)`), the change that resolves Issue #4. Like `v2.10.1`, `v2.10.2` is a tag with no GitHub
+release published for it.
+
+Earlier tags: `v2.10.1` = `5e2073425d03b613867a53aa4157bde45d43b2fc` (`docs: record the v2.10 production
+deployment to 45e8c86`; no GitHub release), `v2.10` = `1315c8022dce7fe720c6eb1a948b9e0497efdeca`.
 
 Latest published GitHub release: tag `v2.10` at `1315c8022dce7fe720c6eb1a948b9e0497efdeca` —
 `Device Monitor v2.10` (marked Latest; published 29 September 2026 12:49 UTC; runtime asset
-`dm-v2.10-runtime.tar.gz`).
+`dm-v2.10-runtime.tar.gz`) — unchanged by the `v2.10.2` tag push, which published a tag only.
 
-Current development HEAD: `0c1950bb6c4a62f180dad9a19245e7c6845e9607` — `fix/installer: install the nmap
-package dependency when it is absent (issue #4)`. It is **untagged**, is **not** contained in tag `v2.10.1`,
-and is therefore part of no published release.
+Current development HEAD: the untagged `docs:` commit that records this release state, made after
+`v2.10.2`; apart from this note it is content-identical to `v2.10.2`.
 
 Status:
 
+- **Release seal (30 September 2026):** tag `v2.10.2` was cut from the verified development HEAD
+  `1b7e42c` and published to `origin` (`git push origin v2.10.2` -> `* [new tag] v2.10.2 -> v2.10.2`;
+  remote tag object `291fbbd5b7e08e61cf34ca0ad0795ee5b4529590` dereferences to
+  `1b7e42c278182c214fa465cea13ef1a2bc51623b`). It carries `0c1950b`, the installer change that resolves
+  **Issue #4 "Missing Dependancy"**. The push published a tag only — no GitHub release or runtime asset
+  was created, so `Device Monitor v2.10` remains the latest published release.
 - **Production was updated to the `45e8c86` v2.10 payload (30 September 2026).** The
   production firewall `192.168.20.254` (`OPNsense.home.arpa`, OPNsense 26.7.4_1) ran the
   guarded installer; that run's log was written at 12:19 (+1000) and reports
