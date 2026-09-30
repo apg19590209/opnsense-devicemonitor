@@ -21,7 +21,7 @@ Primary deployment target:
     OPNsense `192.168.20.23` · FreeBSD 15.1-RELEASE amd64
         |
         v
-    SSH (`ssh opnsense-dm`)
+    SSH (workstation-local host alias)
         |
         v
     Production OPNsense `192.168.20.254` (26.7.2_2)

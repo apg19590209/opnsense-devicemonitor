@@ -2,7 +2,7 @@
 
 ## Current state
 
-Last updated: 29 September 2026
+Last updated: 30 September 2026
 
 Branch: `v2.10-development`
 
@@ -13,6 +13,22 @@ Latest released implementation commit: `96cdd464640af6449afb1aa75c4aa193bc93f2ee
 
 Status:
 
+- **Production was updated to the `45e8c86` v2.10 payload (30 September 2026).** The
+  production firewall `192.168.20.254` (`OPNsense.home.arpa`, OPNsense 26.7.4_1) ran the
+  guarded installer; that run's log was written at 12:19 (+1000) and reports
+  `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1` followed
+  by `INSTALL_OK version=2.10 files=59 core_locales=10 daemon_restarted=1 backup=/var/backups/devicemonitor/install-v210.RulQty`.
+  A subsequent read-only audit re-derived the installed digests on production and matched
+  **38/38 rows** of `release/v2.10-runtime.manifest`
+  (`sha256 15aa829f0a5be8dc5a31438a2ddfc4cf1aaf7bfbef68cec7f9a77936b0d7f7c3`, 38 rows)
+  byte-for-byte, plus the two sampled `cs_CZ`/`en_US` sidecar catalogues, so production's
+  installed payload is the `45e8c86` tree. Two statements elsewhere in this file are now
+  stale and are superseded by this entry — "Production still runs v2.9" (already wrong when
+  written: the guard reported a `2.10` **predecessor**, so production was on an earlier v2.10
+  build, not v2.9) and the note that the v2.10 metadata is "repository-only". One recorded
+  conflict is carried, not resolved, here: tag `v2.10` points at `1315c80`, ten commits
+  *before* `45e8c86`, and the deployed artifact (`sha256 13ed23e8…`) is not the `28ce829d…`
+  asset hash recorded for the v2.10 release draft. Full record at the end of this file.
 - Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
 - Latest source fix `aa25fe7` and its guarded v2.10 runtime-manifest update `0708239` are pushed to `origin/v2.10-development`; full GitHub Actions CI run `36315636699` PASS. Those commits changed no testbed runtime file or service; the nine corrected views were deployed to the testbed separately on 27 September 2026 (deployment record under DM-BL-008 below). `0708239` left the manifest SHA256 pinned in `install-unattended.sh` at the pre-refresh value, so the guarded installer aborted; that pin is restored by `3eeb78b`, which with its documentation commit `3fc9dfc` is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36323794636`; the following record commit `02a1eba` is also pushed and green in CI run `36324231410`, so no commit on this branch is local-only (see the install-guard section below).
 - Device Monitor GUI repair (29 September 2026): the views' `devicemonitor_t()` macro was never registered with the Volt compiler, so every application tab aborted with `MacroNotFound` and rendered a blank content block. The plugin controller now wraps the framework's `.volt` engine and registers the sidecar translator; the pending PHP 8.1+ null guards and the three matching `release/v2.10-runtime.manifest` digests plus the installer pin are refreshed in the same commit `8faf09d`, which is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36501061119`, with its record commit `58b9628` pushed and green in CI run `36501202440` (see the 29 September 2026 section below).
@@ -670,9 +686,9 @@ Follow-up: authenticated interaction checks completed on 27 September as recorde
 - Independent post-install checks confirmed all 39 file hashes, v2.9 metadata, SQLite `quick_check=ok` and a running daemon. Four notification scripts retained their pre-installation executable mode (`755`); their content hashes match the release package. No production GUI acceptance was repeated after the final-package installation.
 
 Environment: native FreeBSD toolchain (`/bin/sh`, `/usr/local/bin/bash`, git,
-php, python3); GitHub CLI (`gh`) authenticated as `apg19590209`; SSH via
-`ssh opnsense-dm`. Workstation-local access rules remain in the untracked
-`.clinerules/90-local-remote-access.md` (never committed). Production
+php, python3); GitHub CLI (`gh`) authenticated as `apg19590209`; SSH via a
+workstation-local host alias. Workstation-local access rules remain in the
+untracked `.clinerules/90-local-remote-access.md` (never committed). Production
 `192.168.20.254` is never targeted without explicit authorisation.
 
 ## 25 September 2026 production promotion
@@ -3525,4 +3541,63 @@ resulting decision.
 Evidence status: the function-execution proof, the `grep` results, the SQLite query, the endpoint probe and the
 before/after hashes were produced in this session on the testbed and are reproducible from
 `.cline-reports/REPORT-20260929-221652.md`; no external host was contacted and no state was mutated.
+
+## 30 September 2026 — v2.10 production deployment to `45e8c86`
+
+Description: the production firewall `192.168.20.254` was updated to the v2.10 runtime
+built from commit `45e8c86` using the guarded `install-unattended.sh`, and the deployed
+payload was then re-derived and verified independently. The guard reported
+`predecessor=2.10`, so production was already on an earlier v2.10 build and this run
+replaced it — it was not a v2.9-to-v2.10 upgrade, and the "Production still runs v2.9"
+statement earlier in this file was already inaccurate.
+
+Benefit: production now runs the same v2.10 payload the testbed has been running, and the
+deployment is recorded with reproducible hash evidence instead of being left un-logged.
+
+Deployment (installer run on production; the run's log was written 30 September 2026
+12:19 +1000):
+
+- `NOTICE: merged the plugin keys into 10 core catalogue(s)` — the DM-BL-008c core
+  catalogue merge ran on production.
+- `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.home.arpa`.
+- `INSTALL_OK version=2.10 files=59 core_locales=10 daemon_restarted=1 backup=/var/backups/devicemonitor/install-v210.RulQty`;
+  `configd` and the Device Monitor daemon were each restarted once.
+- Rollback backup retained on production: `/var/backups/devicemonitor/install-v210.RulQty`
+  (confirmed present). `/etc/rc.conf.d/devicemonitor` is `devicemonitor_enable="YES"` and the
+  daemon was running (pid 48862) at verification time.
+
+Independent verification (read-only, production, same day):
+
+- Installed digests re-derived on production and compared row by row against
+  `release/v2.10-runtime.manifest` as committed at `45e8c86`
+  (`sha256 15aa829f0a5be8dc5a31438a2ddfc4cf1aaf7bfbef68cec7f9a77936b0d7f7c3`, 38 rows):
+  **38/38 match, 0 mismatch, 0 missing**.
+- All 11 sidecar catalogues are present; the two sampled (`cs_CZ`, `en_US`) are byte-identical
+  to a fresh `msgfmt` compile of the `45e8c86` sources.
+- Installed `defaults.json` reports `2.10` and carries the `identity_webhook` key, consistent
+  with the `45e8c86` schema.
+
+Record integrity (reported, not silently resolved):
+
+- A second backup identifier supplied together with this record could not be found in any
+  deployment log, in the collected local backup-ID set, or in production's
+  `/var/backups/devicemonitor`; only `install-v210.RulQty` is evidenced by the run log and by
+  the backup directory, so only that identifier is recorded. The unverifiable identifier is
+  deliberately not written into this ledger.
+- Tag `v2.10` points at `1315c80`; `45e8c86` is ten commits later. Production is therefore
+  running a post-tag development tip, not the tagged release. The tag was **not** moved by
+  this record, and moving it was declined; a follow-on release tag for `45e8c86` is the
+  pending decision.
+- The deployed runtime artifact has `sha256 13ed23e8c2fcd27d9ef18a035e9993065217ee35cb365417ea6b2ff3d06e031a`
+  — the `45e8c86` bundle hash — and is not the `28ce829d…` asset hash recorded for the v2.10
+  release draft.
+
+Limits: verification was read-only and covered the 38 manifest rows plus two sampled
+catalogues; the 10 merged core catalogues were not byte-compared individually, and
+authenticated GUI and live notification behaviour on production were not exercised.
+
+Next recommended step: decide how the post-tag commits now running on production are to be
+represented as a release (for example a `v2.10.1`-style tag at `45e8c86`) rather than moving
+the existing `v2.10` tag, and record that decision in `DECISIONS.md`.
+
 

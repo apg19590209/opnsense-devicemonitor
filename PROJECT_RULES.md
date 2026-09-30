@@ -245,7 +245,7 @@ Prefer temporary files under `/tmp` for syntax and isolated validation where app
 ### Production and testbed targets
 
 Default all deployment and runtime validation to the Device Monitor testbed
-`192.168.20.23`. Production is `192.168.20.254` (alias `opnsense-dm`).
+`192.168.20.23`. Production is `192.168.20.254`.
 
 Never deploy to, modify, scan, probe, SSH to, make HTTP/API calls to, or
 otherwise contact production unless the current user instruction explicitly
