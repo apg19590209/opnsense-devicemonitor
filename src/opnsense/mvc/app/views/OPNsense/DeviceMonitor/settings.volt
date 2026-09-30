@@ -177,10 +177,6 @@
             <!-- TAB 4: Webhook -->
             <div role="tabpanel" class="tab-pane" id="tab-webhook">
                 <form class="dm-pane-form">
-                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Webhook Notifications') }}"
-                        data-content="{{ devicemonitor_t('Enables the primary high-speed HTTP POST notification engine. This serves as the master transport route used to instantly dispatch both asset summaries (New Device Discoveries) and high-severity security events to your monitoring endpoints.') }}">
-                    <i class="fa fa-info-circle" aria-hidden="true"></i>
-                </button>
                 <table class="table table-striped">
                     <tbody>
                         <tr>
@@ -189,6 +185,10 @@
                                     <input type="checkbox" id="webhook_enabled" />
                                     <strong>{{ devicemonitor_t('Enable Webhook') }}</strong>
                                 </label>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Webhook Notifications') }}"
+                                        data-content="{{ devicemonitor_t('Enables the primary high-speed HTTP POST notification engine. This serves as the master transport route used to instantly dispatch both asset summaries (New Device Discoveries) and high-severity security events to your monitoring endpoints.') }}">
+                                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                                </button>
                             </td>
                             <td>
                                 <div id="webhook_config">
