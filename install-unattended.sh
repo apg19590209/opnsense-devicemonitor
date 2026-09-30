@@ -25,7 +25,7 @@ done
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 cd "$SCRIPT_DIR"
 MANIFEST=release/v2.10-runtime.manifest
-[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = 84087b4415a3d88c2d4a924588a80caa271032741dadddb470840cc1c214299d ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
+[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = 5d8101ba5e7075736889480c13a6a6bcfec6adf0390fd1ab2a17edaee7b190af ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 38 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
 [ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = 2.10 ] || { echo 'ABORT: source version' >&2; exit 1; }
 LIVE_DEFAULTS=/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json

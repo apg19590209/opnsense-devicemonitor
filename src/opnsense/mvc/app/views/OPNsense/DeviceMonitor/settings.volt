@@ -195,7 +195,7 @@
                     </div>
                 </div>
 
-                <div class="row">
+                <div class="row form-group">
                     <div class="col-md-3">
                         <strong>{{ devicemonitor_t('Notify for interfaces') }}</strong>
                         <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Notification Interfaces') }}"
@@ -281,7 +281,7 @@
                     </div>
                 </div>
 
-                <div class="row">
+                <div class="row form-group">
                     <div class="col-md-3">
                         <strong>{{ devicemonitor_t('Notify for interfaces') }}</strong>
                         <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Notify for interfaces') }}" data-content="{{ devicemonitor_t('Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>

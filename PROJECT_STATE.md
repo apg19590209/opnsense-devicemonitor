@@ -4073,3 +4073,40 @@ Files changed: `docs/USER_MANUAL.md` only.
 Next recommended step: watch the `ci.yml` run for the documentation commit and treat the change as
 final only once it is green.
 
+## 30 September 2026 — Residual interface-row spacing and USER_MANUAL §14 subsection structure
+
+Closed the two residual layout items carried since the 20:13 report and gave the Plugin Options pane
+its own manual subsection.
+
+- `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`: the two "Notify for interfaces"
+  rows (Email pane line 198, Webhook pane line 284) changed from `class="row"` to
+  `class="row form-group"`, so they inherit the standard bottom margin like every other
+  configuration row. `row form-group` rows: 32 -> 34. The only plain `class="row"` wrappers left are
+  the two deliberate `style="margin-bottom:25px;"` break rows (lines 168 and 268), which this task
+  did not scope.
+- `docs/USER_MANUAL.md`: the Plugin Options paragraph added in `9535425` is now its own subsection.
+  `### 14.5 Plugin Options tab` (line 759) documents the pane as the home of the plugin's own
+  switches (the optional hostname-enrichment sources and the translation catalogue toggle), the
+  **Plugin translations (sidecar catalogue)** behaviour and a pointer to the resolution order; the
+  former 14.5/14.6 headings renumbered to `### 14.6 About tab` (line 771) and `### 14.7 Language and
+  translations` (line 775). No anchored cross-reference to those subsection numbers existed elsewhere
+  in the manual (checked), so no link broke.
+
+Hash chain: `release/v2.10-runtime.manifest` line 25 `52d0aefa…` -> `39a56ff0…` (still 38 rows;
+self-digest `84087b44…` -> `5d8101ba…`); `install-unattended.sh` line 28 `84087b44…` -> `5d8101ba…`.
+
+Deployment (testbed `OPNsense.internal`, 30 September 2026 20:57-21:00 +1000): `CHECK_OK version=2.10
+predecessor=2.10 files=59 core_locales=10 daemon_running=1`; `INSTALL_OK version=2.10 files=59
+core_locales=10 backup=/var/backups/devicemonitor/install-v210.LAYLNP daemon_restarted=1` (exit 0);
+deployed `settings.volt` digest `39a56ff0…` = source = manifest row 25; `/var/lib/php/cache` emptied;
+`configctl webgui restart` -> `OK`; `https://127.0.0.1/` -> HTTP `200`.
+
+Validation: `sh -n install-unattended.sh` PASS, `git diff --check` PASS,
+`V210_RELEASE_MANIFEST=PASS` (the manifest test failed as expected between the view edit and the
+re-pin, and passes after it).
+
+Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`,
+`release/v2.10-runtime.manifest`, `install-unattended.sh`, `docs/USER_MANUAL.md`.
+
+Next recommended step: push `v2.10-development` and read the `ci.yml` run for the commit.
+

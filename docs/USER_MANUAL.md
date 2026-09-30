@@ -675,10 +675,6 @@ Settings are organised into six tabs: **Monitoring**, **Nmap Scanning**,
 **Apply/save** button on each tab to persist changes. Saving is validated server-side; invalid
 values are rejected with an error message.
 
-The **Plugin Options** tab holds the plugin's own switches: **Plugin translations (sidecar
-catalogue)** forces the interface to use the plugin's dedicated translation file instead of the
-OPNsense core catalogues.
-
 ### 14.1 Monitoring tab
 
 - **Enable Device Monitor** — master switch for the background monitoring daemon
@@ -760,11 +756,23 @@ Pi-hole requires Pi-hole v6, HTTPS and an app password.
 - **Nmap scans per cycle** — maximum scans the daemon runs per cycle. Allowed 1–10
   (default 2).
 
-### 14.5 About tab
+### 14.5 Plugin Options tab
+
+Holds the plugin's own switches — the optional hostname-enrichment sources (Sections 13 and 14.1)
+and the translation catalogue toggle — rather than scan or notification settings.
+
+- **Plugin translations (sidecar catalogue)** — enabled (default), page text resolves through the
+  plugin's dedicated translation file first; disabled, the plugin uses the OPNsense core catalogues
+  only. **Changes state** (plugin behaviour, not stored data). The resolution order is described in
+  Section 14.7.
+
+Use the **Apply** button to persist the change.
+
+### 14.6 About tab
 
 Displays the installed Device Monitor version and descriptive information. **Read-only.**
 
-### 14.6 Language and translations
+### 14.7 Language and translations
 
 Device Monitor ships eleven catalogues (`en_US`, `cs_CZ`, `de_DE`, `fr_FR`, `es_ES`, `it_IT`,
 `pt_BR`, `nl_NL`, `ru_RU`, `ja_JP`, `zh_CN`). The GUI language itself is chosen in
