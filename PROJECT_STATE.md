@@ -9,7 +9,17 @@ Branch: `v2.10-development`
 Authoritative development checkout: `/root/src/opnsense-devicemonitor-upstream`
 (FreeBSD 15.1-RELEASE amd64; OPNsense testbed host `192.168.20.23`)
 
-Latest released implementation commit: `96cdd464640af6449afb1aa75c4aa193bc93f2ee` — `Release Device Monitor v2.9 with guarded installer`.
+Latest released implementation commit: `5e2073425d03b613867a53aa4157bde45d43b2fc` — tag `v2.10.1`,
+`docs: record the v2.10 production deployment to 45e8c86` (the newest tag on `origin`; no GitHub release is
+published for it).
+
+Latest published GitHub release: tag `v2.10` at `1315c8022dce7fe720c6eb1a948b9e0497efdeca` —
+`Device Monitor v2.10` (marked Latest; published 29 September 2026 12:49 UTC; runtime asset
+`dm-v2.10-runtime.tar.gz`).
+
+Current development HEAD: `0c1950bb6c4a62f180dad9a19245e7c6845e9607` — `fix/installer: install the nmap
+package dependency when it is absent (issue #4)`. It is **untagged**, is **not** contained in tag `v2.10.1`,
+and is therefore part of no published release.
 
 Status:
 
@@ -29,13 +39,19 @@ Status:
   conflict is carried, not resolved, here: tag `v2.10` points at `1315c80`, ten commits
   *before* `45e8c86`, and the deployed artifact (`sha256 13ed23e8…`) is not the `28ce829d…`
   asset hash recorded for the v2.10 release draft. Full record at the end of this file.
-- Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; the latest released implementation remains v2.9.
+- Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; tags and release state are recorded in the header above.
 - Latest source fix `aa25fe7` and its guarded v2.10 runtime-manifest update `0708239` are pushed to `origin/v2.10-development`; full GitHub Actions CI run `36315636699` PASS. Those commits changed no testbed runtime file or service; the nine corrected views were deployed to the testbed separately on 27 September 2026 (deployment record under DM-BL-008 below). `0708239` left the manifest SHA256 pinned in `install-unattended.sh` at the pre-refresh value, so the guarded installer aborted; that pin is restored by `3eeb78b`, which with its documentation commit `3fc9dfc` is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36323794636`; the following record commit `02a1eba` is also pushed and green in CI run `36324231410`, so no commit on this branch is local-only (see the install-guard section below).
 - Device Monitor GUI repair (29 September 2026): the views' `devicemonitor_t()` macro was never registered with the Volt compiler, so every application tab aborted with `MacroNotFound` and rendered a blank content block. The plugin controller now wraps the framework's `.volt` engine and registers the sidecar translator; the pending PHP 8.1+ null guards and the three matching `release/v2.10-runtime.manifest` digests plus the installer pin are refreshed in the same commit `8faf09d`, which is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36501061119`, with its record commit `58b9628` pushed and green in CI run `36501202440` (see the 29 September 2026 section below).
 - Change Summary confirmation banner (`F1`) fixed and closed (29 September 2026): the Change Summary view's `showToast()` no longer guards on the absent `$.fn.notify`/`window.bootbox` plugins; it renders the same self-contained jQuery banner already used by `devices.volt`, with the icon and message appended as DOM nodes and a 4-second auto-dismiss. The refreshed view digest, `release/v2.10-runtime.manifest` row 17 and the `install-unattended.sh` line 28 manifest pin are in the same change set; the live operator check and the full record are in the `F1` closure section at the end of this file.
 - Testbed background scanner active (29 September 2026): the daemon (PID 94999, running unchanged since 28 September 2026 23:15) hot-loaded `"enabled": "1"` from `/var/db/devicemonitor/config.json` through its own 10 s config reload — no service restart and no web-GUI restart — polling every 60 s over the fail-closed scope `opt1` → `vlan0.50` (`192.168.50.0/24`, DMTEST), with two clean scan cycles and no database-lock or runtime errors observed; rollback copy `/var/backups/devicemonitor/scan-activation-20260929/`.
 - DM-BL-008c **resolved** (29 September 2026): the v2.10 installer now merges the plugin's text keys into the core catalogues (`/usr/local/share/locale/<locale>/LC_MESSAGES/OPNsense.mo`) so the inline-script strings translate too, using `release/merge-opnsense-catalog.sh` (core-first `msgcat --use-first`, with `--plugin-only` for a locale that has no core catalogue such as `nl_NL`), first-write-wins pristine records that `uninstall.sh` restores, and a new CI gate (`python3 tests/test_locale_merge.py`). The update target count rises from **49 to 59** (`60` fresh: 38 manifest rows + 11 sidecar catalogues + 10 merged core catalogues, plus `rc.conf` when fresh); the installer was then executed on the testbed the same day (`INSTALL_OK version=2.10 files=59 core_locales=10`, backup `install-v210.O1Tggb`) and the nine-language runtime acceptance passes with exit code 0 — see the deployment record in the closure section at the end of this file.
-- That v2.10 metadata is repository-only: no v2.10 tag, GitHub release or runtime package exists, the published `v2.9` release asset is unchanged, and no testbed or production install was performed.
+- **Superseded (30 September 2026):** the earlier note that "the v2.10 metadata is repository-only" is no longer
+  true. Tags `v2.10` (`1315c8022dce7fe720c6eb1a948b9e0497efdeca`) and `v2.10.1`
+  (`5e2073425d03b613867a53aa4157bde45d43b2fc`) are both active on `origin`; the GitHub release
+  **`Device Monitor v2.10`** is published (Latest, 29 September 2026 12:49 UTC) with the runtime asset
+  `dm-v2.10-runtime.tar.gz`; `v2.10.1` is a tag with no release published for it; and both a testbed and a
+  production v2.10 install have since been performed (see the bullets above and the deployment records below).
+  The current development HEAD `0c1950bb6c4a62f180dad9a19245e7c6845e9607` remains untagged and unreleased.
 - Notification dispatch remains on configd permanently: the HTTP API integration for `apiEmailUrl`/`apiWebhookUrl` is not implemented (`DECISIONS.md` 33 supersedes the cutover gates recorded in `DECISIONS.md` 32); `scan_network.py` and the live notification path are unchanged. The `www` privilege claim originally recorded for the API path is corrected by `DECISIONS.md` 34 (the web GUI runs `php-cgi` as root).
 - GitHub `v2.9` release is published at commit `96cdd464640af6449afb1aa75c4aa193bc93f2ee`. The runtime-only asset SHA256 is `c8ae2562a3ea895de8d0810a3a1af2a44ac8dfe8739b75c06c9cf9348b2aa07c`; both pull-request and development-branch CI passed.
 - The final v2.9 runtime package was installed and hash-verified on the testbed on 25 September 2026. The checkout has since advanced to v2.10 development; the installed model and Network Identity Details template match `4b2b992` (verified 26 September). Other installed files were not re-audited in that verification.
