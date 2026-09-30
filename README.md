@@ -304,6 +304,8 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 - **OPNsense 26.1.5 or newer**
 - **SSH access** (System → Settings → Administration → Secure Shell)
 - **Root account** or admin with CLI access
+- **Nmap** — used by targeted security scanning; the installer installs it automatically
+  (`pkg install -y nmap`) when it is not already present.
 
 > ⚠️ Versions prior to 26.1.5 are not supported. The plugin uses APIs and mechanisms introduced in 26.x.
 

@@ -4110,3 +4110,51 @@ Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`
 
 Next recommended step: push `v2.10-development` and read the `ci.yml` run for the commit.
 
+## 30 September 2026 — Issue #4 ("Missing Dependancy") resolved: the installer now provides nmap
+
+Closed GitHub issue **#4 "Missing Dependancy"** (`tamimology`, 2026-09-30). The issue carries
+only a screenshot; read directly, it shows
+`root@OPNsense:/tmp/dm-v2.9-runtime # sh install.sh --host (` -> `ABORT: missing dependency nmap`.
+
+Root cause: `nmap` (package `security/nmap`, binary `/usr/local/bin/nmap`) is a package
+dependency, not an OPNsense base tool, but `install-unattended.sh` listed it in the fatal
+preflight loop, so a firewall without nmap aborted the installation at the old line 23.
+`scan_network.py` invokes `/usr/local/bin/nmap` at five sites (`:2369`, `:3837`, `:4288`,
+`:5911`, `:7451`), and the product already documented the opposite behaviour (README v2.4:
+"The installer now automatically installs Nmap when it is not already available"); the shipped
+installer never did, and the README Requirements list did not name nmap either.
+
+Work completed:
+- `install-unattended.sh`: `nmap` left the fatal preflight list (`:22`); read-only detection
+  sets `NMAP_MISSING` (`:31-32`); the write phase installs the package
+  (`pkg install -y nmap`, fail-closed with an explicit ABORT) after every read-only guard has
+  passed and before the first target is replaced (`:241-249`); `--check` reports
+  `NOTICE: nmap is not installed; a real installation runs pkg install -y nmap` before
+  `CHECK_OK` (`:175`) and stays non-mutating.
+- `README.md` `:307-308` and `README_CZ.md` `:300-301`: nmap added to the Requirements list,
+  naming the automatic `pkg install -y nmap`.
+
+No manifest-tracked file changed: `release/v2.10-runtime.manifest` is byte-identical (38 rows,
+`5d8101ba…`), so the installer self-guard on `:36` and `tests/test_release_manifest.py` needed
+no re-pin. No `src/` payload or verified layout asset was touched, so no deployment was
+performed and production `192.168.20.254` was not contacted.
+
+Tests performed / results: `sh -n install-unattended.sh` PASS; `sh -n uninstall.sh` PASS;
+`git diff --check` PASS; `python3 tests/test_release_manifest.py` -> `V210_RELEASE_MANIFEST=PASS`;
+`sh install-unattended.sh --host OPNsense.internal --check` -> `CHECK_OK version=2.10
+predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal` (exit 0, no
+NOTICE). The missing-nmap path was exercised with a sandboxed copy whose `PATH` excludes
+`/usr/local/bin`: it reaches `NOTICE: nmap is not installed …` + the same `CHECK_OK` (exit 0)
+instead of aborting. The write-phase block was exercised in isolation with a stub `pkg`: exit 1
+with `ABORT: missing dependency nmap; pkg install failed` when the package manager fails, exit 0
+when it succeeds. `pkg search nmap` confirms `nmap-7.991` is available from the configured repo.
+
+Unresolved: the `pkg install` branch has not run against a firewall that genuinely lacks nmap
+(proven only by the sandbox and the stub-`pkg` block test); an accepted side effect is that a
+rollback after the package install leaves nmap installed (additive and idempotent).
+
+Files changed: `install-unattended.sh`, `README.md`, `README_CZ.md`, plus this record.
+
+Next recommended step: commit the three files on `v2.10-development`, push, and read the
+`ci.yml` run for the commit (`sh -n install-unattended.sh` + `test_release_manifest.py`).
+

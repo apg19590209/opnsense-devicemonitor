@@ -19,9 +19,17 @@ command -v opnsense-version >/dev/null 2>&1 || { echo 'ABORT: OPNsense missing' 
 [ -x /usr/local/etc/rc.configure_plugins ] || { echo 'ABORT: OPNsense plugin registration unavailable' >&2; exit 1; }
 ver=$(opnsense-version | awk '{print $2}')
 printf '%s\n' "$ver" | awk -F'[.-]' '{if ($1+0>26 || ($1+0==26 && ($2+0>1 || ($2+0==1 && $3+0>=5)))) exit 0; exit 1}' || { echo 'ABORT: OPNsense 26.1.5+ required' >&2; exit 1; }
-for executable in sha256 stat install python3 php msgfmt msgcat msgunfmt nmap service; do
+for executable in sha256 stat install python3 php msgfmt msgcat msgunfmt service; do
     command -v "$executable" >/dev/null 2>&1 || { echo "ABORT: missing dependency $executable" >&2; exit 1; }
 done
+# Issue #4 ("Missing Dependancy"): nmap is a package dependency (security/nmap), not an
+# OPNsense base tool, while scan_network.py invokes /usr/local/bin/nmap directly. The
+# installer supplies it instead of failing the installation, as the v2.4 notes already
+# document ("The installer now automatically installs Nmap when it is not already
+# available"). Detection here is read-only so --check stays non-mutating; the package is
+# installed in the write phase, after every read-only guard has passed.
+NMAP_MISSING=0
+command -v nmap >/dev/null 2>&1 || NMAP_MISSING=1
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 cd "$SCRIPT_DIR"
 MANIFEST=release/v2.10-runtime.manifest
@@ -164,6 +172,7 @@ count=$id
 expected=59
 [ "$FRESH" = 0 ] || expected=60
 [ "$count" = "$expected" ] || { echo 'ABORT: target count' >&2; exit 1; }
+[ "$NMAP_MISSING" = 0 ] || printf 'NOTICE: nmap is not installed; a real installation runs pkg install -y nmap\n'
 printf 'CHECK_OK version=2.10 predecessor=%s files=%s core_locales=%s daemon_running=%s host=%s\n' "$installed" "$count" "$CORE_LOCALES" "$WAS_RUNNING" "$EXPECTED_HOST"
 [ "$CHECK_ONLY" = 0 ] || exit 0
 mkdir -p /var/backups/devicemonitor
@@ -229,6 +238,15 @@ while read -r id old new mode source target; do
     if [ "$old" = absent ]; then [ ! -e "$target" ] || { echo "ABORT: target appeared $target" >&2; exit 1; }
     else [ "$(sha256 -q "$target")" = "$old" ] || { echo "ABORT: target changed $target" >&2; exit 1; }; fi
 done < "$BACKUP/plan"
+# Issue #4: satisfy the nmap package dependency after every read-only guard has passed and
+# before the first installed target is replaced, so the plugin is never installed onto a
+# firewall that lacks the scanner its targeted scans invoke.
+if [ "$NMAP_MISSING" = 1 ]; then
+    command -v pkg >/dev/null 2>&1 || { echo 'ABORT: missing dependency nmap and pkg is unavailable to install it' >&2; exit 1; }
+    printf 'NOTICE: nmap is not installed; installing the security/nmap package\n'
+    pkg install -y nmap >&2 || { echo 'ABORT: missing dependency nmap; pkg install failed' >&2; exit 1; }
+    command -v nmap >/dev/null 2>&1 || { echo 'ABORT: missing dependency nmap; pkg install did not provide nmap' >&2; exit 1; }
+fi
 MUTATING=1
 while read -r id old new mode source target; do
     mkdir -p "$(dirname "$target")"

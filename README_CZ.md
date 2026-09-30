@@ -297,6 +297,8 @@ Také odstraněno rozbité `configctl webgui restart` a `service php-fpm restart
 - **OPNsense 26.1.5 nebo novější**
 - **SSH přístup** (System → Settings → Administration → Secure Shell)
 - **Root účet** nebo admin s přístupem do CLI
+- **Nmap** — používá se pro cílené bezpečnostní skeny; instalátor jej automaticky
+  nainstaluje (`pkg install -y nmap`), pokud v systému chybí.
 
 > ⚠️ Verze starší než 26.1.5 nejsou podporovány. Plugin používá API a mechanismy zavedené ve verzi 26.x.
 
