@@ -193,8 +193,24 @@ Neither `ci.yml` nor `tests/test_deferred_db_writes.py` is a manifest row, so th
 manifest-neutral: `release/v2.11-runtime.manifest` remains `df10e9e0…` and the installer digest pin
 on `install-unattended.sh:36` is unchanged.
 
-Remote verification: pending at commit time; recorded in the follow-up commit once the run for this
-change completes.
+Remote verification: GitHub Actions **Device Monitor CI run `36721415122`** (push, headSha
+`454b859`) — **completed / success**, 2026-09-30T13:24:32Z -> 13:28:14Z. The new step executed on
+the `ubuntu-latest` runner and printed its marker, so the thread and queue logic now runs on the
+cloud runner:
+
+```
+2026-09-30T13:25:12.1619244Z ##[group]Run python3 tests/test_deferred_db_writes.py
+2026-09-30T13:25:13.8673369Z DEFERRED_DB_WRITES=PASS
+```
+
+The runner needed about **1.7 s** for the six checks against 1.32 s locally, and no queue-bound or
+timeout variable had to be set — confirming the bounds are the test's own call-site parameters.
+Before this change the same string appeared **0** times in a run log; it now appears.
+
+Observed but not attributed: this run took 3m42s wall against 50s for the previous commit
+(`36720133878`), and the job reported no step activity for the ~36 s between `started_at` and the
+first step — runner-side provisioning and scheduling variance, since no step in a workflow can
+block step 1 from starting.
 
 ### Task 2 — Pull Request #2 retired as superseded (documentation only, no v2.11 code change)
 
