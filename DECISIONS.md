@@ -1307,3 +1307,65 @@ from the scan path and consolidates the writes onto a single connection.
 commit-and-drain; rescan replaces ports rather than duplicating them; a failed scan records its
 error and writes no ports; the asynchronous and synchronous paths produce identical rows; four
 threads x sixteen concurrent enqueues are all recorded; and an empty flush returns immediately.
+
+## 38. The optional shared-locale installer branch is retired, superseded by the v2.10 catalogue layout
+
+### Decision
+
+Pull request **#2** (`Device Monitor: optional shared locale installation`,
+`feature/optional-locale-installer-20260927` -> `v2.10-development`) was **closed as superseded on
+30 September 2026** via `gh pr close 2`
+(`✓ Closed pull request apg19590209/opnsense-devicemonitor#2`; closed at `2026-09-30T12:58:15Z`,
+head `06a256c69eaa967c953455a4864ce35a2097116e`). No rebase, no merge and no history rewrite were
+performed, and no `--force` push was made: the branch is left in place on `origin` at `06a256c`,
+because closing a pull request does not delete its branch.
+
+### Reason
+
+The pull request adds an opt-in `--languages none|all|LOCALE[,LOCALE...]` selection to the
+unattended installer. The patch was written against the **v2.9** installer, and the v2.10 catalogue
+work replaced the entire locale-staging path that the patch edits:
+
+| Installer facet | PR #2 (`c1fa466`) | `v2.10-development` |
+|---|---|---|
+| release manifest | `release/v2.9-runtime.manifest`, 37 rows | `release/v2.10-runtime.manifest`, 38 rows, sha-pinned to `5d8101ba…` |
+| source pin | `defaults.json version == 2.9` | `defaults.json version == 2.10` |
+| catalogue layout | flat `src/opnsense/mvc/app/languages/${lang}_devicemonitor.po` | per-locale tree `.../languages/${lang}/LC_MESSAGES/devicemonitor.po` |
+| core-domain merge | `ABORT` when the shared core catalogue is absent | `release/merge-opnsense-catalog.sh`, with a `--plugin-only` fallback for locales whose core catalogue is absent (`nl_NL`) |
+| staged target count | `expected=37`, widened per selected language | `expected=59` (38 manifest rows + 11 sidecar catalogues + 10 merged core catalogues), `60` on a fresh install |
+
+`release/v2.9-runtime.manifest` does not exist in `v2.10-development`. Rebasing the branch therefore
+does not yield a merge conflict to adjudicate but a **rewrite of the locale-staging path**: the
+staging loop, the `CORE_LOCALES` accounting, the `expected=59/60` guard and the `CORE_LOCALE_STATE`
+reporting all have to be re-derived under a selected-language set. Two of the five rebase conflicts
+are add/add duplicates of files `v2.10-development` already owns
+(`release/merge-opnsense-catalog.sh` and `tests/test_locale_merge.py`, both introduced by `a9c56b2`,
+DM-BL-008c), so the pull request re-adds work that has already landed.
+
+The branch also has no green baseline worth preserving. On its own unmodified head the installer
+pre-flight aborts, because its v2.9 pin cannot validate the v2.10 `defaults.json` in its own tree:
+
+```
+sh install-unattended.sh --host OPNsense.internal --check
+  ABORT: source version          (exit 1)
+```
+
+The v2.9 staging layout is therefore superseded. The option-parsing intent is not, but it can only
+be delivered as new work on top of the v2.10 installer.
+
+### Verified
+
+- `gh pr view 2` -> `state CLOSED`, `closed true`, `closedAt 2026-09-30T12:58:15Z`,
+  `headRefOid 06a256c69eaa967c953455a4864ce35a2097116e`, `baseRefName v2.10-development`.
+- Scratch rebase of the true head (`06a256c`) onto `v2.10-development`:
+  `CONFLICT (content)` in `.github/workflows/ci.yml`, `PROJECT_STATE.md` and
+  `install-unattended.sh`; `CONFLICT (add/add)` in `release/merge-opnsense-catalog.sh` and
+  `tests/test_locale_merge.py`. No `release/*.manifest` file conflicts.
+- `git show v2.10-development:release/v2.9-runtime.manifest` -> path does not exist.
+- `git show c1fa466:install-unattended.sh` -> `Guarded Device Monitor v2.9 installation`,
+  `MANIFEST=release/v2.9-runtime.manifest`, `version == 2.9`, `expected=37`.
+- `sh install-unattended.sh --host OPNsense.internal --check` on `v2.10-development` ->
+  `CHECK_OK version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal`.
+- The two commits that exist only on `origin/feature/optional-locale-installer-20260927`
+  (`26c27a5`, which adds `remove-locales.sh`, and `06a256c`, which restores locales before the
+  guarded uninstall) are **not** deleted by this closure; they remain on the branch.

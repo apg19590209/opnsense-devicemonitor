@@ -78,14 +78,17 @@ Status:
 
 ## v2.11-development Lifecycle (October 2026 Tracking)
 
-### Task 1 — Asynchronous Deferred SQLite Writes: scaffolded, verified, staged
+### Task 1 — Asynchronous Deferred SQLite Writes: scaffolded, verified, committed
 
 **Recorded 30 September 2026** (the header label above says October; this entry is being written
 on the last day of September, which is when the work was actually done). Feature branch
 `feature/async-db-v2.11`, created from `5cca3c9` (`docs: route AdGuard/Pi-hole/Unbound
 hostname-source anchors to the Plugin Options tab (14.5)`), the pushed tip of `v2.10-development`.
-At the time of writing the work is **staged on that branch only** — not committed, not merged, not
-pushed.
+**Corrected 30 September 2026:** the work is **committed on that branch as `04196c0`** (the commit
+that introduced this section and `DECISIONS.md` 37), and is published to `origin/feature/async-db-v2.11`
+by the `docs:` commit that carries this corrected entry. It is **not merged** into `v2.10-development`.
+This paragraph previously read "staged on that branch only — not committed", which was already stale
+when it was written.
 
 Scaffolded in `src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py` (**+292 / -87**):
 
@@ -146,6 +149,42 @@ revisited if a hard `SIGKILL` scan timeout is ever enforced.
 Note for the next editor: the `## Current state` header above still reads
 `Branch: \`v2.10-development\`` and still names the v2.10.2 release seal as current. That header
 has not been rewritten for this v2.11 feature branch.
+
+### Task 2 — Pull Request #2 retired as superseded (documentation only, no v2.11 code change)
+
+**Recorded 30 September 2026.** PR #2 (`Device Monitor: optional shared locale installation`,
+`feature/optional-locale-installer-20260927` -> `v2.10-development`) was audited and is now
+**CLOSED on GitHub** as superseded: `gh pr close 2` returned
+`✓ Closed pull request apg19590209/opnsense-devicemonitor#2`, and `gh pr view 2` reports
+`state CLOSED`, `closed true`, `closedAt 2026-09-30T12:58:15Z`, head
+`06a256c69eaa967c953455a4864ce35a2097116e`. The decision is recorded in `DECISIONS.md` 38.
+
+The audit found the branch to be a **v2.9-era installer** whose patch predates the v2.10
+multi-tree catalogue layout:
+
+- `MANIFEST=release/v2.9-runtime.manifest` (37 rows) and `defaults.json version == 2.9`, versus the
+  v2.10 manifest (38 rows, sha-pinned to `5d8101ba…`) and `version == 2.10`;
+- flat `src/opnsense/mvc/app/languages/${lang}_devicemonitor.po` staging, versus the v2.10
+  per-locale tree `.../languages/${lang}/LC_MESSAGES/devicemonitor.po` plus the merged core-domain
+  catalogue and 11 sidecar catalogues;
+- `expected=37` widened per selected language, versus `expected=59` (`60` fresh) with
+  `CORE_LOCALES` / `CORE_LOCALE_STATE` accounting.
+
+`release/v2.9-runtime.manifest` does not exist in `v2.10-development`, and a rebase of the true head
+onto `v2.10-development` conflicts in five files (`.github/workflows/ci.yml`, `PROJECT_STATE.md`,
+`install-unattended.sh`, and add/add on `release/merge-opnsense-catalog.sh` and
+`tests/test_locale_merge.py` — the latter two duplicate files v2.10 already owns from `a9c56b2`).
+The branch's own pre-flight was already red before any rebase:
+`sh install-unattended.sh --host OPNsense.internal --check` -> `ABORT: source version`. The pull
+request therefore needed a rewrite of the locale-staging path, not a rebase.
+
+No rebase, no merge, no history rewrite and **no `--force` push** were performed. The branch is left
+in place on `origin` at `06a256c`, so the two commits that lived only there (`26c27a5`
+`remove-locales.sh`; `06a256c` `uninstall.sh` locale restore) are preserved rather than erased. The
+opt-in intent was not adopted; re-delivering it requires new work on the v2.10 installer.
+
+This entry changes documentation only: it does not touch `scan_network.py` and does not alter the
+v2.11 pre-flight state described under Task 1.
 
 ## 27 September 2026 v2.10 install-guard pin restoration
 
