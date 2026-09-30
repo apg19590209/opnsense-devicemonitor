@@ -178,7 +178,7 @@
             <div role="tabpanel" class="tab-pane" id="tab-webhook">
                 <form class="dm-pane-form">
                 <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Webhook Notifications') }}"
-                        data-content="{{ devicemonitor_t('Configure webhook notifications for new devices on the network') }}">
+                        data-content="{{ devicemonitor_t('Enables the primary high-speed HTTP POST notification engine. This serves as the master transport route used to instantly dispatch both asset summaries (New Device Discoveries) and high-severity security events to your monitoring endpoints.') }}">
                     <i class="fa fa-info-circle" aria-hidden="true"></i>
                 </button>
                 <table class="table table-striped">
@@ -220,7 +220,7 @@
                             </td>
                             <td style="padding-top:16px;">
                                 <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('Identity conflict alerts') }}"
-                                        data-content="{{ devicemonitor_t('Send a high-severity IPv4 or IPv6 address conflict alert to the webhook endpoint.') }}">
+                                        data-content="{{ devicemonitor_t('Triggers a webhook payload dispatch immediately upon detection of an existing MAC address switching between multiple IP addresses (IP Spoofing / Identity Hijacking). Recommended to leave enabled.') }}">
                                     <i class="fa fa-info-circle" aria-hidden="true"></i>
                                 </button>
                             </td>
@@ -231,7 +231,7 @@
                                 <strong>{{ devicemonitor_t('Notify for interfaces') }}</strong>
                             </td>
                             <td>
-                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Notify for interfaces') }}" data-content="{{ devicemonitor_t('Leave empty to receive notifications from all interfaces') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                                <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Notify for interfaces') }}" data-content="{{ devicemonitor_t('Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                                 <div style="margin-top:6px;border:1px solid #444;border-radius:4px;padding:8px;max-width:350px;max-height:180px;overflow-y:auto;" id="webhook-vlan-list"></div>
                             </td>
                         </tr>
