@@ -670,10 +670,14 @@ experimental and disabled by default.
 
 **Path:** Services → Device Monitor → Settings
 
-Settings are organised into five tabs: **Monitoring**, **Nmap Scanning**,
-**Email Notifications**, **Webhook Notifications**, and **About**. Use the **Apply/save**
-button on each tab to persist changes. Saving is validated server-side; invalid values are
-rejected with an error message.
+Settings are organised into six tabs: **Monitoring**, **Nmap Scanning**,
+**Email Notifications**, **Webhook Notifications**, **Plugin Options**, and **About**. Use the
+**Apply/save** button on each tab to persist changes. Saving is validated server-side; invalid
+values are rejected with an error message.
+
+The **Plugin Options** tab holds the plugin's own switches: **Plugin translations (sidecar
+catalogue)** forces the interface to use the plugin's dedicated translation file instead of the
+OPNsense core catalogues.
 
 ### 14.1 Monitoring tab
 
@@ -780,7 +784,7 @@ Translations reach a page through two paths, and the installer prepares both:
    instead. The installer reports this as `core_locales=<count>` in its `CHECK_OK`/`INSTALL_OK`
    output.
 
-**Language** (Settings → About tab) — the **Plugin translations (sidecar catalogue)** switch
+**Language** (Settings → Plugin Options tab) — the **Plugin translations (sidecar catalogue)** switch
 controls only step 1: enabled (default), the plugin's own catalogue is used first; disabled, the
 plugin uses the core catalogues only. **Changes state** (plugin behaviour, not stored data).
 The language files under `/usr/local/share/locale` belong to the OPNsense core package; the

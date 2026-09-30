@@ -4043,3 +4043,33 @@ Files changed: `src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt`
 
 Next recommended step: push `v2.10-development` and read the `ci.yml` run for the new commit.
 
+## 30 September 2026 — v2.10-development published; USER_MANUAL §14 Plugin Options tab documented
+
+`0ba1e6d` (the settings grid layout overhaul) was pushed to `origin/v2.10-development`
+(`d9899d1..0ba1e6d`) and CI run `36703847557` (`Device Monitor CI`, push, `ci.yml`) started for it.
+
+Closed the documentation gap carried in the previous three reports. `docs/USER_MANUAL.md` §14
+(lines 673-680) now itemises **six** settings tabs — **Monitoring**, **Nmap Scanning**, **Email
+Notifications**, **Webhook Notifications**, **Plugin Options**, **About** — and adds one sentence of
+functional summary: "The **Plugin Options** tab holds the plugin's own switches: **Plugin
+translations (sidecar catalogue)** forces the interface to use the plugin's dedicated translation
+file instead of the OPNsense core catalogues." The §14.6 cross-reference in the same section still
+sent readers to the About tab for that switch; it now reads `Settings → Plugin Options tab`
+(line 787), matching the tab the switch actually lives in (`settings.volt:26-27` nav entry,
+`#tab-pluginoptions` pane at line 435).
+
+No manifest or installer change was required and none was invented:
+`docs/USER_MANUAL.md` is not a row of `release/v2.10-runtime.manifest` (`grep -c` = 0 — the manifest
+carries only deployed runtime files), so manifest line 25 and the `install-unattended.sh` line 28
+self-guard digest `84087b44…` both stay as committed in `0ba1e6d`.
+
+Deployment re-check (testbed `OPNsense.internal`, 30 September 2026 20:40-20:42 +1000): `CHECK_OK
+version=2.10 predecessor=2.10 files=59 core_locales=10 daemon_running=1`; `INSTALL_OK version=2.10
+files=59 core_locales=10 backup=/var/backups/devicemonitor/install-v210.8nPeKq daemon_restarted=1`
+(exit 0). `git diff --check` PASS.
+
+Files changed: `docs/USER_MANUAL.md` only.
+
+Next recommended step: watch the `ci.yml` run for the documentation commit and treat the change as
+final only once it is green.
+
