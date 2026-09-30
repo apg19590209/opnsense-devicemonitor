@@ -9,6 +9,12 @@ on:
       - v2.8-development
       - v2.9-development
       - v2.10-development
+      # v2.11 feature work (30 September 2026): the async-DB refactor branch is listed explicitly
+      # so its pushes are validated remotely. `pull_request.branches` is deliberately NOT extended
+      # with it: that filter matches the PR *base* branch, so a head branch listed there would only
+      # match pull requests whose target is this feature branch. The eventual PR into
+      # `v2.10-development` is already covered by the entry below.
+      - feature/async-db-v2.11
   pull_request:
     branches:
       - v2.5-development

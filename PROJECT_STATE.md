@@ -234,7 +234,59 @@ current state); the translated heading `v2.10 Features and Enhancements` in `set
 add a new heading, not rewrite the historical one); and the v2.10 install instructions in
 `README.md`, `README_CZ.md` and `docs/USER_MANUAL.md`, which document the published v2.10 asset.
 
-Git state: committed locally on `feature/async-db-v2.11`; not yet pushed.
+Git state: committed locally on `feature/async-db-v2.11` as `ac558a8`; pushed to
+`origin/feature/async-db-v2.11` in the push recorded under Task 4.
+
+### Task 4 — CI watch scope expanded to the v2.11 feature branch
+
+**Recorded 30 September 2026.** `.github/workflows/ci.yml` now lists `feature/async-db-v2.11`
+explicitly under `on.push.branches`, so the branch gets remote validation instead of relying on
+local runs only:
+
+- `on.push.branches` gains `feature/async-db-v2.11` after the `v2.10-development` entry, with an
+  inline comment recording the intent.
+- `on.pull_request.branches` is **deliberately not** extended. That filter matches the pull
+  request's **base** branch, so listing a head branch there would only match pull requests whose
+  target is this feature branch. The eventual PR into `v2.10-development` is already covered by the
+  existing entry.
+- The generic `feature/*-v2.11` glob was considered and not used: this file's convention is explicit
+  branch names, and a glob would start runs for throwaway branches as well.
+
+**Correction to the change request.** The request stated that `ci.yml` is an "active
+manifest-tracked file" and asked for its SHA-256 row to be recalculated in
+`release/v2.11-runtime.manifest` and the installer's self-guard line updated to match. That premise
+is wrong, and no such edit was made:
+
+- `release/v2.11-runtime.manifest` has **38 rows and every one begins with `src/`**. `ci.yml` is not
+  in it (`grep -c 'ci\.yml'` -> 0). The manifest is the runtime install payload, and a workflow file
+  has no install target on a firewall, so it cannot carry a manifest row.
+- Adding a `.github/workflows/ci.yml` row would break `tests/test_release_manifest.py`, which
+  asserts `len(rows) == 38` and restricts non-`src/opnsense/` sources to an allow-list of three
+  `src/etc/...` pairs; it would also break the installer's `= 38` count guard.
+- Therefore the manifest SHA256 is **unchanged** at `df10e9e0…` and the `install-unattended.sh`
+  digest pin on line 36 is **unchanged**. The pre-flight passing with this `ci.yml` edit in the tree
+  is the direct proof that the edit is manifest-neutral.
+
+Validation:
+
+```
+python3 yaml.safe_load(ci.yml)  -> parses; push branches include feature/async-db-v2.11;
+                                   pull_request branches unchanged
+python3 tests/test_release_manifest.py -> V211_RELEASE_MANIFEST=PASS
+git diff --check                -> clean
+sh install-unattended.sh --host OPNsense.internal --check
+  CHECK_OK version=2.11 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal
+  EXIT=0
+sha256 -q release/v2.11-runtime.manifest -> df10e9e0… (unchanged by this change)
+```
+
+**Open gap found while making this change, deliberately not fixed here.** The CI job does **not**
+run `tests/test_deferred_db_writes.py` — the only test that exercises the v2.11 deferred-write
+refactor (`DEFERRED_DB_WRITES=PASS`, six checks; `DECISIONS.md` 37). Enabling the watch therefore
+gives this branch remote validation of the pre-existing suite, **not** of the v2.11 code. Adding
+that step is a separate deliberate change: it alters what CI executes, and its behaviour on
+`ubuntu-latest` is unverified. It was left out so that the trigger-only change stays independently
+verifiable. Tracked as the next recommended step.
 
 ## 27 September 2026 v2.10 install-guard pin restoration
 
