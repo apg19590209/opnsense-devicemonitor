@@ -448,9 +448,18 @@ definition of the schema and needs no external asset.
 inventory and history in the quarantined file are not restored automatically. The quarantined file
 is preserved precisely so an operator can salvage it, and the recovery notice says so explicitly.
 
-Git state: committed and pushed with the rest of the branch package — see the commit recorded in the
-run below. Open item remaining: the accepted data-loss risk of an empty rebuild is recorded as
-`DECISIONS.md` 40 and should be revisited if the operator-visible cost ever proves too high.
+Remote verification: **Device Monitor CI run `36723732905`** (push, headSha `dbf9743`, the
+`feat/perf: implement automated sqlite schema corruption recovery self-healing and async deferred
+database writer queues` commit) — **completed / success**, 2026-09-30T13:43:30Z -> 13:44:13Z. Both
+v2.11 checks ran on the `ubuntu-latest` runner:
+
+```
+2026-09-30T13:43:49.9403675Z DEFERRED_DB_WRITES=PASS
+2026-09-30T13:43:50.2228272Z DB_CORRUPTION_RECOVERY=PASS
+```
+
+Open item remaining: the accepted data-loss risk of an empty rebuild is recorded as `DECISIONS.md` 40
+and should be revisited if the operator-visible cost ever proves too high.
 
 ## 27 September 2026 v2.10 install-guard pin restoration
 
