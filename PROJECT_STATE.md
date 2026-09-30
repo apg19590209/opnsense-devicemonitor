@@ -529,7 +529,80 @@ path — the existing harness works around that with a `builtins.open` shim that
 subprocess boundary. Pinning the wiring needs either that injection path or a source-shape
 assertion, and both are separate decisions.
 
-Git state: uncommitted — the request asked for the change, the re-pin and the two local checks only.
+Git state: committed as `68447c1` and pushed; CI run `36728745227` reported 38 steps, all successful,
+including both v2.11 steps. The `main()` docstring was corrected once before that commit (see the
+"does not cover" paragraph above) and the manifest was re-cut a second time as a result.
+
+### Task 7 — SIGTERM drain handler
+
+**Recorded 1 October 2026.** Closes the one shutdown path Task 6 could not reach.
+
+Task 6's drain lives in `main()`'s `finally`. Python's default SIGTERM disposition terminates without
+unwinding, so that `finally` never runs for a SIGTERM — and `service devicemonitor stop` sends
+SIGTERM, which makes it the usual shutdown path on a firewall. `scan_network.py` therefore now
+installs a SIGTERM handler from `main()` (not at import time, so importing the module cannot hijack
+the caller's signal handling):
+
+- `SHUTDOWN_DRAIN_TIMEOUT = 5.0` (7873) is now one constant used by both the exit path and the
+  handler, replacing the two literals.
+- `_reraise_sigterm()` (7879) — restores the default disposition and re-raises, so the process still
+  reports death-by-SIGTERM (`returncode -15`) to `rc.d` and to supervisors. Kept separate so the
+  handler can be tested without killing the test process.
+- `_sigterm_drain_handler()` (7889) — drains once per process with the shared bound; a second SIGTERM
+  during the drain exits immediately instead of draining again.
+- `_install_sigterm_drain()` (7907) — swallows `ValueError`/`OSError`, so a non-main thread or a
+  platform that refuses the handler degrades to the exit-path drain instead of failing the scan.
+- `main()` (7917) installs the handler first, then runs `_main_dispatch()` under the unchanged
+  `finally`. `import signal` was added to the import block.
+- The writer design comment (5818-5824) now describes four drain levels.
+
+Measured out of process, with the real handler and a real SIGTERM, against a job deliberately held in
+flight by a slow `_db_write_apply`:
+
+```
+WITHOUT handler  returncode=-15   finished_at=None                 -> job committed: False
+WITH handler     returncode=-15   finished_at=2026-10-01 00:00:03  -> job committed: True
+```
+
+The exit status is identical in both cases, which is the point: the handler buys the commit without
+changing what a supervisor or `rc.d` sees.
+
+Validation:
+
+```
+python3 -m py_compile scan_network.py           -> OK
+python3 tests/test_shutdown_drain.py            -> SHUTDOWN_DRAIN=PASS   (4 checks, 2.21s, new asset)
+python3 tests/test_deferred_db_writes.py        -> DEFERRED_DB_WRITES=PASS
+python3 tests/test_db_corruption_recovery.py    -> DB_CORRUPTION_RECOVERY=PASS
+python3 tests/test_device_activity_events.py    -> PASS
+python3 tests/test_device_lifecycle_return.py   -> PASS
+python3 -c yaml.safe_load(ci.yml)               -> 36 steps; new step 7, directly after step 6
+python3 tests/test_release_manifest.py          -> V211_RELEASE_MANIFEST=PASS
+git diff --check                                -> clean
+sh install-unattended.sh --host OPNsense.internal --check
+  CHECK_OK version=2.11 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal
+  EXIT=0
+```
+
+The new asset is wired into CI as step 7 of 36, directly beneath the corruption step, so it runs on
+every push to this branch.
+
+Hash-chain bookkeeping: `scan_network.py` is a manifest row, so per `DECISIONS.md` 35 the manifest and
+pin moved in the same change set — row `c232e26c…` -> `b536f473…`, manifest SHA256 `b400c299…` ->
+`56292fb2…` (still 38 rows), `install-unattended.sh:36` repinned. `release/v2.10-runtime.manifest`
+remains byte-unchanged.
+
+**Behavioural note, recorded rather than glossed:** while the handler drains, the main thread may be
+inside `subprocess.run()` waiting on an nmap scan. The drain waits for the writer queue only — it does
+not signal or reap that child, so a scan killed by SIGTERM can leave its nmap child to be reaped by
+init. That matches the previous default-disposition behaviour, so nothing regressed, but a future
+"stop the scanner cleanly on SIGTERM" change has to signal the child too.
+
+Residual risk, unchanged: **SIGKILL** remains out of reach, because `monitor_daemon.py` runs the scan
+with `subprocess.run(timeout=300)`, which Python escalates to SIGKILL. That is the accepted risk in
+`DECISIONS.md` 37.
+
+The decision itself is recorded as `DECISIONS.md` 41.
 
 ## 27 September 2026 v2.10 install-guard pin restoration
 

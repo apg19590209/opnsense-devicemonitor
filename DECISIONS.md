@@ -1511,3 +1511,68 @@ scanner aborted and the plugin stayed dead until an operator acted.
 - `tests/test_release_manifest.py` -> `V211_RELEASE_MANIFEST=PASS`, and
   `sh install-unattended.sh --host OPNsense.internal --check` -> `EXIT=0`, after the same-change-set
   manifest re-cut that decision 35 requires.
+
+## 41. SIGTERM drains the deferred writer queue and then re-raises
+
+### Decision
+
+`scan_network.py` installs a SIGTERM handler from `main()` — deliberately not at import time — that
+drains the deferred writer queue with the same `SHUTDOWN_DRAIN_TIMEOUT` (5.0 s) the normal exit path
+uses, then restores the default disposition and re-raises the signal:
+
+- `_sigterm_drain_handler()` accepts one drain per process (`_SIGTERM_DRAIN_DONE`). A second SIGTERM
+  arriving during the drain exits immediately instead of draining again, because a repeated SIGTERM
+  means "stop now".
+- `_reraise_sigterm()` does `signal.signal(SIGTERM, SIG_DFL)` followed by
+  `os.kill(os.getpid(), SIGTERM)`, so the process still reports death-by-SIGTERM (`returncode -15`)
+  to `rc.d` and to supervisors. It is a separate function so the handler can be exercised without
+  killing the process running the test.
+- `_install_sigterm_drain()` swallows `ValueError` and `OSError`: a non-main thread, or a platform
+  that refuses the handler, degrades to the exit-path drain instead of failing the scan.
+- Installing from `main()` rather than at import time matters because the test harness imports this
+  module; an import-time handler would hijack the caller's SIGTERM handling.
+- `SHUTDOWN_DRAIN_TIMEOUT` is now one constant, used by both the exit path and the handler.
+
+### Reason
+
+Decision 37's remedy — a bounded pre-exit drain in `main()` — was implemented as the v2.11 Task 6
+wrapper, and it covers every normal and early return, the error handler and SIGINT. It does **not**
+cover SIGTERM, because Python's default disposition terminates the process without unwinding: no
+`finally`, no `atexit`, no callback. Measured before this change: `SIGINT -> finally ran`,
+`SIGTERM -> returncode -15, finally never reached`. Since `service devicemonitor stop` sends SIGTERM,
+that was the one shutdown path on a firewall where a queued history completion could still be lost.
+
+### Verified
+
+Out of process, with the real handler and a real SIGTERM, against a job deliberately held in flight by
+a slow `_db_write_apply`:
+
+```
+WITHOUT handler  returncode=-15   finished_at=None                 -> job committed: False
+WITH handler     returncode=-15   finished_at=2026-10-01 00:00:03  -> job committed: True
+```
+
+The exit status is identical both ways, which is the point: the handler buys the commit without
+changing what a supervisor or `rc.d` observes.
+
+`tests/test_shutdown_drain.py` -> `SHUTDOWN_DRAIN=PASS`, four checks: `main()` installs the handler
+and keeps the matching exit-path drain (a wiring pin read from the source); the handler commits a job
+that is still in flight and then re-raises; a second SIGTERM does not drain twice; and a platform that
+refuses the handler logs and continues. `tests/test_deferred_db_writes.py`,
+`tests/test_db_corruption_recovery.py`, `tests/test_device_activity_events.py` and
+`tests/test_device_lifecycle_return.py` all still pass, and `test_release_manifest.py` reports
+`V211_RELEASE_MANIFEST=PASS` after the same-change-set re-cut that decision 35 requires.
+
+### Residual risk, unchanged
+
+SIGKILL cannot be intercepted by any in-process hook, and `monitor_daemon.py` runs this script with
+`subprocess.run(timeout=300)`, which Python escalates to SIGKILL. That window remains the accepted
+risk recorded in decision 37 and is not affected by this change.
+
+### Behavioural note
+
+While the handler drains, the main thread may be inside a `subprocess.run()` waiting on an nmap scan.
+The drain waits for the writer queue only; it does not signal or reap that child, so a scan killed by
+SIGTERM can leave its nmap child to be reaped by init. That is the same outcome as the previous
+default disposition, so nothing regressed — but any future "stop the scanner cleanly on SIGTERM"
+change has to signal the child as well.

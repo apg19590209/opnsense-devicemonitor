@@ -10,6 +10,7 @@ import json
 import sys
 import argparse
 import atexit
+import signal
 import queue
 import subprocess
 import threading
@@ -5814,11 +5815,13 @@ def config_bool(value, default=False):
 #     needed for the port rows and for the abort path.
 #   * The abort/failure path is still written synchronously; the process
 #     is unwinding and the record must not depend on a background thread.
-#   * Queued work is drained before the process may exit, on three levels so
+#   * Queued work is drained before the process may exit, on four levels so
 #     history is never silently dropped: an explicit drain in the automatic
 #     queue loop, a bounded 5.0 s drain on main()'s exit path (v2.11 Task 6,
-#     which also covers the early returns and the SIGINT/error handlers), and
-#     the atexit backstop registered by _ensure_db_writer().
+#     which also covers the early returns and the SIGINT/error handlers), the
+#     SIGTERM handler installed from main() (v2.11 Task 7, which covers
+#     `service devicemonitor stop`), and the atexit backstop registered by
+#     _ensure_db_writer().
 #   * If the writer cannot be started or a put() fails, the caller falls
 #     back to the original synchronous write.
 # ================================================================
@@ -7852,6 +7855,65 @@ def list_targets():
     return 0
 
 
+# ================================================================
+# v2.11 lifecycle, Task 7 — SIGTERM drain
+#
+# Python's default SIGTERM disposition terminates the process without unwinding,
+# so the `finally` in main() never runs for a SIGTERM — and `service
+# devicemonitor stop` sends SIGTERM, which makes that the usual shutdown path on
+# a firewall. This handler gives the deferred writer queue the same bounded drain
+# the normal exit path gets, then restores the default disposition and re-raises
+# so the exit status still reports death-by-SIGTERM to rc.d and to supervisors.
+#
+# It is installed from main() rather than at import time, so importing this module
+# (the test harness does) cannot hijack the caller's SIGTERM handling.
+#
+# SIGKILL remains out of reach: monitor_daemon.py runs this script with
+# subprocess.run(timeout=300), which Python escalates to SIGKILL. That residual
+# window stays the accepted risk recorded as DECISIONS.md 37.
+# ================================================================
+SHUTDOWN_DRAIN_TIMEOUT = 5.0
+_SIGTERM_DRAIN_DONE = False
+
+
+def _reraise_sigterm():
+    """Restore the default SIGTERM disposition and re-raise the signal.
+
+    Kept separate from the handler so the handler can be exercised without
+    killing the process running the test.
+    """
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    os.kill(os.getpid(), signal.SIGTERM)
+
+
+def _sigterm_drain_handler(signum, frame):
+    """Drain the deferred writer queue, then die by SIGTERM as expected."""
+    global _SIGTERM_DRAIN_DONE
+
+    if not _SIGTERM_DRAIN_DONE:
+        _SIGTERM_DRAIN_DONE = True
+        log(
+            'SIGTERM received; draining the deferred DB writer queue for up to '
+            f'{SHUTDOWN_DRAIN_TIMEOUT:.1f}s'
+        )
+        flush_db_writes(SHUTDOWN_DRAIN_TIMEOUT)
+
+    # Reached on the first signal after the drain, and immediately on a second
+    # signal that arrives while the drain is still running: a repeated SIGTERM
+    # means "stop now", so it is never drained twice.
+    _reraise_sigterm()
+
+
+def _install_sigterm_drain():
+    """Install the SIGTERM drain handler."""
+    try:
+        signal.signal(signal.SIGTERM, _sigterm_drain_handler)
+    except (ValueError, OSError):
+        # Not the main thread, or the platform refused the handler. The
+        # `finally` in main() remains the only drain; not fatal.
+        log('Could not install the SIGTERM drain handler')
+
+
 def main():
     """Run the requested mode, draining queued writes before returning.
 
@@ -7861,30 +7923,31 @@ def main():
     sitting in the deferred writer queue are committed before the process hands
     control back to the interpreter.
 
-    The bound is deliberate: 5.0 s caps how long a finished scan can be held on
-    its exit path, and it is half the 10.0 s default that the atexit backstop in
-    _ensure_db_writer() uses. flush_db_writes() logs and returns False when the
-    queue has not drained in time, so a stuck writer delays the exit by at most
-    that bound instead of hanging it.
+    The bound is deliberate: SHUTDOWN_DRAIN_TIMEOUT (5.0 s) caps how long a
+    finished scan can be held on its exit path, and it is half the 10.0 s default
+    that the atexit backstop in _ensure_db_writer() uses. flush_db_writes() logs
+    and returns False when the queue has not drained in time, so a stuck writer
+    delays the exit by at most that bound instead of hanging it.
 
-    Signals are only partly covered, and the boundary is worth stating exactly
-    because it is easy to over-claim. A SIGINT (Ctrl-C) becomes
-    KeyboardInterrupt, which _main_dispatch() catches, so this drain runs.
-    **SIGTERM is not covered**: Python's default disposition terminates the
-    process without unwinding, so no finally, no atexit handler and no signal
-    callback runs — and `service devicemonitor stop` sends SIGTERM. Measured on
-    this host: SIGINT -> finally ran, SIGTERM -> returncode -15 with the finally
-    never reached. SIGKILL is equally out of reach, and monitor_daemon.py runs
-    this script with subprocess.run(timeout=300), which Python escalates to
-    SIGKILL. Both uncovered windows are the accepted risk recorded as
-    DECISIONS.md 37; closing the SIGTERM one needs an explicit
-    signal.signal(signal.SIGTERM, ...) handler, which this change deliberately
-    does not add.
+    Signal coverage, stated exactly because it is easy to over-claim:
+
+      * SIGINT (Ctrl-C) becomes KeyboardInterrupt, which _main_dispatch()
+        catches, so the finally below runs.
+      * SIGTERM is covered by the handler installed on the first line of this
+        function (v2.11 Task 7): it drains with the same bound and then re-raises
+        the signal so the exit status still reports death-by-SIGTERM. `service
+        devicemonitor stop` sends SIGTERM, so that is the usual shutdown path on
+        a firewall. Measured before the handler existed: SIGINT -> finally ran,
+        SIGTERM -> returncode -15 with the finally never reached.
+      * SIGKILL remains out of reach: monitor_daemon.py runs this script with
+        subprocess.run(timeout=300), which Python escalates to SIGKILL. That
+        residual window is the accepted risk recorded as DECISIONS.md 37.
     """
+    _install_sigterm_drain()
     try:
         return _main_dispatch()
     finally:
-        flush_db_writes(5.0)
+        flush_db_writes(SHUTDOWN_DRAIN_TIMEOUT)
 
 
 def _main_dispatch():

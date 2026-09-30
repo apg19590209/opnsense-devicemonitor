@@ -60,6 +60,11 @@ jobs:
       - name: Validate database corruption recovery (v2.11)
         run: python3 tests/test_db_corruption_recovery.py
 
+      # v2.11 Task 7: pins the SIGTERM drain handler and the main() wiring. It drives the handler
+      # directly with `_reraise_sigterm()` stubbed, so the runner is never signalled.
+      - name: Validate shutdown drain (v2.11)
+        run: python3 tests/test_shutdown_drain.py
+
       - name: Lint PHP sources
         run: |
           set -eu
