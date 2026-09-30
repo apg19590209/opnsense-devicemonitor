@@ -215,7 +215,7 @@
                             <td style="vertical-align:top;padding-top:16px;">
                                 <label style="margin:0;">
                                     <input type="checkbox" id="identity_webhook_enabled" />
-                                    <strong>{{ devicemonitor_t('Enable instant real-time webhook identity alerts') }}</strong>
+                                    <strong>{{ devicemonitor_t('Enable immediate webhook identity conflict alerts') }}</strong>
                                 </label>
                             </td>
                             <td style="padding-top:16px;">
