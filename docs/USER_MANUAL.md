@@ -643,10 +643,13 @@ Precedence (strongest first):
   leases with hostnames).
 - **Unbound** *(Experimental)* — reads local OPNsense Unbound host overrides (A records)
   and host aliases from `/conf/config.xml`. It reads local configuration only, performs no
-  network queries, is disabled by default and must be enabled in Settings.
-- **AdGuard** — optional external DNS-rewrite source. Configured in Settings.
+  network queries, is disabled by default and must be enabled on the Plugin Options tab, see
+  [Section 14.5](#145-plugin-options-tab).
+- **AdGuard** — optional external DNS-rewrite source. Configured on the Plugin Options tab,
+  see [Section 14.5](#145-plugin-options-tab).
 - **Pi-hole** *(Experimental)* — optional external DHCP-lease source (Pi-hole v6 REST
-  API). Configured in Settings and disabled by default.
+  API). Configured on the Plugin Options tab, see
+  [Section 14.5](#145-plugin-options-tab), and disabled by default.
 
 ### 13.3 Behaviour and guarantees
 
@@ -659,8 +662,8 @@ Precedence (strongest first):
 
 ### 13.4 Configuration
 
-Configure AdGuard, Pi-hole and Unbound on the **Settings → Monitoring** tab (see
-Section 14). ISC, Kea, Dnsmasq and Hostwatch require no Device Monitor configuration; they
+Configure AdGuard, Pi-hole and Unbound on the **Settings → Plugin Options** tab, see
+[Section 14.5](#145-plugin-options-tab). ISC, Kea, Dnsmasq and Hostwatch require no Device Monitor configuration; they
 are used when the underlying data is present on OPNsense. Pi-hole and Unbound are
 experimental and disabled by default.
 
@@ -694,30 +697,9 @@ values are rejected with an error message.
   - **Unavailable** — notify when a service becomes unavailable.
   - **Recovered** — notify when a service becomes available again.
 
-#### AdGuard DNS rewrites
-
-- **Enable AdGuard rewrites** — enable hostname enrichment from AdGuard Home DNS rewrites.
-- **AdGuard URL** — the AdGuard Home base URL (HTTPS).
-- **AdGuard username / password** — credentials for the AdGuard API.
-
-#### Pi-hole (Experimental)
-
-- **Enable Pi-hole** — enable hostname enrichment from Pi-hole v6 DHCP leases (disabled by
-  default).
-- **Pi-hole URL** — the Pi-hole base URL (HTTPS).
-- **Pi-hole password** — the Pi-hole v6 app password (used for session auth).
-
-Pi-hole requires Pi-hole v6, HTTPS and an app password.
-
-#### Unbound (Experimental)
-
-- **Enable Unbound hostname enrichment** — enable hostname enrichment from local Unbound
-  host overrides and host aliases (disabled by default). This reads `/conf/config.xml`
-  only and performs no network queries.
-
-> AdGuard is an optional external source. Pi-hole and Unbound are experimental and disabled
-> by default. AdGuard and Pi-hole use HTTPS with certificate verification enabled, and
-> credentials are never written to logs or error messages.
+> **These sources are configured on the Plugin Options tab, not on this tab.** AdGuard,
+> Pi-hole and Unbound have no controls under Monitoring; their fields are documented in
+> [Section 14.5 Plugin Options tab](#145-plugin-options-tab).
 
 ### 14.2 Email Notifications tab
 
@@ -758,8 +740,36 @@ Pi-hole requires Pi-hole v6, HTTPS and an app password.
 
 ### 14.5 Plugin Options tab
 
-Holds the plugin's own switches — the optional hostname-enrichment sources (Sections 13 and 14.1)
-and the translation catalogue toggle — rather than scan or notification settings.
+Holds the plugin's own switches — the optional hostname-enrichment sources (described in
+[Section 13.2](#132-the-sources)) and the translation catalogue toggle — rather than scan or
+notification settings.
+
+#### AdGuard DNS rewrites
+
+- **Enable AdGuard rewrites** — enable hostname enrichment from AdGuard Home DNS rewrites.
+- **AdGuard URL** — the AdGuard Home base URL (HTTPS).
+- **AdGuard username / password** — credentials for the AdGuard API.
+
+#### Pi-hole (Experimental)
+
+- **Enable Pi-hole** — enable hostname enrichment from Pi-hole v6 DHCP leases (disabled by
+  default).
+- **Pi-hole URL** — the Pi-hole base URL (HTTPS).
+- **Pi-hole password** — the Pi-hole v6 app password (used for session auth).
+
+Pi-hole requires Pi-hole v6, HTTPS and an app password.
+
+#### Unbound (Experimental)
+
+- **Enable Unbound hostname enrichment** — enable hostname enrichment from local Unbound
+  host overrides and host aliases (disabled by default). This reads `/conf/config.xml`
+  only and performs no network queries.
+
+> AdGuard is an optional external source. Pi-hole and Unbound are experimental and disabled
+> by default. AdGuard and Pi-hole use HTTPS with certificate verification enabled, and
+> credentials are never written to logs or error messages.
+
+#### Plugin translations
 
 - **Plugin translations (sidecar catalogue)** — enabled (default), page text resolves through the
   plugin's dedicated translation file first; disabled, the plugin uses the OPNsense core catalogues
