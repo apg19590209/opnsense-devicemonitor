@@ -38,6 +38,7 @@
 
             <!-- TAB 3: Email -->
             <div role="tabpanel" class="tab-pane" id="tab-email">
+                <form class="dm-pane-form">
                 <a id="return-to-device-details" class="btn btn-default btn-sm"
                    href="#" style="display:none;margin-bottom:12px;">
                     <i class="fa fa-arrow-left" aria-hidden="true"></i>
@@ -170,10 +171,12 @@
                         <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
                     </button>
                 </div>
+                </form>
             </div>
 
             <!-- TAB 4: Webhook -->
             <div role="tabpanel" class="tab-pane" id="tab-webhook">
+                <form class="dm-pane-form">
                 <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('About Webhook Notifications') }}"
                         data-content="{{ devicemonitor_t('Configure webhook notifications for new devices on the network') }}">
                     <i class="fa fa-info-circle" aria-hidden="true"></i>
@@ -212,7 +215,7 @@
                             <td style="vertical-align:top;padding-top:16px;">
                                 <label style="margin:0;">
                                     <input type="checkbox" id="identity_webhook_enabled" />
-                                    <strong>{{ devicemonitor_t('Identity conflict alerts') }}</strong>
+                                    <strong>{{ devicemonitor_t('Enable instant real-time webhook identity alerts') }}</strong>
                                 </label>
                             </td>
                             <td style="padding-top:16px;">
@@ -239,10 +242,12 @@
                         <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
                     </button>
                 </div>
+                </form>
             </div>
 
             <!-- TAB 1: Monitoring -->
             <div role="tabpanel" class="tab-pane active" id="tab-monitoring">
+                <form class="dm-pane-form">
                 <table class="table table-striped">
                     <tbody>
                         <tr>
@@ -285,10 +290,12 @@
                         <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
                     </button>
                 </div>
+                </form>
             </div>
 
             <!-- TAB 2: Nmap Scanning -->
             <div role="tabpanel" class="tab-pane" id="tab-nmap">
+                <form class="dm-pane-form">
                 <table class="table table-striped">
                     <tbody>
                         <tr>
@@ -362,10 +369,12 @@
                         <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
                     </button>
                 </div>
+                </form>
             </div>
 
             <!-- TAB 5: Plugin Options -->
             <div role="tabpanel" class="tab-pane" id="tab-pluginoptions">
+                <form class="dm-pane-form">
                 <table class="table table-striped">
                     <tbody>
                         <tr>
@@ -461,10 +470,12 @@
                         <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
                     </button>
                 </div>
+                </form>
             </div>
 
             <!-- TAB 6: About -->
             <div role="tabpanel" class="tab-pane" id="tab-about">
+                <form class="dm-pane-form">
                 <div style="max-width:600px;padding:10px 0;">
                     <h3 style="margin-top:0;">{{ devicemonitor_t('Device Monitor') }} <span id="about-version" style="color:#888;font-size:16px;"></span></h3>
                     <p class="text-muted">{{ devicemonitor_t('OPNsense plugin for monitoring network devices, detecting IP and MAC address conflicts, discovering infrastructure services, performing targeted security scans, and sending configurable alerts using native hostwatch data.') }}</p>
@@ -505,6 +516,7 @@
                         </tr>
                     </table>
                 </div>
+                </form>
             </div>
 
         </div>
@@ -516,6 +528,10 @@
 </style>
 <script>
 $().ready(function() {
+    /* Each tab pane is its own form container: Enter inside a pane must not run
+     * an implicit GET submit, which would reload the page and discard unsaved
+     * edits. */
+    $('.dm-pane-form').on('submit', function(e) { e.preventDefault(); });
     // Keep guidance beside the setting it explains, clear of the form control.
     $('#tab-monitoring, #tab-nmap, #tab-email, #tab-webhook, #tab-pluginoptions').each(function() {
         $(this).find('table > tbody > tr').each(function() {
@@ -846,9 +862,20 @@ $().ready(function() {
         $('#webhook_test_result').html(('<span style="color:blue;">⏳ ' + {{ lang.query('Sending...')|json_encode(15) }} + '</span>'));
         $.ajax({ url:'/api/devicemonitor/config/testWebhook', type:'POST', data:{webhook_url:url},
             success:function(d) {
-                $('#webhook_test_result').html(d.result==='ok'
+                var ok = d.result==='ok';
+                $('#webhook_test_result').show().html(ok
                     ? ('<span style="color:green;">✅ ' + {{ lang.query('Test sent!')|json_encode(15) }} + '</span>')
                     : '<span style="color:red;">❌ '+(d.message||{{ lang.query('Failed')|json_encode(15) }})+'</span>');
+                if (ok) {
+                    /* The success banner fades out after three seconds; the
+                     * callback clears it and restores display so the next test
+                     * result is visible. */
+                    setTimeout(function() {
+                        $('#webhook_test_result').fadeOut(400, function() {
+                            $(this).html('').show();
+                        });
+                    }, 3000);
+                }
             }
         });
     });

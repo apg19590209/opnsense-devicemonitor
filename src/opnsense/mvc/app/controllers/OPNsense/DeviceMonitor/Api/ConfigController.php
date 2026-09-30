@@ -471,14 +471,17 @@ class ConfigController extends ApiControllerBase
          * when the URL is a Discord webhook (Discord rejects a topic/message
          * frame). hostname and timestamp are filled in by sendWebhook(). */
         $test_message = 'Device Monitor webhook is working!';
+        /* The custom topic name is parsed from the URL the operator entered: the
+         * last non-empty path segment carries it, so
+         * https://ntfy.sh/opnsense_monitor -> opnsense_monitor. Query strings and
+         * fragments never contribute, and a value without a host, or without a
+         * path segment, falls back to the hostname. */
         $topic = gethostname() ?: 'Device Monitor';
-        if (stripos($webhook_url, 'ntfy') !== false) {
-            /* ntfy reads the destination topic from the JSON body, so it must
-             * match the topic in the URL the operator entered. */
-            $ntfy_topic = trim((string)parse_url($webhook_url, PHP_URL_PATH), '/');
-            if ($ntfy_topic !== '') {
-                $topic = $ntfy_topic;
-            }
+        $url_host = (string)parse_url($webhook_url, PHP_URL_HOST);
+        $url_path = (string)parse_url($webhook_url, PHP_URL_PATH);
+        $url_segments = array_values(array_filter(explode('/', $url_path), 'strlen'));
+        if ($url_host !== '' && $url_segments !== []) {
+            $topic = rawurldecode((string)end($url_segments));
         }
         $payload = [
             'topic' => $topic,

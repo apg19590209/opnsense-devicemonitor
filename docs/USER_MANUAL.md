@@ -737,12 +737,13 @@ Pi-hole requires Pi-hole v6, HTTPS and an app password.
 ### 14.3 Webhook Notifications tab
 
 - **Enable Webhook** — master switch for webhook notifications (default: off).
-- **Webhook URL** — the HTTP(S) endpoint that receives JSON notifications.
-- **Identity conflict alerts** — send a high-severity IPv4 or IPv6 address conflict alert to
-  the configured endpoint (default: off). Requires **Enable Webhook** and a webhook URL;
-  identity-conflict alerts are webhook-only.
+- **Webhook URL** — the HTTP(S) endpoint that receives JSON notifications. The custom topic
+  name is taken from the last path segment of the URL.
+- **Enable instant real-time webhook identity alerts** — send a high-severity IPv4 or IPv6
+  address conflict alert to the configured endpoint (default: off). Requires **Enable Webhook**
+  and a webhook URL; identity-conflict alerts are webhook-only.
 - **Test webhook** — send a test payload to the configured URL and show the result.
-  **Changes state** (sends a real request).
+  **Changes state** (sends a real request). The success banner clears itself after three seconds.
 
 ### 14.4 Nmap Scanning tab
 
