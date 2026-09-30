@@ -123,7 +123,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:top;padding-top:16px;">
+                            <td style="width:30%;vertical-align:top;padding-top:16px;">
                                 <strong>{{ devicemonitor_t('Infrastructure Services') }}</strong>
                             </td>
                             <td style="padding-top:16px;">
@@ -136,7 +136,7 @@
                                         data-content="{{ devicemonitor_t('Alert only on verified or authoritative infrastructure-service evidence.') }} {{ devicemonitor_t('Generic service-changed events remain history-only in this version.') }}">
                                     <i class="fa fa-info-circle" aria-hidden="true"></i>
                                 </button>
-                                <div id="service_email_options" style="margin-top:10px;margin-left:20px;">
+                                <div id="service_email_options" style="margin-top:10px;">
                                     <label style="display:block;font-weight:normal;">
                                         <input type="checkbox" id="service_email_new" />
                                         {{ devicemonitor_t('New verified service') }}
@@ -153,7 +153,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:top;padding-top:16px;">
+                            <td style="width:30%;vertical-align:top;padding-top:16px;">
                                 <strong>{{ devicemonitor_t('Notify for interfaces') }}</strong>
                             </td>
                             <td>
@@ -232,7 +232,7 @@
                             </td>
                             <td>
                                 <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Notify for interfaces') }}" data-content="{{ devicemonitor_t('Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                                <div style="margin-top:6px;border:1px solid #444;border-radius:4px;padding:8px;max-width:350px;max-height:180px;overflow-y:auto;" id="webhook-vlan-list"></div>
+                                <div style="margin-top:6px;border:1px solid #444;border-radius:4px;padding:8px;max-width:500px;max-height:180px;overflow-y:auto;" id="webhook-vlan-list"></div>
                             </td>
                         </tr>
                     </tbody>
