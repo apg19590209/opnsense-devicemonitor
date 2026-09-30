@@ -1369,3 +1369,58 @@ be delivered as new work on top of the v2.10 installer.
 - The two commits that exist only on `origin/feature/optional-locale-installer-20260927`
   (`26c27a5`, which adds `remove-locales.sh`, and `06a256c`, which restores locales before the
   guarded uninstall) are **not** deleted by this closure; they remain on the branch.
+
+## 39. v2.11 carries its own release manifest, and the v2.10 manifest is retained unchanged
+
+### Decision
+
+The v2.11 tree is cut as a **separate** release artifact instead of repinning the v2.10 one:
+
+- `release/v2.11-runtime.manifest` — 38 rows, SHA256 `df10e9e0…`, generated from this tree.
+- `release/v2.10-runtime.manifest` — retained **byte-unchanged** (`5d8101ba…`, 38 rows) as the
+  v2.10 release artifact, so a v2.10 deployment remains independently verifiable.
+- `install-unattended.sh` points at the v2.11 manifest, pins its digest, and its source-version and
+  predecessor guards become `2.11` and `2.8|2.9|2.10|2.11`.
+- `defaults.json` `version` becomes `2.11`, so the installer, the manifest and the installed payload
+  agree on a single identity. A "v2.11" manifest over a `version == 2.10` tree would be a
+  mislabelled artifact, which is why the version bump is part of the cut rather than a later step.
+
+### Reason
+
+Three rows no longer matched the tree — `scan_network.py` (deferred writes, `DECISIONS.md` 37),
+`defaults.json` (version) and `devicemonitor_locale.inc` (a comment naming the guarded manifest) —
+so the v2.10 manifest had stopped being a truthful description of the tree, and **both** integrity
+gates were failing:
+
+```
+python3 tests/test_release_manifest.py   -> AssertionError: .../scan_network.py   (rc=1)
+sh install-unattended.sh --host OPNsense.internal --check
+                                         -> ABORT: source hash .../scan_network.py   (exit 1)
+```
+
+Two alternatives were rejected. Rewriting `release/v2.10-runtime.manifest` in place would contradict
+the position recorded in `PROJECT_STATE.md` Task 1 ("the v2.10 manifest is the v2.10 release artifact
+and must not be rewritten for v2.11 work") and would retroactively change what the published v2.10
+asset verifies. Leaving the branch red until release time was the other option, and it was rejected
+because it left the branch unable to demonstrate a coherent payload.
+
+The cut follows the coupling rule already recorded in this file under decision 35: a manifest row
+change and the installer's digest pin move in the same commit. That rule's
+`install-unattended.sh:28` line reference is stale — the pin is line 36 as of this change.
+
+### Verified
+
+- `python3 tests/test_release_manifest.py` -> `V211_RELEASE_MANIFEST=PASS` (rc=0).
+- `sh install-unattended.sh --host OPNsense.internal --check` ->
+  `CHECK_OK version=2.11 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal`, `EXIT=0`.
+- `sha256 -q release/v2.10-runtime.manifest` -> `5d8101ba…`, and the file has no diff.
+- `sh -n` on `install-unattended.sh`, `install.sh`, `uninstall.sh` and `release/build-bundle.sh` -> PASS.
+- `git diff --check` -> clean.
+
+### Scope note
+
+The check is self-consistent by construction: it was cut from the tree it validates, so it cannot
+fail for that tree. It verifies release-artifact integrity only and says nothing about the
+correctness of the deferred-write refactor — that evidence is `tests/test_deferred_db_writes.py`.
+The gate is expected to go red again the next time a manifest row changes without the manifest and
+the pin being refreshed in the same commit, which is the intended behaviour.

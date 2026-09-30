@@ -1,10 +1,10 @@
-"""Validate the v2.10 install payload against the working tree."""
+"""Validate the v2.11 install payload against the working tree."""
 from pathlib import Path
 import hashlib
 import json
 
 root = Path(__file__).resolve().parents[1]
-manifest = root / 'release/v2.10-runtime.manifest'
+manifest = root / 'release/v2.11-runtime.manifest'
 rows = [line.split() for line in manifest.read_text().splitlines()]
 assert len(rows) == 38
 assert all(len(row) == 4 for row in rows)
@@ -31,5 +31,5 @@ for digest, mode, source, target in rows:
 defaults = json.loads(
     (root / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json').read_text()
 )
-assert defaults['version'] == '2.10'
-print('V210_RELEASE_MANIFEST=PASS')
+assert defaults['version'] == '2.11'
+print('V211_RELEASE_MANIFEST=PASS')

@@ -13,7 +13,7 @@
  * The core catalogues under /usr/local/share/locale are never read or written by
  * this file; the core domain is only asked for a translation.
  *
- * This file is part of the guarded runtime payload (release/v2.10-runtime.manifest):
+ * This file is part of the guarded runtime payload (release/v2.11-runtime.manifest):
  * the views call devicemonitor_t(), so a system without it must not render a Device
  * Monitor page. It is required, guarded on is_file(), from
  * IndexController::initialize() and from plugins.inc.d/devicemonitor.inc.

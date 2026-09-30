@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build dm-v2.10-runtime.tar.gz from an explicit allow-list.
+# Build dm-v2.11-runtime.tar.gz from an explicit allow-list.
 #
 # The bundle is NOT just the manifest: install-unattended.sh:97-123 compiles all 11
 # locale .po files (hardcoded list, unconditional ABORT on a missing one) and the
@@ -12,13 +12,13 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 REPO=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 BUILD=/tmp/dm-bundle-stage
-OUT=/tmp/dm-v2.10-runtime.tar.gz
+OUT=/tmp/dm-v2.11-runtime.tar.gz
 LIST=/tmp/dm-bundle-list.txt
 
 cd "$REPO"
 
 # 1. Manifest payload: the 38 hash-verified install targets.
-awk '{print $3}' release/v2.10-runtime.manifest > "$LIST"
+awk '{print $3}' release/v2.11-runtime.manifest > "$LIST"
 
 # 2. The .po catalogues the installer compiles (includes the 9 the manifest omits).
 find src -name '*.po' >> "$LIST"
@@ -29,7 +29,7 @@ printf '%s\n' \
     install.sh \
     uninstall.sh \
     install-unattended.sh \
-    release/v2.10-runtime.manifest \
+    release/v2.11-runtime.manifest \
     release/merge-opnsense-catalog.sh >> "$LIST"
 
 sort -u "$LIST" -o "$LIST"

@@ -184,7 +184,57 @@ in place on `origin` at `06a256c`, so the two commits that lived only there (`26
 opt-in intent was not adopted; re-delivering it requires new work on the v2.10 installer.
 
 This entry changes documentation only: it does not touch `scan_network.py` and does not alter the
-v2.11 pre-flight state described under Task 1.
+v2.11 pre-flight state described under Task 1. (Task 3 below supersedes that pre-flight state.)
+
+### Task 3 — v2.11 release identity cut: manifest, installer pin and version metadata
+
+**Recorded 30 September 2026.** The v2.11 tree now carries its own release identity instead of
+borrowing the v2.10 release artifact. Cut, in one change set:
+
+- `release/v2.11-runtime.manifest` — **new**, 38 rows, every row's SHA256 recomputed from the tree.
+  Three rows differ from v2.10: `scan_network.py` (`4fd87dc7…` -> `3a386a88…`, the deferred-write
+  refactor), `defaults.json` (`e9dad548…` -> `0398f09f…`, version 2.10 -> 2.11) and
+  `devicemonitor_locale.inc` (`724f74de…` -> `b9c2a2e4…`, a comment naming the guarded manifest).
+  The manifest's own SHA256 moves `5d8101ba…` -> `df10e9e0…`; the row count is unchanged at 38.
+- `install-unattended.sh` — `MANIFEST=release/v2.11-runtime.manifest` (line 35), digest pin
+  (line 36) -> `df10e9e0…`, source-version guard (line 38) -> `2.11`, predecessor list (line 46) ->
+  `2.8|2.9|2.10|2.11`, both report strings (lines 176, 303) -> `version=2.11`, header comment and
+  the two `mktemp` templates -> `v211`.
+- `src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json` — `"version": "2.11"`.
+- `tests/test_release_manifest.py` — repointed to `release/v2.11-runtime.manifest`, version
+  assertion -> `2.11`, marker `V210_RELEASE_MANIFEST=PASS` -> `V211_RELEASE_MANIFEST=PASS`.
+- `release/build-bundle.sh` — manifest path and bundle output name -> v2.11.
+- `release/v2.11-notes.md` — **new**.
+
+`release/v2.10-runtime.manifest` is **retained byte-unchanged** (`5d8101ba…`, 38 rows) as the v2.10
+release artifact, so a v2.10 deployment stays verifiable; this cut is additive.
+
+Validation on 30 September 2026:
+
+```
+sh -n install-unattended.sh install.sh uninstall.sh release/build-bundle.sh   -> PASS
+python3 tests/test_release_manifest.py   -> V211_RELEASE_MANIFEST=PASS (rc=0; it was rc=1 before the cut)
+git diff --check                         -> clean
+sh install-unattended.sh --host OPNsense.internal --check
+  CHECK_OK version=2.11 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal
+  EXIT=0
+```
+
+Caveat, deliberately stated: that green gate is a **release-artifact integrity** check. It confirms
+the payload matches the manifest, the manifest matches its pin, and the tree declares 2.11. It is
+**not** evidence that the deferred-write refactor is correct — that evidence is
+`tests/test_deferred_db_writes.py` (`DEFERRED_DB_WRITES=PASS`, six checks) and `DECISIONS.md` 37.
+This is also why the check is expected to go red again the next time a manifest row changes without
+the manifest and the pin being refreshed in the same commit (`DECISIONS.md` 35).
+
+Deliberately **not** changed: the historical references to `release/v2.10-runtime.manifest` and
+`V210_RELEASE_MANIFEST=PASS` earlier in this file and in `PRODUCT_BACKLOG.md` (ledger history, not
+current state); the translated heading `v2.10 Features and Enhancements` in `settings.volt` and its
+11 `.po` catalogues (a user-visible i18n string rather than version metadata — a v2.11 release would
+add a new heading, not rewrite the historical one); and the v2.10 install instructions in
+`README.md`, `README_CZ.md` and `docs/USER_MANUAL.md`, which document the published v2.10 asset.
+
+Git state: committed locally on `feature/async-db-v2.11`; not yet pushed.
 
 ## 27 September 2026 v2.10 install-guard pin restoration
 
