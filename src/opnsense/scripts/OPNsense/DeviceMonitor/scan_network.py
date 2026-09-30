@@ -313,8 +313,130 @@ def scoped_device_macs(conn, networks):
     }
 
 
+# ================================================================
+# v2.11 lifecycle, Task 2 — corruption self-heal
+#
+# A hard crash, power fault or filesystem locking loop can leave devices.db
+# malformed. Before any schema work, init_db() probes the file with PRAGMA
+# quick_check and treats either a sqlite3.DatabaseError or a non-'ok' result as
+# corruption. On corruption the database and its WAL sidecars are moved aside
+# with a .corrupt-<UTC stamp> suffix (never deleted, so an operator can still
+# recover the history) and a pristine schema is rebuilt at DB_FILE, so the
+# daemon does not fail every scan until somebody intervenes by hand.
+#
+# Accepted risk, recorded as DECISIONS.md 40: the rebuilt database is empty, so
+# device inventory and history contained in the quarantined file are not restored
+# automatically. The file is preserved precisely so that a human can salvage it.
+# ================================================================
+DB_QUARANTINE_SUFFIX = '.corrupt'
+# The path whose health has already been probed in this process. A single scan
+# calls init_db() about a dozen times, and the probe only needs to run once per
+# process per database.
+_db_health_checked_path = None
+
+
+def _db_health_problem(path):
+    """Return a string describing why `path` is unusable, or None if it is healthy.
+
+    A missing file is not a problem: that is a first run, and the schema creates
+    it. Anything sqlite3 cannot open, or that fails PRAGMA quick_check, is
+    reported so that the caller can quarantine and rebuild it.
+    """
+    if not os.path.exists(path):
+        return None
+    # Opened read-only and immutable on purpose. A plain connect() on a malformed
+    # database makes SQLite delete the -wal and -shm sidecars while it tries to
+    # recover, which destroys exactly the evidence this routine exists to
+    # preserve. A read-only immutable handle never writes, never deletes and
+    # never replays a WAL, and it still raises sqlite3.DatabaseError on a
+    # malformed file. Verified both ways: garbage raises, a healthy WAL database
+    # reports 'ok', and neither touch deletes a sidecar.
+    uri = 'file:%s?mode=ro&immutable=1' % urllib.parse.quote(path, safe='/')
+    try:
+        conn = sqlite3.connect(uri, uri=True)
+        try:
+            row = conn.execute('PRAGMA quick_check').fetchone()
+        finally:
+            conn.close()
+    except sqlite3.DatabaseError as exc:
+        return f'{type(exc).__name__}: {exc}'
+    if not row:
+        return 'PRAGMA quick_check returned no rows'
+    if str(row[0]).lower() != 'ok':
+        return f'PRAGMA quick_check returned {row[0]!r}'
+    return None
+
+
+def _db_quarantine_target(path):
+    """Return an unused `<path>.corrupt-<UTC stamp>` name.
+
+    The stamp makes each quarantine identifiable; the counter keeps a second
+    quarantine inside the same second from overwriting the first.
+    """
+    stamp = datetime.now(UTC).strftime('%Y%m%d-%H%M%S')
+    candidate = f'{path}{DB_QUARANTINE_SUFFIX}-{stamp}'
+    counter = 1
+    while os.path.exists(candidate):
+        candidate = f'{path}{DB_QUARANTINE_SUFFIX}-{stamp}-{counter}'
+        counter += 1
+    return candidate
+
+
+def _db_quarantine(path, alert):
+    """Move a corrupt database and its WAL sidecars aside, preserving them.
+
+    The ``-wal`` and ``-shm`` sidecars have to move with the database: leaving
+    them behind would let SQLite replay stale WAL frames into the freshly built
+    database.
+    """
+    for suffix in ('', '-wal', '-shm'):
+        source = f'{path}{suffix}'
+        if not os.path.exists(source):
+            continue
+        target = _db_quarantine_target(source)
+        os.replace(source, target)
+        alert(f'quarantined {source} -> {target} (retained for manual recovery)')
+
+
+def _db_recover(problem):
+    """Isolate a corrupt database and rebuild a pristine schema at DB_FILE."""
+    def alert(message):
+        log(f'CRITICAL DB RECOVERY: {message}')
+        # The system-log notice follows monitor_daemon.py's existing precedent.
+        # It is best effort: recovery must not depend on `logger` being present.
+        try:
+            subprocess.run(
+                ['logger', '-t', 'devicemonitor', f'CRITICAL DB RECOVERY: {message}'],
+                check=False, timeout=10
+            )
+        except Exception:
+            pass
+
+    alert(f'{DB_FILE} failed its integrity check ({problem})')
+    try:
+        _db_quarantine(DB_FILE, alert)
+    except OSError as exc:
+        alert(f'could not quarantine {DB_FILE}: {exc}')
+        raise
+    alert(
+        f'rebuilding an empty schema at {DB_FILE}; the device history held in the '
+        'quarantined file is NOT restored automatically'
+    )
+
+
 def init_db():
-    """Initialise database"""
+    """Initialise the database, self-healing a corrupt file before schema work."""
+    global _db_health_checked_path
+    if _db_health_checked_path != DB_FILE:
+        _db_health_checked_path = DB_FILE
+        problem = _db_health_problem(DB_FILE)
+        if problem:
+            _db_recover(problem)
+    _apply_db_schema()
+
+
+def _apply_db_schema():
+    """Apply the full schema, migrations and backfills to DB_FILE."""
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
 
@@ -675,7 +797,7 @@ def init_db():
     # On upgrade, seed the cursors to the current maxima so enabling alerts
     # later cannot replay the existing service inventory or historical
     # activity events as new notifications. INSERT OR IGNORE preserves the
-    # cursors on every subsequent init_db() call.
+    # cursors on every subsequent _apply_db_schema() call.
     c.execute('''CREATE TABLE IF NOT EXISTS service_alert_state (
         id INTEGER PRIMARY KEY CHECK(id = 1),
         last_service_id INTEGER NOT NULL DEFAULT 0,

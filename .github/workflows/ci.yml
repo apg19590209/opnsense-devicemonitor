@@ -54,6 +54,12 @@ jobs:
       - name: Validate deferred database writes (v2.11)
         run: python3 tests/test_deferred_db_writes.py
 
+      # v2.11 Task 5 (roadmap "Task 2"): the corruption self-heal's own verification asset. It is a
+      # separate step rather than a second line inside the step above, so a failure names the recovery
+      # check directly in the run summary. It needs no environment variable and no service.
+      - name: Validate database corruption recovery (v2.11)
+        run: python3 tests/test_db_corruption_recovery.py
+
       - name: Lint PHP sources
         run: |
           set -eu

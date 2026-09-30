@@ -350,6 +350,108 @@ that step is a separate deliberate change: it alters what CI executes, and its b
 `ubuntu-latest` is unverified. It was left out so that the trigger-only change stays independently
 verifiable. Tracked as the next recommended step.
 
+### Task 5 — Automated SQLite Schema Corruption Recovery (v2.11 roadmap "Task 2")
+
+**Initiated and scaffolded 30 September 2026.** Numbering note: the roadmap this task comes from
+calls it "Task 2", but `### Task 2` above is already the Pull Request #2 retirement record, so this
+entry keeps the ledger's chronological numbering and names the roadmap task in the heading.
+
+`init_db()` in `src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py` was the single
+database-initialisation hook: it opened `DB_FILE` and applied ~430 lines of
+`CREATE TABLE IF NOT EXISTS`, `ALTER TABLE` migrations and backfills, and it is called from **13**
+places (one scan calls it about a dozen times). It had no integrity guard, so a malformed
+`devices.db` raised `sqlite3.DatabaseError` on every call, the scan aborted, and the plugin stayed
+dead until somebody intervened by hand.
+
+What was added — new region **lines 316-435**, with the former body kept intact as
+`_apply_db_schema()` at **438-876** (`find_active_lifecycle_id` still starts at 878, and all 13
+`init_db()` call sites are unchanged):
+
+- `DB_QUARANTINE_SUFFIX = '.corrupt'` (331) and `_db_health_checked_path` (335), the per-process
+  probe cache.
+- `_db_health_problem(path)` (**338-367**) — opens the database read-only and immutable
+  (`file:<path>?mode=ro&immutable=1`) and runs `PRAGMA quick_check`. It returns `None` for a missing
+  file (a first run is not corruption), the exception text for `sqlite3.DatabaseError`, and a
+  message for any non-`ok` result or an empty result set.
+- `_db_quarantine_target(path)` (**370-382**) — an unused `<path>.corrupt-<UTC stamp>` name, with a
+  counter so a second quarantine inside the same second cannot overwrite the first.
+- `_db_quarantine(path, alert)` (**385-398**) — moves the database and its `-wal` and `-shm`
+  sidecars aside with `os.replace`, preserving every byte.
+- `_db_recover(problem)` (**401-424**) — logs the critical notice to `/var/log/devicemonitor.log`
+  and, following `monitor_daemon.py`'s existing precedent, to syslog via
+  `logger -t devicemonitor` (best effort, wrapped so recovery can never depend on it), then
+  quarantines and rebuilds.
+- `init_db()` (**427-435**) — probes once per process per path, heals if needed, then calls
+  `_apply_db_schema()` exactly as before. The public name, signature and behaviour are unchanged for
+  every existing caller, including `tests/test_device_activity_events.py` and the inline `init_db()`
+  in the `.github/workflows/ci.yml` identity-alert step.
+
+Error conditions caught: `sqlite3.DatabaseError` raised while opening or probing the file (`file is
+not a database`, `database disk image is malformed`) and an explicit `PRAGMA quick_check` result
+other than `ok`. A missing database file is deliberately **not** treated as corruption.
+
+New asset `tests/test_db_corruption_recovery.py` (200 lines, five checks) reports
+`DB_CORRUPTION_RECOVERY=PASS`: a missing database is a first run; a malformed database is
+quarantined byte-for-byte and replaced by a valid schema; the `-wal` and `-shm` sidecars are
+quarantined with it; a healthy database keeps its rows across repeated `init_db()` calls; and the
+health probe runs once per process per path.
+
+Wired into CI on the same day as step **6 of 35**, directly beneath the Task 1B step, so a failure
+names the recovery check in the run summary rather than being folded into the deferred-write step:
+
+```yaml
+      - name: Validate database corruption recovery (v2.11)
+        run: python3 tests/test_db_corruption_recovery.py
+```
+
+Hash-chain bookkeeping: `scan_network.py` is a manifest row, so per `DECISIONS.md` 35 the v2.11
+manifest and the installer pin moved in the same change set — `release/v2.11-runtime.manifest` row
+`3a386a88…` -> `56735e62…`, manifest SHA256 `df10e9e0…` -> `1904cc1f…` (still 38 rows), and the
+`install-unattended.sh:36` pin to match. `release/v2.10-runtime.manifest` remains byte-unchanged.
+
+Validation:
+
+```
+python3 -m py_compile src/.../scan_network.py    -> OK
+python3 tests/test_db_corruption_recovery.py     -> DB_CORRUPTION_RECOVERY=PASS   (5 checks)
+python3 tests/test_deferred_db_writes.py         -> DEFERRED_DB_WRITES=PASS       (no queue regression)
+python3 tests/test_device_activity_events.py     -> 8 x PASS   (init_db caller)
+python3 tests/test_device_lifecycle_return.py    -> 3 x PASS   (init_db caller)
+python3 tests/test_release_manifest.py           -> V211_RELEASE_MANIFEST=PASS
+git diff --check                                 -> clean
+sh install-unattended.sh --host OPNsense.internal --check
+  CHECK_OK version=2.11 predecessor=2.10 files=59 core_locales=10 daemon_running=1 host=OPNsense.internal
+  EXIT=0
+```
+
+**Defect found and fixed by the new test while scaffolding, worth recording.** The first
+implementation probed health with a plain `sqlite3.connect(path)`. SQLite **deletes the `-wal` and
+`-shm` sidecars while it fails to open a malformed database**, so by the time the quarantine ran, the
+evidence it exists to preserve was already gone — the sidecars vanished silently and only the main
+file was quarantined. `tests/test_db_corruption_recovery.py` failed on exactly that assertion
+(`len(quarantine_files(path + '-wal')) == 1`), and the probe now uses a read-only immutable URI
+(`file:<path>?mode=ro&immutable=1`). Both directions were verified in isolation before the fix was
+accepted: garbage content raises `DatabaseError`; a healthy WAL-mode database reports `ok`; and
+neither probe deletes a sidecar. The live database is in `journal_mode=delete` and passes
+`PRAGMA quick_check`, so the sidecar path is defensive rather than routine.
+
+**Correction to the change request.** The request asked for a pristine schema to be provisioned
+"from our backup template assets at `/var/backups/devicemonitor/`". No such asset exists. That
+directory holds installer backups (`install-v210.*/`, each with a `plan` file and a `files/`
+directory), the `core-locale/` state directory, and ad-hoc operator copies such as
+`devices.db.pre-monitor-scan-20260923-070801` — none of which is a schema template, and restoring
+one would silently reinstate stale device data instead of a pristine schema. The pristine schema is
+therefore built from the DDL `_apply_db_schema()` already carries, which is the authoritative
+definition of the schema and needs no external asset.
+
+**Accepted risk**, recorded as `DECISIONS.md` 40: the rebuilt database is **empty**, so device
+inventory and history in the quarantined file are not restored automatically. The quarantined file
+is preserved precisely so an operator can salvage it, and the recovery notice says so explicitly.
+
+Git state: committed and pushed with the rest of the branch package — see the commit recorded in the
+run below. Open item remaining: the accepted data-loss risk of an empty rebuild is recorded as
+`DECISIONS.md` 40 and should be revisited if the operator-visible cost ever proves too high.
+
 ## 27 September 2026 v2.10 install-guard pin restoration
 
 Description: restored the guarded v2.10 installer, which aborted with

@@ -1424,3 +1424,69 @@ fail for that tree. It verifies release-artifact integrity only and says nothing
 correctness of the deferred-write refactor — that evidence is `tests/test_deferred_db_writes.py`.
 The gate is expected to go red again the next time a manifest row changes without the manifest and
 the pin being refreshed in the same commit, which is the intended behaviour.
+
+## 40. A corrupt devices.db is quarantined and rebuilt empty at initialisation
+
+### Decision
+
+`init_db()` in `src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py` probes the database for
+structural corruption before any schema work, and self-heals it:
+
+- **Probe.** `_db_health_problem()` opens the file read-only and immutable
+  (`file:<path>?mode=ro&immutable=1`) and runs `PRAGMA quick_check`. A missing file is *not*
+  corruption — that is a first run, and the schema creates it. `sqlite3.DatabaseError`, and any
+  `quick_check` result other than `ok`, are corruption.
+- **Quarantine.** `_db_quarantine()` moves the database, its `-wal` and its `-shm` aside with
+  `os.replace` to `<path>.corrupt-<UTC stamp>`; a counter disambiguates a second quarantine in the
+  same second. Nothing is deleted.
+- **Rebuild.** The pristine schema is rebuilt at `DB_FILE` from the DDL that `_apply_db_schema()`
+  already carries. No external asset is used.
+- **Alert.** A `CRITICAL DB RECOVERY:` notice goes to `/var/log/devicemonitor.log` and, following
+  `monitor_daemon.py`'s precedent, to syslog via `logger -t devicemonitor`. The syslog call is best
+  effort and can never fail the recovery.
+- The probe runs once per process per path (`_db_health_checked_path`), because a single scan calls
+  `init_db()` about a dozen times.
+
+### Accepted risk — the recovered database is empty
+
+**Accepted by architectural decision, 30 September 2026.** Rebuilding restores service but not data:
+the device inventory, identities, lifecycles, activity events and Nmap history held in the corrupt
+file are absent from the rebuilt database and are **not** restored automatically. Recovery is
+therefore availability-preserving, not data-preserving.
+
+Accepted because:
+
+- the alternative is a plugin that fails every scan until an operator intervenes, logging a failed
+  scan every cycle;
+- the corrupt file is preserved under a `.corrupt-<stamp>` name, so the data stays recoverable by
+  hand with `sqlite3 .recover` or a `dump`/`restore`;
+- the alert states, in the log line itself, that the history is not restored;
+- only `devices.db` is affected — OPNsense configuration and `config.json` are not in the database.
+
+If the operator-visible cost of a silent empty rebuild is ever judged too high, the remedy is to gate
+the rebuild behind an explicit configuration flag, or to attempt salvage first and rebuild only when
+salvage fails. Both are larger changes and need their own decision.
+
+### Reason
+
+`init_db()` is the single database initialisation hook and had no integrity guard. A malformed
+`devices.db` therefore raised `sqlite3.DatabaseError` at every one of its 13 call sites, so the
+scanner aborted and the plugin stayed dead until an operator acted.
+
+### Verified
+
+- `tests/test_db_corruption_recovery.py` -> `DB_CORRUPTION_RECOVERY=PASS`, five checks: a missing
+  database is a first run; a malformed database is quarantined byte-for-byte and replaced by a valid
+  schema; the `-wal` and `-shm` sidecars are quarantined with it; a healthy database keeps its rows
+  across repeated `init_db()` calls; and the probe runs once per process per path.
+- The read-only immutable URI is required, not stylistic. Measured on this host: a plain
+  `sqlite3.connect(path)` **deletes** `-wal` and `-shm` while it fails to open a malformed database,
+  destroying the quarantine's own evidence — the new test caught this on its first run.
+  `mode=ro`, `immutable=1` and `mode=ro&immutable=1` all raise `DatabaseError` on garbage, all
+  report `ok` on a healthy WAL-mode database, and none deletes a sidecar. The live database is in
+  `journal_mode=delete`, so the sidecar path is defensive rather than routine.
+- `tests/test_deferred_db_writes.py` -> `DEFERRED_DB_WRITES=PASS`; `test_device_activity_events.py`
+  and `test_device_lifecycle_return.py`, the other `init_db()` callers, still pass.
+- `tests/test_release_manifest.py` -> `V211_RELEASE_MANIFEST=PASS`, and
+  `sh install-unattended.sh --host OPNsense.internal --check` -> `EXIT=0`, after the same-change-set
+  manifest re-cut that decision 35 requires.
