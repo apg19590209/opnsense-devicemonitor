@@ -2,9 +2,10 @@
 
 ## Current state
 
-Last updated: 30 September 2026
+Last updated: 9 October 2026
 
-Branch: `v2.10-development`
+Branch: `feature/async-db-v2.11` — active development checkout (created from the
+`v2.10-development` tip `5cca3c9`; `v2.10-development` remains the released maintenance line)
 
 Authoritative development checkout: `/root/src/opnsense-devicemonitor-upstream`
 (FreeBSD 15.1-RELEASE amd64; OPNsense testbed host `192.168.20.23`)
@@ -50,7 +51,7 @@ Status:
   conflict is carried, not resolved, here: tag `v2.10` points at `1315c80`, ten commits
   *before* `45e8c86`, and the deployed artifact (`sha256 13ed23e8…`) is not the `28ce829d…`
   asset hash recorded for the v2.10 release draft. Full record at the end of this file.
-- Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; tags and release state are recorded in the header above.
+- Development is on `v2.10-development`: nine major UI translations and the v2.10 version bump (`199be95`), followed by the completed view translation patch and JavaScript encoding correction documented below, then the v2.10 version-metadata and config-API alignment (`702d674`). Service email warning implementation is `4b2b992`; tags and release state are recorded in the header above. *(This bullet records the v2.10 line: as of 9 October 2026 the active development checkout is `feature/async-db-v2.11` — see the header and the 9 October 2026 entry below.)*
 - Latest source fix `aa25fe7` and its guarded v2.10 runtime-manifest update `0708239` are pushed to `origin/v2.10-development`; full GitHub Actions CI run `36315636699` PASS. Those commits changed no testbed runtime file or service; the nine corrected views were deployed to the testbed separately on 27 September 2026 (deployment record under DM-BL-008 below). `0708239` left the manifest SHA256 pinned in `install-unattended.sh` at the pre-refresh value, so the guarded installer aborted; that pin is restored by `3eeb78b`, which with its documentation commit `3fc9dfc` is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36323794636`; the following record commit `02a1eba` is also pushed and green in CI run `36324231410`, so no commit on this branch is local-only (see the install-guard section below).
 - Device Monitor GUI repair (29 September 2026): the views' `devicemonitor_t()` macro was never registered with the Volt compiler, so every application tab aborted with `MacroNotFound` and rendered a blank content block. The plugin controller now wraps the framework's `.volt` engine and registers the sidecar translator; the pending PHP 8.1+ null guards and the three matching `release/v2.10-runtime.manifest` digests plus the installer pin are refreshed in the same commit `8faf09d`, which is pushed to `origin/v2.10-development` and green in GitHub Actions Device Monitor CI run `36501061119`, with its record commit `58b9628` pushed and green in CI run `36501202440` (see the 29 September 2026 section below).
 - Change Summary confirmation banner (`F1`) fixed and closed (29 September 2026): the Change Summary view's `showToast()` no longer guards on the absent `$.fn.notify`/`window.bootbox` plugins; it renders the same self-contained jQuery banner already used by `devices.volt`, with the icon and message appended as DOM nodes and a 4-second auto-dismiss. The refreshed view digest, `release/v2.10-runtime.manifest` row 17 and the `install-unattended.sh` line 28 manifest pin are in the same change set; the live operator check and the full record are in the `F1` closure section at the end of this file.
@@ -4712,4 +4713,73 @@ Files changed: `install-unattended.sh`, `README.md`, `README_CZ.md`, plus this r
 
 Next recommended step: commit the three files on `v2.10-development`, push, and read the
 `ci.yml` run for the commit (`sh -n install-unattended.sh` + `test_release_manifest.py`).
+
+
+## 9 October 2026 — Issues 1-4 backlog resolved; workflow rules codified (local-only commits)
+
+**Recorded 9 October 2026.** Two commits were made on `feature/async-db-v2.11` and are
+**local-only**: not pushed, no GitHub Actions run exists for them, and
+`origin/feature/async-db-v2.11` does not carry them.
+
+Work completed (commit `2747110` — "chore: resolve frontend input race conditions, support plain
+HTTP for AdGuard, unblock anonymous SMTP relays, and patch translation catalog headers"; 9 files,
++66/-16):
+
+- **Issue 1a — inline-edit save race** (`devices.volt` L1039-1058): `Escape` cleared no timer while
+  the input's own `blur` handler scheduled `save()` at 150 ms, so abandoning an edit could still
+  write. Added `saveTimer`/`suppressBlurSave`; `Escape` now clears the pending timer, suppresses
+  the single blur caused by releasing focus, then calls `loadDevices()`. `Enter` clears any stale
+  pending timer before saving.
+- **Issue 1b — grid column sorting** (`DevicesController.php:797`): the whitelist is an anonymous
+  `in_array` literal, not a `$sort_whitelist` variable; `'custom_hostname'` was added to it.
+- **Issue 2 — configd update action** (new
+  `src/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf`): `[update]` section with
+  `command:pkg install -y opnsense-plugin-devicemonitor`.
+- **Issue 3 — AdGuard plain HTTP** (`ConfigController.php:206,208`; `scan_network.py:1421,1428`):
+  the scheme test is now a membership check against `['http', 'https']`; the controller message
+  reads `AdGuard URL must use http or https`. Pi-hole's parallel check
+  (`scan_network.py:1544`) was deliberately left HTTPS-only.
+- **Issue 4 — anonymous SMTP relay** (`ConfigController.php:137-141`, `smtp_send.py:63-66`,
+  `settings.volt:775-776`): the empty-parameter fallback is now `none` when the port is 25 and
+  `starttls` otherwise, at all three layers; an explicit `smtp_encryption` value is preserved.
+- Tests updated to match: `tests/test_adguard_config.php` (HTTP now accepted) and
+  `tests/test_adguard_rewrites.py` (rejection case moved to `ftp://`, new
+  `test_plain_http_url_is_accepted`).
+
+Work completed (commit `6c4887c` — "chore: formalize exact-path staging boundaries and
+.cline-reports tracking protocols in workflow rules"; 1 file, +22):
+`.clinerules/10-workflow-and-finalisation.md` gains section 7 (stage exact paths only;
+`git add .`/`-A`/`--all` forbidden; `git status --short` and `git diff --cached --check` before
+commit; never stage the workstation-local `.clinerules/90-local-remote-access.md` or
+`.cline-reports/`) and section 8 (every successful task block must write
+`.cline-reports/REPORT-YYYYMMDD-HHMMSS.md`). Sections 1-6 are unchanged.
+
+Tests performed / results: `php -l` PASS on `ConfigController.php`, `DevicesController.php` and
+`tests/test_adguard_config.php`; `python3 -m py_compile` PASS on `scan_network.py`, `smtp_send.py`
+and `tests/test_adguard_rewrites.py`; `php tests/test_adguard_config.php` ->
+`ADGUARD_HTTP_URL_ACCEPTED=PASS` … `ADGUARD_CONFIG_REGRESSION=PASS` (rc 0);
+`python3 tests/test_adguard_rewrites.py` -> 12 asserts PASS including
+`ADGUARD_PLAIN_HTTP_ACCEPTED=PASS` (rc 0); `msgfmt -c` PASS on all 11
+`mvc/app/languages/*/LC_MESSAGES/devicemonitor.po`; a monkeypatched `smtplib.SMTP` probe confirmed
+that port 25 with no `smtp_encryption` key performs no STARTTLS, port 587 still does, and an
+explicit `starttls` on port 25 is preserved; `git diff --check` PASS before both commits.
+
+Deliberately not done: the backlog's translation-catalog item was a **no-op** — all 11 `.po`
+catalogs already carry `PO-Revision-Date` and `Last-Translator` and already pass `msgfmt -c`, so no
+header was injected even though the commit message names it. The `opnsense-plugin-devicemonitor`
+package name in the new configd action is unverified (the plugin's package identity derives from
+`Makefile` `PLUGIN_NAME = DeviceMonitor`), and the action is absent from
+`release/v2.11-runtime.manifest`, so `install-unattended.sh` does not ship it yet.
+
+Unresolved: neither commit is pushed and no CI run exists for them; the `devices.volt`
+inline-editor change and the `custom_hostname` sort path are verified by inspection rather than at
+runtime; no deployment, testbed or production contact was made for this work.
+
+Files changed: the nine paths of `2747110` plus `.clinerules/10-workflow-and-finalisation.md` in
+`6c4887c`. Reports written (git-ignored, not committed):
+`.cline-reports/REPORT-20261009-120559.md`, `.cline-reports/REPORT-20261009-120923.md` (cross-node
+rule audit, read-only findings and proposed text) and `.cline-reports/REPORT-20261009-121217.md`.
+
+Next recommended step: push `feature/async-db-v2.11` and read the `ci.yml` run for `2747110` and
+`6c4887c`.
 
