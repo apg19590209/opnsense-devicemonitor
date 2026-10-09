@@ -1,4 +1,33 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Cline Bot Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Author: Cline Bot Inc. (upstream project: the Cline monorepo,
+# https://cline.bot, licensed Apache-2.0). Ported into the Device Monitor test
+# harness as tests/price_gate.py on 2026-10-09 by the workspace operator
+# (apg19590209).
+#
+# Provenance: the ported revision was byte-identical to the upstream
+# apps/cli/tests/price_gate.py with sha256
+# 3fea2443f2bbc644ca30ddfa7ec3c4109579933019e4e78b3bf1e9ad9678a03c;
+# this header block is the only change made since.
+#
+# Licensing note: the Device Monitor repository as a whole is BSD-2-Clause
+# (see LICENSE). This file remains Apache-2.0 third-party material and is not
+# covered by those repository terms.
 """Peak-price gate for test harness entry points.
 
 The gate evaluates the *Sydney* wall clock (AEST/AEDT) independently of the
