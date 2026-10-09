@@ -11,7 +11,7 @@ BLUE   = \033[0;34m
 NC     = \033[0m # No Colour
 
 # Cesty
-PLUGIN_NAME = DeviceMonitor
+PLUGIN_NAME = DeviceMonitor-apg19590209
 DB_DIR = /var/db/devicemonitor
 BACKUP_DIR = /root/devicemonitor_backup
 

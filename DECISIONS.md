@@ -1665,3 +1665,51 @@ The `[update]` action's command is `pkg install -y opnsense-plugin-devicemonitor
 name matches no artifact in this repository (`Makefile:14` declares `PLUGIN_NAME = DeviceMonitor`,
 whose OPNsense package would be `os-devicemonitor`). The row therefore ships an action whose package
 reference is still unverified; the row itself only installs a configuration file.
+
+## 44. The plugin package identity is isolated as `DeviceMonitor-apg19590209` / `os-DeviceMonitor-apg19590209`
+
+### Decision
+
+The Makefile's plugin name carries the operator's unique suffix, and the configd `[update]` action
+pulls the matching package name:
+
+- `Makefile:14` - `PLUGIN_NAME = DeviceMonitor` -> `PLUGIN_NAME = DeviceMonitor-apg19590209`.
+- `src/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf:2` -
+  `command:pkg install -y opnsense-plugin-devicemonitor` ->
+  `command:pkg install -y os-DeviceMonitor-apg19590209`.
+- Internal PHP paths, namespaces, database identifiers and configd action names are unchanged: the
+  section stays `[update]`, the file name stays `actions_devicemonitor_update.conf`, and nothing
+  under `src/opnsense/mvc` moved.
+
+### Reason
+
+Upstream uses the bare `DeviceMonitor` / `os-devicemonitor` identity; a suffixed name keeps a
+locally built package from colliding with an upstream artefact of the same name.
+
+### Effects and guards
+
+- `Makefile`'s `PLUGIN_NAME` is a declaration only: repo-wide it is referenced by nothing except its
+  own definition and two documentation lines, so no target, path or bundle name derives from it and
+  no execution path changes.
+- The configd action is a manifest row (row 37), so the content change moved that row's digest to
+  `48e7f6537ffe9a4f16041dd9dc0c85987ef8d9f7305218bcbea6c139ac5a6646`; the manifest SHA256 became
+  `d7ef21e4f8131aa9bd952457f07a1dd5af9304de012c10410ebb622e8b6ddd15` and `install-unattended.sh:36`
+  was re-pinned in the same change. The row count is still 39, so `install-unattended.sh:37`
+  (`= 39`), `:172` (`expected=60`), `:173` (`expected=61`) and `tests/test_release_manifest.py:9`
+  needed no change.
+
+### Verified
+
+`python3 tests/test_release_manifest.py` -> `V211_RELEASE_MANIFEST=PASS` (39 rows);
+`python3 -m py_compile tests/test_release_manifest.py tests/price_gate.py` -> PASS;
+`sh -n install-unattended.sh` and `sh -n release/build-bundle.sh` -> PASS; `git diff --check` -> PASS;
+the action file parses as one `[update]` section with `command`/`parameters`/`type`/`message`/
+`description` keys.
+
+### Residual risk
+
+The identifier `os-DeviceMonitor-apg19590209` is **not verified against any package repository** -
+it exists only in this change - and it mixes case, whereas OPNsense plugin packages are
+conventionally lowercase (`os-<plugin>`). If the local build produces a lowercase artefact this
+string must match it or the action will fail; `os-devicemonitor-apg19590209` is the safer default.
+The action is inert until invoked, and the package is not built by any file in this repository.
