@@ -140,3 +140,25 @@ STOP.
 Do not begin another phase, make another edit, commit, deploy, or continue
 with the recommended next step until the user explicitly instructs Cline
 to proceed.
+
+## 7. Staging discipline
+
+Stage exact paths only. Broad staging is forbidden:
+
+- Never run `git add .`, `git add -A` or `git add --all`, and never stage a directory
+  when only some of its contents are intended.
+- Provide every staged path explicitly, e.g.
+  `git add src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt`.
+- Before committing, run `git status --short` and confirm that every listed path is
+  intended and that no unrelated local noise is staged.
+- Run `git diff --cached --check` (whitespace) and `git --no-pager diff --cached` before
+  the commit. Abort on any unexpected path.
+- Never stage `.clinerules/90-local-remote-access.md` (workstation-local, git-excluded)
+  or anything under `.cline-reports/` (git-ignored).
+
+## 8. Milestone report requirement
+
+Every successful task block must end by writing a milestone report to
+`.cline-reports/REPORT-YYYYMMDD-HHMMSS.md` as required by
+`.clinerules/15-auto-capture-reports.md`, and must state in the final report that the
+file was written. A task without its milestone report is not complete.
