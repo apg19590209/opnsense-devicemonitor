@@ -772,7 +772,8 @@ $().ready(function() {
             $('#email_method').val(d.email_method||'sendmail');
             $('#smtp_host').val(d.smtp_host||'');
             $('#smtp_port').val(d.smtp_port||587);
-            $('#smtp_encryption').val(d.smtp_encryption||'starttls');
+            var smtpEncryptionDefault = (parseInt($('#smtp_port').val(), 10) === 25) ? 'none' : 'starttls';
+            $('#smtp_encryption').val(d.smtp_encryption||smtpEncryptionDefault);
             $('#smtp_username').val(d.smtp_username||'');
             $('#smtp_password').val(d.smtp_password||'');
             $('#webhook_enabled').prop('checked', d.webhook_enabled==='1');

@@ -794,7 +794,7 @@ class DevicesController extends ApiControllerBase
                 $sortColumn = key($sort);
                 $sortOrder = $sort[$sortColumn];
                 
-                if ($sortColumn && in_array($sortColumn, ['mac', 'ip', 'hostname', 'vendor', 'vlan', 'first_seen', 'last_seen', 'status', 'nmap_scan_status'])) {
+                if ($sortColumn && in_array($sortColumn, ['mac', 'ip', 'hostname', 'custom_hostname', 'vendor', 'vlan', 'first_seen', 'last_seen', 'status', 'nmap_scan_status'])) {
                     usort($devices, function($a, $b) use ($sortColumn, $sortOrder) {
                         $valA = isset($a[$sortColumn]) ? $a[$sortColumn] : '';
                         $valB = isset($b[$sortColumn]) ? $b[$sortColumn] : '';

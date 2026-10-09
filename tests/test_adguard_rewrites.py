@@ -119,12 +119,31 @@ def test_non_https_url_rejected_without_request():
     module.urllib.request.build_opener = forbidden_build_opener
 
     config = enabled_config()
-    config["adguard_url"] = "http://192.0.2.53"
+    config["adguard_url"] = "ftp://192.0.2.53"
 
     result = module.get_adguard_rewrite_hostnames(config)
 
     assert result == {}
     print("ADGUARD_NON_HTTPS_REJECTED=PASS")
+
+
+def test_plain_http_url_is_accepted():
+    module = load_module()
+
+    opener, _tls_context, _seen = install_fake_opener(module, payload=[])
+
+    config = enabled_config()
+    config["adguard_url"] = "http://192.0.2.53"
+
+    result = module.get_adguard_rewrite_hostnames(config)
+
+    assert result == {}
+    assert opener.request is not None
+    assert opener.request.full_url == (
+        "http://192.0.2.53/control/rewrite/list"
+    )
+
+    print("ADGUARD_PLAIN_HTTP_ACCEPTED=PASS")
 
 
 def test_valid_ipv4_rewrites_tls_and_no_redirects():
@@ -313,6 +332,7 @@ def test_load_config_exposes_adguard_settings():
 def main():
     test_disabled_no_request()
     test_non_https_url_rejected_without_request()
+    test_plain_http_url_is_accepted()
     test_valid_ipv4_rewrites_tls_and_no_redirects()
     test_ambiguous_ipv4_rewrite_is_skipped()
     test_malformed_json_fails_soft()

@@ -60,7 +60,10 @@ def main():
     except (TypeError, ValueError):
         fail("Invalid SMTP port")
 
-    encryption = str(config.get("smtp_encryption", "starttls")).strip().lower()
+    encryption = str(config.get("smtp_encryption", "")).strip().lower()
+    if not encryption:
+        # Port 25 falls back to an explicit unencrypted session; other ports keep STARTTLS.
+        encryption = "none" if port == 25 else "starttls"
     username = str(config.get("smtp_username", "")).strip()
     password = str(config.get("smtp_password", ""))
     mail_from = str(config.get("email_from", "devicemonitor@opnsense.local")).strip()

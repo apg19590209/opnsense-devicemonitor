@@ -134,7 +134,11 @@ class ConfigController extends ApiControllerBase
         $email_method = strtolower(trim($this->request->getPost('email_method', 'string', 'sendmail')));
         $smtp_host = trim($this->request->getPost('smtp_host', 'string', ''));
         $smtp_port = (int)$this->request->getPost('smtp_port', 'int', 587);
-        $smtp_encryption = strtolower(trim($this->request->getPost('smtp_encryption', 'string', 'starttls')));
+        $smtp_encryption = strtolower(trim($this->request->getPost('smtp_encryption', 'string', '')));
+        if ($smtp_encryption === '') {
+            // Port 25 falls back to an explicit unencrypted session; other ports keep STARTTLS.
+            $smtp_encryption = ($smtp_port === 25) ? 'none' : 'starttls';
+        }
         $smtp_username = trim($this->request->getPost('smtp_username', 'string', ''));
         $smtp_password = $this->request->getPost('smtp_password', 'string', '');
 
@@ -199,9 +203,9 @@ class ConfigController extends ApiControllerBase
 
             if (
                 !is_array($adguard_url_parts)
-                || strtolower((string)($adguard_url_parts['scheme'] ?? '')) !== 'https'
+                || !in_array(strtolower((string)($adguard_url_parts['scheme'] ?? '')), ['http', 'https'], true)
             ) {
-                return ['result' => 'failed', 'message' => 'AdGuard URL must use HTTPS'];
+                return ['result' => 'failed', 'message' => 'AdGuard URL must use http or https'];
             }
 
             if (

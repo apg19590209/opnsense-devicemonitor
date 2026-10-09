@@ -1036,10 +1036,26 @@ $(document).ready(function() {
                 }
             });
         }
+        var saveTimer=null;
+        var suppressBlurSave=false;
         $inp.on('keydown',function(e){
-            if(e.key==='Enter') save();
-            if(e.key==='Escape') loadDevices();
-        }).on('blur',function(){ setTimeout(save,150); });
+            if(e.key==='Enter'){
+                if(saveTimer!==null){ clearTimeout(saveTimer); saveTimer=null; }
+                save();
+            }
+            if(e.key==='Escape'){
+                // Abandon the edit: cancel any pending blur save, suppress the blur
+                // caused by releasing focus, then reload without saving.
+                if(saveTimer!==null){ clearTimeout(saveTimer); saveTimer=null; }
+                suppressBlurSave=true;
+                $inp.blur();
+                loadDevices();
+            }
+        }).on('blur',function(){
+            if(suppressBlurSave){ suppressBlurSave=false; return; }
+            if(saveTimer!==null) clearTimeout(saveTimer);
+            saveTimer=setTimeout(save,150);
+        });
     });
 
     // Column sorting

@@ -1418,14 +1418,14 @@ def get_adguard_rewrite_hostnames(config):
         parsed_url = urllib.parse.urlsplit(base_url)
 
         if (
-            parsed_url.scheme.lower() != 'https'
+            parsed_url.scheme.lower() not in ('http', 'https')
             or not parsed_url.hostname
             or parsed_url.username is not None
             or parsed_url.password is not None
             or parsed_url.query
             or parsed_url.fragment
         ):
-            log("AdGuard DNS rewrites: invalid HTTPS URL")
+            log("AdGuard DNS rewrites: invalid http/https URL")
             return {}
 
         url = f"{base_url}/control/rewrite/list"

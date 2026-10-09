@@ -84,13 +84,13 @@ namespace {
         'adguard_password' => 'secret',
     ]);
 
-    expect_true($result['result'] === 'failed', 'Expected failed result');
+    expect_true($result['result'] === 'saved', 'Plain HTTP AdGuard URL was rejected');
     expect_true(
-        $result['message'] === 'AdGuard URL must use HTTPS',
-        'HTTP URL was not rejected'
+        $result['message'] === 'Configuration saved',
+        'Plain HTTP AdGuard URL did not reach the save path'
     );
 
-    echo "ADGUARD_HTTP_URL_REJECTED=PASS\n";
+    echo "ADGUARD_HTTP_URL_ACCEPTED=PASS\n";
 
     $result = run_config_case([
         'adguard_rewrite_enabled' => '1',
