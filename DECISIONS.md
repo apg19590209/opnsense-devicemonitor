@@ -1576,3 +1576,53 @@ The drain waits for the writer queue only; it does not signal or reap that child
 SIGTERM can leave its nmap child to be reaped by init. That is the same outcome as the previous
 default disposition, so nothing regressed — but any future "stop the scanner cleanly on SIGTERM"
 change has to signal the child as well.
+
+## 42. `tests/price_gate.py` carries its own Apache-2.0 record, separate from the repository licence
+
+### Decision
+
+`tests/price_gate.py` is a standalone test-harness utility distributed with its own licensing
+record rather than under the repository's BSD-2-Clause terms:
+
+- Its copyright notice names the individual holder
+  (`Copyright 2026 Anthony Gonzalez (apg19590209)`), per the operator's ownership attestation
+  recorded in `.cline-reports/REPORT-20261009-142252.md` and the follow-up instruction that set
+  the individual name.
+- It declares `SPDX-License-Identifier: Apache-2.0` and is accompanied by the full Apache-2.0
+  terms in `tests/price_gate.LICENSE`, satisfying Apache-2.0 section 4(a) for source
+  distribution.
+- The position is deliberately mixed-licence: the plugin payload stays BSD-2-Clause (`LICENSE`,
+  `Copyright (c) 2024, Hacesoft`); this test asset stays Apache-2.0, so the repository's BSD-2
+  terms are not asserted over third-party code.
+
+### Provenance
+
+The utility is a port, not original composition. It was copied verbatim from the Cline monorepo
+(`apps/cli/tests/price_gate.py`, Apache-2.0; that project's `LICENSE` appendix names
+`Copyright 2026 Cline Bot Inc.`). The ported revision was byte-identical, sha256
+`3fea2443f2bbc644ca30ddfa7ec3c4109579933019e4e78b3bf1e9ad9678a03c`, and the only later change is
+the header comment block added on 9 October 2026. The header therefore keeps upstream authorship
+(`Author: Cline Bot Inc.`) alongside the local copyright notice; Apache-2.0 section 4(c) is met
+because the upstream attribution travels both in the file and in `tests/price_gate.LICENSE`.
+
+### Reason
+
+The gate is developer/CI tooling rather than plugin payload: nothing under `src/` imports it, it is
+absent from `release/v2.11-runtime.manifest` (0 of 38 rows mention `tests/`), and no `ci.yml` step
+executes it. Keeping its licence self-contained isolates the copyright record and keeps the
+Apache-2.0 obligations with the file.
+
+### Verified
+
+`python3 -m py_compile tests/price_gate.py` passes; `python3 tests/price_gate.py --status` reports
+`peak=false off-peak` on 9 October 2026 with the window boundaries (11:00 and 16:00 inside, 14:00
+and 20:00 outside, weekends never) unchanged from the pre-header revision.
+`tests/price_gate.LICENSE` is a byte-copy of the upstream Apache-2.0 text (sha256
+`f704446a5f1271608805598b557e4288cf8580477ea038c9c3d8b361f693f6b8`, 201 lines).
+
+### Residual risk
+
+The individual ownership notice rests on the operator's instruction; no assignment document is held
+in the repository, and the same file previously carried a Hacesoft notice (commit `75d3ad3`,
+superseded by `e038933`) and before that the upstream Cline Bot Inc. notice. If the rights position
+changes again, this decision and the file header must be updated together.
