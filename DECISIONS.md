@@ -1713,3 +1713,47 @@ it exists only in this change - and it mixes case, whereas OPNsense plugin packa
 conventionally lowercase (`os-<plugin>`). If the local build produces a lowercase artefact this
 string must match it or the action will fail; `os-devicemonitor-apg19590209` is the safer default.
 The action is inert until invoked, and the package is not built by any file in this repository.
+
+## 45. This workspace is scoped to OPNsense Device Monitor only, and out-of-scope work requires explicit authorisation
+
+### Decision
+
+`.clinerules/00-project-control.md` now states the positive rule alongside the existing
+exclusion: work belonging to any other project must not be executed - not even as
+read-only reconnaissance - unless the operator explicitly authorises that specific task
+in the current instruction. Absent authorisation the agent stops at the planning step
+and reports the scope conflict.
+
+### Reason
+
+The file already said not to apply EPL Predictions/EPL Competition context
+(`.clinerules/00-project-control.md:15`) but not what to do when such a task arrives, so
+the stop-and-report behaviour had to be inferred. On 2026-10-09 the operator issued an
+EPL deployment to a Proxmox host (`192.168.20.183`); the request was out of scope and the
+host was additionally unreachable for the agent, so the rule is recorded explicitly.
+
+### Effects and guards
+
+- Scope: workspace governance only. No source, test, manifest, installer, bundle or
+  runtime file changes; the existing EPL exclusion is retained verbatim and this is
+  additive.
+- Authorisation must be explicit and in the *current* instruction. Session history,
+  standing approvals, credentials on disk (`/root/.ssh/config` defines only `github.com`
+  and `opnsense-dm`; no key for `192.168.20.183`) and resemblance to project work are not
+  authorisation.
+- Consistent with `PROJECT_RULES.md:406` (control files change only when working
+  practices actually change) and `PROJECT_RULES.md:66` (warn before consequential
+  actions).
+
+### Verified
+
+`git diff --check` -> PASS; `git status --short` lists only the two intended paths; the
+`00-project-control.md` exclusion sentence is byte-identical to before; the neighbouring
+line 18 semantics ("the current explicit user instruction determines the requested task
+and scope") still hold, since authorisation is required to be explicit *and* current.
+
+### Residual risk
+
+The rule is prose, not enforced code, so it relies on the agent honouring it and cannot
+technically prevent an operator who explicitly authorises out-of-scope work from
+proceeding. No technical control was added.

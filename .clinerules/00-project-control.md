@@ -14,6 +14,14 @@ These files are authoritative. Do not duplicate or replace their rules in this f
 
 Do not apply instructions, assumptions, architecture, paths, rules, or context from the EPL Predictions or EPL Competition projects.
 
+Out-of-scope work is blocked by default. Do not execute any task that is not part of the
+OPNsense Device Monitor project - including EPL Predictions/EPL Competition work, and any
+deployment to hosts outside this project - not even as read-only reconnaissance, unless
+the operator explicitly authorises that specific task in the current instruction. Session
+history, standing approval, credentials present on disk, and mere resemblance to project
+work are not authorisation. Absent such authorisation, stop at the planning step and
+report the scope conflict.
+
 If instructions conflict, report the conflict rather than silently resolving it.
 The current explicit user instruction determines the requested task and scope;
 factual and architectural truth follows the authority order in PROJECT_RULES.md.
