@@ -34,5 +34,6 @@ d9181a7be03d010ee1c8ddff082ff81dd2cd308957d3b7ad2cdd3ac351c24e21 644 src/opnsens
 2364199c563a371682359436d79bb43be0cd7e088a0602e18a68f58ddd3df1f9 755 src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py
 8ae36c20dd54fead22c510ea59f7221b3bfff2eeb8ef0f58f818148de41a0624 755 src/opnsense/scripts/OPNsense/DeviceMonitor/smtp_send.py /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/smtp_send.py
 5757224cd36490af35db646edbda7ceb1321ec2dc1562a73e72b396c69d8891a 644 src/opnsense/service/conf/actions.d/actions_devicemonitor.conf /usr/local/opnsense/service/conf/actions.d/actions_devicemonitor.conf
+65b73c331a2d647a9fe51eead72586babb3bcab36fe43b79f4c4df46f96a1196 644 src/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf /usr/local/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf
 282f943830ddfc0d0df8adc220c8c8ac5f7383363bff362f67ad6fae6177c858 644 src/opnsense/www/js/widgets/DeviceMonitor.js /usr/local/opnsense/www/js/widgets/DeviceMonitor.js
 8bf809e2fad16e3a2b5b48b177e47733603cb4080e121df03611fee1114bc239 644 src/opnsense/www/js/widgets/Metadata/DeviceMonitor.xml /usr/local/opnsense/www/js/widgets/Metadata/DeviceMonitor.xml

@@ -1626,3 +1626,42 @@ The individual ownership notice rests on the operator's instruction; no assignme
 in the repository, and the same file previously carried a Hacesoft notice (commit `75d3ad3`,
 superseded by `e038933`) and before that the upstream Cline Bot Inc. notice. If the rights position
 changes again, this decision and the file header must be updated together.
+
+## 43. The configd `[update]` action joins the v2.11 manifest as row 39, and its guards move with it
+
+### Decision
+
+`src/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf` (the `[update]` configd
+action added in `2747110`) is part of the v2.11 install payload from this change onward. A manifest
+row change is recorded here because it is a decision, not a maintenance edit.
+
+- Manifest: `release/v2.11-runtime.manifest` gains one row (39 total) beside its sibling
+  `actions_devicemonitor.conf` row, with `644` mode and the source target mapping
+  `src/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf` ->
+  `/usr/local/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf`. New manifest
+  SHA256: `05a3e0f0d785a0bafc7b79f8ad16b2e1857aecb537a3460528144a8594c60180`.
+- Guards moved in the same change: `install-unattended.sh:36` digest pin, `:37` row count
+  `38 -> 39`, `:172` `expected=59 -> 60`, `:173` `expected=60 -> 61`, and
+  `tests/test_release_manifest.py:9` `38 -> 39`.
+- No installer allow-list change was needed: the source/target guard on `install-unattended.sh`
+  matches `src/opnsense/*:/usr/local/opnsense/*`, and `release/build-bundle.sh` derives its payload
+  list from `awk '{print $3}'` of the manifest, so the new row reaches the bundle automatically.
+
+### Reason
+
+Without the row the action existed in the source tree but in no guarded installation - every prior
+v2.11 manifest row is deployed by `install-unattended.sh`, so an unrowed file is simply absent on
+target firewalls.
+
+### Verified
+
+`python3 tests/test_release_manifest.py` -> `V211_RELEASE_MANIFEST=PASS` (39 rows; every digest,
+mode and target mapping re-derived); `sh -n install-unattended.sh` -> PASS; `git diff --check` ->
+PASS. Nothing was staged, no installation was run and no firewall was contacted.
+
+### Residual risk
+
+The `[update]` action's command is `pkg install -y opnsense-plugin-devicemonitor`, and that package
+name matches no artifact in this repository (`Makefile:14` declares `PLUGIN_NAME = DeviceMonitor`,
+whose OPNsense package would be `os-devicemonitor`). The row therefore ships an action whose package
+reference is still unverified; the row itself only installs a configuration file.

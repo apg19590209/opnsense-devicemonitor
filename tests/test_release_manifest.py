@@ -6,7 +6,7 @@ import json
 root = Path(__file__).resolve().parents[1]
 manifest = root / 'release/v2.11-runtime.manifest'
 rows = [line.split() for line in manifest.read_text().splitlines()]
-assert len(rows) == 38
+assert len(rows) == 39
 assert all(len(row) == 4 for row in rows)
 sources = [row[2] for row in rows]
 targets = [row[3] for row in rows]
