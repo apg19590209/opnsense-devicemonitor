@@ -2247,6 +2247,39 @@ def upsert_device_service(
     return True
 
 
+def nmap_evidence_is_current(
+    finished_at,
+    now=None,
+    max_age_days=SERVICE_UNKNOWN_AFTER_DAYS
+):
+    """Is re-applied Nmap evidence recent enough to become inventory?
+
+    Phase-3 discovery does not run Nmap; it re-uses the structured evidence of
+    previous targeted scans, so a device whose last scan is weeks old would
+    otherwise be re-inventoried with a historical verification time on every
+    cycle. Retirement (Decision 55) then removes those rows again for an address
+    nobody has seen, which is a permanent rediscover-then-delete loop
+    (Decision 56). Evidence older than the ageing window is history, not
+    inventory.
+
+    An empty or unparseable timestamp counts as current: the caller falls back to
+    the observation time in that case, so no evidence is silently discarded.
+    """
+    text = str(finished_at or '').strip()
+
+    if not text:
+        return True
+
+    try:
+        stamp = datetime.strptime(text, '%Y-%m-%d %H:%M:%S')
+    except (TypeError, ValueError):
+        return True
+
+    now = now or datetime.now()
+
+    return now - stamp <= timedelta(days=max_age_days)
+
+
 def update_service_inventory_from_nmap(
     conn,
     mac,
@@ -5436,6 +5469,7 @@ def discover_phase3_services(networks):
         )
 
         seen_nmap = set()
+        stale_nmap_evidence = 0
 
         for (
             ip,
@@ -5490,6 +5524,10 @@ def discover_phase3_services(networks):
                 or now_text
             )
 
+            if not nmap_evidence_is_current(evidence_time):
+                stale_nmap_evidence += 1
+                continue
+
             upsert_device_service(
                 conn,
                 meta.get('mac', ''),
@@ -5517,6 +5555,13 @@ def discover_phase3_services(networks):
                 'product': product or '',
                 'version': version or ''
             })
+
+        if stale_nmap_evidence:
+            log(
+                "[SERVICES] Skipped "
+                f"{stale_nmap_evidence} Nmap evidence row(s) older than "
+                f"{SERVICE_UNKNOWN_AFTER_DAYS} days"
+            )
 
         # ----------------------------------------------------
         # Build protocol verification targets

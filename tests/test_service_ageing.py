@@ -630,8 +630,27 @@ def main():
     test_init_db_adds_and_backfills_last_checked()
     test_retirement_keeps_address_with_a_fresh_device_row()
     test_retirement_drops_address_with_only_stale_rows()
+    test_nmap_evidence_age_bound()
 
     print("SERVICE_AGEING=PASS")
+
+def test_nmap_evidence_age_bound():
+    module = load_module()
+    day = timedelta(days=module.SERVICE_UNKNOWN_AFTER_DAYS)
+
+    def at(delta):
+        return (NOW + delta).strftime("%Y-%m-%d %H:%M:%S")
+
+    assert module.nmap_evidence_is_current(at(timedelta(hours=-1)), now=NOW)
+    assert module.nmap_evidence_is_current(at(-day), now=NOW)
+    assert not module.nmap_evidence_is_current(
+        at(-day - timedelta(seconds=1)), now=NOW
+    )
+    assert module.nmap_evidence_is_current("", now=NOW)
+    assert module.nmap_evidence_is_current("not-a-date", now=NOW)
+
+    print("NMAP_EVIDENCE_AGE_BOUND=PASS")
+
 
 def test_retirement_keeps_address_with_a_fresh_device_row():
     module = load_module()

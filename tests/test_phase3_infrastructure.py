@@ -75,6 +75,42 @@ def test_no_automatic_nmap():
     print("PHASE3_NO_AUTOMATIC_NMAP=PASS")
 
 
+def test_stale_nmap_evidence_is_not_inventoried():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+
+        module.DB_FILE = str(tmp_path / "devices.db")
+        module.LOG_FILE = str(tmp_path / "devicemonitor.log")
+        module.init_db()
+
+        # Six weeks old: history, not inventory (Decision 56).
+        module._service_probe_candidates = (
+            lambda conn, *args, **kwargs: {}
+        )
+        module._phase3_nmap_rows = lambda conn, networks: [
+            ("192.168.50.10", "2026-09-21 09:07:55", 3389, "tcp",
+             "ms-wbt-server", "Microsoft", "10.0")
+        ]
+        module._discover_local_wireguard = (
+            lambda conn, candidates, networks: []
+        )
+
+        result = module.discover_phase3_services(networks_fixture())
+
+        assert result == [], result
+
+        with sqlite3.connect(module.DB_FILE) as conn:
+            rows = conn.execute(
+                "SELECT COUNT(*) FROM device_services"
+            ).fetchone()[0]
+
+        assert rows == 0, rows
+
+    print("PHASE3_STALE_EVIDENCE_SKIPPED=PASS")
+
+
 def test_nmap_single_host_and_strong_evidence():
     module = load_module()
 
@@ -704,6 +740,7 @@ def test_ssh_banner_probe_clean_disconnect():
 
 def main():
     test_no_automatic_nmap()
+    test_stale_nmap_evidence_is_not_inventoried()
     test_nmap_single_host_and_strong_evidence()
     test_smb_single_host_nmap()
     test_ssh_banner_probe_clean_disconnect()

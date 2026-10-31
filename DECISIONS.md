@@ -2446,3 +2446,48 @@ Monotonicity means a genuinely stale hostwatch timestamp can never correct a wro
 wall clock catches up. `devices.last_seen` remains a "someone saw this host at or after" marker, not
 a precise observation log, and the three writers (hostwatch import, service verification, and this
 guard) are recorded here so the meaning stays explicit.
+
+## 56. Nmap evidence older than the ageing window is history, not inventory
+
+### Decision
+
+Phase-3 discovery re-uses the structured evidence of previous targeted Nmap scans. Before writing
+inventory from that evidence, `nmap_evidence_is_current()` now rejects rows whose scan `finished_at`
+is older than `SERVICE_UNKNOWN_AFTER_DAYS`, and the pass logs one
+`[SERVICES] Skipped N Nmap evidence row(s) older than 7 days` line. An empty or unparseable
+timestamp is treated as current, because the caller then falls back to the observation time.
+
+### Reason
+
+The 01:23 cycle still retired three rows every hour. Running one real discovery pass against a copy
+of the live database named them: `192.168.20.116` RDP 3389 and SMB 139/445, `detection_method`
+`nmap_service`, `last_verified` **2026-09-21 09:07:55**, the `finished_at` of nmap history row 35.
+`_phase3_nmap_rows()` returns that historical `finished_at` and the Phase-3 loop used it as the write
+timestamp (`evidence_time = finished_at or now_text`), so each cycle recreated the rows with a
+six-week-old verification time. Decision 53's refresh then refused to move `devices.last_seen`
+backwards to that date, the address stayed stale by Decision 55's predicate, and retirement deleted
+the rows again — a closed loop that neither Decision 55 nor Decision 54 could break, because both
+were looking at the wrong side of it.
+
+### Effects and guards
+
+- Recent evidence keeps working exactly as before: a targeted scan from this cycle stamps its rows
+  with its own `finished_at`, refreshes the device, and the rows survive.
+- Old evidence no longer resurrects inventory, so retirement is final for a host nobody has seen.
+  The services remain discoverable again if the host is scanned afresh.
+- Nothing is deleted by this change; it only stops rows being written from stale evidence, and it
+  states how many it skipped so an operator can see the difference between "no evidence" and
+  "evidence too old to trust".
+- `tests/test_phase3_infrastructure.py::test_stale_nmap_evidence_is_not_inventoried` drives the real
+  Phase-3 pass with a six-week-old evidence row and asserts no `device_services` row is written;
+  `tests/test_service_ageing.py::test_nmap_evidence_age_bound` pins the boundary (one hour old and
+  exactly seven days are current, seven days plus a second is not, empty and unparseable are
+  current).
+
+### Residual risk
+
+A host that is scanned once and then never again now loses its Nmap-derived inventory after seven
+days rather than keeping it indefinitely, which is the intent but will look like data loss to anyone
+who expected the Scans tab's evidence to persist in the Services view. Probe-based discovery (DNS,
+DHCP, NTP, SSH, web, RDP, SMB, LDAP, VPN) is unaffected, because those rows carry a live observation
+time.
