@@ -582,6 +582,43 @@ Field effect of the redeploy, measured on the master:
   `retired 0` means the churn is over, a repeat of `retired 3` means the authoritative path is the
   remaining source and needs an insert-side guard.
 
+**Identified and fixed 1 November 2026 — Decision 56, commit `6493d5a`.** The `01:23:03` cycle
+repeated `retired 3`, so one real discovery pass was run against a **copy** of the live database
+(`sqlite3 .backup`, live file hash-checked before and after). It named the rows exactly:
+`192.168.20.116` RDP 3389 and SMB 139/445, `detection_method` `nmap_service`, `last_verified`
+`2026-09-21 09:07:55` — the `finished_at` of nmap history row 35. Phase-3 discovery re-uses previous
+Nmap evidence and stamped inventory with that historical time
+(`evidence_time = finished_at or now_text`, `scan_network.py:5488-5506`), so each cycle recreated the
+rows six weeks old; Decision 53's forward-only refresh correctly refused to move `devices.last_seen`
+backwards to that date; Decision 55's predicate then treated the address as unseen and retirement
+deleted the rows again. Both earlier fixes were correct but aimed at the wrong side of the loop.
+
+`nmap_evidence_is_current()` now rejects evidence older than `SERVICE_UNKNOWN_AFTER_DAYS` and the
+pass logs `[SERVICES] Skipped N Nmap evidence row(s) older than 7 days`. Deployed as bundle
+`41cd357b…` (`.252` backup `install-v211.UE7JJ9`, `.253` backup `install-v211.AzOAj2`), installed
+`scan_network.py` `175598e4…` on both; dry runs read `{"aged": 0, "retired": 0}` on both.
+
+Proof against the same copy of the live database, with the new build performing a full real
+discovery:
+
+```
+LOG [SERVICES] Skipped 6 Nmap evidence row(s) older than 7 days
+DISCOVERED=66            (was 72)
+CANDIDATES=0             (was 3)
+ALL_STALE_ADDRESSES=192.168.20.109(2),192.168.20.116(1),…
+LIVE_UNCHANGED=True
+```
+
+i.e. the three rows are no longer recreated, and no service row is attached to an address whose
+device rows are all stale. Tests: `PHASE3_STALE_EVIDENCE_SKIPPED` (a six-week-old evidence row writes
+no inventory) and `NMAP_EVIDENCE_AGE_BOUND` (one hour and exactly seven days are current, seven days
+plus a second is not, empty/unparseable fall back to current); full local suite 30/30 PASS,
+`V211_RELEASE_MANIFEST=PASS`.
+
+**Closes when:** the next scheduled cycle on the master logs
+`aged 0 row(s) to unknown, retired 0 row(s)` and the rows stay gone. Until then this item stays
+open, because the copy run proves the code and only the live cycle proves the deployment.
+
 **Not caused by this item, recorded because it was observed during the deployment:** both nodes log
 chronic `database is locked` scan failures (14,760 on `.252` since 06-10-2026, 16,130 on `.253`
 since 09-09-2026) and `/usr/local/sbin/sendmail: not found` from the targeted-Nmap email path.

@@ -5455,6 +5455,21 @@ rewinds the refreshed legacy row to `2026-08-15` before retirement runs. `PRODUC
 carries the two candidate fixes — require that no device row for the address is fresh, and make the
 hostwatch upsert forward-only — awaiting the operator's choice.
 
+Both were applied as Decision 55 (commit `9a300cd`, bundle `c2aedfc0…`, installed `scan_network.py`
+`71e2edfc…`); the `00:17:06` and `01:23:03` cycles still logged `retired 3`, so one real discovery
+pass was run against a copy of the live database to name the rows: `192.168.20.116` RDP 3389 and
+SMB 139/445, `nmap_service`, `last_verified 2026-09-21 09:07:55` — the `finished_at` of nmap history
+row 35. Phase-3 discovery re-uses previous Nmap evidence and stamped inventory with that historical
+time, so the rows were recreated six weeks old every hour, the forward-only refresh refused to move
+`last_seen` backwards to that date, and retirement deleted them again.
+
+Decision 56 (commit `6493d5a`, bundle `41cd357b…`, installed `scan_network.py` `175598e4…` on both,
+backups `install-v211.UE7JJ9` / `install-v211.AzOAj2`) rejects Nmap evidence older than
+`SERVICE_UNKNOWN_AFTER_DAYS`. The same copy of the live database, with the new build performing a
+full real discovery, then reported `Skipped 6 Nmap evidence row(s) older than 7 days`,
+`DISCOVERED=66` (was 72), `CANDIDATES=0` (was 3) and `LIVE_UNCHANGED=True`; both nodes' dry runs
+read `{"aged": 0, "retired": 0}`. The live cycle at `02:23` is the remaining observation.
+
 Deployment-side finding: the automatic ageing path sits behind `service_observation_allowed()`, so
 on this CARP pair only the **master** ages state during a scheduled scan; the backup logs
 `skipping service discovery and service alerts on this node`. The backup's ageing above was an
