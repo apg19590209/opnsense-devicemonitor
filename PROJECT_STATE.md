@@ -604,6 +604,72 @@ with `subprocess.run(timeout=300)`, which Python escalates to SIGKILL. That is t
 `DECISIONS.md` 37.
 
 The decision itself is recorded as `DECISIONS.md` 41.
+### Task 8 — Service-liveness noise: false offline/online pairs (O1, probe hardening)
+
+**Recorded 31 October 2026.** Operator report: "too many false positives of services going offline then
+back online ... i don't believe the services go offline". Confirmed against
+`/var/db/devicemonitor/devices.db` on the testbed, and traced to the probe layer rather than to the
+monitored hosts.
+
+Evidence measured before any change (`device_activity_events`):
+
+- 36 service events in total — **26 `SERVICE_UNAVAILABLE` against 10 `SERVICE_AVAILABLE`**.
+- 8 complete down->up pairs; **7 of them lasted exactly 60 minutes**, i.e. exactly
+  `run_scheduled_service_discovery(interval_seconds=3600)`. A one-interval outage that clears itself on
+  the next run is a single bad sample, not an outage.
+- One outlier: `DNS|192.168.50.1` was written `unavailable` on 2026-09-30 22:47:54 and "recovered" on
+  2026-10-08 09:12:44 — 10,704 minutes, because nothing ages state when an endpoint leaves the probe set.
+- Per key: `DNS|10.0.2.15` 9 events, `DNS|192.168.56.2` 7, `WEB_ADMIN`:443 6, then SSH/NTP/SMB/RDP.
+
+Root causes, all in `scan_network.py`:
+
+1. Single-attempt probes with timeouts **below the initial TCP SYN retransmit timer**:
+   `_probe_web_service(timeout=0.6)`, `_probe_ssh_service(0.8)`, `_probe_ntp_service(0.8)`,
+   `discover_dns_servers(timeout=1.5)` (one UDP query, no retransmission).
+2. Burst concurrency of 16/24/32 workers (NTP/SSH/Web) multiplying that failure rate; the web path tests
+   four common ports per candidate.
+3. The first failure writing `status='unavailable'` unconditionally at seven sites, with no miss counter,
+   no grace window and no second opinion; `trg_device_services_status_activity` turns each flip into an
+   event and `select_service_alert_events()` emails **both** directions
+   (`service_email_unavailable` and `service_email_recovered` both default to `'1'`).
+
+Change set (O1 of five options presented; O2/O3 are the recorded follow-ups):
+
+- New "SERVICE PROBE TUNING" block: `SERVICE_PROBE_ATTEMPTS = 2`, `SERVICE_PROBE_RETRY_DELAY = 0.25`,
+  `SERVICE_PROBE_TIMEOUTS` (`dns` 3.0, `ntp` 2.0, `ssh` 2.5, `web` 2.5) and `SERVICE_PROBE_WORKERS`
+  (`ntp` 8, `ssh` 12, `web` 16).
+- `_probe_ssh_service`, `_probe_ntp_service` and `_probe_web_service` keep their signatures and delegate
+  to new single-attempt helpers (`_probe_ssh_service_attempt`, `_probe_ntp_service_attempt`,
+  `_probe_web_service_attempt`), retrying once before returning `None`.
+- The DNS receive loop moved into `_dns_collect_responses()` so `discover_dns_servers()` can retransmit
+  the **same packet with the same transaction ID** to every still-unanswered candidate; the reply to
+  either transmission still matches its candidate.
+- Worker caps read from `SERVICE_PROBE_WORKERS`.
+
+New regression asset `tests/test_probe_resilience.py` (fake sockets, no network, no root) reporting
+`PROBE_RESILIENCE=PASS` with `PROBE_TUNING_CONSTANTS`, `PROBE_SSH_RETRY_RECOVERS`,
+`PROBE_RETRY_BOUNDED`, `PROBE_WEB_RETRY_RECOVERS` and `PROBE_DNS_RETRANSMITS_SAME_TXID`. It is wired
+into `.github/workflows/ci.yml` as the step after the shutdown-drain step.
+
+Hash-chain bookkeeping: `scan_network.py` is manifest row 34, so per `DECISIONS.md` 39 the manifest and
+pin moved in the same change set — row `2364199c…` -> `2afb485b…`, manifest SHA256
+`d7ef21e4…` -> `73f5cd2b…` (still 39 rows), `install-unattended.sh:36` repinned. The target count is
+unchanged at 60/61, so `:37`, `:172` and `:173` needed no edit. `release/v2.10-runtime.manifest` remains
+byte-unchanged.
+
+Verification: `tests/test_probe_resilience.py`, `tests/test_phase3_infrastructure.py`,
+`tests/test_service_alert_processing.py` and `tests/test_release_manifest.py` all pass; the full local
+suite is 23 of 24 files, the single failure being the pre-existing `test_language_acceptance.py`
+deployment drift (testbed still carries the v2.10 `devices.volt`/`settings.volt`), which failed
+identically before this change.
+
+Recorded, not fixed: one failed probe (after both attempts) still writes `unavailable` immediately and
+still emails the recovery; the state machine has no hysteresis, the alert path has no confirmation
+window, and stale `unavailable` states are never aged. Those are O2 (alert-side confirmation/de-bounce)
+and O3 (liveness hysteresis plus a host-active gate) of the analysis, still open. The decision itself is
+`DECISIONS.md` 46.
+
+
 
 ## 27 September 2026 v2.10 install-guard pin restoration
 

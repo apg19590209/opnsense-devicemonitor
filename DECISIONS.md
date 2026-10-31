@@ -1757,3 +1757,77 @@ and scope") still hold, since authorisation is required to be explicit *and* cur
 The rule is prose, not enforced code, so it relies on the agent honouring it and cannot
 technically prevent an operator who explicitly authorises out-of-scope work from
 proceeding. No technical control was added.
+
+## 46. Service liveness is sampled with a retried, patient probe, never a single impatient one
+
+### Decision
+
+Infrastructure-service availability is decided once per discovery run, so every probe
+that can mark a service `unavailable` must survive a transient loss before that verdict
+is written. Four network probes now carry explicit tuning in one place
+(`scan_network.py`, "SERVICE PROBE TUNING"):
+
+- timeouts are raised above the initial TCP SYN retransmit timer: `web` 0.6 -> 2.5 s,
+  `ssh` 0.8 -> 2.5 s, `ntp` 0.8 -> 2.0 s, `dns` 1.5 -> 3.0 s;
+- every probe is attempted `SERVICE_PROBE_ATTEMPTS` (2) times with a
+  `SERVICE_PROBE_RETRY_DELAY` (0.25 s) pause, and the DNS query is retransmitted with the
+  *same transaction ID* so a reply to either transmission still matches its candidate;
+- the probe burst is capped per protocol (`ntp` 8, `ssh` 12, `web` 16 workers, from 16/24/32).
+
+Retries stay bounded, so a genuinely dead service still reaches `unavailable` within one
+discovery run.
+
+### Reason
+
+The v2.11 liveness path produced false outages on the testbed: `device_activity_events`
+held 26 `SERVICE_UNAVAILABLE` against 10 `SERVICE_AVAILABLE`, and 7 of the 8 complete
+down->up pairs lasted exactly 60 minutes - one discovery interval
+(`run_scheduled_service_discovery(interval_seconds=3600)`). A one-interval outage that
+clears itself on the next run is a single bad sample, not an outage: the first failed
+probe wrote `unavailable` through `trg_device_services_status_activity`, the next run wrote
+`available`, and both directions were emailed (`service_email_unavailable` and
+`service_email_recovered` both default to `1`). With a 0.6 s connect timeout below the SYN
+retransmit timer, up to four ports per candidate and 32 concurrent workers, a single
+dropped packet was enough.
+
+### Effects and guards
+
+- Scope: `scan_network.py` probe layer only. The state machine (a single negative sample
+  still flips status), the alert selector and the email path are unchanged by this
+  decision; alert-side confirmation and liveness hysteresis remain open follow-ups.
+- Signature compatibility: `_probe_ssh_service`, `_probe_ntp_service`, `_probe_web_service`
+  and `discover_dns_servers` keep their parameters and gain a single-attempt inner helper
+  (`_probe_*_attempt`, `_dns_collect_responses`), so existing callers and tests that pass
+  an explicit `timeout=` are unaffected.
+- `tests/test_probe_resilience.py` pins the retry, the bound, the same-transaction-ID
+  retransmission and the constant wiring with fake sockets; it runs as a CI step and needs
+  no root and no network.
+- Release identity: `release/v2.11-runtime.manifest` row 34 moved to
+  `2afb485b9350cd5d47d23629e0b303973f4d9367da4404962996a5103621574a`, the manifest
+  SHA256 became
+  `73f5cd2b034c8bf114df279d2935bd6f499a16ffea925da2bea18dde9cfed94c` and
+  `install-unattended.sh:36` was re-pinned in the same change. This supersedes the pin
+  recorded in Decision 43 (`d7ef21e4...`). The row count is still 39 and the target count is
+  still 60 (61 on a fresh install), so `:37`, `:172` and `:173` needed no change.
+
+### Verified
+
+`tests/test_probe_resilience.py` -> `PROBE_RESILIENCE=PASS` (tuning constants,
+`PROBE_SSH_RETRY_RECOVERS`, `PROBE_RETRY_BOUNDED`, `PROBE_WEB_RETRY_RECOVERS`,
+`PROBE_DNS_RETRANSMITS_SAME_TXID`); `tests/test_phase3_infrastructure.py` ->
+`PHASE3_CI_REGRESSION=PASS`; `tests/test_release_manifest.py` ->
+`V211_RELEASE_MANIFEST=PASS`. Full local run: 23 of 24 test files pass, the single failure
+being the pre-existing `tests/test_language_acceptance.py` deployment drift (the testbed
+still runs the v2.10 `devices.volt`/`settings.volt` while the v2.11 tree carries the newer
+views), measured identically before this change.
+
+### Residual risk
+
+This removes most bad samples at the source but does not make alerting confirm evidence:
+one failed probe after both attempts still writes `unavailable` immediately, and the
+matching recovery is still emailed. Wireless clients that sleep, and hosts whose services
+leave the probe set (one recorded outage was still `unavailable` after 7.4 days and then
+"recovered"), need the alert-side confirmation and liveness-hysteresis follow-ups. Worst
+case discovery runtime rises with the higher timeouts and lower worker caps (bounded by
+`candidates x timeouts / workers`); it stays inside the hourly discovery budget on the
+testbed but has not been measured on a large network.

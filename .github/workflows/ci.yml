@@ -65,6 +65,11 @@ jobs:
       - name: Validate shutdown drain (v2.11)
         run: python3 tests/test_shutdown_drain.py
 
+      # v2.11 service-liveness noise fix (O1): pins the probe retry/timeout/worker bounds that stop
+      # one lost packet from being reported as an outage. Fake sockets only — no network, no root.
+      - name: Validate service probe resilience (v2.11)
+        run: python3 tests/test_probe_resilience.py
+
       - name: Lint PHP sources
         run: |
           set -eu

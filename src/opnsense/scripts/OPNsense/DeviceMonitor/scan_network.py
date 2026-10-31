@@ -53,6 +53,32 @@ CONFIG_FILE = PATHS['configFile']
 DB_FILE = PATHS['dbFile']
 DEFAULT_CONFIG = _defaults['config']
 PORT_DISCOVERY_LOCK = '/var/run/devicemonitor-port-discovery.lock'
+
+# ================================================================
+# SERVICE PROBE TUNING
+#
+# Infrastructure-service availability is decided by a single discovery
+# run per hour, so one impatient probe manufactures an hour-long outage.
+# Every timeout below sits above the initial TCP SYN retransmit timer,
+# each probe is attempted twice before a service may be called
+# unavailable, and the per-protocol worker caps keep the probe burst
+# small enough that the firewall does not drop its own traffic.
+# ================================================================
+SERVICE_PROBE_ATTEMPTS = 2
+SERVICE_PROBE_RETRY_DELAY = 0.25
+
+SERVICE_PROBE_TIMEOUTS = {
+    'dns': 3.0,
+    'ntp': 2.0,
+    'ssh': 2.5,
+    'web': 2.5,
+}
+
+SERVICE_PROBE_WORKERS = {
+    'ntp': 8,
+    'ssh': 12,
+    'web': 16,
+}
 # ================================================================
 
 
@@ -2104,12 +2130,109 @@ def update_service_inventory_from_nmap(
     return recorded
 
 
-def discover_dns_servers(networks, timeout=1.5):
+def _dns_collect_responses(sock, pending, conn, found, verified_ips, deadline):
     """
-    Verify DNS servers using one real UDP DNS query per active IPv4 device.
+    Match DNS responses to outstanding queries until ``deadline``.
+
+    Verified candidates are removed from ``pending`` and recorded through
+    ``upsert_device_service``. Unmatched, malformed or foreign responses are
+    ignored, leaving their query pending so a retransmission pass can still
+    satisfy it.
+    """
+    while pending:
+        remaining = deadline - time.monotonic()
+
+        if remaining <= 0:
+            break
+
+        readable, _, _ = select.select(
+            [sock],
+            [],
+            [],
+            remaining
+        )
+
+        if not readable:
+            break
+
+        try:
+            data, source = sock.recvfrom(4096)
+        except OSError:
+            continue
+
+        if len(data) < 12:
+            continue
+
+        try:
+            (
+                rxid,
+                flags,
+                _questions,
+                _answers,
+                _authority,
+                _additional
+            ) = struct.unpack('!HHHHHH', data[:12])
+        except struct.error:
+            continue
+
+        candidate = pending.get(rxid)
+
+        if candidate is None:
+            continue
+
+        # The reply must come from the device that was queried.
+        if source[0] != candidate['ip']:
+            continue
+
+        # QR flag = this is a DNS response, not another query.
+        if not (flags & 0x8000):
+            continue
+
+        verified_at = datetime.now().strftime(
+            '%Y-%m-%d %H:%M:%S'
+        )
+
+        if upsert_device_service(
+            conn,
+            candidate['mac'],
+            candidate['ip'],
+            candidate['interface'],
+            'DNS',
+            53,
+            'udp',
+            'dns_query',
+            'verified',
+            verified_at
+        ):
+            item = {
+                'service_type': 'DNS',
+                'ip': candidate['ip'],
+                'mac': candidate['mac'],
+                'interface': candidate['interface'],
+                'port': 53,
+                'protocol': 'udp',
+                'confidence': 'verified'
+            }
+
+            found.append(item)
+            verified_ips.add(candidate['ip'])
+
+            log(
+                "[SERVICES] DNS server verified: "
+                f"{candidate['ip']}"
+            )
+
+        del pending[rxid]
+
+
+def discover_dns_servers(networks, timeout=SERVICE_PROBE_TIMEOUTS['dns']):
+    """
+    Verify DNS servers using real UDP DNS queries to active IPv4 devices.
 
     A device is recorded only when it returns a syntactically valid DNS
-    response with the matching transaction ID.
+    response with the matching transaction ID. Each unanswered query is
+    retransmitted once with the same transaction ID before the device may be
+    reported as no longer serving DNS.
     """
     init_db()
 
@@ -2266,6 +2389,7 @@ def discover_dns_servers(networks, timeout=1.5):
         sock.setblocking(False)
 
         pending = {}
+        packets = {}
 
         # example.com A query. We care about receiving a valid DNS
         # response, not what answer the resolver returns.
@@ -2305,97 +2429,44 @@ def discover_dns_servers(networks, timeout=1.5):
                         (candidate['ip'], 53)
                     )
                     pending[txid] = candidate
+                    packets[txid] = packet
                 except OSError:
                     continue
 
             found = []
             verified_ips = set()
-            deadline = time.monotonic() + float(timeout)
 
-            while pending:
-                remaining = deadline - time.monotonic()
-
-                if remaining <= 0:
+            for attempt in range(SERVICE_PROBE_ATTEMPTS):
+                if not pending:
                     break
 
-                readable, _, _ = select.select(
-                    [sock],
-                    [],
-                    [],
-                    remaining
-                )
+                if attempt:
+                    # Retransmit the identical query. The transaction ID is
+                    # unchanged, so a reply to either transmission is still
+                    # matched to the same candidate. A single lost UDP packet
+                    # must not be reported as an outage.
+                    time.sleep(SERVICE_PROBE_RETRY_DELAY)
 
-                if not readable:
-                    break
+                    for txid, packet in packets.items():
+                        if txid not in pending:
+                            continue
 
-                try:
-                    data, source = sock.recvfrom(4096)
-                except OSError:
-                    continue
+                        try:
+                            sock.sendto(
+                                packet,
+                                (pending[txid]['ip'], 53)
+                            )
+                        except OSError:
+                            continue
 
-                if len(data) < 12:
-                    continue
-
-                try:
-                    (
-                        rxid,
-                        flags,
-                        _questions,
-                        _answers,
-                        _authority,
-                        _additional
-                    ) = struct.unpack('!HHHHHH', data[:12])
-                except struct.error:
-                    continue
-
-                candidate = pending.get(rxid)
-
-                if candidate is None:
-                    continue
-
-                # The reply must come from the device that was queried.
-                if source[0] != candidate['ip']:
-                    continue
-
-                # QR flag = this is a DNS response, not another query.
-                if not (flags & 0x8000):
-                    continue
-
-                verified_at = datetime.now().strftime(
-                    '%Y-%m-%d %H:%M:%S'
-                )
-
-                if upsert_device_service(
+                _dns_collect_responses(
+                    sock,
+                    pending,
                     conn,
-                    candidate['mac'],
-                    candidate['ip'],
-                    candidate['interface'],
-                    'DNS',
-                    53,
-                    'udp',
-                    'dns_query',
-                    'verified',
-                    verified_at
-                ):
-                    item = {
-                        'service_type': 'DNS',
-                        'ip': candidate['ip'],
-                        'mac': candidate['mac'],
-                        'interface': candidate['interface'],
-                        'port': 53,
-                        'protocol': 'udp',
-                        'confidence': 'verified'
-                    }
-
-                    found.append(item)
-                    verified_ips.add(candidate['ip'])
-
-                    log(
-                        "[SERVICES] DNS server verified: "
-                        f"{candidate['ip']}"
-                    )
-
-                del pending[rxid]
+                    found,
+                    verified_ips,
+                    time.monotonic() + float(timeout)
+                )
 
             # Every candidate was actively queried during this run. Existing
             # dns_query inventory entries that did not answer are no longer
@@ -2777,8 +2848,13 @@ def _nmap_tcp_service_candidates(conn, networks):
         return []
 
 
-def _probe_ntp_service(ip, timeout=0.8):
-    """Verify NTP using a real client request and matching originate time."""
+def _probe_ntp_service(ip, timeout=SERVICE_PROBE_TIMEOUTS['ntp']):
+    """
+    Verify NTP using a real client request and matching originate time.
+
+    One unanswered request is retried with the same originate timestamp, so a
+    single lost UDP packet cannot be read as "no NTP server here".
+    """
     request = bytearray(48)
 
     # LI=0, VN=4, Mode=3 (client)
@@ -2798,13 +2874,33 @@ def _probe_ntp_service(ip, timeout=0.8):
         fraction
     )
 
-    expected_originate = bytes(request[40:48])
+    payload = bytes(request)
+    expected_originate = payload[40:48]
 
+    for attempt in range(SERVICE_PROBE_ATTEMPTS):
+        result = _probe_ntp_service_attempt(
+            ip,
+            timeout,
+            payload,
+            expected_originate
+        )
+
+        if result is not None:
+            return result
+
+        if attempt + 1 < SERVICE_PROBE_ATTEMPTS:
+            time.sleep(SERVICE_PROBE_RETRY_DELAY)
+
+    return None
+
+
+def _probe_ntp_service_attempt(ip, timeout, payload, expected_originate):
+    """Perform one NTP client exchange for _probe_ntp_service."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     try:
         sock.settimeout(timeout)
-        sock.sendto(bytes(request), (ip, 123))
+        sock.sendto(payload, (ip, 123))
 
         data, source = sock.recvfrom(512)
 
@@ -2868,7 +2964,7 @@ def discover_ntp_servers(networks):
         targets = sorted(candidates.keys())
 
         if targets:
-            workers = min(16, len(targets))
+            workers = min(SERVICE_PROBE_WORKERS['ntp'], len(targets))
 
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 results = list(
@@ -2989,8 +3085,27 @@ def _send_ssh_probe_disconnect(sock, banner):
         pass
 
 
-def _probe_ssh_service(target, timeout=0.8):
-    """Verify SSH by receiving an SSH protocol identification banner."""
+def _probe_ssh_service(target, timeout=SERVICE_PROBE_TIMEOUTS['ssh']):
+    """
+    Verify SSH by receiving an SSH protocol identification banner.
+
+    A failed attempt is retried once, so a single refused or dropped connection
+    cannot be read as "SSH is gone".
+    """
+    for attempt in range(SERVICE_PROBE_ATTEMPTS):
+        result = _probe_ssh_service_attempt(target, timeout)
+
+        if result is not None:
+            return result
+
+        if attempt + 1 < SERVICE_PROBE_ATTEMPTS:
+            time.sleep(SERVICE_PROBE_RETRY_DELAY)
+
+    return None
+
+
+def _probe_ssh_service_attempt(target, timeout):
+    """Perform one SSH banner exchange for _probe_ssh_service."""
     ip, port = target
 
     try:
@@ -3122,7 +3237,7 @@ def discover_ssh_servers(networks):
         target_list = sorted(targets.keys())
 
         if target_list:
-            workers = min(24, len(target_list))
+            workers = min(SERVICE_PROBE_WORKERS['ssh'], len(target_list))
 
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 results = list(
@@ -3207,12 +3322,30 @@ def discover_ssh_servers(networks):
     return discovered
 
 
-def _probe_web_service(target, timeout=0.6):
+def _probe_web_service(target, timeout=SERVICE_PROBE_TIMEOUTS['web']):
     """
     Verify an HTTP/HTTPS endpoint using a real request and HTTP response.
+
     TLS certificate validation is deliberately disabled because local
     infrastructure commonly uses private/self-signed certificates.
+
+    A failed attempt is retried once, so one dropped SYN or one slow
+    handshake cannot be read as "the web UI is gone".
     """
+    for attempt in range(SERVICE_PROBE_ATTEMPTS):
+        result = _probe_web_service_attempt(target, timeout)
+
+        if result is not None:
+            return result
+
+        if attempt + 1 < SERVICE_PROBE_ATTEMPTS:
+            time.sleep(SERVICE_PROBE_RETRY_DELAY)
+
+    return None
+
+
+def _probe_web_service_attempt(target, timeout):
+    """Perform one HTTP/HTTPS request for _probe_web_service."""
     ip, port, scheme = target
 
     try:
@@ -3433,7 +3566,7 @@ def discover_web_admin_services(networks):
         target_list = sorted(targets.keys())
 
         if target_list:
-            workers = min(32, len(target_list))
+            workers = min(SERVICE_PROBE_WORKERS['web'], len(target_list))
 
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 results = list(
