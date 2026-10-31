@@ -663,13 +663,66 @@ suite is 23 of 24 files, the single failure being the pre-existing `test_languag
 deployment drift (testbed still carries the v2.10 `devices.volt`/`settings.volt`), which failed
 identically before this change.
 
-Recorded, not fixed: one failed probe (after both attempts) still writes `unavailable` immediately and
-still emails the recovery; the state machine has no hysteresis, the alert path has no confirmation
-window, and stale `unavailable` states are never aged. Those are O2 (alert-side confirmation/de-bounce)
-and O3 (liveness hysteresis plus a host-active gate) of the analysis, still open. The decision itself is
-`DECISIONS.md` 46.
+Recorded, not fixed by Task 8: one failed probe (after both attempts) still writes `unavailable`
+immediately and still emails the recovery; the state machine has no hysteresis, the alert path has no
+confirmation window, and stale `unavailable` states are never aged. O2 (alert-side
+confirmation/de-bounce) is implemented in Task 9 below; O3 (liveness hysteresis plus a host-active
+gate) and O4 (ageing stale state) of the analysis remain open. The decision itself is `DECISIONS.md` 46.
 
 
+
+### Task 9 — Service-liveness noise: alert confirmation (O2)
+
+**Recorded 31 October 2026.** Follow-up to Task 8. O1 stopped most bad samples at the probe
+layer; O2 stops the remaining ones from reaching the operator, because a flap that survives
+two probe attempts still produced two emails (down, then recovered one discovery run later).
+
+Change set:
+
+- `init_db()` creates `service_alert_pending` (`service_key` primary key, `mac`, `event_json`,
+  `held_at`, `notified`, `notified_at`) with `CREATE TABLE IF NOT EXISTS`, so no migration.
+- `apply_service_alert_confirmation()` holds a first-time `SERVICE_UNAVAILABLE` for
+  `SERVICE_ALERT_CONFIRM_SECONDS` (4320 s — deliberately one discovery run plus margin), deletes the
+  hold and drops both events when the matching `SERVICE_AVAILABLE` arrives inside that window, applies
+  `SERVICE_ALERT_QUIET_SECONDS` (21600 s) to repeat outage emails, and drops a recovery whose outage was
+  never emailed. Duplicate `(service_key, event_type)` pairs within one batch are collapsed.
+- `collect_expired_service_alert_holds()` releases the stored outage once the window has elapsed, so a
+  real outage is still reported with the original address, port and product.
+- `commit_service_alert_delivery()` marks the hold notified (or deletes it on recovery) **after** a
+  successful send; a failed delivery leaves `notified = 0` so the outage is retried next cycle.
+- `process_service_alerts()` fetches events, adds expired holds, re-applies the per-device and global
+  preference gates to both, runs the confirmation stage, sends, then commits the outcome and the cursor.
+  Held events are passed to `plan_service_alert_cursor_advance()` alongside the deliverable ones, so the
+  activity cursor stops at an undelivered outage and the matching recovery is still read.
+
+Net effect on the recorded testbed signature: a one-interval down/up pair now produces **zero**
+emails instead of two; a real outage produces one outage email after the window and one recovery
+email, with no repeats for six hours.
+
+New asset `tests/test_service_alert_confirmation.py` reporting `SERVICE_ALERT_CONFIRMATION=PASS` with
+`ALERT_FLAP_SILENT`, `ALERT_OUTAGE_CONFIRMED_ONCE`, `ALERT_QUIET_WINDOW`,
+`ALERT_RECOVERY_AFTER_OUTAGE`, `ALERT_UNREPORTED_RECOVERY_DROPPED` and `ALERT_CONFIRMATION_RETRY`,
+wired into CI after the probe-resilience step. All seven pre-existing checks in
+`tests/test_service_alert_processing.py` pass **unmodified**, which is the compatibility evidence for
+the cursor and retry contracts.
+
+Hash-chain bookkeeping: `scan_network.py` row 34 `2afb485b…` -> `1f68c41e…`, manifest SHA256
+`73f5cd2b…` -> `d89002b1…` (still 39 rows), `install-unattended.sh:36` repinned; target count still
+60/61. `release/v2.10-runtime.manifest` remains byte-unchanged.
+
+Verification: full local suite 24 of 25 files pass; the single failure is the pre-existing
+`test_language_acceptance.py` deployment drift (testbed still carries the v2.10 `devices.volt` and
+`settings.volt`), measured identically before this work started.
+
+Recorded, not fixed: the state machine still flips `device_services.status` on one negative sample, so
+the Devices view can briefly show a service as unavailable after a flap — only the notification is
+suppressed. That is O3 (two-miss hysteresis plus a host-active gate) and O4 (ageing stale `unavailable`
+state instead of retaining it indefinitely), both still open. The decision is `DECISIONS.md` 47.
+
+Operator mitigation still recommended until O3 lands (O5 of the analysis, no code): set
+`service_email_recovered=0` in Settings to remove the "back online" half of every pair, and/or set
+`service_recovered=off` / `service_unavailable=off` per device in the per-device alert preferences for
+laptops, phones and televisions.
 
 ## 27 September 2026 v2.10 install-guard pin restoration
 

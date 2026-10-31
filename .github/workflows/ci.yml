@@ -70,6 +70,11 @@ jobs:
       - name: Validate service probe resilience (v2.11)
         run: python3 tests/test_probe_resilience.py
 
+      # v2.11 service-liveness noise fix (O2): pins the alert confirmation stage — a flap is silent,
+      # a sustained outage is mailed once, and a recovery is only mailed for a reported outage.
+      - name: Validate service alert confirmation (v2.11)
+        run: python3 tests/test_service_alert_confirmation.py
+
       - name: Lint PHP sources
         run: |
           set -eu

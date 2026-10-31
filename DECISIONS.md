@@ -1831,3 +1831,82 @@ leave the probe set (one recorded outage was still `unavailable` after 7.4 days 
 case discovery runtime rises with the higher timeouts and lower worker caps (bounded by
 `candidates x timeouts / workers`); it stays inside the hourly discovery budget on the
 testbed but has not been measured on a large network.
+
+## 47. Outage alerts are confirmed before delivery, so a probe flap is silent
+
+### Decision
+
+`process_service_alerts()` runs a confirmation stage between selection and delivery:
+
+- the first `SERVICE_UNAVAILABLE` for a service is held in `service_alert_pending` for
+  `SERVICE_ALERT_CONFIRM_SECONDS` (4320 s, deliberately longer than the 3600 s discovery
+  run) and is not emailed;
+- if the matching `SERVICE_AVAILABLE` arrives inside that window, the hold is deleted and
+  *both* events are dropped without delivery;
+- a hold that survives the window releases the original event once, and
+  `SERVICE_ALERT_QUIET_SECONDS` (21600 s) suppresses repeat outage emails for the same
+  service;
+- a recovery is only emailed when its outage was actually emailed — a recovery with no
+  notified hold is dropped;
+- held events keep the alert cursor stopped (they are passed to
+  `plan_service_alert_cursor_advance()` alongside the deliverable events), so the matching
+  recovery is still read even though the outage itself has not been delivered;
+- delivery failure leaves the hold at `notified = 0`, so the outage is retried on the next
+  cycle rather than lost.
+
+Deliveries and deletions are only committed after a successful send
+(`commit_service_alert_delivery()`).
+
+### Reason
+
+`DECISIONS.md` 46 fixed the probe layer, but alerting still treated one negative sample as
+an outage and mailed both directions. The recorded testbed history shows the signature:
+26 `SERVICE_UNAVAILABLE` against 10 `SERVICE_AVAILABLE`, with 7 of 8 complete down/up pairs
+lasting exactly one discovery interval. Every one of those pairs was two emails for an
+event that self-corrected on the next run. Alert delivery is the only notification channel
+for this class of event, so it is the correct place to require corroboration: the state and
+the Devices UI stay live and unchanged, while the operator only hears about outages that
+outlive a full discovery run.
+
+### Effects and guards
+
+- Scope: service-alert delivery only. `device_services.status`, the activity trigger, the
+  Devices/Infrastructure views, the webhook path and the per-device preference checks are
+  untouched; `select_service_alert_events()` keeps its signature and its role.
+- New persistent state is one table, `service_alert_pending`, created by `init_db()` with
+  `CREATE TABLE IF NOT EXISTS` (no migration needed for existing databases).
+- Deduplication is per `(service_key, event_type)`. The expiry path can hand the same
+  outage to the stage twice — once from the cursor window and once from the released hold —
+  and a down and its recovery legitimately share one key, so keying on the pair keeps
+  exactly one down and one up per service per batch.
+- Existing behaviour preserved: failed delivery still blocks the cursor at the first
+  selected event and logs for retry; out-of-scope rows are still never acknowledged;
+  disabled alerts still advance the cursors; `SERVICE_CHANGED` remains history-only. All
+  seven existing checks in `tests/test_service_alert_processing.py` pass unmodified.
+- `tests/test_service_alert_confirmation.py` pins the new stage: `ALERT_FLAP_SILENT`,
+  `ALERT_OUTAGE_CONFIRMED_ONCE`, `ALERT_QUIET_WINDOW`, `ALERT_RECOVERY_AFTER_OUTAGE`,
+  `ALERT_UNREPORTED_RECOVERY_DROPPED`, `ALERT_CONFIRMATION_RETRY`.
+- Release identity: `release/v2.11-runtime.manifest` row 34 moved to
+  `1f68c41eae37ac704461c153e4202317987f10bb68705feb625a72e97dd1a4bc`, the manifest SHA256
+  became `d89002b1bf2777286f834f0aa603c417cae887e915448f4443935a5dd3c14646` and
+  `install-unattended.sh:36` was re-pinned in the same change. Row count is still 39;
+  target count is unchanged at 60/61.
+
+### Verified
+
+`tests/test_service_alert_confirmation.py` -> `SERVICE_ALERT_CONFIRMATION=PASS`;
+`tests/test_service_alert_processing.py` -> `DM_BL003_SERVICE_ALERT_REGRESSION=PASS`
+(unchanged); `tests/test_probe_resilience.py` -> `PROBE_RESILIENCE=PASS`;
+`tests/test_release_manifest.py` -> `V211_RELEASE_MANIFEST=PASS`.
+
+### Residual risk
+
+The confirmation window is a fixed constant, not a GUI setting, so an operator cannot
+shorten it for a critical endpoint without editing the daemon. `SERVICE_ALERT_QUIET_SECONDS`
+can hide a genuine repeat outage that begins within six hours of a previous confirmed one
+for the same service; the outage still appears in device activity history. A hold only
+ages out because `process_service_alerts()` runs on every full scan, so a stopped daemon
+delays both the outage email and the recovery email. The underlying state machine still
+flips on one negative sample (O3: hysteresis plus a host-active gate), so the Devices view
+can still briefly show a service as unavailable after a flap; only the notification is
+suppressed.

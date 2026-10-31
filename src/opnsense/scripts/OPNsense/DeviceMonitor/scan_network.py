@@ -79,6 +79,18 @@ SERVICE_PROBE_WORKERS = {
     'ssh': 12,
     'web': 16,
 }
+
+# ================================================================
+# SERVICE ALERT CONFIRMATION
+#
+# Discovery runs hourly, so a first-time "service unavailable" is held
+# for longer than one run: if the matching recovery arrives inside that
+# window the pair is dropped without an email, and if the service is
+# still down the original event is released. A quiet window then stops
+# one flapping endpoint from mailing the operator repeatedly.
+# ================================================================
+SERVICE_ALERT_CONFIRM_SECONDS = 4320   # 72 min, longer than one 3600 s discovery run
+SERVICE_ALERT_QUIET_SECONDS = 21600    # 6 h between repeat outage emails per service
 # ================================================================
 
 
@@ -844,6 +856,20 @@ def _apply_db_schema():
             COALESCE((SELECT MAX(id) FROM device_activity_events), 0)
         '''
     )
+    # Outstanding and recently delivered outage confirmations. A row is
+    # created the first time a service is reported unavailable and is removed
+    # by the matching recovery, so an unconfirmed down/recovered pair is never
+    # emailed. `notified = 0` marks a hold that is still awaiting the
+    # confirmation window; `notified_at` backs the per-service quiet window.
+    c.execute('''CREATE TABLE IF NOT EXISTS service_alert_pending (
+        service_key TEXT PRIMARY KEY,
+        mac TEXT NOT NULL DEFAULT '',
+        event_json TEXT NOT NULL,
+        held_at DATETIME NOT NULL,
+        notified INTEGER NOT NULL DEFAULT 0,
+        notified_at DATETIME DEFAULT NULL
+    )''')
+
     # Observational identity anomaly events. v2.7 Phase A records evidence
     # only; it does not automatically alert, block, merge, or delete devices.
     c.execute('''CREATE TABLE IF NOT EXISTS device_identity_events (
@@ -5599,6 +5625,246 @@ def select_service_alert_events(config, events, preferences=None):
     return selected
 
 
+def service_alert_key(event):
+    """Return the stable identity of the service an alert event belongs to."""
+    try:
+        port = int(event.get('port') or 0)
+    except (TypeError, ValueError):
+        port = 0
+
+    return '|'.join((
+        str(event.get('mac') or '').strip().lower(),
+        str(event.get('service_type') or ''),
+        str(event.get('ip') or ''),
+        str(port),
+        str(event.get('protocol') or '').lower(),
+        str(event.get('interface') or ''),
+        str(event.get('detection_method') or ''),
+    ))
+
+
+def _service_alert_timestamp(value):
+    """Parse a stored alert timestamp into a datetime, or None."""
+    if isinstance(value, datetime):
+        return value
+
+    text = str(value or '').strip()
+
+    if not text:
+        return None
+
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f'):
+        try:
+            return datetime.strptime(text, fmt)
+        except (TypeError, ValueError):
+            continue
+
+    return None
+
+
+def _service_alert_age_seconds(value, now):
+    """Return the age of a stored timestamp in seconds, or None."""
+    stamp = _service_alert_timestamp(value)
+
+    if stamp is None:
+        return None
+
+    return (now - stamp).total_seconds()
+
+
+def collect_expired_service_alert_holds(conn, now=None):
+    """
+    Return held outage events whose confirmation window has elapsed.
+
+    A hold is created the first time a service is reported unavailable and is
+    deleted by the matching recovery event. One that survives the whole window
+    is a real outage, so the original event is released for delivery. Holds are
+    stored with their original event payload, so a released outage still
+    reports the address, port and product that were observed.
+    """
+    now = now or datetime.now()
+
+    try:
+        rows = conn.execute(
+            '''
+            SELECT event_json, held_at
+            FROM service_alert_pending
+            WHERE notified = 0
+            '''
+        ).fetchall()
+    except sqlite3.Error:
+        return []
+
+    due = []
+
+    for payload, held_at in rows:
+        age = _service_alert_age_seconds(held_at, now)
+
+        if age is None or age < SERVICE_ALERT_CONFIRM_SECONDS:
+            continue
+
+        try:
+            event = json.loads(payload)
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+        if isinstance(event, dict):
+            due.append(event)
+
+    return due
+
+
+def apply_service_alert_confirmation(conn, selected, now=None):
+    """
+    Hold a first-time outage alert until a later observation confirms it.
+
+    Returns ``(deliverable, held, suppressed)``. ``held`` events must keep the
+    alert cursor stopped, so the matching recovery is still read on a later
+    cycle; ``suppressed`` events are already resolved and need no hold. A
+    recovery for an outage that was never emailed removes the hold and is
+    itself dropped, which is what turns a probe flap into silence instead of
+    two emails.
+    """
+    now = now or datetime.now()
+    stamp = now.strftime('%Y-%m-%d %H:%M:%S')
+
+    deliverable = []
+    held = {}
+    suppressed = []
+    handled = set()
+
+    for event in selected:
+        key = service_alert_key(event)
+        event_type = str(event.get('event_type') or '')
+
+        # A held outage and its recovery are separate events for the same
+        # service, so only the same (key, type) pair is deduplicated.
+        identity = (key, event_type)
+
+        if identity in handled:
+            continue
+
+        handled.add(identity)
+        mac = str(event.get('mac') or '').strip().lower()
+
+        row = conn.execute(
+            '''
+            SELECT notified, notified_at, held_at
+            FROM service_alert_pending
+            WHERE service_key = ?
+            ''',
+            (key,)
+        ).fetchone()
+
+        if event_type == 'SERVICE_UNAVAILABLE':
+            if row is None:
+                conn.execute(
+                    '''
+                    INSERT OR REPLACE INTO service_alert_pending (
+                        service_key, mac, event_json, held_at, notified,
+                        notified_at
+                    )
+                    VALUES (?, ?, ?, ?, 0, NULL)
+                    ''',
+                    (
+                        key,
+                        mac,
+                        json.dumps(event, sort_keys=True, default=str),
+                        stamp,
+                    )
+                )
+                held[key] = event
+                continue
+
+            if not int(row[0] or 0):
+                age = _service_alert_age_seconds(row[2], now)
+
+                if age is None or age < SERVICE_ALERT_CONFIRM_SECONDS:
+                    held[key] = event
+                    continue
+
+                deliverable.append(event)
+                continue
+
+            quiet_age = _service_alert_age_seconds(row[1], now)
+
+            if (
+                quiet_age is not None
+                and quiet_age < SERVICE_ALERT_QUIET_SECONDS
+            ):
+                suppressed.append(event)
+                continue
+
+            deliverable.append(event)
+            continue
+
+        if event_type == 'SERVICE_AVAILABLE':
+            if row is None:
+                suppressed.append(event)
+                continue
+
+            if not int(row[0] or 0):
+                conn.execute(
+                    'DELETE FROM service_alert_pending WHERE service_key = ?',
+                    (key,)
+                )
+                held.pop(key, None)
+                suppressed.append(event)
+                continue
+
+            deliverable.append(event)
+            continue
+
+        deliverable.append(event)
+
+    conn.commit()
+
+    return deliverable, list(held.values()), suppressed
+
+
+def commit_service_alert_delivery(conn, delivered, now=None):
+    """Record the confirmation outcome of a successful alert delivery."""
+    now = now or datetime.now()
+    stamp = now.strftime('%Y-%m-%d %H:%M:%S')
+
+    for event in delivered:
+        key = service_alert_key(event)
+        event_type = str(event.get('event_type') or '')
+
+        if event_type == 'SERVICE_UNAVAILABLE':
+            conn.execute(
+                '''
+                INSERT INTO service_alert_pending (
+                    service_key, mac, event_json, held_at, notified,
+                    notified_at
+                )
+                VALUES (?, ?, ?, ?, 1, ?)
+                ON CONFLICT(service_key) DO UPDATE SET
+                    mac = excluded.mac,
+                    event_json = excluded.event_json,
+                    held_at = excluded.held_at,
+                    notified = 1,
+                    notified_at = excluded.notified_at
+                ''',
+                (
+                    key,
+                    str(event.get('mac') or '').strip().lower(),
+                    json.dumps(event, sort_keys=True, default=str),
+                    stamp,
+                    stamp,
+                )
+            )
+            continue
+
+        if event_type == 'SERVICE_AVAILABLE':
+            conn.execute(
+                'DELETE FROM service_alert_pending WHERE service_key = ?',
+                (key,)
+            )
+
+    conn.commit()
+
+
 def plan_service_alert_cursor_advance(
     events,
     selected_events,
@@ -5845,6 +6111,12 @@ def process_service_alerts(config, networks):
     may advance after a delivery failure. Out-of-scope rows are never sent,
     acknowledged or advanced past.
 
+    Before delivery, outage events pass through the confirmation stage: a
+    first-time `SERVICE_UNAVAILABLE` is held for `SERVICE_ALERT_CONFIRM_SECONDS`
+    and a recovery that arrives inside that window cancels both emails, so a
+    probe flap produces no notification at all. Held events keep the cursor
+    stopped so the matching recovery is still read.
+
     A non-blocking process lock serialises this read/send/cursor sequence so
     overlapping full scans cannot normally deliver the same pending alert.
     """
@@ -5856,44 +6128,69 @@ def process_service_alerts(config, networks):
     try:
         init_db()
 
+        now = datetime.now()
+
         conn = sqlite3.connect(DB_FILE)
         try:
             events = get_pending_service_alert_events(conn, networks)
-            preferences = load_service_alert_preferences(conn, events)
+            expired = collect_expired_service_alert_holds(conn, now)
+            preferences = load_service_alert_preferences(
+                conn,
+                events + expired,
+            )
+            selected = select_service_alert_events(config, events, preferences)
+            selected += select_service_alert_events(
+                config,
+                expired,
+                preferences,
+            )
+            deliverable, held, suppressed = apply_service_alert_confirmation(
+                conn,
+                selected,
+                now,
+            )
         finally:
             conn.close()
 
-        if not events:
+        if not events and not expired:
             return True
 
-        selected = select_service_alert_events(config, events, preferences)
+        if suppressed:
+            log(
+                '[SERVICE-EMAIL] Deferred or dropped '
+                f'{len(suppressed)} unconfirmed service event(s)'
+            )
+
         delivery_succeeded = False
 
-        if selected:
-            delivery_succeeded = send_service_alert_email(selected)
+        if deliverable:
+            delivery_succeeded = send_service_alert_email(deliverable)
 
         plan = plan_service_alert_cursor_advance(
             events,
-            selected,
+            deliverable + held,
             delivery_succeeded=delivery_succeeded,
         )
 
         conn = sqlite3.connect(DB_FILE)
         try:
+            if delivery_succeeded and deliverable:
+                commit_service_alert_delivery(conn, deliverable, now)
+
             advanced = advance_service_alert_cursors(conn, plan)
         finally:
             conn.close()
 
-        if selected and not delivery_succeeded:
+        if deliverable and not delivery_succeeded:
             log(
                 '[SERVICE-EMAIL] Delivery failed; selected events retained '
                 'for retry'
             )
             return False
 
-        if selected:
+        if deliverable:
             log(
-                f'[SERVICE-EMAIL] Processed {len(selected)} selected '
+                f'[SERVICE-EMAIL] Processed {len(deliverable)} confirmed '
                 'infrastructure service event(s)'
             )
         elif advanced:
