@@ -85,6 +85,12 @@ jobs:
       - name: Validate service miss hysteresis (v2.11)
         run: python3 tests/test_service_miss_hysteresis.py
 
+      # v2.11 service-liveness fix (O4): a stale `unavailable` verdict ages to `unknown`, rows for
+      # hosts unseen for 30 days are retired, and a hostwatch-blackout is refused rather than
+      # emptying the inventory. Temporary databases only — no host, no network.
+      - name: Validate service state ageing (v2.11)
+        run: python3 tests/test_service_ageing.py
+
       # v2.11 HA safety: a CARP backup node must not observe services, and a node that can see no
       # hosts must say so instead of silently suppressing outage verdicts.
       - name: Validate CARP role gate (v2.11)

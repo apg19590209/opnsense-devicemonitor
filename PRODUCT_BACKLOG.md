@@ -443,3 +443,34 @@ confirmation only.
   taken on 29 September 2026 (the v2.10 merge engine; see that entry above). `DM-BL-008a` (Dutch selectability) was closed as
   dropped on 28 September 2026 — an inherited `get_locale_list()` limitation, not a result of this
   work; see the `DM-BL-008a` entry above.
+
+## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `CODE-COMPLETE` (not deployed)
+
+**Identifier note:** `PROJECT_STATE.md` and `DECISIONS.md` 52 use `O4` for this item. The `O4`
+above (sidecar text-domain view migration, `CLOSED` 28 September 2026) is a different workstream;
+neither references the other in the original records, so the ageing work is named
+`O4-ageing` here.
+
+**Description:** `device_services.status` only ever moved between `available` and `unavailable`.
+Nothing aged an `unavailable` verdict, so a service that failed two consecutive probes stayed
+down indefinitely, and rows whose hosts had not been seen since 2026-09-21 were still presented
+as current inventory.
+
+**Implemented (31 October 2026, branch `feature/async-db-v2.11`):**
+`age_stale_service_state()` rewrites `unavailable` rows older than 7 days to `unknown` (clearing
+`miss_count` so Decision 49's two-miss rule still applies afterwards) and deletes rows whose
+`devices.last_seen` is older than 30 days, together with their held alert. The pass runs on the
+hourly scheduled discovery gate and via `scan_network.py --age-services [--dry-run]`. It refuses
+retirement outright when no host at all is fresh, and never retires an address that has no
+`devices` row. The Devices view renders and filters `unknown`. Decision: `DECISIONS.md` 52.
+
+**Why it is not `RESOLVED`:** nothing is deployed and no live evidence exists. The 24 rows are
+still in the testbed database; the retirement has not been observed running, and the installed
+view and catalogues still predate the change.
+
+**Closes when:** `install-unattended.sh` has installed the change on the testbed, one live
+discovery cycle has logged
+`[SERVICES] Stale-state ageing: aged N row(s) to unknown, retired M row(s)` with the expected
+counts, and a controlled proof on a copy of the live database (back-dated `last_verified` and
+`last_seen`, live database byte-identical afterwards) reproduces the ageing and retirement at
+their window boundaries.

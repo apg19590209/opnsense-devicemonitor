@@ -2199,3 +2199,103 @@ accepted, and an interface whose address changes after selection (DHCP) is refus
 existing static-IPv4 rule at save time. The PHP and Python rules duplicate the same logic by
 necessity (two runtimes); both are pinned by their own assets, and a drift would surface as a
 save-time acceptance followed by a daemon refusal in the log.
+
+## 52. A stale `unavailable` verdict ages to `unknown`, and an unseen host loses its inventory
+
+### Decision
+
+`age_stale_service_state()` applies two independent windows. It runs on every
+scheduled discovery pass (`run_scheduled_service_discovery()`, hourly gate) and on
+demand through `scan_network.py --age-services [--dry-run]`:
+
+- an `unavailable` row whose `last_verified` is older than
+  `SERVICE_UNKNOWN_AFTER_DAYS` (7) is rewritten to `unknown`, and its
+  `miss_count` is cleared. It is neither known up nor known down, which is what
+  the evidence supports;
+- rows whose address belongs to a `devices` row whose `last_seen` is older than
+  `SERVICE_RETIRE_AFTER_DAYS` (30) are deleted, together with any held alert in
+  `service_alert_pending`. A host that has not been seen for a month has no
+  inventory worth keeping.
+
+Retirement is keyed on `devices.last_seen`, never on `devices.is_active`, and the
+whole retirement pass is refused when no device at all is fresh inside the window.
+An address with no `devices` row (gateway, firewall, untracked server) is never
+retired.
+
+### Reason
+
+`record_service_miss()` flips a row to `unavailable` on the second consecutive
+miss and nothing moved it back, so the run recorded 24 service rows whose hosts
+had not been seen since 2026-09-21 still presenting as down. That is a permanent
+verdict manufactured from one bad hour. `unknown` states exactly what is known,
+and deleting the inventory of a host that no longer answers keeps the Devices view
+honest instead of accumulating phantom endpoints.
+
+`is_active` is deliberately not consulted for retirement: it is hostwatch's
+opinion, and a stopped hostwatch would mark every host inactive (Decision 48's
+residual risk). `last_seen` is a timestamp the daemon writes, so a dead hostwatch
+looks exactly like a quiet network — which is why the pass also refuses outright
+when no host is fresh.
+
+Clearing `miss_count` on ageing keeps Decision 49 intact: the aged streak
+describes the period that was just discarded, so an endpoint that is still down
+must accumulate two fresh misses again instead of re-flipping to `unavailable`
+(and possibly mailing an outage) on the first new failure.
+
+### Effects and guards
+
+- Deliberate behaviour change: a service that is genuinely down for more than
+  7 days stops being reported as down. That is the intent — an unobserved
+  endpoint is not an observed outage. The ageing UPDATE moves `status` through
+  `trg_device_services_status_activity`, so a MAC-bearing row records one
+  history-only `SERVICE_CHANGED` event, an event type
+  `select_service_alert_events()` never selects for email.
+- Retirement is a `DELETE`, which does not fire the `AFTER UPDATE OF status`
+  trigger, so it leaves no history row. Held alerts for the retired endpoints are
+  removed in the same transaction, so `collect_expired_service_alert_holds()`
+  cannot release an outage for an endpoint that no longer exists.
+- The Devices view gained `unknown`: filter option, `label-default` badge with the
+  literal `Unknown`, and a header counter, so available + unavailable + stale +
+  unknown still equals the total. The filter and counter need the `Unknown` msgid,
+  now present in all eleven plugin catalogues (translations taken from the core
+  catalogues where one exists).
+- Dry run is the default review path: `--age-services --dry-run` reports the same
+  counts without writing, and `--dry-run` without `--age-services` is a parser
+  error rather than a silent normal scan.
+- `tests/test_service_ageing.py` (12 cases) pins the window boundaries exactly
+  (a row at 7 days stays `unavailable`, one second more ages), other statuses
+  untouched, the counter reset, fresh-host rows kept, no-`devices`-row rows kept,
+  the refusal when no host is fresh, the dry-run round trip, held-alert removal,
+  the activity-event shape, the scheduler wiring and the CLI JSON.
+- Release identity: `scan_network.py` row 34 -> `843c15f7…`,
+  `infrastructureservices.volt` -> `6034d980…`, `en_US` catalogue -> `709fb328…`,
+  `cs_CZ` catalogue -> `aee43039…`, manifest SHA256 -> `0914e9c9…`,
+  `install-unattended.sh:36` re-pinned. Row count 39, target count 60/61
+  unchanged.
+
+### Verified
+
+`python3 tests/test_service_ageing.py` -> `SERVICE_AGEING=PASS` (12 cases);
+`python3 tests/test_service_miss_hysteresis.py` -> `SERVICE_MISS_HYSTERESIS=PASS`;
+`python3 tests/test_language_acceptance.py --engine interpolate --views
+src/opnsense/mvc/app/views/OPNsense/DeviceMonitor --installed-po
+/tmp/dm-accept-stage/plugin --locale-dir /tmp/dm-accept-stage/locale` ->
+`LANGUAGE_ACCEPTANCE=PASS failures=0` against a catalogue tree staged with the
+installer's own merge helper (`MERGED` for all ten non-`en_US` locales);
+`python3 tests/test_translated_javascript.py` -> `TRANSLATED_JAVASCRIPT=PASS` for
+all eleven locales; `node tests/test_infrastructure_stale.js` PASS;
+`V211_RELEASE_MANIFEST=PASS`; `msgfmt --check --check-format` clean on all eleven
+`.po` files; `sh -n install-unattended.sh` clean.
+
+### Residual risk
+
+Ageing is wall-clock based and has no notion of "this outage is still being
+observed": an endpoint that stays down for longer than a week becomes `unknown`,
+so a long outage is no longer distinguishable from a host that went away. The
+retirement window is the only protection against deleting an idle segment, and it
+is 30 days by default. A host that returns after retirement is rediscovered by the
+next discovery run, but its previous service history is gone. Nothing in this
+change has been run against the testbed yet: the drift the language acceptance
+reports on the installed `infrastructureservices.volt` and the deployed catalogues
+is exactly the pre-deployment lag, and it clears with the next
+`install-unattended.sh` run.

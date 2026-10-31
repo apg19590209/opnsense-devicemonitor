@@ -5237,3 +5237,61 @@ rule audit, read-only findings and proposed text) and `.cline-reports/REPORT-202
 Next recommended step: push `feature/async-db-v2.11` and read the `ci.yml` run for `2747110` and
 `6c4887c`.
 
+
+## 31 October 2026 — O4: stale service state ages to `unknown` and unseen hosts are retired (Decision 52)
+
+**Recorded 31 October 2026.** The last item left open by the service-liveness work: `unavailable`
+was a permanent verdict, and 24 service rows from hosts last seen on 2026-09-21 still presented as
+down. `age_stale_service_state()` now applies two windows, on the same hourly gate as scheduled
+discovery and on demand through `--age-services [--dry-run]`.
+
+- `unavailable` older than 7 days (`SERVICE_UNKNOWN_AFTER_DAYS`) becomes `unknown`, and
+  `miss_count` is cleared so a still-down endpoint must earn the verdict again (Decision 49)
+  instead of re-flipping on one fresh sample.
+- Rows whose `devices.last_seen` is older than 30 days (`SERVICE_RETIRE_AFTER_DAYS`) are deleted
+  with their held alert. `is_active` is not consulted, and the pass is refused entirely when no
+  device at all is fresh, because that is what a stopped hostwatch looks like (Decision 48).
+- An address with no `devices` row (gateway, firewall, untracked server) is never retired.
+- The Devices view gained `unknown`: filter option, neutral badge, and a counter so the four
+  statuses still sum to the total. The `Unknown` msgid is now in all eleven plugin catalogues,
+  with translations taken from the core catalogues where one exists (`Neznámé`, `Unbekannt`,
+  `Desconocido`, `Inconnu`, `Sconosciuto`, `不明`, `Unknown`, `Desconhecido`, `Неизвестный`,
+  `未知`).
+
+Why this shape rather than a "retire" column: the operator chose deletion, so a retired endpoint
+leaves no state behind; the DELETE does not fire the `AFTER UPDATE OF status` trigger, so history
+gains nothing that would imply an observation. Ageing, which is an UPDATE, writes one history-only
+`SERVICE_CHANGED` event per MAC-bearing row, and that event type is never emailed
+(`select_service_alert_events()`).
+
+Verification, all local: `python3 tests/test_service_ageing.py` -> `SERVICE_AGEING=PASS`
+(12 cases: exact 7-day and 30-day boundaries, fresh-host rows kept, untracked endpoint kept,
+hostwatch-blackout refusal, dry-run round trip, held-alert removal, activity-event shape, the
+`run_scheduled_service_discovery()` wiring and the CLI JSON);
+`python3 tests/test_service_miss_hysteresis.py` and `tests/test_service_host_gate.py` unchanged and
+passing; `tests/test_language_acceptance.py --engine interpolate` ->
+`LANGUAGE_ACCEPTANCE=PASS failures=0` against a catalogue tree staged with the installer's own
+`release/merge-opnsense-catalog.sh` (all ten non-`en_US` locales merged) and the source views;
+`tests/test_translated_javascript.py` PASS for eleven locales;
+`node tests/test_infrastructure_stale.js` PASS; `V211_RELEASE_MANIFEST=PASS`; `msgfmt --check` clean
+on all eleven `.po` files; `sh -n install-unattended.sh` clean.
+
+Release identity: `scan_network.py` row 34 `bd4c0604…` -> `843c15f7…` (after the O4 edit chain),
+`infrastructureservices.volt` `487031c4…` -> `6034d980…`, `en_US` catalogue -> `709fb328…`,
+`cs_CZ` catalogue `5863dfeb…` -> `aee43039…`, manifest SHA256 `8ae03861…` -> `0914e9c9…`,
+`install-unattended.sh:36` re-pinned. Row count stays 39 and the installed target count stays
+60/61: tests are not shipped and the other nine catalogues are compiled by the installer's
+hardcoded locale list rather than hash-pinned.
+
+Not done, and not claimed: nothing has been deployed. The testbed still carries the previous
+`scan_network.py`, `infrastructureservices.volt` and catalogues, so running
+`tests/test_language_acceptance.py` in its default (installed-view) mode reports the pre-existing
+deployment drift — measured before this work and unchanged by it. The 24 rows are still in the live
+database; they retire on the first scheduled discovery after the install, which should be recorded
+with its `[SERVICES] Stale-state ageing: aged N row(s) to unknown, retired M row(s)` line before O4
+is called closed.
+
+Next step: `./install-unattended.sh --check`, install, then one live cycle and a controlled proof on
+a copy of the live database with back-dated `last_verified`/`last_seen` (the Task 14 pattern),
+leaving the live database byte-identical afterwards.
+

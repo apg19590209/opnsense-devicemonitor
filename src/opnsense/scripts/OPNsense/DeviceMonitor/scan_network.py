@@ -85,6 +85,17 @@ SERVICE_PROBE_WORKERS = {
 # reported as a one-hour outage; a successful probe resets the count.
 SERVICE_MISS_THRESHOLD = 2
 
+# Stale-state ageing (O4). `unavailable` is a verdict about the run that
+# observed it, and nothing aged it, so an endpoint that was down once stayed
+# down forever. A row whose last successful verification is older than this is
+# no longer evidence of an outage and ages to `unknown`.
+SERVICE_UNKNOWN_AFTER_DAYS = 7
+
+# A host that has not been seen for this long has no service inventory worth
+# keeping, so its rows are retired. Keyed on `devices.last_seen`, never on
+# `devices.is_active`: a stopped hostwatch would otherwise empty the inventory.
+SERVICE_RETIRE_AFTER_DAYS = 30
+
 # RFC1918 space. A gateway interface inside these ranges is an internal segment
 # using policy routing; outside them it is an uplink and must not be monitored.
 PRIVATE_IPV4_NETWORKS = (
@@ -2933,6 +2944,180 @@ def record_service_miss(
     ).rowcount
 
 
+def age_stale_service_state(conn=None, now=None, dry_run=False):
+    """Age `unavailable` verdicts to `unknown` and retire rows for unseen hosts.
+
+    O4 (DECISIONS.md 52). An `unavailable` row records what one discovery run
+    observed, but nothing aged it, so an endpoint that was down once stayed down
+    forever - including the 24 rows whose hosts had not been seen since
+    2026-09-21. Two independent windows apply:
+
+      * an `unavailable` row whose `last_verified` is older than
+        SERVICE_UNKNOWN_AFTER_DAYS becomes `unknown`: neither known up nor known
+        down is what the evidence supports;
+      * rows whose host address has not been seen in `devices.last_seen` for
+        SERVICE_RETIRE_AFTER_DAYS are deleted: the inventory of a host that no
+        longer exists is not an observation of anything.
+
+    Retirement keys on `last_seen`, never on `is_active`, because `is_active` is
+    hostwatch's opinion and a stopped hostwatch would make every host look
+    inactive (DECISIONS.md 48). The whole retirement pass is refused when no
+    device at all was seen inside the window - the signature of a broken
+    hostwatch rather than of a dead network. Rows whose address has no `devices`
+    record (gateway, firewall, untracked server) are never retired: missing
+    inventory is not evidence of absence, the rule
+    `service_endpoint_host_gate()` already applies to outage verdicts.
+
+    The ageing UPDATE also clears `miss_count`: the old streak describes the
+    period that was just aged away, so an endpoint that is still down has to
+    earn the verdict again instead of flipping back to `unavailable` on the
+    first fresh failure (Decision 49). It moves `status` through the activity
+    trigger, so a MAC-bearing row records one history-only `SERVICE_CHANGED`
+    event; that event type is never emailed (see
+    `select_service_alert_events()`). The DELETE does not fire that trigger, so
+    retirement leaves no history row behind, and the held-alert rows for a
+    retired endpoint are removed with it.
+
+    Returns ``(aged, retired)``. `dry_run` reports the same counts without
+    writing anything.
+    """
+    now = now or datetime.now()
+
+    if conn is None:
+        init_db()
+        owned = sqlite3.connect(DB_FILE)
+        try:
+            return age_stale_service_state(owned, now, dry_run)
+        finally:
+            owned.close()
+
+    unknown_cutoff = (
+        now - timedelta(days=SERVICE_UNKNOWN_AFTER_DAYS)
+    ).strftime('%Y-%m-%d %H:%M:%S')
+    retire_cutoff = (
+        now - timedelta(days=SERVICE_RETIRE_AFTER_DAYS)
+    ).strftime('%Y-%m-%d %H:%M:%S')
+
+    stale = '''
+        status = 'unavailable'
+          AND COALESCE(last_verified, '') <> ''
+          AND last_verified < ?
+    '''
+
+    unseen_host = '''
+        ip IN (
+            SELECT ip
+            FROM devices
+            WHERE COALESCE(ip, '') <> ''
+              AND COALESCE(last_seen, '') <> ''
+              AND last_seen < ?
+        )
+    '''
+
+    try:
+        if dry_run:
+            aged = conn.execute(
+                f'''
+                SELECT COUNT(*)
+                FROM device_services
+                WHERE {stale}
+                ''',
+                (unknown_cutoff,)
+            ).fetchone()[0]
+        else:
+            aged = conn.execute(
+                f'''
+                UPDATE device_services
+                SET status = 'unknown',
+                    miss_count = 0
+                WHERE {stale}
+                ''',
+                (unknown_cutoff,)
+            ).rowcount
+    except sqlite3.Error as e:
+        log(f"[SERVICES] Stale-state ageing failed: {e}")
+        return 0, 0
+
+    if not dry_run:
+        conn.commit()
+
+    try:
+        fresh_hosts = conn.execute(
+            '''
+            SELECT COUNT(*)
+            FROM devices
+            WHERE COALESCE(last_seen, '') >= ?
+            ''',
+            (retire_cutoff,)
+        ).fetchone()[0]
+    except sqlite3.Error as e:
+        log(f"[SERVICES] Retirement pre-check failed: {e}")
+        return aged, 0
+
+    if fresh_hosts == 0:
+        log(
+            "[SERVICES] Refusing retirement: no device seen within "
+            f"{SERVICE_RETIRE_AFTER_DAYS} days (hostwatch suspect)"
+        )
+        return aged, 0
+
+    try:
+        rows = conn.execute(
+            f'''
+            SELECT mac, ip, interface, service_type, port, protocol,
+                   detection_method
+            FROM device_services
+            WHERE {unseen_host}
+            ''',
+            (retire_cutoff,)
+        ).fetchall()
+    except sqlite3.Error as e:
+        log(f"[SERVICES] Retirement candidates failed: {e}")
+        return aged, 0
+
+    if not rows:
+        return aged, 0
+
+    if dry_run:
+        return aged, len(rows)
+
+    keys = [
+        service_alert_key({
+            'mac': mac,
+            'service_type': service_type,
+            'ip': ip,
+            'port': port,
+            'protocol': protocol,
+            'interface': interface,
+            'detection_method': detection_method,
+        })
+        for mac, ip, interface, service_type, port, protocol, detection_method
+        in rows
+    ]
+
+    try:
+        retired = conn.execute(
+            f'''
+            DELETE FROM device_services
+            WHERE {unseen_host}
+            ''',
+            (retire_cutoff,)
+        ).rowcount
+
+        if keys:
+            conn.executemany(
+                'DELETE FROM service_alert_pending WHERE service_key = ?',
+                [(key,) for key in keys]
+            )
+
+        conn.commit()
+    except sqlite3.Error as e:
+        log(f"[SERVICES] Retirement failed: {e}")
+        return aged, 0
+
+    return aged, retired
+
+
 def parse_carp_roles(ifconfig_text):
     """
     Map interface device names to their CARP role from `ifconfig` output.
@@ -5728,9 +5913,19 @@ def run_scheduled_service_discovery(interval_seconds=3600, networks=None):
 
         services = discover_infrastructure_services(networks)
 
+        # O4: age stale verdicts and retire the inventory of hosts that are no
+        # longer seen. Runs on the same hourly gate as discovery, so a row can
+        # never age without a discovery run having been attempted first.
+        aged, retired = age_stale_service_state()
+
         log(
             "[SERVICES] Scheduled discovery completed: "
             f"{len(services)} verified service(s)"
+        )
+
+        log(
+            "[SERVICES] Stale-state ageing: "
+            f"aged {aged} row(s) to unknown, retired {retired} row(s)"
         )
 
         return True
@@ -8793,6 +8988,18 @@ Examples:
     )
 
     parser.add_argument(
+        '--age-services',
+        action='store_true',
+        help='Age stale service state to unknown and retire rows for unseen hosts'
+    )
+
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='With --age-services: report the counts without writing'
+    )
+
+    parser.add_argument(
         '--list-targets',
         action='store_true',
         help='Print resolved monitored interfaces and exit (no scanning)'
@@ -8803,6 +9010,19 @@ Examples:
     global DEBUG_LOGGING
     if args.verbose:
         DEBUG_LOGGING = True
+    if args.dry_run and not args.age_services:
+        parser.error('--dry-run requires --age-services')
+    if args.age_services:
+        aged, retired = age_stale_service_state(dry_run=args.dry_run)
+
+        print(json.dumps({
+            'result': 'ok',
+            'dry_run': bool(args.dry_run),
+            'aged': aged,
+            'retired': retired
+        }))
+        return 0
+
     if args.discover_services:
         config = load_config()
         networks, error = resolve_monitored_networks(config)

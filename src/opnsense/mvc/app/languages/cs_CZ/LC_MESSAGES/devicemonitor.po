@@ -95,6 +95,10 @@ msgstr "IP adresa"
 msgid "Hostname"
 msgstr "Hostname"
 
+#: infrastructureservices.volt
+msgid "Unknown"
+msgstr "Neznámé"
+
 #: devices.volt - hlavička sloupce
 msgid "Vendor"
 msgstr "Výrobce"

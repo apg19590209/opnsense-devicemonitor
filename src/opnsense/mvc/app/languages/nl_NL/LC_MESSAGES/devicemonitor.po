@@ -96,6 +96,10 @@ msgstr "IP-adres"
 msgid "Hostname"
 msgstr "Hostnaam"
 
+#: infrastructureservices.volt
+msgid "Unknown"
+msgstr "Unknown"
+
 #: devices.volt - table column header
 msgid "Vendor"
 msgstr "Leverancier"
