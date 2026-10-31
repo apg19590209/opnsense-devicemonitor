@@ -79,6 +79,12 @@ class ConfigController extends ApiControllerBase
                         continue;
                     }
 
+                    // Never offer the uplink: the daemon refuses it too, and a
+                    // greyed-out entry is clearer than a save-time error.
+                    if ($this->isUplinkInterface($name, $ifData, $ipaddr)) {
+                        continue;
+                    }
+
                     $result[$name] = [
                         'name' => $name,
                         'description' => $descr !== '' ? $descr : strtoupper($name),
@@ -112,6 +118,42 @@ class ConfigController extends ApiControllerBase
         $loStart = ip2long('127.0.0.0');
         $loEnd = ip2long('127.255.255.255');
         return $ipLong >= $loStart && $ipLong <= $loEnd;
+    }
+
+    /**
+     * True when an interface is the WAN/uplink and must not be monitored.
+     *
+     * Mirrors resolve_monitored_networks() in scan_network.py: the assignment
+     * name "wan" is refused outright, and any interface carrying a gateway on a
+     * non-RFC1918 address is an uplink. A gateway on private space is an
+     * internal segment using policy routing and stays selectable.
+     */
+    private function isUplinkInterface($name, $ifData, $ipaddr)
+    {
+        if (strtolower((string)$name) === 'wan') {
+            return true;
+        }
+
+        $gateway = trim((string)($ifData->gateway ?? ''));
+
+        if ($gateway === '') {
+            return false;
+        }
+
+        $ipLong = ip2long($ipaddr);
+        if ($ipLong === false) {
+            return false;
+        }
+
+        foreach (['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'] as $cidr) {
+            [$network, $prefix] = explode('/', $cidr);
+            $range = $this->ipv4SubnetRange($network, (int)$prefix);
+            if ($range !== null && $ipLong >= $range[0] && $ipLong <= $range[1]) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function setAction()
@@ -359,6 +401,9 @@ class ConfigController extends ApiControllerBase
                 }
                 if ($this->isLoopbackIpv4($ipaddr)) {
                     return ['result' => 'failed', 'message' => 'Monitored interface "' . $name . '" uses a loopback address and cannot be monitored'];
+                }
+                if ($this->isUplinkInterface($name, $ifData, $ipaddr)) {
+                    return ['result' => 'failed', 'message' => 'Monitored interface "' . $name . '" is the WAN/uplink; Device Monitor monitors internal segments only'];
                 }
                 if (
                     $subnet === '' ||

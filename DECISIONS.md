@@ -2128,3 +2128,74 @@ the old master may still alert while the new master starts to. A node that is `M
 one vhid and `BACKUP` for another observes both segments; if both nodes are master for
 different segments, both alert, which is correct but means double notifications are possible
 by design. The visibility warning is a log line only, not a Status-page indicator.
+
+## 51. The WAN/uplink is never a monitored segment
+
+### Decision
+
+`resolve_monitored_networks()` refuses two interface shapes:
+
+- any interface whose assignment name is `wan`, whatever address it holds;
+- any interface carrying a `<gateway>` child whose IPv4 address is **outside** RFC1918
+  (`10/8`, `172.16/12`, `192.168/16`), which is what marks an uplink regardless of what the
+  assignment is called.
+
+A gateway on RFC1918 space is an internal segment using policy routing, so it stays selectable,
+and a public-addressed segment with no gateway (a DMZ) stays selectable too. The controller
+mirrors the same rule: `isUplinkInterface()` is consulted by `getmonitoredinterfacesAction()`
+so the picker does not offer the uplink, and by `setAction()` so a stale form post cannot save
+it.
+
+### Reason
+
+After the production HA reconfiguration `opt1` disappeared and the uplink became `wan`.
+Interface selection is by logical name, and the resolver accepted any *static* IPv4
+interface — a fixture with `wan / em0 / 203.0.113.10/24` was accepted and produced
+`203.0.113.0/24` as a monitored network (measured before the change). That would have pointed
+nmap and the protocol probes at the internet-facing segment. The name rule covers the case the
+operator reported; the gateway rule covers the next rename, which a name check cannot.
+
+The operator's constraint is that the WAN link cannot be brought down, so this must not be a
+network change: it is not. Nothing here configures, raises, bounces or reads a link beyond the
+XML configuration and the read-only interface list; the only effect is that an interface
+cannot be *selected for scanning*.
+
+### Effects and guards
+
+- Deliberate behaviour removal: a legitimate transit-segment deployment is no longer
+  selectable. That is the intent, and a failing selection names the interface and the gateway
+  so the operator can see why.
+- The daemon remains the authority (it fails closed and never falls back to the LAN); the
+  controller filters the picker and validates on save, so the GUI cannot construct a state the
+  daemon would refuse.
+- `PRIVATE_IPV4_NETWORKS` is an explicit RFC1918 tuple rather than
+  `ipaddress.is_private`, because Python reports `True` for documentation/TEST-NET ranges
+  (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`) — the first implementation used
+  `is_private` and accepted a public uplink, which the test caught.
+- `tests/test_monitored_interfaces.py`: `MONITORED_INTERNAL_ACCEPTED`, `MONITORED_WAN_REFUSED`,
+  `MONITORED_GATEWAY_REFUSED`, `MONITORED_INTERNAL_GATEWAY_ALLOWED`, `MONITORED_DMZ_ALLOWED`,
+  `MONITORED_MISSING_STILL_REFUSED`, `MONITORED_EMPTY_STILL_REFUSED`.
+  `tests/test_monitored_interfaces_php.php`: `MONITORED_PHP_UPLINK_RULE`,
+  `MONITORED_PHP_PICKER`, both driving the controller through a namespaced
+  `simplexml_load_file()` override so no host configuration is read.
+- Release identity: `scan_network.py` row 34 -> `bd4c0604…`, `ConfigController.php` row 4 ->
+  `21c1ed8f…`, manifest SHA256 -> `8ae03861…`, `install-unattended.sh:36` re-pinned. Row count
+  39, target count 60/61 unchanged.
+
+### Verified
+
+`tests/test_monitored_interfaces.py` -> `MONITORED_INTERFACES=PASS`;
+`php tests/test_monitored_interfaces_php.php` -> `MONITORED_INTERFACES_PHP=PASS`;
+`php -l` clean on the controller; full local Python suite and `V211_RELEASE_MANIFEST=PASS`.
+
+### Residual risk
+
+A NAT/CGNAT uplink on a private address remains selectable — it is not the internet at large,
+and selecting it is a deliberate act. A public-addressed DMZ that does carry a gateway is
+refused because it is indistinguishable from an uplink; the error names the interface, so the
+remedy is a settings change. The rule is name-and-gateway heuristics, not a routing-table
+analysis: an uplink with neither marker (renamed, private, no gateway element) would still be
+accepted, and an interface whose address changes after selection (DHCP) is refused by the
+existing static-IPv4 rule at save time. The PHP and Python rules duplicate the same logic by
+necessity (two runtimes); both are pinned by their own assets, and a drift would surface as a
+save-time acceptance followed by a daemon refusal in the log.

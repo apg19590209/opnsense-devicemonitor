@@ -85,6 +85,14 @@ SERVICE_PROBE_WORKERS = {
 # reported as a one-hour outage; a successful probe resets the count.
 SERVICE_MISS_THRESHOLD = 2
 
+# RFC1918 space. A gateway interface inside these ranges is an internal segment
+# using policy routing; outside them it is an uplink and must not be monitored.
+PRIVATE_IPV4_NETWORKS = (
+    ipaddress.ip_network('10.0.0.0/8'),
+    ipaddress.ip_network('172.16.0.0/12'),
+    ipaddress.ip_network('192.168.0.0/16'),
+)
+
 # ================================================================
 # SERVICE ALERT CONFIRMATION
 #
@@ -275,6 +283,29 @@ def resolve_monitored_networks(config):
             return None, (
                 f'Monitored interface "{name}" uses a loopback address '
                 f'({ip}); loopback interfaces cannot be monitored'
+            )
+
+        # Never point the scanner at the uplink. The assignment name is checked
+        # because it is what the operator reported (opt1 became wan), and the
+        # gateway marker is checked because it survives a rename. A gateway on a
+        # private address is an internal segment using policy routing, so it
+        # stays selectable; a public address behind a gateway is an uplink.
+        gateway = (node.findtext('gateway') or '').strip()
+
+        if name.lower() == 'wan':
+            return None, (
+                f'Monitored interface "{name}" is the WAN/uplink; '
+                'Device Monitor monitors internal segments only'
+            )
+
+        if gateway and not any(
+            address in network
+            for network in PRIVATE_IPV4_NETWORKS
+        ):
+            return None, (
+                f'Monitored interface "{name}" is an uplink '
+                f'(gateway "{gateway}" on public address {ip}); '
+                'Device Monitor monitors internal segments only'
             )
 
         if not subnet.isdigit():

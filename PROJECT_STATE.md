@@ -979,6 +979,49 @@ change (fails closed); re-select the internal interface that now carries the seg
 select `wan`, which Task 16 addresses.
 
 
+### Task 16 — HA safety: the WAN/uplink can no longer be monitored (Decision 51)
+
+**Recorded 31 October 2026.** Operator: production is an HA pair where `opt1` no longer exists and the
+uplink is now `wan`; the WAN link cannot be brought down, so any remedy had to stay inside Device
+Monitor's own settings.
+
+Verified exposure before the change: the resolver accepted any *static* IPv4 interface, and a fixture
+proved it — `wan / em0 / 203.0.113.10/24` was accepted and produced `203.0.113.0/24` as a monitored
+network. A DHCP/PPPoE WAN was already refused by the existing static-IPv4 rule, so the exposure existed
+only for a static uplink.
+
+Change set:
+
+- `resolve_monitored_networks()` refuses an interface named `wan`, and refuses any interface carrying a
+  `<gateway>` child whose address is outside RFC1918. A gateway on RFC1918 space (policy routing) and a
+  public segment with no gateway (DMZ) stay selectable.
+- `PRIVATE_IPV4_NETWORKS` is an explicit RFC1918 tuple: the first implementation used
+  `ipaddress.is_private`, which Python reports as `True` for TEST-NET/documentation ranges, so a public
+  uplink was still accepted — caught by the new test before commit.
+- `ConfigController::isUplinkInterface()` mirrors the rule; the picker (`getmonitoredinterfacesAction()`)
+  no longer offers the uplink and `setAction()` refuses to save it.
+
+New assets, written test-first: `tests/test_monitored_interfaces.py` reporting
+`MONITORED_INTERFACES=PASS` with seven checks (including `MONITORED_INTERNAL_GATEWAY_ALLOWED` and
+`MONITORED_DMZ_ALLOWED` as the "do not over-refuse" pins), and `tests/test_monitored_interfaces_php.php`
+reporting `MONITORED_INTERFACES_PHP=PASS` through a namespaced `simplexml_load_file()` override, so no
+host configuration is read. Both are wired into CI; `php -l` clean on the controller.
+
+Hash-chain bookkeeping: row 34 `scan_network.py` -> `bd4c0604…`, row 4 `ConfigController.php` ->
+`21c1ed8f…`, manifest SHA256 -> `8ae03861…`, `install-unattended.sh:36` re-pinned; row count 39 and
+target count 60/61 unchanged.
+
+**No link is touched.** The change reads `/conf/config.xml` and the read-only interface list; it
+configures, raises, bounces nothing, and cannot bring the WAN down. The installer still restarts only
+configd and the devicemonitor daemon.
+
+Operator action on production: in Device Monitor's Settings re-select an **internal** interface. If the
+box now has no internal IPv4 interface, the honest outcome is "not monitoring" — the resolver fails
+closed and says why; it will no longer fall back to the uplink.
+
+Full local Python suite: **29 of 29 pass**. Not deployed; deployment needs a separate authorisation.
+
+
 ## 27 September 2026 v2.10 install-guard pin restoration
 
 Description: restored the guarded v2.10 installer, which aborted with

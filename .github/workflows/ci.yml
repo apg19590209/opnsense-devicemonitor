@@ -90,6 +90,10 @@ jobs:
       - name: Validate CARP role gate (v2.11)
         run: python3 tests/test_carp_role_gate.py
 
+      # v2.11 HA safety: the WAN/uplink must never be selectable as a monitored segment.
+      - name: Validate monitored interface selection (v2.11)
+        run: python3 tests/test_monitored_interfaces.py
+
       - name: Lint PHP sources
         run: |
           set -eu
@@ -1025,3 +1029,4 @@ jobs:
           php tests/test_pihole_config.php
           php tests/test_unbound_config.php
           php tests/test_loopback_monitoring.php
+          php tests/test_monitored_interfaces_php.php
