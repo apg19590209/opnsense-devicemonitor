@@ -809,6 +809,7 @@ def _apply_db_schema():
         first_detected DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         last_verified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         miss_count INTEGER NOT NULL DEFAULT 0,
+        last_checked DATETIME DEFAULT NULL,
         UNIQUE(ip, service_type, port, protocol, detection_method, interface)
     )''')
 
@@ -822,6 +823,21 @@ def _apply_db_schema():
         c.execute(
             'ALTER TABLE device_services '
             'ADD COLUMN miss_count INTEGER NOT NULL DEFAULT 0'
+        )
+
+    # Last observation of any kind (success or miss) for existing databases.
+    # Ageing used `last_verified` alone, which only moves on success, so a row
+    # that is still being probed and failing looked abandoned and was aged to
+    # `unknown` again on every pass (Decision 54).
+    if 'last_checked' not in service_columns:
+        c.execute(
+            'ALTER TABLE device_services '
+            'ADD COLUMN last_checked DATETIME DEFAULT NULL'
+        )
+        c.execute(
+            'UPDATE device_services '
+            'SET last_checked = last_verified '
+            'WHERE last_checked IS NULL'
         )
 
     c.execute('''
@@ -2182,9 +2198,10 @@ def upsert_device_service(
             product,
             version,
             first_detected,
-            last_verified
+            last_verified,
+            last_checked
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(
             ip,
             service_type,
@@ -2200,6 +2217,7 @@ def upsert_device_service(
             product = excluded.product,
             version = excluded.version,
             last_verified = excluded.last_verified,
+            last_checked = excluded.last_checked,
             miss_count = 0
         ''',
         (
@@ -2214,6 +2232,7 @@ def upsert_device_service(
             confidence,
             product or '',
             version or '',
+            verified_at,
             verified_at,
             verified_at,
         )
@@ -2935,7 +2954,8 @@ def record_service_miss(
     ip,
     port=None,
     interface=None,
-    threshold=SERVICE_MISS_THRESHOLD
+    threshold=SERVICE_MISS_THRESHOLD,
+    checked_at=None
 ):
     """
     Record one failed observation of a service endpoint.
@@ -2944,6 +2964,10 @@ def record_service_miss(
     until then only `miss_count` moves, so one lost probe no longer writes an
     hour-long outage into the Devices view. A successful verification resets the
     counter in `upsert_device_service()`.
+
+    `last_checked` is stamped on every observation, success or miss, because it is
+    the only timestamp that says "this endpoint is still being watched". Ageing
+    keys on it (Decision 54); `last_verified` keeps its meaning of last known-good.
 
     Returns the number of rows whose counter was advanced.
     """
@@ -2977,10 +3001,20 @@ def record_service_miss(
     except (TypeError, ValueError):
         threshold = SERVICE_MISS_THRESHOLD
 
+    stamp = (
+        checked_at.strftime('%Y-%m-%d %H:%M:%S')
+        if hasattr(checked_at, 'strftime')
+        else str(checked_at or '').strip()
+    )
+
+    if not stamp:
+        stamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
     return conn.execute(
         f'''
         UPDATE device_services
         SET miss_count = COALESCE(miss_count, 0) + 1,
+            last_checked = ?,
             status = CASE
                          WHEN COALESCE(miss_count, 0) + 1 >= ?
                              THEN 'unavailable'
@@ -2989,7 +3023,7 @@ def record_service_miss(
         WHERE {where}
           AND status <> 'unavailable'
         ''',
-        [threshold] + params
+        [stamp, threshold] + params
     ).rowcount
 
 
@@ -3001,9 +3035,12 @@ def age_stale_service_state(conn=None, now=None, dry_run=False):
     forever - including the 24 rows whose hosts had not been seen since
     2026-09-21. Two independent windows apply:
 
-      * an `unavailable` row whose `last_verified` is older than
+      * an `unavailable` row whose last observation is older than
         SERVICE_UNKNOWN_AFTER_DAYS becomes `unknown`: neither known up nor known
-        down is what the evidence supports;
+        down is what the evidence supports. The observation timestamp is
+        `last_checked`, which both a success and a miss advance, so an endpoint
+        that is still being probed and failing is never aged; `last_verified`
+        keeps its meaning of last known-good (Decision 54);
       * rows whose host address has not been seen in `devices.last_seen` for
         SERVICE_RETIRE_AFTER_DAYS are deleted: the inventory of a host that no
         longer exists is not an observation of anything.
@@ -3049,8 +3086,8 @@ def age_stale_service_state(conn=None, now=None, dry_run=False):
 
     stale = '''
         status = 'unavailable'
-          AND COALESCE(last_verified, '') <> ''
-          AND last_verified < ?
+          AND COALESCE(last_checked, last_verified, '') <> ''
+          AND COALESCE(last_checked, last_verified) < ?
     '''
 
     unseen_host = '''

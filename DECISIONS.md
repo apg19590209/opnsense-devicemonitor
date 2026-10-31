@@ -2350,3 +2350,53 @@ list, `devices_seen_last_24h` and the host-active gate) will count a host as see
 service on it answers, which is the intent here but is a semantic widening worth remembering.
 A device that answers one probe and then disappears still looks present for the full
 retirement window, because the probe evidence is timestamped like any other sighting.
+
+## 54. Ageing keys on the last observation, not the last success
+
+### Decision
+
+`device_services` gains `last_checked DATETIME`. Both a successful verification
+(`upsert_device_service()`, which sets it to the verification time) and a failed
+observation (`record_service_miss()`, which sets it to the miss time) advance it, and
+`age_stale_service_state()` ages on `COALESCE(last_checked, last_verified)` instead of
+`last_verified`. Existing databases are migrated by `ALTER TABLE ... ADD COLUMN
+last_checked` followed by `UPDATE ... SET last_checked = last_verified WHERE last_checked
+IS NULL`.
+
+### Reason
+
+`last_verified` means last known-good and is never written by a miss, so a row that is
+being probed and failing keeps an old timestamp. After Decision 52 aged such a row to
+`unknown` (and cleared `miss_count`), two further failed probes flipped it back to
+`unavailable` with the same old timestamp, and the next hourly pass aged it again: an
+`unavailable`/`unknown` oscillation, each round writing a `SERVICE_UNAVAILABLE` activity
+event that the confirmation layer can email. Measured on the master before this change:
+40 `unknown` rows, 22 of them already back at `miss_count = 1` — one failed probe away
+from the first re-flip.
+
+Ageing asks "has anyone looked at this endpoint recently?". `last_verified` answers a
+different question ("when was it last known good?"), which the Devices view needs for its
+own `stale` rendering, so the two had to stop sharing one column.
+
+### Effects and guards
+
+- An endpoint that is still being probed never ages, however long its outage lasts; a row
+  only ages when discovery has genuinely stopped observing it (host gone, segment no
+  longer monitored).
+- `last_verified` keeps its meaning, so the view's `stale` calculation and the
+  "last known-good" column are unchanged.
+- The migration is additive and idempotent: `last_checked` is nullable, the backfill only
+  touches NULL rows, and both the fresh `CREATE TABLE` and the `ALTER TABLE` path leave the
+  same schema.
+- `tests/test_service_ageing.py` covers it with `AGE_RECENT_PROBE_NOT_AGED`,
+  `AGE_MISS_ADVANCES_LAST_CHECKED` (age, two misses, re-flip, then no further ageing) and
+  `AGE_LAST_CHECKED_MIGRATION` (legacy table without the column, migrated and backfilled).
+
+### Residual risk
+
+A row whose endpoint is still probed but which discovery no longer *reaches* (for example a
+service on a host that responds to ping but not to the probe port) keeps a fresh
+`last_checked` only while the probe runs; when discovery stops probing it, `last_checked`
+freezes and the row ages again, which is the intended meaning but means "unknown" can
+appear weeks after the last real observation. `last_checked` also has two writers, so it
+must not be read as a verification time.

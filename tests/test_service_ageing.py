@@ -625,9 +625,152 @@ def main():
     test_verified_service_refreshes_device_last_seen()
     test_authoritative_service_does_not_refresh_device()
     test_refresh_never_invents_or_rewinds_device()
+    test_recent_probe_prevents_ageing()
+    test_miss_stamps_last_checked_and_prevents_reflip_cycle()
+    test_init_db_adds_and_backfills_last_checked()
 
     print("SERVICE_AGEING=PASS")
 
 
+def read_checked(module, ip, port=22):
+    with closing(sqlite3.connect(module.DB_FILE)) as conn:
+        return conn.execute(
+            "SELECT last_checked FROM device_services WHERE ip = ? AND port = ?",
+            (ip, port),
+        ).fetchone()[0]
+
+
+def test_recent_probe_prevents_ageing():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, FRESH_MAC, FRESH_IP, stamp(timedelta(hours=-1)))
+            # Last success long ago, but the endpoint is still being observed.
+            add_service(conn, FRESH_MAC, FRESH_IP, "unavailable",
+                        stamp(-timedelta(days=30)))
+            conn.execute(
+                "UPDATE device_services SET last_checked = ? WHERE ip = ?",
+                (stamp(timedelta(hours=-1)), FRESH_IP),
+            )
+            conn.commit()
+
+        aged, retired = module.age_stale_service_state(now=NOW)
+
+        assert (aged, retired) == (0, 0), (aged, retired)
+        assert read_row(module, FRESH_IP)[0] == "unavailable"
+
+    print("AGE_RECENT_PROBE_NOT_AGED=PASS")
+
+
+def test_miss_stamps_last_checked_and_prevents_reflip_cycle():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, FRESH_MAC, FRESH_IP, stamp(timedelta(hours=-1)))
+            add_service(conn, FRESH_MAC, FRESH_IP, "unavailable",
+                        stamp(-timedelta(days=30)))
+            conn.execute(
+                "UPDATE device_services SET last_checked = ? WHERE ip = ?",
+                (stamp(-timedelta(days=30)), FRESH_IP),
+            )
+            conn.commit()
+
+        # Abandoned row: aged once.
+        assert module.age_stale_service_state(now=NOW) == (1, 0)
+        assert read_row(module, FRESH_IP)[0] == "unknown"
+
+        # The endpoint is probed again and fails: counter and time both move.
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            module.record_service_miss(
+                conn, "SSH", "ssh_banner", FRESH_IP, 22, "VLAN60",
+                checked_at=stamp(timedelta(minutes=-50)),
+            )
+            conn.commit()
+
+        assert read_checked(module, FRESH_IP) == stamp(timedelta(minutes=-50))
+        assert read_row(module, FRESH_IP) == ("unknown", 1)
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            module.record_service_miss(
+                conn, "SSH", "ssh_banner", FRESH_IP, 22, "VLAN60",
+                checked_at=stamp(timedelta(minutes=-20)),
+            )
+            conn.commit()
+
+        assert read_row(module, FRESH_IP) == ("unavailable", 2)
+
+        # The next ageing pass must not touch a row observed 20 minutes ago,
+        # even though its last success is a month old.
+        assert module.age_stale_service_state(now=NOW) == (0, 0)
+        assert read_row(module, FRESH_IP)[0] == "unavailable"
+
+    print("AGE_MISS_ADVANCES_LAST_CHECKED=PASS")
+
+
+def test_init_db_adds_and_backfills_last_checked():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+
+        # A pre-Decision-54 database: device_services without last_checked.
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            conn.execute(
+                """
+                CREATE TABLE device_services (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    mac TEXT,
+                    ip TEXT NOT NULL,
+                    interface TEXT NOT NULL DEFAULT '',
+                    service_type TEXT NOT NULL,
+                    port INTEGER NOT NULL,
+                    protocol TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'available',
+                    detection_method TEXT NOT NULL,
+                    confidence TEXT NOT NULL,
+                    product TEXT,
+                    version TEXT,
+                    first_detected DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    last_verified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    miss_count INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE(ip, service_type, port, protocol,
+                           detection_method, interface)
+                )
+                """
+            )
+            conn.execute(
+                "INSERT INTO device_services (mac, ip, interface, service_type, "
+                "port, protocol, status, detection_method, confidence, "
+                "first_detected, last_verified) "
+                "VALUES (?, ?, 'VLAN60', 'SSH', 22, 'tcp', 'unavailable', "
+                "'ssh_banner', 'verified', ?, ?)",
+                (FRESH_MAC, FRESH_IP, stamp(-timedelta(days=9)),
+                 stamp(-timedelta(days=9))),
+            )
+            conn.commit()
+
+        module.init_db()
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            columns = {
+                row[1]
+                for row in conn.execute("PRAGMA table_info(device_services)")
+            }
+
+        assert "last_checked" in columns, columns
+        assert read_checked(module, FRESH_IP) == stamp(-timedelta(days=9))
+
+        # Backfilled from last_verified, so the old row still ages.
+        assert module.age_stale_service_state(now=NOW) == (1, 0)
+
+    print("AGE_LAST_CHECKED_MIGRATION=PASS")
 if __name__ == "__main__":
     main()
