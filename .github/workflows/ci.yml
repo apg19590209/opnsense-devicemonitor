@@ -75,6 +75,11 @@ jobs:
       - name: Validate service alert confirmation (v2.11)
         run: python3 tests/test_service_alert_confirmation.py
 
+      # v2.11 service-liveness noise fix (O3a): an inactive host's services must keep their status,
+      # while an active host and an untracked endpoint still flip.
+      - name: Validate service host gate (v2.11)
+        run: python3 tests/test_service_host_gate.py
+
       - name: Lint PHP sources
         run: |
           set -eu

@@ -783,6 +783,46 @@ testbed but not on a runner. Fixed in `e940eb2` by adopting the `builtins.open` 
 local `PASS` alone is not deployment evidence.
 
 
+### Task 11 — Service-liveness noise: host-active gate (O3a)
+
+**Recorded 31 October 2026.** Follow-up to Tasks 8–10. The first deployed cycle proved the
+dominant noise source was not probe impatience: **all 16 `SERVICE_UNAVAILABLE` events came from hosts
+with `devices.is_active = 0` and `last_seen = 2026-09-21`** (`192.168.20.101`, `.103`, `.111`, `.177`),
+with only 1 of 26 devices active. SSH/NTP/Web/phase-3 build probe sets from `device_services` rows
+without consulting host liveness, so a dead host's services were re-probed hourly, failed, and were
+written `unavailable`; when the host next answered they flipped back — the reported offline/online pair.
+
+Change set:
+
+- New `service_endpoint_host_gate(conn)` returning a predicate: an endpoint whose device record says
+  `is_active = 0` is not written `unavailable`; an endpoint on an active device flips as before; an
+  endpoint with **no** device record (gateway, untracked server, the firewall itself) still flips, so the
+  gate fails open rather than silencing genuine infrastructure outages.
+- All seven negative-verdict sites consult it: DNS, DHCP, NTP, SSH, Web/Admin, WireGuard/VPN and the
+  phase-3 protocol verifiers. One `SELECT ip, is_active FROM devices` per discovery function, reused
+  across the marking loop; an address mapped to several device records counts as active if any is.
+
+New asset `tests/test_service_host_gate.py` reporting `SERVICE_HOST_GATE=PASS` with
+`HOST_GATE_HELPER`, `HOST_GATE_INACTIVE_UNTOUCHED`, `HOST_GATE_ACTIVE_FLIPS`,
+`HOST_GATE_UNTRACKED_FAILS_OPEN` — the last two are the regression pin proving detection was not
+weakened. Written test-first; the first run failed with `AttributeError: module has no attribute
+'service_endpoint_host_gate'` as intended. Wired into CI.
+
+Hash-chain bookkeeping: row 34 `108f6524…` -> `17b3e944…`, manifest SHA256 `84a530a2…` -> `ed96e6fc…`,
+`install-unattended.sh:36` repinned; row count 39 and target count 60/61 unchanged.
+
+Verification: full local suite **26 of 26 pass**, including `tests/test_phase3_infrastructure.py`,
+`tests/test_port_discovery.py` and all three alert assets. The previously failing
+`tests/test_language_acceptance.py` now reports `LANGUAGE_ACCEPTANCE=PASS failures=0`: the Task 10
+deployment updated the installed `devices.volt`/`settings.volt` to the v2.11 tree, which removes the
+deployment drift that had failed since before this work began.
+
+Not yet deployed — the gate is committed and pushed only. The next live cycle after a deployment of
+`17b3e944…` should show **zero** new `SERVICE_UNAVAILABLE` events for the four inactive hosts, which is
+the acceptance check for this task. Decision recorded as `DECISIONS.md` 48; O3b (two-miss hysteresis) and
+O4 (age stale rows to `unknown`) remain open.
+
+
 ## 27 September 2026 v2.10 install-guard pin restoration
 
 Description: restored the guarded v2.10 installer, which aborted with

@@ -2498,10 +2498,15 @@ def discover_dns_servers(networks, timeout=SERVICE_PROBE_TIMEOUTS['dns']):
             # dns_query inventory entries that did not answer are no longer
             # considered currently available. Preserve last_verified so the
             # UI can still show when the endpoint was last known-good.
+            host_gate = service_endpoint_host_gate(conn)
+
             for candidate in candidates:
                 candidate_ip = candidate['ip']
 
                 if candidate_ip in verified_ips:
+                    continue
+
+                if not host_gate(candidate_ip):
                     continue
 
                 changed = conn.execute(
@@ -2714,10 +2719,15 @@ def discover_dhcp_servers(networks):
                 (interface,)
             ).fetchall()
 
+            host_gate = service_endpoint_host_gate(conn)
+
             for row in known_rows:
                 known_ip = str(row[0] or '').strip()
 
                 if not known_ip or known_ip in verified_ips:
+                    continue
+
+                if not host_gate(known_ip):
                     continue
 
                 changed = conn.execute(
@@ -2756,6 +2766,54 @@ def _valid_service_probe_ipv4(ip):
         and not address.is_loopback
         and not address.is_multicast
     )
+
+
+def service_endpoint_host_gate(conn):
+    """
+    Return a predicate for whether an endpoint's outage verdict is trustworthy.
+
+    A service can only be observed to have gone away while its host is still
+    being seen. An inactive host is still probed from `device_services`
+    inventory, so without this gate its services are written `unavailable` every
+    run and then "recover" when the host next answers - the offline/online pair
+    the operator reported.
+
+    An endpoint with no device record at all - a gateway, an untracked server,
+    the firewall itself - is not gated: missing inventory is not evidence of
+    absence, so the negative verdict is still allowed.
+    """
+    try:
+        rows = conn.execute(
+            '''
+            SELECT ip, is_active
+            FROM devices
+            WHERE ip IS NOT NULL
+              AND TRIM(ip) <> ''
+            '''
+        ).fetchall()
+    except sqlite3.Error:
+        return lambda ip: True
+
+    active = {}
+
+    for ip, is_active in rows:
+        key = str(ip or '').strip()
+
+        if not key:
+            continue
+
+        # Any record claiming the address is active keeps it observable.
+        active[key] = active.get(key, False) or int(is_active or 0) == 1
+
+    def host_gate(ip):
+        key = str(ip or '').strip()
+
+        if key not in active:
+            return True
+
+        return active[key]
+
+    return host_gate
 
 
 def _service_probe_candidates(conn, networks, limit=128):
@@ -3044,10 +3102,12 @@ def discover_ntp_servers(networks):
 
         tested = set(targets)
 
+        host_gate = service_endpoint_host_gate(conn)
+
         for row in previous:
             ip = (row[0] or '').strip()
 
-            if ip in tested and ip not in verified:
+            if ip in tested and ip not in verified and host_gate(ip):
                 conn.execute(
                     '''
                     UPDATE device_services
@@ -3319,13 +3379,15 @@ def discover_ssh_servers(networks):
 
         tested = set(target_list)
 
+        host_gate = service_endpoint_host_gate(conn)
+
         for ip, port, mac, interface in previous:
             try:
                 key = ((ip or '').strip(), int(port))
             except (TypeError, ValueError):
                 continue
 
-            if key in tested and key not in verified:
+            if key in tested and key not in verified and host_gate(key[0]):
                 conn.execute(
                     '''
                     UPDATE device_services
@@ -3666,6 +3728,8 @@ def discover_web_admin_services(networks):
             for ip, port, scheme in target_list
         }
 
+        host_gate = service_endpoint_host_gate(conn)
+
         for ip, port, method, mac, interface in previous:
             try:
                 key = (
@@ -3676,7 +3740,7 @@ def discover_web_admin_services(networks):
             except (TypeError, ValueError):
                 continue
 
-            if key in tested and key not in verified:
+            if key in tested and key not in verified and host_gate(key[0]):
                 conn.execute(
                     '''
                     UPDATE device_services
@@ -4483,6 +4547,8 @@ def _discover_local_wireguard(conn, candidates, networks):
         (method,)
     ).fetchall()
 
+    host_gate = service_endpoint_host_gate(conn)
+
     for ip, port, wg_interface in previous:
         try:
             key = (
@@ -4493,7 +4559,7 @@ def _discover_local_wireguard(conn, candidates, networks):
         except (TypeError, ValueError):
             continue
 
-        if key not in current:
+        if key not in current and host_gate(key[0]):
             conn.execute(
                 '''
                 UPDATE device_services
@@ -5223,6 +5289,8 @@ def discover_phase3_services(networks):
 
         tested = set(target_list)
 
+        host_gate = service_endpoint_host_gate(conn)
+
         for (
             service_type,
             ip,
@@ -5241,7 +5309,7 @@ def discover_phase3_services(networks):
             except (TypeError, ValueError):
                 continue
 
-            if key in tested and key not in verified:
+            if key in tested and key not in verified and host_gate(key[1]):
                 conn.execute(
                     '''
                     UPDATE device_services

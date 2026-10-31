@@ -1923,6 +1923,75 @@ can hide a genuine repeat outage that begins within six hours of a previous conf
 for the same service; the outage still appears in device activity history. A hold only
 ages out because `process_service_alerts()` runs on every full scan, so a stopped daemon
 delays both the outage email and the recovery email. The underlying state machine still
-flips on one negative sample (O3: hysteresis plus a host-active gate), so the Devices view
-can still briefly show a service as unavailable after a flap; only the notification is
-suppressed.
+flips on one negative sample (O3a's host gate narrows this to active hosts, but a live host's
+single failed probe still flips), so the Devices view can still briefly show a service as
+unavailable after a flap; only the notification is suppressed by this decision.
+
+
+## 48. A service may only be called unavailable while its host is still being seen
+
+### Decision
+
+`service_endpoint_host_gate(conn)` returns a predicate that every
+`SET status = 'unavailable'` path must consult before writing an outage:
+
+- an endpoint whose `devices` record says `is_active = 0` is **not** written `unavailable`;
+  its existing status is left untouched, so no activity event, no alert and no subsequent
+  "recovered" alert can be produced from it;
+- an endpoint on an active device still flips exactly as before;
+- an endpoint with **no** device record at all — a gateway, a server hostwatch does not
+  track, the firewall itself — still flips. The gate fails open, because missing inventory
+  is not evidence of absence and a genuinely dead infrastructure server must still page.
+
+All seven sites consult it: DNS (`dns_query`), DHCP (`dhcp_offer`), NTP (`ntp_query`), SSH
+(`ssh_banner`), Web/Admin (`http_response`/`https_response`), WireGuard (`VPN`) and the
+phase-3 protocol verifiers.
+
+### Reason
+
+`DECISIONS.md` 46 and 47 fixed probe impatience and unconfirmed alerting, but live
+measurement on the deployed testbed (31 October 2026, first cycle after deployment) showed
+the dominant cause was none of those: **all 16 `SERVICE_UNAVAILABLE` events** in that cycle
+belonged to hosts with `devices.is_active = 0` and `last_seen = 2026-09-21` — six-week-stale
+inventory, with only 1 of 26 devices active. SSH/NTP/Web/phase-3 build their probe sets from
+`device_services` rows without consulting host liveness, so a dead host's services were
+re-probed hourly, failed, and were written `unavailable`; when the host next answered they
+flipped back. That pair *is* the operator's reported "offline then back online" noise, and no
+amount of probe patience removes it: the host really is not answering.
+
+### Effects and guards
+
+- Scope: the negative verdict only. Verification, discovery, `last_verified`, the alert
+  layer and the Devices UI are untouched; a service that comes back is still recorded
+  normally.
+- One query per discovery function (`SELECT ip, is_active FROM devices`), built once and
+  reused across the marking loop, so the cost is constant rather than per endpoint.
+- Addresses mapped to more than one device record are treated as active if **any** record is
+  active.
+- `tests/test_service_host_gate.py` pins the semantics and drives `discover_ssh_servers()`
+  end to end: `HOST_GATE_HELPER`, `HOST_GATE_INACTIVE_UNTOUCHED`, `HOST_GATE_ACTIVE_FLIPS`,
+  `HOST_GATE_UNTRACKED_FAILS_OPEN`. It runs as a CI step.
+- Release identity: `release/v2.11-runtime.manifest` row 34 moved to
+  `17b3e9446706b29def2a6402b0be1796357fa5bedc3a3ce965e511d9532e8a72`, the manifest SHA256 to
+  `ed96e6fcc64e93fa1ee9b4f29eb6d9bc641f1b4ad5b990b4d16a79c5e3259118`, and
+  `install-unattended.sh:36` was re-pinned. Row count 39, target count 60/61 unchanged.
+
+### Verified
+
+`tests/test_service_host_gate.py` -> `SERVICE_HOST_GATE=PASS`; regression set
+`test_phase3_infrastructure`, `test_port_discovery`, `test_service_alert_processing`,
+`test_service_alert_confirmation`, `test_probe_resilience`, `test_device_activity_events` all
+still pass, so the existing lifecycle expectations are unaffected (their fixtures have no
+`devices` rows, or active ones, and the gate fails open).
+
+### Residual risk
+
+A host that is genuinely powered off will now keep showing its last known service state
+indefinitely instead of being marked unavailable. That is deliberate — an unobservable host
+is not an observed outage — but it means the Devices view can show a stale "available" for
+services on a host that has been off for weeks. The remedy is O4 (age `unavailable`/stale
+rows to `unknown`, and retire service rows whose host has not been seen for N days), which
+remains open. The gate also depends on `devices.is_active` being maintained correctly: if
+hostwatch stops updating, every host looks inactive and outages stop being reported entirely
+— a fail-safe direction for noise, but a blind spot for detection that O4's ageing and an
+operator-facing "devices not seen" signal should cover.
