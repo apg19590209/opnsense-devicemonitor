@@ -444,7 +444,7 @@ confirmation only.
   dropped on 28 September 2026 — an inherited `get_locale_list()` limitation, not a result of this
   work; see the `DM-BL-008a` entry above.
 
-## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `RESOLVED` (deployed 31 October 2026)
+## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `OPEN` (deployed; presence refresh live, two residual seams recorded)
 
 **Identifier note:** `PROJECT_STATE.md` and `DECISIONS.md` 52 use `O4` for this item. The `O4`
 above (sidecar text-domain view migration, `CLOSED` 28 September 2026) is a different workstream;
@@ -515,6 +515,34 @@ inserting a device). Bundle `6a66a068…` installed on both nodes
 now persist and are `available`, `kept_rows_on_refreshed_hosts=5`, `stale_devices` 13 -> 12 and
 `--age-services --dry-run` reports `retired 0` (against 21 then 12 by churn before the fix). The
 backup never runs discovery, so it neither refreshes nor churns.
+
+**Two residual seams found immediately afterwards (measured 19:58:16 on `.253`), which is why this
+item is still `OPEN`:**
+
+1. *Historical-timestamp inserts still churn.* The dry run read
+   `{"aged": 22, "dry_run": true, "retired": 3}` — 3 rows remained on the stale host
+   `192.168.20.116` (RDP 3389, SMB 139/445, `nmap_service`, `last_verified 2026-09-21`). Because
+   they are re-inserted with a **historical** verification timestamp older than the device's own
+   `last_seen` (`2026-10-01`), the forward-only refresh cannot advance it, so the same three rows
+   are re-imported and retired each discovery cycle. The refresh is working; the insert time is
+   the problem. Candidate fix: stamp an inventory insert with the scan's own time, or exclude
+   rows whose verification predates the retirement window at the insert path.
+2. *Ageing can re-flip a still-probed endpoint.* `record_service_miss()` never writes
+   `last_verified` (it means last known-good), so a row that is being actively probed and failing
+   keeps an old timestamp. After ageing it has `status='unknown'`, `miss_count=0`, an old
+   `last_verified`; two further failed probes flip it back to `unavailable` with the same old
+   timestamp, and the next hourly ageing pass ages it again. That is an `unavailable`/`unknown`
+   oscillation with a `SERVICE_UNAVAILABLE` event each time, which the confirmation layer may
+   email. This is code-evident from the deployed predicates; no re-flip had been observed by
+   19:58 (`events_since_1943=0`), so it must be confirmed on the next due cycle before a fix is
+   chosen. Candidate fix: store a `last_checked` timestamp on `device_services` (updated by both a
+   successful verification and a miss) and age on that, so an endpoint that is being observed is
+   never aged.
+
+The 22 rows the dry run reports as ageable are genuine: 13 `http_response`, 3 `ntp_query`,
+2 `dns_query`, 1 `https_response`, 1 `rdp_negotiation`, 1 `smb_protocols`, 1 `ssh_banner`, all
+`unavailable` with `last_verified` between 2026-10-05 and 2026-10-21 (exactly the stale verdicts
+O4 exists to retire).
 
 **Not caused by this item, recorded because it was observed during the deployment:** both nodes log
 chronic `database is locked` scan failures (14,760 on `.252` since 06-10-2026, 16,130 on `.253`

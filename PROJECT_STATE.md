@@ -5415,6 +5415,15 @@ Live effect on the master, measured after the next scans:
 `tests/test_service_ageing.py` is now 15 cases; full local Python suite 30/30 PASS,
 `V211_RELEASE_MANIFEST=PASS` after the re-pin (manifest `41fd7a21…`), `sh -n` clean.
 
+Two residual seams were measured on the same node two minutes later (`19:58:16`) and are recorded
+in `PRODUCT_BACKLOG.md`: nmap inventory re-inserts rows for `192.168.20.116` with a historical
+`last_verified` (`2026-09-21`) older than that device's own `last_seen`, so the forward-only refresh
+cannot apply and the rows are still retired each cycle (dry run `retired 3`); and the ageing
+predicate can re-flip an endpoint that is still being probed, because a miss never updates
+`last_verified` — code-evident, not yet observed (`events_since_1943=0`), to be confirmed on the
+next due cycle. The 22 ageable rows are genuine stale verdicts (`last_verified` between 2026-10-05
+and 2026-10-21). O4-ageing therefore stays open with the presence refresh deployed.
+
 Deployment-side finding: the automatic ageing path sits behind `service_observation_allowed()`, so
 on this CARP pair only the **master** ages state during a scheduled scan; the backup logs
 `skipping service discovery and service alerts on this node`. The backup's ageing above was an
