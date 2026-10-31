@@ -692,8 +692,10 @@ Change set:
   successful send; a failed delivery leaves `notified = 0` so the outage is retried next cycle.
 - `process_service_alerts()` fetches events, adds expired holds, re-applies the per-device and global
   preference gates to both, runs the confirmation stage, sends, then commits the outcome and the cursor.
-  Held events are passed to `plan_service_alert_cursor_advance()` alongside the deliverable ones, so the
-  activity cursor stops at an undelivered outage and the matching recovery is still read.
+  The hold lives in `service_alert_pending`, not in the cursor, so an outstanding outage cannot delay an
+  alert for another service. (The first cut *did* hold the cursor; a replay against the real testbed
+  database showed a per-device `service_recovered = off` preference pinning activity event 47 and
+  stalling everything behind it, so that was removed before commit.)
 
 Net effect on the recorded testbed signature: a one-interval down/up pair now produces **zero**
 emails instead of two; a real outage produces one outage email after the window and one recovery
@@ -701,13 +703,18 @@ email, with no repeats for six hours.
 
 New asset `tests/test_service_alert_confirmation.py` reporting `SERVICE_ALERT_CONFIRMATION=PASS` with
 `ALERT_FLAP_SILENT`, `ALERT_OUTAGE_CONFIRMED_ONCE`, `ALERT_QUIET_WINDOW`,
-`ALERT_RECOVERY_AFTER_OUTAGE`, `ALERT_UNREPORTED_RECOVERY_DROPPED` and `ALERT_CONFIRMATION_RETRY`,
-wired into CI after the probe-resilience step. All seven pre-existing checks in
-`tests/test_service_alert_processing.py` pass **unmodified**, which is the compatibility evidence for
-the cursor and retry contracts.
+`ALERT_RECOVERY_AFTER_OUTAGE`, `ALERT_UNREPORTED_RECOVERY_DROPPED`, `ALERT_CONFIRMATION_RETRY` and
+`ALERT_HELD_OUTAGE_NOT_BLOCKING`, wired into CI after the probe-resilience step. In
+`tests/test_service_alert_processing.py` one cursor expectation was updated deliberately — the activity
+cursor after a failed delivery is now `ids["recovered"]` instead of `ids["changed"]`, because a held
+outage no longer stops that cursor; the other six checks are unmodified.
 
-Hash-chain bookkeeping: `scan_network.py` row 34 `2afb485b…` -> `1f68c41e…`, manifest SHA256
-`73f5cd2b…` -> `d89002b1…` (still 39 rows), `install-unattended.sh:36` repinned; target count still
+Real-data replay (non-destructive): a copy of `devices.db` with the cursors reset produced **0 emails**
+for all 36 recorded service events (26 down, 10 up) across four cycles, ending at the real cursor maxima
+`(736, 48)`; the source database hash was unchanged afterwards.
+
+Hash-chain bookkeeping: `scan_network.py` row 34 `2afb485b…` -> `108f6524…`, manifest SHA256
+`73f5cd2b…` -> `84a530a2…` (still 39 rows), `install-unattended.sh:36` repinned; target count still
 60/61. `release/v2.10-runtime.manifest` remains byte-unchanged.
 
 Verification: full local suite 24 of 25 files pass; the single failure is the pre-existing

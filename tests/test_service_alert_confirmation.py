@@ -204,7 +204,9 @@ def test_flap_is_silent():
         holds = read_holds(module)
         assert len(holds) == 1, holds
         assert holds[0][1] == 0, holds
-        assert read_cursor(module)[1] == down_id - 1, read_cursor(module)
+        # The hold lives in service_alert_pending, so the cursor has already
+        # consumed the outage event; the recovery is matched by service key.
+        assert read_cursor(module)[1] == down_id, read_cursor(module)
 
         up_id = add_activity(
             module,
@@ -390,12 +392,65 @@ def test_failed_delivery_keeps_hold_for_retry():
     print("ALERT_CONFIRMATION_RETRY=PASS")
 
 
+def test_held_outage_does_not_block_later_events():
+    """An outstanding hold must not delay an unrelated service's alert."""
+    module = load_module()
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        seed(module)
+        sends = stub_delivery(module)
+
+        add_activity(
+            module,
+            "SERVICE_UNAVAILABLE",
+            "available",
+            "unavailable",
+            "2026-10-31 01:00:00",
+        )
+        assert module.process_service_alerts(
+            alert_config(),
+            networks_fixture(),
+        ) is True
+        assert sends == [], sends
+        assert len(read_holds(module)) == 1, read_holds(module)
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO device_services (
+                    mac, ip, interface, service_type, port, protocol,
+                    status, detection_method, confidence,
+                    product, version, first_detected, last_verified
+                )
+                VALUES ('aa:bb:cc:dd:ee:11', '192.168.50.21', 'LAN', 'SSH', 22,
+                        'tcp', 'available', 'nmap_service', 'verified',
+                        'OpenSSH', '9.9', '2026-10-31 02:00:00',
+                        '2026-10-31 02:00:00')
+                """
+            )
+            conn.commit()
+            new_id = cursor.lastrowid
+
+        assert module.process_service_alerts(
+            alert_config(service_email_new=True),
+            networks_fixture(),
+        ) is True
+
+        delivered = [event for batch in sends for event in batch]
+        assert [event["record_id"] for event in delivered] == [new_id], delivered
+        assert delivered[0]["ip"] == "192.168.50.21", delivered
+
+    print("ALERT_HELD_OUTAGE_NOT_BLOCKING=PASS")
+
+
 def main():
     test_flap_is_silent()
     test_sustained_outage_is_delivered_once()
     test_recovery_after_delivery_is_emailed()
     test_unheld_recovery_is_dropped()
     test_failed_delivery_keeps_hold_for_retry()
+    test_held_outage_does_not_block_later_events()
 
     print("SERVICE_ALERT_CONFIRMATION=PASS")
 

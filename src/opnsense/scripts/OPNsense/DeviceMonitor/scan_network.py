@@ -5718,12 +5718,13 @@ def apply_service_alert_confirmation(conn, selected, now=None):
     """
     Hold a first-time outage alert until a later observation confirms it.
 
-    Returns ``(deliverable, held, suppressed)``. ``held`` events must keep the
-    alert cursor stopped, so the matching recovery is still read on a later
-    cycle; ``suppressed`` events are already resolved and need no hold. A
-    recovery for an outage that was never emailed removes the hold and is
-    itself dropped, which is what turns a probe flap into silence instead of
-    two emails.
+    Returns ``(deliverable, held, suppressed)``. Each outcome is decided here and
+    persisted in ``service_alert_pending``, which is the durable record: a held
+    event is not replayed from the cursor, and the matching recovery is matched
+    by service key when it is read later, so an outstanding hold never delays
+    alerts for other services. A recovery for an outage that was never emailed
+    removes the hold and is itself dropped, which is what turns a probe flap into
+    silence instead of two emails.
     """
     now = now or datetime.now()
     stamp = now.strftime('%Y-%m-%d %H:%M:%S')
@@ -6114,8 +6115,9 @@ def process_service_alerts(config, networks):
     Before delivery, outage events pass through the confirmation stage: a
     first-time `SERVICE_UNAVAILABLE` is held for `SERVICE_ALERT_CONFIRM_SECONDS`
     and a recovery that arrives inside that window cancels both emails, so a
-    probe flap produces no notification at all. Held events keep the cursor
-    stopped so the matching recovery is still read.
+    probe flap produces no notification at all. The hold lives in
+    `service_alert_pending`, not in the cursor, so one outstanding outage cannot
+    delay an alert for another service.
 
     A non-blocking process lock serialises this read/send/cursor sequence so
     overlapping full scans cannot normally deliver the same pending alert.
@@ -6155,10 +6157,11 @@ def process_service_alerts(config, networks):
         if not events and not expired:
             return True
 
-        if suppressed:
+        if held or suppressed:
             log(
-                '[SERVICE-EMAIL] Deferred or dropped '
-                f'{len(suppressed)} unconfirmed service event(s)'
+                '[SERVICE-EMAIL] Held '
+                f'{len(held)} and dropped {len(suppressed)} '
+                'unconfirmed service event(s)'
             )
 
         delivery_succeeded = False
@@ -6168,7 +6171,7 @@ def process_service_alerts(config, networks):
 
         plan = plan_service_alert_cursor_advance(
             events,
-            deliverable + held,
+            deliverable,
             delivery_succeeded=delivery_succeeded,
         )
 

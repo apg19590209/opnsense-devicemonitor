@@ -1848,9 +1848,11 @@ testbed but has not been measured on a large network.
   service;
 - a recovery is only emailed when its outage was actually emailed — a recovery with no
   notified hold is dropped;
-- held events keep the alert cursor stopped (they are passed to
-  `plan_service_alert_cursor_advance()` alongside the deliverable events), so the matching
-  recovery is still read even though the outage itself has not been delivered;
+- the hold lives in `service_alert_pending`, **not** in the alert cursor: the cursor is
+  advanced as usual and a later recovery is matched by service key, so one outstanding
+  outage can never delay an alert for another service (the first implementation did block
+  the cursor; a replay against the real testbed database showed a single per-device
+  `service_recovered = off` preference pinning event 47 and stalling everything behind it);
 - delivery failure leaves the hold at `notified = 0`, so the outage is retried on the next
   cycle rather than lost.
 
@@ -1879,25 +1881,39 @@ outlive a full discovery run.
   outage to the stage twice — once from the cursor window and once from the released hold —
   and a down and its recovery legitimately share one key, so keying on the pair keeps
   exactly one down and one up per service per batch.
-- Existing behaviour preserved: failed delivery still blocks the cursor at the first
-  selected event and logs for retry; out-of-scope rows are still never acknowledged;
-  disabled alerts still advance the cursors; `SERVICE_CHANGED` remains history-only. All
-  seven existing checks in `tests/test_service_alert_processing.py` pass unmodified.
+- Existing behaviour preserved except one deliberate cursor expectation:
+  `tests/test_service_alert_processing.py` still proves failed delivery blocks the
+  `device_services` cursor before its first selected row, that a successful delivery
+  advances both cursors, that disabled alerts advance without sending and that out-of-scope
+  rows are never acknowledged. The single updated assertion is the `device_activity_events`
+  cursor after a failed delivery (`ids["changed"]` -> `ids["recovered"]`), because a held
+  outage no longer stops that cursor.
 - `tests/test_service_alert_confirmation.py` pins the new stage: `ALERT_FLAP_SILENT`,
   `ALERT_OUTAGE_CONFIRMED_ONCE`, `ALERT_QUIET_WINDOW`, `ALERT_RECOVERY_AFTER_OUTAGE`,
-  `ALERT_UNREPORTED_RECOVERY_DROPPED`, `ALERT_CONFIRMATION_RETRY`.
+  `ALERT_UNREPORTED_RECOVERY_DROPPED`, `ALERT_CONFIRMATION_RETRY` and
+  `ALERT_HELD_OUTAGE_NOT_BLOCKING`.
 - Release identity: `release/v2.11-runtime.manifest` row 34 moved to
-  `1f68c41eae37ac704461c153e4202317987f10bb68705feb625a72e97dd1a4bc`, the manifest SHA256
-  became `d89002b1bf2777286f834f0aa603c417cae887e915448f4443935a5dd3c14646` and
+  `108f65243144f2c76a8cdc3ef2facdac34ef3c087e6ab749a9c0d47b768541c7`, the manifest SHA256
+  became `84a530a29c671b37c3d751ad0e10b6650c256b67d605e49f0bf3cc95eee20d88` and
   `install-unattended.sh:36` was re-pinned in the same change. Row count is still 39;
   target count is unchanged at 60/61.
 
 ### Verified
 
 `tests/test_service_alert_confirmation.py` -> `SERVICE_ALERT_CONFIRMATION=PASS`;
-`tests/test_service_alert_processing.py` -> `DM_BL003_SERVICE_ALERT_REGRESSION=PASS`
-(unchanged); `tests/test_probe_resilience.py` -> `PROBE_RESILIENCE=PASS`;
-`tests/test_release_manifest.py` -> `V211_RELEASE_MANIFEST=PASS`.
+`tests/test_service_alert_processing.py` -> `DM_BL003_SERVICE_ALERT_REGRESSION=PASS` (one
+cursor expectation updated as described above); `tests/test_probe_resilience.py` ->
+`PROBE_RESILIENCE=PASS`; `tests/test_release_manifest.py` ->
+`V211_RELEASE_MANIFEST=PASS`.
+
+Replay against real data, non-destructive: a copy of `/var/db/devicemonitor/devices.db` with
+the alert cursors reset to zero was processed for four cycles with the mail helper stubbed.
+All 36 recorded service events (26 `SERVICE_UNAVAILABLE`, 10 `SERVICE_AVAILABLE`) produced
+**0 emails**, and the cursors finished at the real maxima (`736`, `48`) rather than stalling.
+The single surviving hold is `DNS|192.168.50.1`, whose mac carries a per-device
+`service_recovered = off` preference, so its recovery is never selected — it ages out of the
+window and produces at most one outage email. The source database was verified byte-identical
+(`sha256sum -c`) after the replay.
 
 ### Residual risk
 
