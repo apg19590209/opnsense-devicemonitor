@@ -5415,14 +5415,36 @@ Live effect on the master, measured after the next scans:
 `tests/test_service_ageing.py` is now 15 cases; full local Python suite 30/30 PASS,
 `V211_RELEASE_MANIFEST=PASS` after the re-pin (manifest `41fd7a21…`), `sh -n` clean.
 
-Two residual seams were measured on the same node two minutes later (`19:58:16`) and are recorded
-in `PRODUCT_BACKLOG.md`: nmap inventory re-inserts rows for `192.168.20.116` with a historical
-`last_verified` (`2026-09-21`) older than that device's own `last_seen`, so the forward-only refresh
-cannot apply and the rows are still retired each cycle (dry run `retired 3`); and the ageing
-predicate can re-flip an endpoint that is still being probed, because a miss never updates
-`last_verified` — code-evident, not yet observed (`events_since_1943=0`), to be confirmed on the
-next due cycle. The 22 ageable rows are genuine stale verdicts (`last_verified` between 2026-10-05
-and 2026-10-21). O4-ageing therefore stays open with the presence refresh deployed.
+Two residual seams were measured on the same node two minutes later (`19:58:16`). One was withdrawn
+after measurement, one became Decision 54 (`last_checked`):
+
+- *Withdrawn:* the `retired 3` seen at 19:58 were not re-imported churn. The only `INSERT INTO
+  device_services` path is `upsert_device_service()`, and every caller passes a current
+  `verified_at` (`_db_write_apply` uses `job['finished_at']`, stamped at scan completion), so a
+  historical verification time cannot enter. Those three rows were original inventory
+  (`last_verified 2026-09-21`, from nmap history id 35) on the stale host `192.168.20.116`, and the
+  scheduled cycle at node-time `22:08:27` retired them once
+  (`[SERVICES] Stale-state ageing: aged 0 row(s) to unknown, retired 3 row(s)`). Total 116,
+  `rows_on_stale=0` afterwards.
+- *Fixed by Decision 54:* ageing used `last_verified`, which a miss never writes, so an
+  `unavailable` row aged to `unknown` could flip back after two failed probes and be aged again —
+  an `unavailable`/`unknown` oscillation with an emailable event each round. Measured state before
+  the fix: 40 `unknown` rows, 22 of them already at `miss_count = 1`, one probe away from the first
+  re-flip. `device_services.last_checked` now records the last observation of any kind (success or
+  miss) and `age_stale_service_state()` keys on `COALESCE(last_checked, last_verified)`; existing
+  databases are migrated with `ALTER TABLE` plus a backfill from `last_verified`.
+
+Deployed as commit `d266698`, bundle `c45715b1…`: `.252` backup `install-v211.4x90pm`, `.253` backup
+`install-v211.1rHLrw`, both `CHECK_OK`/`INSTALL_OK version=2.11 files=60`; installed
+`scan_network.py` `7560406b…` on both, `pragma_table_info('device_services')` reports `last_checked`
+and no NULL values (backfill complete). Ageing on `.253` then retired 5 pre-existing rows on unseen
+hosts (`{"aged": 0, "retired": 5}`) and a following dry run reads `{"aged": 0, "retired": 0}`;
+`.252` reads `0/0` throughout. 62 rows on the master carry a `last_checked` inside two hours, and no
+`SERVICE_UNAVAILABLE` event has been written since the 19:43 cycle, so no re-flip occurred. The
+oscillation itself is pinned by `tests/test_service_ageing.py::
+test_miss_stamps_last_checked_and_prevents_reflip_cycle` (age, two misses, flip, no further ageing)
+and the migration by `::test_init_db_adds_and_backfills_last_checked`; 18 cases, full local suite
+30/30 PASS, `V211_RELEASE_MANIFEST=PASS` after the re-pin.
 
 Deployment-side finding: the automatic ageing path sits behind `service_observation_allowed()`, so
 on this CARP pair only the **master** ages state during a scheduled scan; the backup logs
