@@ -444,7 +444,7 @@ confirmation only.
   dropped on 28 September 2026 — an inherited `get_locale_list()` limitation, not a result of this
   work; see the `DM-BL-008a` entry above.
 
-## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `RESOLVED` (deployed 31 October 2026)
+## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `OPEN` (deployed, churn found in the first scheduled cycle)
 
 **Identifier note:** `PROJECT_STATE.md` and `DECISIONS.md` 52 use `O4` for this item. The `O4`
 above (sidecar text-domain view migration, `CLOSED` 28 September 2026) is a different workstream;
@@ -489,6 +489,23 @@ dry run on both nodes reports `aged 0, retired 0`. `.253` retains 13 `devices` r
 the CARP MASTER ages state in a scheduled scan; the backup logs `skipping service discovery and
 service alerts on this node`. The `.252` ageing above was an explicit CLI run, consistent with the
 rows its own Devices view shows.
+
+**Open defect found in the first scheduled cycle (19:43:16 on `.253`):**
+`[SERVICES] Scheduled discovery completed: 71 verified service(s)` was followed by
+`[SERVICES] Stale-state ageing: aged 0 row(s) to unknown, retired 12 row(s)` although the manual run
+had left no service rows attached to a stale host. Net inventory stayed at 107 and
+`rows_on_stale_devices` returned to 0, so 12 rows had been inserted by discovery (this cycle or
+a preceding targeted-scan inventory sync) for endpoints whose `devices.last_seen` is older than
+30 days, and the retirement step deleted them. No
+`SERVICE_DISCOVERED` event was written, so those services never reach the Changes feed, and the
+underlying `devices` rows (all long-standing, none added today) stay stale.
+
+Cause: retirement keys on the *device* timestamp; discovery has positive evidence the endpoint
+answers. Candidate fixes: (a) exempt rows whose `last_verified` is inside the retirement window,
+(b) refresh `devices.last_seen` when a service is verified, (c) retire on
+`device_services.last_verified` age alone. (a) is the smallest change that preserves the operator's
+stated rule. Which to take is an operator decision, so this item stays `OPEN` with deployment
+already in place — the ageing half is live and correct, the retirement half churns.
 
 **Not caused by this item, recorded because it was observed during the deployment:** both nodes log
 chronic `database is locked` scan failures (14,760 on `.252` since 06-10-2026, 16,130 on `.253`

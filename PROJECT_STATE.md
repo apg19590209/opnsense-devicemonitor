@@ -5350,6 +5350,47 @@ wrapper logged `[SERVICES] Scheduled discovery completed …` and then
 `discover_infrastructure_services()` itself, so the copy kept its back-dated value — the ordering
 of the two lines is what the proof asserts.
 
+### First scheduled cycle on the master — and the churn it exposed
+
+The due cycle ran at `19:43:16` and logged both lines:
+
+```
+31-10-2026 19:43:16 - [SERVICES] Scheduled discovery completed: 71 verified service(s)
+31-10-2026 19:43:16 - [SERVICES] Stale-state ageing: aged 0 row(s) to unknown, retired 12 row(s)
+```
+
+`retired 12` was not expected: the manual run had already cleared every row attached to a stale
+host, and the invariant at 19:23 read `rows_on_stale_devices=0`. Measured immediately after the
+cycle:
+
+- `services_total` is still **107** and `rows_on_stale_devices` is again **0**, so 12 rows had
+  been inserted by discovery (this cycle or a preceding targeted-scan inventory sync) and were
+  deleted by the retirement step, leaving the total unchanged;
+- no `SERVICE_DISCOVERED` event exists in the 19:42+ window (the only events in the hour are the 46
+  `SERVICE_CHANGED` rows from the manual ageing), so the inserted rows never reached the Changes
+  feed;
+- the 13 stale `devices` rows are long-standing (`first_seen` August/September), none were added
+  today, and `rows_without_device` is unchanged at 19 — so the retired rows were not orphans that
+  became attributable.
+
+That is a **discovery/retirement loop**: network discovery inserts service rows for endpoints whose
+`devices.last_seen` is more than 30 days old (hostwatch has not refreshed those devices, but they
+still answer), and `age_stale_service_state()` deletes them in the same run because it keys on the
+*device* timestamp. Net inventory is unchanged (107 either way), so the visible inventory is stable,
+but the cycle does the work twice, the services never surface even though they are verifiable, and
+the underlying device records stay stale.
+
+Retirement therefore needs one refinement before O4-ageing can be called closed: the criterion should
+reflect the endpoint's own evidence rather than only the device row, either by
+(a) exempting service rows whose `last_verified` is inside the retirement window, or
+(b) refreshing `devices.last_seen` when a service on that address is verified (fixes the stale
+hostwatch record instead of the symptom), or
+(c) retiring on `device_services.last_verified` age alone.
+
+Option (a) is the smallest change that stops the churn and keeps the operator's stated rule; (b)
+also repairs the device record but lets a service probe write a device timestamp. The choice is an
+operator decision, so the item stays open (see `PRODUCT_BACKLOG.md`).
+
 Deployment-side finding: the automatic ageing path sits behind `service_observation_allowed()`, so
 on this CARP pair only the **master** ages state during a scheduled scan; the backup logs
 `skipping service discovery and service alerts on this node`. The backup's ageing above was an
