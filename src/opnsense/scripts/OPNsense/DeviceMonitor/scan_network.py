@@ -2098,6 +2098,44 @@ def is_device_active(last_seen_str, ip, was_active=False):
         pass
     return was_active and is_recently_seen(last_seen_str, minutes=30)
 
+def touch_device_last_seen(conn, ip, seen_at=None):
+    """Advance `devices.last_seen` for an address that just answered.
+
+    O4 refinement (DECISIONS.md 53). `devices.last_seen` is maintained by
+    hostwatch alone, so a host that hostwatch stops refreshing looks absent while
+    it still answers every probe. Service discovery has positive evidence of
+    presence, and without it the retirement pass deletes rows for an endpoint it
+    verified in the same run - every hour.
+
+    Only an existing device row is touched, and only forwards: this never invents
+    a device and never moves `last_seen` backwards. Returns the number of rows
+    advanced.
+    """
+    key = str(ip or '').strip()
+
+    if not key:
+        return 0
+
+    stamp = (
+        seen_at.strftime('%Y-%m-%d %H:%M:%S')
+        if hasattr(seen_at, 'strftime')
+        else str(seen_at or '').strip()
+    )
+
+    if not stamp:
+        stamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    return conn.execute(
+        '''
+        UPDATE devices
+        SET last_seen = ?
+        WHERE ip = ?
+          AND COALESCE(last_seen, '') < ?
+        ''',
+        (stamp, key, stamp)
+    ).rowcount
+
+
 def upsert_device_service(
     conn,
     mac,
@@ -2113,7 +2151,12 @@ def upsert_device_service(
     product='',
     version=''
 ):
-    """Insert or refresh one infrastructure-service endpoint."""
+    """Insert or refresh one infrastructure-service endpoint.
+
+    A successful active verification is also presence evidence for the address, so
+    an existing `devices` row has its `last_seen` advanced (DECISIONS.md 53). An
+    `authoritative` row is configuration, not an answer, and does not count.
+    """
     mac = (mac or '').strip().lower() or None
     ip = (ip or '').strip()
     interface = (interface or '').strip()
@@ -2175,6 +2218,12 @@ def upsert_device_service(
             verified_at,
         )
     )
+
+    if (
+        str(status or '').strip().lower() == 'available'
+        and detection_method.lower() != 'authoritative'
+    ):
+        touch_device_last_seen(conn, ip, verified_at)
 
     return True
 

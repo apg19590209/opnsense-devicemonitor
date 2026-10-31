@@ -498,6 +498,117 @@ def test_cli_dry_run():
     print("AGE_CLI_DRY_RUN=PASS")
 
 
+def device_last_seen(module, ip):
+    with closing(sqlite3.connect(module.DB_FILE)) as conn:
+        row = conn.execute(
+            "SELECT last_seen FROM devices WHERE ip = ?", (ip,)
+        ).fetchone()
+    return row[0] if row else None
+
+
+def device_count(module):
+    with closing(sqlite3.connect(module.DB_FILE)) as conn:
+        return conn.execute("SELECT COUNT(*) FROM devices").fetchone()[0]
+
+
+def test_verified_service_refreshes_device_last_seen():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, STALE_MAC, STALE_IP,
+                       stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 1)))
+            add_service(conn, STALE_MAC, STALE_IP, "available", stamp(-timedelta(days=40)))
+            conn.commit()
+
+        # A probe that answers is presence evidence: hostwatch alone is not.
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            module.upsert_device_service(
+                conn, STALE_MAC, STALE_IP, "VLAN60", "SSH", 22, "tcp",
+                "ssh_banner", "verified", stamp(timedelta(0)),
+            )
+            conn.commit()
+
+        assert device_last_seen(module, STALE_IP) == stamp(timedelta(0))
+
+        aged, retired = module.age_stale_service_state(now=NOW)
+
+        assert (aged, retired) == (0, 0), (aged, retired)
+        assert read_row(module, STALE_IP) is not None
+
+    print("AGE_VERIFIED_SERVICE_REFRESHES_DEVICE=PASS")
+
+
+def test_authoritative_service_does_not_refresh_device():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        stale_seen = stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 1))
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, STALE_MAC, STALE_IP, stale_seen)
+            # A fresh host keeps the retirement pass from refusing outright.
+            add_device(conn, FRESH_MAC, FRESH_IP, stamp(timedelta(hours=-1)))
+            conn.commit()
+
+            # Configuration, not an answer: it must not keep the row alive.
+            module.upsert_device_service(
+                conn, STALE_MAC, STALE_IP, "VLAN60", "SSH", 22, "tcp",
+                "authoritative", "authoritative", stamp(timedelta(0)),
+                status="available",
+            )
+            conn.commit()
+
+        assert device_last_seen(module, STALE_IP) == stale_seen
+
+        aged, retired = module.age_stale_service_state(now=NOW)
+
+        assert (aged, retired) == (0, 1), (aged, retired)
+        assert read_row(module, STALE_IP) is None
+
+    print("AGE_AUTHORITATIVE_DOES_NOT_REFRESH=PASS")
+
+
+def test_refresh_never_invents_or_rewinds_device():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        future_seen = stamp(timedelta(hours=2))
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, FRESH_MAC, FRESH_IP, future_seen)
+            conn.commit()
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            # No device row for this address: discovery must not create one.
+            module.upsert_device_service(
+                conn, "", ORPHAN_IP, "VLAN60", "SSH", 22, "tcp",
+                "ssh_banner", "verified", stamp(timedelta(0)),
+            )
+            # An older verification must not move a newer timestamp backwards.
+            module.upsert_device_service(
+                conn, FRESH_MAC, FRESH_IP, "VLAN60", "SSH", 22, "tcp",
+                "ssh_banner", "verified", stamp(-timedelta(hours=5)),
+            )
+            conn.commit()
+
+        assert device_count(module) == 1, device_count(module)
+        assert device_last_seen(module, FRESH_IP) == future_seen
+        assert device_last_seen(module, ORPHAN_IP) is None
+
+    print("AGE_REFRESH_IS_FORWARD_ONLY=PASS")
+
+
+
 def main():
     test_window_constants()
     test_ageing_boundary()
@@ -511,6 +622,9 @@ def main():
     test_retirement_writes_no_activity_event()
     test_scheduler_runs_ageing()
     test_cli_dry_run()
+    test_verified_service_refreshes_device_last_seen()
+    test_authoritative_service_does_not_refresh_device()
+    test_refresh_never_invents_or_rewinds_device()
 
     print("SERVICE_AGEING=PASS")
 

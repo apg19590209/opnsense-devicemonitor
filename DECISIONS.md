@@ -2299,3 +2299,54 @@ change has been run against the testbed yet: the drift the language acceptance
 reports on the installed `infrastructureservices.volt` and the deployed catalogues
 is exactly the pre-deployment lag, and it clears with the next
 `install-unattended.sh` run.
+
+## 53. A verified service advances its device's `last_seen`, so retirement cannot delete live inventory
+
+### Decision
+
+`upsert_device_service()` now calls `touch_device_last_seen()` after a successful
+verification: when the recorded status is `available` and the detection method is not
+`authoritative`, an **existing** `devices` row for that address has its `last_seen`
+advanced to the verification timestamp. The update is forward-only (`WHERE last_seen <
+stamp`), never inserts a device, and never runs for `authoritative` rows, because a
+configured service is not an answer from the host.
+
+### Reason
+
+The first scheduled cycle after Decision 52 went live produced
+
+```
+[SERVICES] Scheduled discovery completed: 71 verified service(s)
+[SERVICES] Stale-state ageing: aged 0 row(s) to unknown, retired 12 row(s)
+```
+
+while the inventory total stayed at 107 and no service row remained attached to a stale
+host: discovery inserted 12 rows for endpoints whose `devices.last_seen` was more than 30
+days old, and the retirement step deleted them in the same run. Those services never
+reached the Devices or Changes views even though they answer every hour, and the work
+repeats every cycle. The cause was the asymmetry Decision 52 encoded: `last_seen` is
+maintained by hostwatch alone, while service discovery independently proves the endpoint
+is present.
+
+### Effects and guards
+
+- The retirement window keeps its meaning: a host nobody has seen for 30 days still loses
+  its inventory. What changes is that a responding endpoint counts as having been seen.
+- `authoritative` rows (DNS/DHCP configuration, WireGuard peers) do not refresh `last_seen`;
+  they say a service is configured, not that its host answered.
+- The refresh cannot create a device row, so gateway, firewall and untracked endpoints keep
+  the existing "no device record means never retire" rule, and `last_seen` never moves
+  backwards when an older verification is replayed.
+- `tests/test_service_ageing.py` gained three cases: a verified service refreshes a stale
+  device and survives ageing (`AGE_VERIFIED_SERVICE_REFRESHES_DEVICE`), an `authoritative`
+  row does not (`AGE_AUTHORITATIVE_DOES_NOT_REFRESH`), and the refresh is forward-only and
+  never invents a device (`AGE_REFRESH_IS_FORWARD_ONLY`).
+
+### Residual risk
+
+`devices.last_seen` now has two writers, so a reader can no longer assume it means "hostwatch
+saw this host". Anything that treats `last_seen` as an online/offline signal (the Devices
+list, `devices_seen_last_24h` and the host-active gate) will count a host as seen while a
+service on it answers, which is the intent here but is a semantic widening worth remembering.
+A device that answers one probe and then disappears still looks present for the full
+retirement window, because the probe evidence is timestamped like any other sighting.
