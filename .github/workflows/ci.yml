@@ -80,6 +80,11 @@ jobs:
       - name: Validate service host gate (v2.11)
         run: python3 tests/test_service_host_gate.py
 
+      # v2.11 service-liveness noise fix (O3b): one failed observation must not flip a live host's
+      # service; the second consecutive miss does, and a success resets the counter.
+      - name: Validate service miss hysteresis (v2.11)
+        run: python3 tests/test_service_miss_hysteresis.py
+
       - name: Lint PHP sources
         run: |
           set -eu

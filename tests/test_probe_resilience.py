@@ -297,7 +297,8 @@ def test_dns_probe_retransmits_identical_query():
                     protocol TEXT NOT NULL,
                     status TEXT NOT NULL DEFAULT 'available',
                     detection_method TEXT NOT NULL,
-                    confidence TEXT NOT NULL
+                    confidence TEXT NOT NULL,
+                    miss_count INTEGER NOT NULL DEFAULT 0
                 )
                 '''
             )
@@ -350,6 +351,20 @@ def test_dns_probe_retransmits_identical_query():
         payloads = [payload for payload, _address in fake.sent]
         assert payloads[0] == payloads[1], payloads
         assert fake.sent[0][1] == ("198.51.100.10", 53), fake.sent
+
+        with sqlite3.connect(module.DB_FILE) as conn:
+            status, misses = conn.execute(
+                "SELECT status, miss_count FROM device_services WHERE ip = ?",
+                ("198.51.100.10",),
+            ).fetchone()
+
+        # The retransmission happened and the endpoint did not answer, but one
+        # missed run only advances the counter (Decision 49) - it is not yet an
+        # outage, even though the pre-hysteresis code would have flipped it here.
+        assert status == "available", status
+        assert misses == 1, misses
+
+        module.discover_dns_servers(networks_fixture(), timeout=0.01)
 
         with sqlite3.connect(module.DB_FILE) as conn:
             status = conn.execute(

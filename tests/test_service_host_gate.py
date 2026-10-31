@@ -214,6 +214,9 @@ def test_active_host_still_flips():
         seed(module)
         stub_failing_probes(module)
 
+        # Two consecutive failed runs: the miss counter flips the row on the
+        # second one (Decision 49), so a single bad sample stays silent.
+        module.discover_ssh_servers(networks_fixture())
         module.discover_ssh_servers(networks_fixture())
 
         assert read_status(module, ACTIVE_IP) == "unavailable", "not flipped"
@@ -230,6 +233,7 @@ def test_untracked_endpoint_still_flips():
         seed(module)
         stub_failing_probes(module)
 
+        module.discover_ssh_servers(networks_fixture())
         module.discover_ssh_servers(networks_fixture())
 
         assert read_status(module, UNTRACKED_IP) == "unavailable", "not flipped"

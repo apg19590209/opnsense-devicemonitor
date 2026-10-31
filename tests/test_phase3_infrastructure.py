@@ -481,7 +481,8 @@ def test_active_service_lifecycle():
             f"services={len(rows)}"
         )
 
-        # Cycle 2: verification fails.
+        # Cycle 2 and cycle 3: verification fails twice. The first failure only
+        # increments the miss counter; the second flips the row (Decision 49).
         module._run_phase3_protocol_probes = (
             lambda targets: [
                 None
@@ -489,6 +490,7 @@ def test_active_service_lifecycle():
             ]
         )
 
+        module.discover_phase3_services(networks_fixture())
         module.discover_phase3_services(networks_fixture())
 
         with sqlite3.connect(module.DB_FILE) as conn:

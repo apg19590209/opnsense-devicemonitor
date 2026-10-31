@@ -860,6 +860,51 @@ view) and O4 (age stale `unavailable` rows to `unknown` and retire the 24 servic
 2026-09-21, which also closes the blind spot O3a introduces for hosts that stay off).
 
 
+### Task 13 — Service-liveness noise: two-miss hysteresis (O3b)
+
+**Recorded 31 October 2026.** Follow-up to Tasks 8–12. O3a stopped unobservable hosts from voting;
+a *live* host still flipped on one failed observation, and because discovery runs hourly that single bad
+sample was rendered as a one-hour outage in the Devices view.
+
+Change set:
+
+- `device_services.miss_count INTEGER NOT NULL DEFAULT 0`, added for new databases in
+  `CREATE TABLE IF NOT EXISTS` and for existing ones through the `PRAGMA table_info` + `ALTER TABLE`
+  pattern already used for `nmap_scan_history`.
+- `record_service_miss(conn, service_type, detection_method, ip, port=None, interface=None)` replaces all
+  seven ad-hoc `SET status = 'unavailable'` statements (DNS, DHCP, NTP, SSH, Web/Admin, WireGuard/VPN,
+  phase-3). One statement increments the counter and flips the byte only when
+  `SERVICE_MISS_THRESHOLD` (2) is reached, via a `CASE` expression, guarded by
+  `AND status <> 'unavailable'` so repeated failures cannot write repeated transitions.
+- `upsert_device_service()` resets `miss_count = 0` on every successful verification, so recovery stays
+  first-success and isolated losses never accumulate.
+
+`grep -c "SET status = 'unavailable'"` over `scan_network.py` is now **0**: no discovery path can flip a
+service outside the helper.
+
+New asset `tests/test_service_miss_hysteresis.py` reporting `SERVICE_MISS_HYSTERESIS=PASS` with
+`MISS_THRESHOLD_CONSTANT`, `MISS_FIRST_RUN_QUIET`, `MISS_SECOND_RUN_FLIPS`, `MISS_SUCCESS_RESETS` and
+`MISS_ALREADY_DOWN_NO_REPEAT`; written test-first (first run failed with
+`AttributeError: module has no attribute 'SERVICE_MISS_THRESHOLD'`). Wired into CI.
+
+Three existing assets were updated because the behaviour they pin changed, each with a comment naming
+`DECISIONS.md` 49: `tests/test_service_host_gate.py` (same gate, two failing runs before the flip),
+`tests/test_phase3_infrastructure.py` (a second failing cycle before `PHASE3_UNAVAILABLE`) and
+`tests/test_probe_resilience.py` (one unanswered DNS run now asserts `available` with `miss_count = 1`,
+then flips on the next run). The first failure of that last one was a genuine fixture gap rather than an
+expectation change: its hand-built `device_services` table lacked the new column, and the run stopped with
+`sqlite3.OperationalError: no such column: miss_count`, which is exactly the schema the production
+`init_db()` guarantees.
+
+Hash-chain bookkeeping: row 34 `17b3e944…` -> `2b8cd11b…`, manifest SHA256 `ed96e6fc…` -> `7f9c5b89…`,
+`install-unattended.sh:36` repinned; row count 39 and target count 60/61 unchanged.
+
+Not yet deployed. Acceptance after deployment: a live host whose service fails one discovery run must
+stay `available` with `miss_count = 1`, and flip only on the second consecutive failure. Decision recorded
+as `DECISIONS.md` 49. O4 (age stale `unavailable` rows to `unknown`, retire the 24 rows from 2026-09-21)
+remains open.
+
+
 ## 27 September 2026 v2.10 install-guard pin restoration
 
 Description: restored the guarded v2.10 installer, which aborted with

@@ -1995,3 +1995,66 @@ remains open. The gate also depends on `devices.is_active` being maintained corr
 hostwatch stops updating, every host looks inactive and outages stop being reported entirely
 — a fail-safe direction for noise, but a blind spot for detection that O4's ageing and an
 operator-facing "devices not seen" signal should cover.
+
+## 49. A live host's service needs two consecutive failed runs before it is called unavailable
+
+### Decision
+
+`record_service_miss()` replaces the seven ad-hoc `UPDATE device_services SET status =
+'unavailable'` statements. Each failed observation of a known endpoint now:
+
+- increments `device_services.miss_count` (new column, `INTEGER NOT NULL DEFAULT 0`, added by
+  `init_db()` with `CREATE TABLE IF NOT EXISTS` for new databases and `ALTER TABLE` for
+  existing ones);
+- flips the row to `unavailable` only when the counter reaches
+  `SERVICE_MISS_THRESHOLD` (2), in the same statement via a `CASE` expression;
+- leaves an already-`unavailable` row alone (`AND status <> 'unavailable'`), so repeated
+  failures cannot write repeated transitions.
+
+Any successful verification resets the counter: `upsert_device_service()` now sets
+`miss_count = 0` in its `DO UPDATE` clause. Recovery therefore stays first-success, as before.
+
+### Reason
+
+Discovery runs hourly, so a single failed observation was rendered as an hour-long outage in
+the Devices view. `DECISIONS.md` 46 made probes patient and 48 stopped unobservable hosts
+from voting, but a **live** host's one bad sample still flipped the inventory. The operator's
+report was about noise, and an inventory that says "offline" for an hour on one lost probe is
+noise even when no email is sent (47 already suppressed the mail). A second consecutive
+failure is the cheapest evidence that survives the hourly cadence without adding probe
+traffic.
+
+### Effects and guards
+
+- Inventory-only change: the alert layer still confirms independently (47), so a real outage
+  now needs two failed runs before it appears anywhere, which is the intended trade.
+- The threshold is a constant, not a GUI setting, matching the precedent set in 46/47.
+- `tests/test_service_miss_hysteresis.py` pins it: `MISS_THRESHOLD_CONSTANT`,
+  `MISS_FIRST_RUN_QUIET`, `MISS_SECOND_RUN_FLIPS`, `MISS_SUCCESS_RESETS`,
+  `MISS_ALREADY_DOWN_NO_REPEAT`. It is a CI step.
+- Two existing assets were updated because the behaviour they pin changed, deliberately:
+  `tests/test_service_host_gate.py` now drives two failing runs before asserting a flip, and
+  `tests/test_phase3_infrastructure.py` gained a second failing cycle before
+  `PHASE3_UNAVAILABLE`. Every other assertion in both files is unchanged, and
+  `PHASE3_RECOVERY`/`PHASE3_AVAILABLE` still pass on a single successful run.
+- Release identity: `release/v2.11-runtime.manifest` row 34 moved to
+  `2b8cd11ba8fa837b66d0aca59829f8753fc78e77b017bd85f28804451192f7ea`, the manifest SHA256 to
+  `7f9c5b890e403d138fd508065bb2995783cb220e5994fad036fa577b23144399`, and
+  `install-unattended.sh:36` was re-pinned. Row count 39, target count 60/61 unchanged.
+
+### Verified
+
+`tests/test_service_miss_hysteresis.py` -> `SERVICE_MISS_HYSTERESIS=PASS`;
+`tests/test_service_host_gate.py` -> `SERVICE_HOST_GATE=PASS`;
+`tests/test_phase3_infrastructure.py` -> `PHASE3_CI_REGRESSION=PASS`; full local suite green
+(see `PROJECT_STATE.md` Task 13 for the run).
+
+### Residual risk
+
+Two misses means up to two discovery intervals (about two hours) before a genuine outage
+appears, and a service that fails once per hour in an alternating pattern would stay
+`available` indefinitely — a flapping endpoint that never accumulates two consecutive misses
+is invisible to the negative path. The counter does not decay with time, only on success, so
+two failures weeks apart would still flip a row; with hourly discovery that is acceptable but
+it is not a sliding window. Nothing ages a row out of `unavailable` (O4), and the counter is
+per service row, not per host.

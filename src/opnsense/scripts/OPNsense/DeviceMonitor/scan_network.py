@@ -80,6 +80,11 @@ SERVICE_PROBE_WORKERS = {
     'web': 16,
 }
 
+# Consecutive failed observations required before a service is called
+# unavailable. Discovery runs hourly, so one bad sample would otherwise be
+# reported as a one-hour outage; a successful probe resets the count.
+SERVICE_MISS_THRESHOLD = 2
+
 # ================================================================
 # SERVICE ALERT CONFIRMATION
 #
@@ -761,8 +766,21 @@ def _apply_db_schema():
         version TEXT,
         first_detected DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         last_verified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        miss_count INTEGER NOT NULL DEFAULT 0,
         UNIQUE(ip, service_type, port, protocol, detection_method, interface)
     )''')
+
+    # Consecutive-failed-observation counter for existing databases.
+    service_columns = {
+        row[1]
+        for row in c.execute('PRAGMA table_info(device_services)')
+    }
+
+    if 'miss_count' not in service_columns:
+        c.execute(
+            'ALTER TABLE device_services '
+            'ADD COLUMN miss_count INTEGER NOT NULL DEFAULT 0'
+        )
 
     c.execute('''
         CREATE INDEX IF NOT EXISTS idx_device_services_mac
@@ -2084,7 +2102,8 @@ def upsert_device_service(
             confidence = excluded.confidence,
             product = excluded.product,
             version = excluded.version,
-            last_verified = excluded.last_verified
+            last_verified = excluded.last_verified,
+            miss_count = 0
         ''',
         (
             mac,
@@ -2509,17 +2528,12 @@ def discover_dns_servers(networks, timeout=SERVICE_PROBE_TIMEOUTS['dns']):
                 if not host_gate(candidate_ip):
                     continue
 
-                changed = conn.execute(
-                    '''
-                    UPDATE device_services
-                    SET status = 'unavailable'
-                    WHERE service_type = 'DNS'
-                      AND detection_method = 'dns_query'
-                      AND ip = ?
-                      AND status <> 'unavailable'
-                    ''',
-                    (candidate_ip,)
-                ).rowcount
+                changed = record_service_miss(
+                    conn,
+                    'DNS',
+                    'dns_query',
+                    candidate_ip
+                )
 
                 if changed:
                     log(
@@ -2730,18 +2744,13 @@ def discover_dhcp_servers(networks):
                 if not host_gate(known_ip):
                     continue
 
-                changed = conn.execute(
-                    '''
-                    UPDATE device_services
-                    SET status = 'unavailable'
-                    WHERE service_type = 'DHCP'
-                      AND detection_method = 'dhcp_offer'
-                      AND ip = ?
-                      AND LOWER(interface) = LOWER(?)
-                      AND status <> 'unavailable'
-                    ''',
-                    (known_ip, interface)
-                ).rowcount
+                changed = record_service_miss(
+                    conn,
+                    'DHCP',
+                    'dhcp_offer',
+                    known_ip,
+                    interface=interface
+                )
 
                 if changed:
                     log(
@@ -2814,6 +2823,71 @@ def service_endpoint_host_gate(conn):
         return active[key]
 
     return host_gate
+
+
+def record_service_miss(
+    conn,
+    service_type,
+    detection_method,
+    ip,
+    port=None,
+    interface=None,
+    threshold=SERVICE_MISS_THRESHOLD
+):
+    """
+    Record one failed observation of a service endpoint.
+
+    The row flips to `unavailable` only on the `threshold`-th consecutive miss;
+    until then only `miss_count` moves, so one lost probe no longer writes an
+    hour-long outage into the Devices view. A successful verification resets the
+    counter in `upsert_device_service()`.
+
+    Returns the number of rows whose counter was advanced.
+    """
+    clauses = [
+        'service_type = ?',
+        'detection_method = ?',
+        'ip = ?',
+    ]
+    params = [
+        str(service_type or '').strip().upper(),
+        str(detection_method or '').strip(),
+        str(ip or '').strip(),
+    ]
+
+    if port is not None:
+        try:
+            params.append(int(port))
+        except (TypeError, ValueError):
+            return 0
+
+        clauses.append('port = ?')
+
+    if interface:
+        clauses.append('LOWER(interface) = LOWER(?)')
+        params.append(str(interface).strip())
+
+    where = ' AND '.join(clauses)
+
+    try:
+        threshold = max(1, int(threshold))
+    except (TypeError, ValueError):
+        threshold = SERVICE_MISS_THRESHOLD
+
+    return conn.execute(
+        f'''
+        UPDATE device_services
+        SET miss_count = COALESCE(miss_count, 0) + 1,
+            status = CASE
+                         WHEN COALESCE(miss_count, 0) + 1 >= ?
+                             THEN 'unavailable'
+                         ELSE status
+                     END
+        WHERE {where}
+          AND status <> 'unavailable'
+        ''',
+        [threshold] + params
+    ).rowcount
 
 
 def _service_probe_candidates(conn, networks, limit=128):
@@ -3108,15 +3182,11 @@ def discover_ntp_servers(networks):
             ip = (row[0] or '').strip()
 
             if ip in tested and ip not in verified and host_gate(ip):
-                conn.execute(
-                    '''
-                    UPDATE device_services
-                    SET status = 'unavailable'
-                    WHERE ip = ?
-                      AND service_type = 'NTP'
-                      AND detection_method = 'ntp_query'
-                    ''',
-                    (ip,)
+                record_service_miss(
+                    conn,
+                    'NTP',
+                    'ntp_query',
+                    ip
                 )
 
         conn.commit()
@@ -3388,16 +3458,12 @@ def discover_ssh_servers(networks):
                 continue
 
             if key in tested and key not in verified and host_gate(key[0]):
-                conn.execute(
-                    '''
-                    UPDATE device_services
-                    SET status = 'unavailable'
-                    WHERE ip = ?
-                      AND port = ?
-                      AND service_type = 'SSH'
-                      AND detection_method = 'ssh_banner'
-                    ''',
-                    key
+                record_service_miss(
+                    conn,
+                    'SSH',
+                    'ssh_banner',
+                    key[0],
+                    port=key[1]
                 )
 
         conn.commit()
@@ -3741,16 +3807,12 @@ def discover_web_admin_services(networks):
                 continue
 
             if key in tested and key not in verified and host_gate(key[0]):
-                conn.execute(
-                    '''
-                    UPDATE device_services
-                    SET status = 'unavailable'
-                    WHERE ip = ?
-                      AND port = ?
-                      AND service_type = 'WEB_ADMIN'
-                      AND detection_method = ?
-                    ''',
-                    key
+                record_service_miss(
+                    conn,
+                    'WEB_ADMIN',
+                    key[2],
+                    key[0],
+                    port=key[1]
                 )
 
         conn.commit()
@@ -4560,20 +4622,12 @@ def _discover_local_wireguard(conn, candidates, networks):
             continue
 
         if key not in current and host_gate(key[0]):
-            conn.execute(
-                '''
-                UPDATE device_services
-                SET status = 'unavailable'
-                WHERE service_type = 'VPN'
-                  AND detection_method = ?
-                  AND ip = ?
-                  AND port = ?
-                ''',
-                (
-                    method,
-                    key[0],
-                    key[1]
-                )
+            record_service_miss(
+                conn,
+                'VPN',
+                method,
+                key[0],
+                port=key[1]
             )
 
     return discovered
@@ -5310,16 +5364,12 @@ def discover_phase3_services(networks):
                 continue
 
             if key in tested and key not in verified and host_gate(key[1]):
-                conn.execute(
-                    '''
-                    UPDATE device_services
-                    SET status = 'unavailable'
-                    WHERE service_type = ?
-                      AND ip = ?
-                      AND port = ?
-                      AND detection_method = ?
-                    ''',
-                    key
+                record_service_miss(
+                    conn,
+                    key[0],
+                    key[3],
+                    key[1],
+                    port=key[2]
                 )
 
         conn.commit()
