@@ -731,6 +731,58 @@ Operator mitigation still recommended until O3 lands (O5 of the analysis, no cod
 `service_recovered=off` / `service_unavailable=off` per device in the per-device alert preferences for
 laptops, phones and televisions.
 
+### Task 10 — O1 + O2 deployed to the testbed and validated in a live scan cycle
+
+**Recorded 31 October 2026.** Operator authorised the testbed deployment (`192.168.20.23`) and the
+push to `origin` in the same instruction.
+
+Deployment: `/bin/sh install-unattended.sh --host OPNsense.internal --check` ->
+`CHECK_OK version=2.11 predecessor=2.10 files=60 core_locales=10 daemon_running=1`, then the real run ->
+`BACKUP_READY=/var/backups/devicemonitor/install-v211.navdmC`, `CORE_LOCALE_STATE=/var/backups/devicemonitor/core-locale`,
+`INSTALL_OK version=2.11 files=60 core_locales=10 backup=/var/backups/devicemonitor/install-v211.navdmC daemon_restarted=1`.
+Installed `scan_network.py` now matches the tree (`108f6524…`, previously `4fd87dc7…`).
+
+Monitoring was enabled for the observation window only (`enabled=1`,
+`monitored_interfaces="lan,opt1"`) by editing `/var/db/devicemonitor/config.json` directly, because the
+plugin's `set` API takes flat defaults for every unsupplied field and would have reset unrelated
+settings; the pre-change file is saved at `/tmp/config.json.pre-o1o2` and the GUI still shows the old
+values until an operator saves Settings. Email and service alerts remain disabled, so no mail was
+generated during validation.
+
+First live cycle (15:54–15:55): `Scheduled discovery completed: 55 verified service(s)`, web discovery
+28 verified, phase 3 none, then `[SERVICE-EMAIL] No selected alerts; advanced cursor state`. The
+`service_alert_pending` table was created on the live database by `init_db()` as designed. Second cycle
+(15:58) correctly reported `Scheduled discovery not due (175s since last run)` and produced **no new
+service events** — the 16 transitions from cycle 1 did not repeat.
+
+O2 proven on the fresh real data, non-destructively: a copy of `devices.db` with the alert cursors reset
+and the mail helper stubbed produced **0 emails for the 16 fresh `SERVICE_UNAVAILABLE` events** (17 holds
+recorded), and after injecting the matching `SERVICE_AVAILABLE` for a real service key
+(`DHCP|192.168.20.254|67|udp|re0|dhcp_offer`) it still produced **0 emails** — the flap pair was dropped
+as intended. The source database was verified byte-identical afterwards (`sha256sum -c`). The old code
+would have sent 16 outage emails and then 16 recovery emails for the same data.
+
+**New finding, and it reprioritises O3.** All 16 transitions came from hosts whose
+`devices.is_active = 0` with `last_seen = 2026-09-21` (`192.168.20.101`, `.103`, `.111`, `.177`), i.e.
+six-week-stale inventory; only **1 of 26** devices is currently active. SSH/NTP/WEB/phase-3 build their
+probe sets from `device_services` rows without any host-active gate, so a dead host's services are
+re-probed every hour and written `unavailable`. Probe impatience (O1) was the smaller contributor; the
+missing host-active gate is the dominant one. O3 must therefore cover the gate, not only the two-miss
+hysteresis, and O4's ageing would also retire those 24 stale service rows.
+
+Incident, recorded rather than glossed: a `service devicemonitor restart` issued inside a 30-second
+command window was interrupted between stop and start and left the daemon down at 15:57:01. It was
+restored with `/usr/local/etc/rc.d/devicemonitor onestart` (new PID, scan resumed at 15:57:50). Restarts
+on this host should be run detached and polled, not inline.
+
+CI: the first push (`0c6aeae`) failed in `Validate service probe resilience (v2.11)` with
+`FileNotFoundError: /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json` — both new
+assets loaded `scan_network.py` without redirecting the installed defaults path, which exists on the
+testbed but not on a runner. Fixed in `e940eb2` by adopting the `builtins.open` redirect already used by
+`tests/test_shutdown_drain.py`; run `41170669799` then completed **success** in 32 s. This is the reason
+local `PASS` alone is not deployment evidence.
+
+
 ## 27 September 2026 v2.10 install-guard pin restoration
 
 Description: restored the guarded v2.10 installer, which aborted with
