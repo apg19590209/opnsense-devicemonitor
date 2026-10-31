@@ -1022,6 +1022,43 @@ closed and says why; it will no longer fall back to the uplink.
 Full local Python suite: **29 of 29 pass**. Not deployed; deployment needs a separate authorisation.
 
 
+### Task 17 — HA safety deployed: CARP role gate and uplink refusal live on the testbed
+
+**Recorded 31 October 2026.** Operator authorised deployment of `a225104` to `192.168.20.23`.
+
+Deployment: `--check` -> `CHECK_OK version=2.11 predecessor=2.11 files=60 core_locales=10
+daemon_running=1`, then `BACKUP_READY=/var/backups/devicemonitor/install-v211.2aLlS8`,
+`INSTALL_OK version=2.11 files=60 core_locales=10 backup=…2aLlS8 daemon_restarted=1`. Installed digests
+now match the tree: `scan_network.py` `2b8cd11b…` -> `bd4c0604…`, `ConfigController.php` -> `21c1ed8f…`;
+daemon restarted (PID 17110).
+
+Live schema: `init_db()` added `service_discovery_state.carp_role` on the running database, and the first
+post-deploy cycle (17:59:29–18:00:04) completed with `device_activity_events` still at **64** — no
+flips — and no `CARP role` transition line, which is correct here: the role is `None` (no CARP on this
+host) and an unchanged role is not logged. `service_observation_allowed()` on the live selection
+(`lan`, `opt1`) returns `(True, None, '')`.
+
+Installed-bytes proof of the uplink rule, driving the deployed `resolve_monitored_networks()` with an
+injected configuration tree (read-only, no host configuration read):
+
+```
+lan     -> ALLOWED  ['lan']
+wan     -> REFUSED  Monitored interface "wan" is the WAN/uplink; …
+opt3    -> REFUSED  Monitored interface "opt3" is an uplink (gateway "WAN2_GW" on public address 198.51.100.2); …
+opt4    -> ALLOWED  ['opt4']              (gateway on RFC1918 = policy routing)
+lan,wan -> REFUSED
+```
+
+Recorded limitation: the WAN rule cannot be exercised end-to-end on this host because its own `wan` is
+DHCP and was already refused by the pre-existing static-IPv4 rule; the refusal above is therefore proven
+against injected configuration data, not against the live uplink. The CARP BACKUP path is likewise
+fixture-proven only, because the host has no CARP pair (zero `<carp>` in `/conf/config.xml`).
+
+Testbed state: O1 + O2 + O3a + O3b + Decisions 50/51 installed; monitoring enabled on `lan,opt1`
+(pre-session config at `/tmp/config.json.pre-o1o2`); email and service alerts still disabled. Remaining
+open item is O4 (age stale `unavailable` rows to `unknown`, retire the 24 service rows from 2026-09-21).
+
+
 ## 27 September 2026 v2.10 install-guard pin restoration
 
 Description: restored the guarded v2.10 installer, which aborted with
