@@ -905,6 +905,37 @@ as `DECISIONS.md` 49. O4 (age stale `unavailable` rows to `unknown`, retire the 
 remains open.
 
 
+### Task 14 — O3b deployed: two-miss hysteresis live, schema migrated in place
+
+**Recorded 31 October 2026.** Operator authorised the third testbed deployment.
+
+Deployment: `--check` -> `CHECK_OK version=2.11 predecessor=2.11 files=60 core_locales=10
+daemon_running=1`, then `BACKUP_READY=/var/backups/devicemonitor/install-v211.5WKg0k`,
+`INSTALL_OK version=2.11 files=60 core_locales=10 backup=…5WKg0k daemon_restarted=1`. Installed
+`scan_network.py` is now `2b8cd11b…` (was `17b3e944…`); daemon restarted and resumed scanning.
+
+Schema migration, in place on the live database: `pragma_table_info('device_services')` returned **0**
+rows named `miss_count` before the deploy and **1** after the first `init_db()` call, so the
+`ALTER TABLE` path works on a real v2.11 database rather than only on a fresh one. The post-deploy cycle
+(16:44:41–16:45:15) completed normally with `device_activity_events` still at **64** and
+`SUM(miss_count)` still **0**.
+
+Controlled proof of the threshold against the migrated live schema (copy of the live database, source
+verified byte-identical afterwards): target `192.168.20.1:53` (`dns_query`, two rows).
+
+- run 1 -> rows stayed `available`, `miss_count = 1`, events 64 -> **64** (no transition);
+- run 2 -> rows became `unavailable`, `miss_count = 2`, events 64 -> **65** (one transition, not two);
+- run 3 -> `changed = 0`, events still **65** (an already-unavailable row is never rewritten).
+
+Pre-hysteresis code flipped both rows on run 1 and wrote the event then, which is the one-interval
+"outage" the operator kept seeing in the Devices view.
+
+State on the testbed: O1 + O2 + O3a + O3b installed (`2b8cd11b…`); monitoring enabled on `lan,opt1`
+(pre-session config at `/tmp/config.json.pre-o1o2`); email and service alerts still disabled.
+Remaining: O4 — age stale `unavailable` rows to `unknown` and retire the 24 service rows whose hosts have
+not been seen since 2026-09-21.
+
+
 ## 27 September 2026 v2.10 install-guard pin restoration
 
 Description: restored the guarded v2.10 installer, which aborted with
