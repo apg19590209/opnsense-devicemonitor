@@ -5295,3 +5295,71 @@ Next step: `./install-unattended.sh --check`, install, then one live cycle and a
 a copy of the live database with back-dated `last_verified`/`last_seen` (the Task 14 pattern),
 leaving the live database byte-identical afterwards.
 
+
+## 31 October 2026 — O4-ageing deployed to the HA pair (192.168.20.252 BACKUP, 192.168.20.253 MASTER)
+
+**Recorded 31 October 2026.** Operator authorised deployment on both nodes. Both were running the
+plugin at **2.10** (installed `scan_network.py` `4fd87dc7…`, `defaults.json` version 2.10), so this
+was a 2.10 -> 2.11 upgrade of the full 60-target payload and eleven catalogues rather than a
+same-build patch. `install-unattended.sh:46` lists 2.10 as a supported predecessor, and the CARP
+BACKUP node was installed first.
+
+Bundle: `release/build-bundle.sh` -> `/tmp/dm-v2.11-runtime.tar.gz`, 53 allow-list files, SHA256
+`0e166265…`. It was copied to each node, the archive hash re-checked there, and extracted to
+`/tmp/dm-deploy`.
+
+| Node | Role | Preflight | Install | Backup | Post-install `scan_network.py` / view |
+| --- | --- | --- | --- | --- | --- |
+| 192.168.20.252 | CARP BACKUP | `CHECK_OK version=2.11 predecessor=2.10 files=60 core_locales=10 daemon_running=1` | `INSTALL_OK version=2.11 files=60 core_locales=10 daemon_restarted=1` | `/var/backups/devicemonitor/install-v211.Mni93b` | `843c15f7…` / `6034d980…` |
+| 192.168.20.253 | CARP MASTER | `CHECK_OK version=2.11 predecessor=2.10 files=60 core_locales=10 daemon_running=1` | `INSTALL_OK version=2.11 files=60 core_locales=10 daemon_restarted=1` | `/var/backups/devicemonitor/install-v211.bMJF2H` | `843c15f7…` / `6034d980…` |
+
+Schema migration happened in place on both live databases: `pragma_table_info('device_services')`
+returns one `miss_count` row after the first `init_db()` on each node.
+
+Ageing, run through the documented CLI on each node (`scan_network.py --age-services`, previewed
+with `--dry-run` immediately beforehand):
+
+- `.252` (BACKUP): dry run `aged 47, retired 0`; actual `{"result": "ok", "dry_run": false, "aged":
+  47, "retired": 0}` — 121 services, `unknown` 47, `unavailable` 55 -> 8, `available` 66; 47
+  `SERVICE_CHANGED` events, all inside the same ten-minute window.
+- `.253` (MASTER): dry run `aged 46, retired 21`; actual `"aged": 46, "retired": 21` — 128 -> 107
+  services, `unknown` 40, `unavailable` 54 -> 5, `available` 74 -> 62; 46 `SERVICE_CHANGED` events.
+  The retired rows are the September inventory the backlog named (21 rather than 24: three had
+  already changed state since the count was taken), and the removal split 6 just-aged, 3 still
+  `unavailable` and 12 `available`.
+- A second dry run on both nodes returns `aged 0, retired 0`, so the pass is idempotent on live data.
+
+Retirement invariants after the run: `.253` still carries 13 `devices` rows older than 30 days and
+**zero** service rows attached to them; both nodes keep 22 / 19 service rows whose address has no
+`devices` row at all (gateway, firewall, untracked server) exactly as designed; every `unknown` row
+is older than seven days, so nothing was aged early.
+
+Controlled proof on a **copy** of the master database (`sqlite3 .backup` to `/tmp/dm-proof.db`,
+fixtures inserted into the copy only, real `age_stale_service_state()`):
+
+- 31-day-old host -> its service row retired; exactly-30-day-old host -> kept;
+- `unavailable` verified 8 days ago -> `unknown` with `miss_count` 0; exactly 7 days -> still
+  `unavailable`; an existing `unknown` row and an untracked endpoint -> untouched;
+- second run `(0, 0)`; live database SHA256 `83a1418c…` identical before and after.
+
+A second copy with `service_discovery_state.last_run` back-dated and
+`discover_infrastructure_services()` stubbed demonstrated the scheduled wiring on live data: the
+wrapper logged `[SERVICES] Scheduled discovery completed …` and then
+`[SERVICES] Stale-state ageing: aged 0 row(s) to unknown, retired 0 row(s)`
+(`SCHED_PROOF=PASS`, live database hash unchanged). `last_run` is written by
+`discover_infrastructure_services()` itself, so the copy kept its back-dated value — the ordering
+of the two lines is what the proof asserts.
+
+Deployment-side finding: the automatic ageing path sits behind `service_observation_allowed()`, so
+on this CARP pair only the **master** ages state during a scheduled scan; the backup logs
+`skipping service discovery and service alerts on this node`. The backup's ageing above was an
+explicit CLI run. That is consistent with what its own Devices view shows and is idempotent, but it
+is not something the scheduled path would have done, and the record states it as an operator-run
+step rather than as automatic behaviour.
+
+Pre-existing, unchanged by this deployment: both nodes log chronic `database is locked` scan
+failures (14,760 occurrences on `.252` since 06-10-2026 and 16,130 on `.253` since 09-09-2026; 430
+and 636 of them before 18:00 today), and the targeted-Nmap email path reports
+`/usr/local/sbin/sendmail: not found`. Neither is caused by O4-ageing; the ageing pass uses its own
+short-lived connection and commits before the retirement query.
+

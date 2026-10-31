@@ -444,7 +444,7 @@ confirmation only.
   dropped on 28 September 2026 — an inherited `get_locale_list()` limitation, not a result of this
   work; see the `DM-BL-008a` entry above.
 
-## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `CODE-COMPLETE` (not deployed)
+## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `RESOLVED` (deployed 31 October 2026)
 
 **Identifier note:** `PROJECT_STATE.md` and `DECISIONS.md` 52 use `O4` for this item. The `O4`
 above (sidecar text-domain view migration, `CLOSED` 28 September 2026) is a different workstream;
@@ -456,7 +456,7 @@ Nothing aged an `unavailable` verdict, so a service that failed two consecutive 
 down indefinitely, and rows whose hosts had not been seen since 2026-09-21 were still presented
 as current inventory.
 
-**Implemented (31 October 2026, branch `feature/async-db-v2.11`):**
+**Implemented (31 October 2026, branch `feature/async-db-v2.11`, commit `cd8ccbc`):**
 `age_stale_service_state()` rewrites `unavailable` rows older than 7 days to `unknown` (clearing
 `miss_count` so Decision 49's two-miss rule still applies afterwards) and deletes rows whose
 `devices.last_seen` is older than 30 days, together with their held alert. The pass runs on the
@@ -464,13 +464,32 @@ hourly scheduled discovery gate and via `scan_network.py --age-services [--dry-r
 retirement outright when no host at all is fresh, and never retires an address that has no
 `devices` row. The Devices view renders and filters `unknown`. Decision: `DECISIONS.md` 52.
 
-**Why it is not `RESOLVED`:** nothing is deployed and no live evidence exists. The 24 rows are
-still in the testbed database; the retirement has not been observed running, and the installed
-view and catalogues still predate the change.
+**Deployed (31 October 2026)** to both HA nodes from a 2.10 predecessor:
+`.252` (CARP BACKUP) `INSTALL_OK version=2.11 files=60`, backup `install-v211.Mni93b`;
+`.253` (CARP MASTER) `INSTALL_OK version=2.11 files=60`, backup `install-v211.bMJF2H`. Both nodes
+now carry `scan_network.py` `843c15f7…` and `infrastructureservices.volt` `6034d980…`, with the
+`miss_count` schema migration applied in place.
 
-**Closes when:** `install-unattended.sh` has installed the change on the testbed, one live
-discovery cycle has logged
-`[SERVICES] Stale-state ageing: aged N row(s) to unknown, retired M row(s)` with the expected
-counts, and a controlled proof on a copy of the live database (back-dated `last_verified` and
-`last_seen`, live database byte-identical afterwards) reproduces the ageing and retirement at
-their window boundaries.
+**Live evidence:** `--age-services` on `.252` `aged 47, retired 0` (121 services, `unavailable`
+55 -> 8, `unknown` 47); on `.253` `aged 46, retired 21` (128 -> 107 services, `unavailable`
+54 -> 5, `unknown` 40), with 47 and 46 `SERVICE_CHANGED` activity events respectively. A second
+dry run on both nodes reports `aged 0, retired 0`. `.253` retains 13 `devices` rows older than
+30 days with no service rows attached, and both nodes keep their untracked-endpoint rows.
+
+**Controlled proofs (live database byte-identical after each):**
+1. copy of the master database with back-dated `last_verified`/`last_seen`: retirement at the
+   30-day boundary, ageing at the 7-day boundary, `miss_count` reset, untracked endpoint kept,
+   idempotent second run — `PROOF=PASS`, live SHA256 `83a1418c…` unchanged;
+2. copy of the master database with `service_discovery_state.last_run` back-dated and discovery
+   stubbed: the scheduled wrapper logged
+   `[SERVICES] Stale-state ageing: aged 0 row(s) to unknown, retired 0 row(s)` after
+   `[SERVICES] Scheduled discovery completed` — `SCHED_PROOF=PASS`.
+
+**Operator note:** the automatic ageing path sits behind `service_observation_allowed()`, so only
+the CARP MASTER ages state in a scheduled scan; the backup logs `skipping service discovery and
+service alerts on this node`. The `.252` ageing above was an explicit CLI run, consistent with the
+rows its own Devices view shows.
+
+**Not caused by this item, recorded because it was observed during the deployment:** both nodes log
+chronic `database is locked` scan failures (14,760 on `.252` since 06-10-2026, 16,130 on `.253`
+since 09-09-2026) and `/usr/local/sbin/sendmail: not found` from the targeted-Nmap email path.
