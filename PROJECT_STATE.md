@@ -5391,6 +5391,30 @@ Option (a) is the smallest change that stops the churn and keeps the operator's 
 also repairs the device record but lets a service probe write a device timestamp. The choice is an
 operator decision, so the item stays open (see `PRODUCT_BACKLOG.md`).
 
+### Refinement deployed — Decision 53 (service evidence advances `devices.last_seen`)
+
+Operator chose option (b). `upsert_device_service()` now calls `touch_device_last_seen()` on a
+successful verification: `available` status, any detection method except `authoritative`, an
+existing `devices` row for the address, forward-only. Commit `6258914`; bundle
+`6a66a068…` (53 files) installed on both nodes (`.252` backup `install-v211.qW0WKO`, `.253` backup
+`install-v211.apLeor`, both `CHECK_OK`/`INSTALL_OK version=2.11 files=60`), installed
+`scan_network.py` now `2f3c05b1…` on both.
+
+Live effect on the master, measured after the next scans:
+
+- `192.168.20.127` had `last_seen` `2026-09-12 03:27:30` (one of the 13 stale devices) and now
+  reads `19:56:31`, refreshed by the DNS/NTP/WEB_ADMIN verifications on it; those three rows are
+  present and `available` instead of being discovered and deleted in the same cycle;
+- `kept_rows_on_refreshed_hosts=5` — service rows older than 30 days on hosts that are now fresh,
+  i.e. inventory that the old rule would have deleted;
+- `stale_devices` fell 13 -> 12 and `--age-services --dry-run` reports `retired 0` (the preceding
+  run had retired 21, then 12 by churn);
+- `.252` is unaffected by design: the backup skips service discovery, so it neither refreshes nor
+  churns.
+
+`tests/test_service_ageing.py` is now 15 cases; full local Python suite 30/30 PASS,
+`V211_RELEASE_MANIFEST=PASS` after the re-pin (manifest `41fd7a21…`), `sh -n` clean.
+
 Deployment-side finding: the automatic ageing path sits behind `service_observation_allowed()`, so
 on this CARP pair only the **master** ages state during a scheduled scan; the backup logs
 `skipping service discovery and service alerts on this node`. The backup's ageing above was an
@@ -5403,4 +5427,3 @@ failures (14,760 occurrences on `.252` since 06-10-2026 and 16,130 on `.253` sin
 and 636 of them before 18:00 today), and the targeted-Nmap email path reports
 `/usr/local/sbin/sendmail: not found`. Neither is caused by O4-ageing; the ageing pass uses its own
 short-lived connection and commits before the retirement query.
-

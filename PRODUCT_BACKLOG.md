@@ -444,7 +444,7 @@ confirmation only.
   dropped on 28 September 2026 — an inherited `get_locale_list()` limitation, not a result of this
   work; see the `DM-BL-008a` entry above.
 
-## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `OPEN` (deployed, churn found in the first scheduled cycle)
+## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `RESOLVED` (deployed 31 October 2026)
 
 **Identifier note:** `PROJECT_STATE.md` and `DECISIONS.md` 52 use `O4` for this item. The `O4`
 above (sidecar text-domain view migration, `CLOSED` 28 September 2026) is a different workstream;
@@ -503,9 +503,18 @@ underlying `devices` rows (all long-standing, none added today) stay stale.
 Cause: retirement keys on the *device* timestamp; discovery has positive evidence the endpoint
 answers. Candidate fixes: (a) exempt rows whose `last_verified` is inside the retirement window,
 (b) refresh `devices.last_seen` when a service is verified, (c) retire on
-`device_services.last_verified` age alone. (a) is the smallest change that preserves the operator's
-stated rule. Which to take is an operator decision, so this item stays `OPEN` with deployment
-already in place — the ageing half is live and correct, the retirement half churns.
+`device_services.last_verified` age alone.
+
+**Resolved by Decision 53 (operator chose (b)), commit `6258914`, deployed 31 October 2026:**
+`upsert_device_service()` advances the existing `devices` row's `last_seen` after a successful
+verification (`available` status, detection method other than `authoritative`, forward-only, never
+inserting a device). Bundle `6a66a068…` installed on both nodes
+(`.252` backup `install-v211.qW0WKO`, `.253` backup `install-v211.apLeor`), installed
+`scan_network.py` `2f3c05b1…`. Live evidence on the master: `192.168.20.127` moved from
+`last_seen 2026-09-12` to `19:56:31` through its DNS/NTP/WEB_ADMIN verifications, those three rows
+now persist and are `available`, `kept_rows_on_refreshed_hosts=5`, `stale_devices` 13 -> 12 and
+`--age-services --dry-run` reports `retired 0` (against 21 then 12 by churn before the fix). The
+backup never runs discovery, so it neither refreshes nor churns.
 
 **Not caused by this item, recorded because it was observed during the deployment:** both nodes log
 chronic `database is locked` scan failures (14,760 on `.252` since 06-10-2026, 16,130 on `.253`
