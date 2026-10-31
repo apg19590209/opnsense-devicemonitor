@@ -823,6 +823,43 @@ the acceptance check for this task. Decision recorded as `DECISIONS.md` 48; O3b 
 O4 (age stale rows to `unknown`) remain open.
 
 
+### Task 12 — O3a deployed and accepted: inactive hosts no longer flip
+
+**Recorded 31 October 2026.** Operator authorised the second testbed deployment in the same
+instruction that authorised the O3a work.
+
+Deployment: `--check` -> `CHECK_OK version=2.11 predecessor=2.11 files=60 core_locales=10
+daemon_running=1`, then `BACKUP_READY=/var/backups/devicemonitor/install-v211.L081JN`,
+`INSTALL_OK version=2.11 files=60 core_locales=10 backup=…L081JN daemon_restarted=1`. Installed
+`scan_network.py` is now `17b3e944…` (was `108f6524…`); daemon restarted and resumed scanning.
+
+Acceptance cycle. `service_discovery_state.last_run` was set back to `2026-10-01 00:00:00` so the next
+daemon cycle would run discovery instead of waiting for the hourly gate — a one-row, reversible lever on
+derived state. The following cycle (16:25:57–16:27:33) reported
+`Scheduled discovery completed: 56 verified service(s)` and `device_activity_events` stayed at **64:
+zero new events**, with the four inactive hosts still at their previous status. Under the pre-gate code
+the same cycle shape produced 16 `SERVICE_UNAVAILABLE` events (Task 10).
+
+Controlled proof, because a stable status could also mean "nothing changed". On a copy of the live
+database the 10 service rows belonging to `192.168.20.101`, `.103`, `.111` and `.177` were forced back
+to `available` (which itself fired the activity trigger: 64 -> 74 events), then the real
+`discover_ssh_servers()`, `discover_web_admin_services()` and `discover_ntp_servers()` were run against
+that copy with the live monitored networks (`lan`, `opt1`). Result: **all 10 rows still `available`,
+events still 74** — every flip was gated. Pre-gate code would have flipped all 10 and written 10 more
+events. `service_endpoint_host_gate('192.168.20.101')` is `False` while
+`service_endpoint_host_gate('192.168.20.23')` (the firewall, no `devices` row) is `True`, confirming the
+fail-open side still allows genuine infrastructure verdicts. The live database was byte-identical
+afterwards (`sha256sum -c`).
+
+State left on the testbed: O3a installed; monitoring enabled for `lan,opt1`
+(`/tmp/config.json.pre-o1o2` holds the pre-session file); email and service alerts still disabled;
+`service_discovery_state.last_run` is a normal timestamp again.
+
+Remaining: O3b (two-miss hysteresis, so a live host's single failed probe stops flipping the Devices
+view) and O4 (age stale `unavailable` rows to `unknown` and retire the 24 service rows from
+2026-09-21, which also closes the blind spot O3a introduces for hosts that stay off).
+
+
 ## 27 September 2026 v2.10 install-guard pin restoration
 
 Description: restored the guarded v2.10 installer, which aborted with
