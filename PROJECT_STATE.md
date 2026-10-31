@@ -5446,6 +5446,15 @@ test_miss_stamps_last_checked_and_prevents_reflip_cycle` (age, two misses, flip,
 and the migration by `::test_init_db_adds_and_backfills_last_checked`; 18 cases, full local suite
 30/30 PASS, `V211_RELEASE_MANIFEST=PASS` after the re-pin.
 
+The next scheduled cycle (node time `23:14:22`) logged `retired 3 row(s)` again, so the item stays
+open. The churn is now fully attributed: address `192.168.20.254` has two `devices` rows, one
+`2026-08-15` and one `2026-10-31 12:32:29`; its five services were verified at `23:13-23:14`; the
+retirement predicate matches an IP if **any** of its device rows is stale, and the scan's own
+hostwatch import (`scan_network.py:8428-8435`, `UPDATE devices SET … last_seen = ? … WHERE mac = ?`)
+rewinds the refreshed legacy row to `2026-08-15` before retirement runs. `PRODUCT_BACKLOG.md`
+carries the two candidate fixes — require that no device row for the address is fresh, and make the
+hostwatch upsert forward-only — awaiting the operator's choice.
+
 Deployment-side finding: the automatic ageing path sits behind `service_observation_allowed()`, so
 on this CARP pair only the **master** ages state during a scheduled scan; the backup logs
 `skipping service discovery and service alerts on this node`. The backup's ageing above was an
