@@ -2400,3 +2400,49 @@ service on a host that responds to ping but not to the probe port) keeps a fresh
 freezes and the row ages again, which is the intended meaning but means "unknown" can
 appear weeks after the last real observation. `last_checked` also has two writers, so it
 must not be read as a verification time.
+
+## 55. An address is abandoned only when none of its device rows is fresh, and hostwatch may not rewind `last_seen`
+
+### Decision
+
+Two changes to how retirement and device writes interact:
+
+- the retirement predicate requires that the address has at least one `devices` row **and** that
+  none of them is fresh:
+  `EXISTS (rows for the ip) AND NOT EXISTS (row for the ip with last_seen >= cutoff)`, instead of
+  `ip IN (SELECT ip FROM devices WHERE last_seen < cutoff)`;
+- the two hostwatch-driven `UPDATE devices … last_seen = ?` statements now write
+  `last_seen = MAX(COALESCE(last_seen, ''), ?)` (`scan_network.py`, the normal update and the
+  returning-device update), so a replayed hostwatch timestamp cannot move `last_seen` backwards.
+
+### Reason
+
+The 23:14:22 scheduled cycle still retired three freshly verified services on `192.168.20.254`.
+That address has two device rows — a legacy MAC at `2026-08-15` and the live VRRP/CARP MAC at
+`12:32:29` — and the old predicate retired an address as soon as **one** of its rows was stale.
+Decision 53's refresh had advanced both rows, but the scan's own hostwatch import immediately wrote
+`last_seen` back to hostwatch's stored value, rewinding the legacy row to `2026-08-15` before the
+retirement step ran. The two defects compounded: the refresh was undone, and a single stale row was
+enough to condemn every service on the address.
+
+### Effects and guards
+
+- "Someone has seen this host recently" now keeps its inventory, which is what the operator's
+  original rule meant; an address whose rows are all stale still retires.
+- A duplicated or legacy device row for a live address no longer makes its services unretireable
+  churn. Rows whose address has no `devices` record at all are still never retired.
+- `last_seen` becomes monotonic from every writer, so a hostwatch replay cannot erase probe evidence
+  (Decision 53) and no reader has to guess which writer ran last.
+- `tests/test_service_ageing.py` gains `RETIRE_KEEPS_ADDRESS_WITH_FRESH_ROW` (stale sibling row,
+  fresh row, service kept) and `RETIRE_DROPS_ADDRESS_WITH_ONLY_STALE_ROWS` (two stale rows, service
+  retired); 20 cases. The forward-only hostwatch write is verified in the field rather than by unit
+  test, because it lives inside the full-scan device sync: after deployment the legacy
+  `192.168.20.254` row must stop returning to `2026-08-15`.
+
+### Residual risk
+
+Monotonicity means a genuinely stale hostwatch timestamp can never correct a wrongly-newer
+`last_seen`, so a clock jump forward on one writer would suppress retirement for that host until the
+wall clock catches up. `devices.last_seen` remains a "someone saw this host at or after" marker, not
+a precise observation log, and the three writers (hostwatch import, service verification, and this
+guard) are recorded here so the meaning stays explicit.

@@ -628,8 +628,58 @@ def main():
     test_recent_probe_prevents_ageing()
     test_miss_stamps_last_checked_and_prevents_reflip_cycle()
     test_init_db_adds_and_backfills_last_checked()
+    test_retirement_keeps_address_with_a_fresh_device_row()
+    test_retirement_drops_address_with_only_stale_rows()
 
     print("SERVICE_AGEING=PASS")
+
+def test_retirement_keeps_address_with_a_fresh_device_row():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            # One legacy row for the address is stale, a live VRRP/CARP row is not.
+            add_device(conn, STALE_MAC, STALE_IP,
+                       stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 20)))
+            add_device(conn, FRESH_MAC, STALE_IP, stamp(timedelta(hours=-2)))
+            add_service(conn, STALE_MAC, STALE_IP, "available", stamp(timedelta(0)))
+            conn.commit()
+
+        aged, retired = module.age_stale_service_state(now=NOW)
+
+        assert (aged, retired) == (0, 0), (aged, retired)
+        assert read_row(module, STALE_IP) is not None
+
+    print("RETIRE_KEEPS_ADDRESS_WITH_FRESH_ROW=PASS")
+
+
+def test_retirement_drops_address_with_only_stale_rows():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        stale_seen = stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 20))
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, STALE_MAC, STALE_IP, stale_seen)
+            add_device(conn, "aa:bb:cc:dd:ee:29", STALE_IP, stale_seen)
+            add_device(conn, FRESH_MAC, FRESH_IP, stamp(timedelta(hours=-1)))
+            add_service(conn, STALE_MAC, STALE_IP, "available", stamp(timedelta(0)))
+            conn.commit()
+
+        aged, retired = module.age_stale_service_state(now=NOW)
+
+        assert (aged, retired) == (0, 1), (aged, retired)
+        assert read_row(module, STALE_IP) is None
+
+    print("RETIRE_DROPS_ADDRESS_WITH_ONLY_STALE_ROWS=PASS")
+
+
 
 
 def read_checked(module, ip, port=22):

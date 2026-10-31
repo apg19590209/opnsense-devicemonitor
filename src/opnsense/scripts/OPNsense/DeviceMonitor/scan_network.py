@@ -3091,12 +3091,18 @@ def age_stale_service_state(conn=None, now=None, dry_run=False):
     '''
 
     unseen_host = '''
-        ip IN (
-            SELECT ip
-            FROM devices
-            WHERE COALESCE(ip, '') <> ''
-              AND COALESCE(last_seen, '') <> ''
-              AND last_seen < ?
+        EXISTS (
+            SELECT 1
+            FROM devices d
+            WHERE d.ip = device_services.ip
+              AND COALESCE(d.ip, '') <> ''
+        )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM devices d
+            WHERE d.ip = device_services.ip
+              AND COALESCE(d.ip, '') <> ''
+              AND COALESCE(d.last_seen, '') >= ?
         )
     '''
 
@@ -8368,8 +8374,9 @@ def full_scan():
                     '''
                     UPDATE devices
                     SET ip = ?, hostname = ?, hostname_source = ?, vendor = ?,
-                        vlan = ?, first_seen = ?, last_seen = ?, is_active = ?,
-                        lifecycle_id = NULL, return_pending = 1
+                        vlan = ?, first_seen = ?,
+                        last_seen = MAX(COALESCE(last_seen, ''), ?),
+                        is_active = ?, lifecycle_id = NULL, return_pending = 1
                     WHERE mac = ?
                     ''',
                     (
@@ -8428,7 +8435,8 @@ def full_scan():
             conn.execute('''
                 UPDATE devices
                 SET ip = ?, hostname = ?, hostname_source = ?, vendor = ?, vlan = ?,
-                    last_seen = ?, is_active = ?, lifecycle_id = ?
+                    last_seen = MAX(COALESCE(last_seen, ''), ?),
+                    is_active = ?, lifecycle_id = ?
                 WHERE mac = ?
             ''', (device['ip'], device['hostname'], device['hostname_source'],
                   device['vendor'], device['vlan'], last_seen, is_active,
