@@ -444,7 +444,7 @@ confirmation only.
   dropped on 28 September 2026 — an inherited `get_locale_list()` limitation, not a result of this
   work; see the `DM-BL-008a` entry above.
 
-## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `RESOLVED` (deployed 31 October 2026, Decisions 52-54)
+## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `OPEN` (deployed; retirement churns on multi-row IPs)
 
 **Identifier note:** `PROJECT_STATE.md` and `DECISIONS.md` 52 use `O4` for this item. The `O4`
 above (sidecar text-domain view migration, `CLOSED` 28 September 2026) is a different workstream;
@@ -538,6 +538,30 @@ fixed by Decision 54:**
    carry a `last_checked` inside two hours and no `SERVICE_UNAVAILABLE` event has appeared since
    19:43. Pinned by `AGE_MISS_ADVANCES_LAST_CHECKED` and `AGE_LAST_CHECKED_MIGRATION`
    (18 cases), full local suite 30/30, `V211_RELEASE_MANIFEST=PASS`.
+
+**Reopened 31 October 2026 (node time 23:14:22):** the next scheduled cycle logged
+`aged 0 row(s) to unknown, retired 3 row(s)` again, so retirement still churns. Measured cause, on
+the master:
+
+- address `192.168.20.254` has **two** `devices` rows: `a0:10:a2:ba:06:e5`
+  (`last_seen 2026-08-15 11:10:03`) and `00:00:5e:00:01:01` (`last_seen 2026-10-31 12:32:29`);
+- its five service rows were verified at `23:13:37 … 23:14:09` and are `available`;
+- the retirement predicate is `s.ip IN (SELECT ip FROM devices WHERE last_seen < cutoff)`, so **one**
+  stale row for an IP makes every service on that IP retireable, regardless of a fresh sibling row;
+- `touch_device_last_seen()` did advance both rows, but the scan's own hostwatch import then writes
+  `UPDATE devices SET … last_seen = ? … WHERE mac = ?`
+  (`scan_network.py:8428-8435`) with hostwatch's value, which rewinds the legacy row to `2026-08-15`
+  every cycle. The refresh is undone before retirement runs.
+
+Two candidate fixes, both narrow:
+(A) retirement requires that **no** device row for the address is fresh —
+`NOT EXISTS (SELECT 1 FROM devices d WHERE d.ip = s.ip AND COALESCE(d.last_seen,'') >= cutoff)` —
+so "someone has seen this host recently" is enough to keep its inventory;
+(B) the hostwatch upsert must not move `last_seen` backwards
+(`last_seen = MAX(COALESCE(last_seen,''), ?)`), so a replayed hostwatch value cannot undo a probe.
+
+(A) is the smallest change that stops this churn and is correct on its own terms; (B) removes the
+rewind that made it possible. Which is applied is an operator decision.
 
 **Not caused by this item, recorded because it was observed during the deployment:** both nodes log
 chronic `database is locked` scan failures (14,760 on `.252` since 06-10-2026, 16,130 on `.253`
