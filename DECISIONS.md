@@ -2058,3 +2058,73 @@ is invisible to the negative path. The counter does not decay with time, only on
 two failures weeks apart would still flip a row; with hourly discovery that is acceptable but
 it is not a sliding window. Nothing ages a row out of `unavailable` (O4), and the counter is
 per service row, not per host.
+
+## 50. Service observation belongs to the node that owns the segment, so a CARP backup stays quiet
+
+### Decision
+
+`service_observation_allowed(networks)` reads the CARP role of the monitored devices from
+`ifconfig -a` and returns `(allowed, role, reason)`. A node whose monitored interfaces are
+all `BACKUP` does not run infrastructure-service discovery and does not process
+infrastructure-service alerts; `MASTER` on any monitored segment keeps full behaviour, and a
+node with no CARP state at all is unaffected.
+
+`parse_carp_roles()` maps device -> role, `detect_carp_role()` applies the "master wins"
+rule, and the decision is consulted in three places: `full_scan()` before
+`run_scheduled_service_discovery()`/`process_service_alerts()`, `discover_infrastructure_services()`
+itself (so any caller is covered), and the `--discover-services` CLI path, which returns
+`{"result": "skipped", "reason": "CARP backup node"}`.
+
+The role is persisted in a new `service_discovery_state.carp_role` column so the transition is
+logged once per role change rather than once per five-minute scan.
+
+Adjacent case, same decision: `service_visibility_summary()` logs
+`host-active gate is suppressing outage verdicts: 0 active devices in monitored scope` when
+the host-active gate (Decision 48) has nothing to observe.
+
+### Reason
+
+`is_active` is derived from hostwatch plus a ping fallback (`is_device_active()`), so on a
+CARP BACKUP node — which does not carry the traffic — most devices read inactive. Decision
+48's gate then suppresses nearly every outage verdict on the standby. Silence there is the
+*correct* answer, because the node genuinely cannot observe the segment; but before this
+change nothing said so, nothing stopped the standby from probing and flipping rows while its
+visibility was degraded, and which node alerted depended on an emergent property of hostwatch
+rather than an explicit role.
+
+### Effects and guards
+
+- Non-HA installs are unchanged: no CARP lines -> role `None` -> observation allowed, pinned by
+  `CARP_ABSENT_ALLOWS`.
+- An unreadable `ifconfig` fails **open** (`ifconfig unavailable: …`), so a detection failure
+  cannot silently disable monitoring. That is the deliberate direction: this decision removes
+  observation only when the role is positively known.
+- Scope: service discovery and service alerts only. Host/identity tracking, the Devices view,
+  webhooks, port discovery and the nmap scan history are untouched, so a standby still
+  records inventory and identity.
+- `tests/test_carp_role_gate.py` pins it: `CARP_ROLE_PARSE_PASS`, `CARP_ROLE_DECISION_PASS`,
+  `CARP_BACKUP_DENIES`, `CARP_MASTER_ALLOWS`, `CARP_ABSENT_ALLOWS`,
+  `CARP_BACKUP_SKIPS_DISCOVERY`, `CARP_GATE_WIRED_IN_FULL_SCAN`, `CARP_VISIBILITY_WARNING`.
+  Synthetic `ifconfig` text is used, because the testbed has no CARP pair (verified: zero
+  `<carp>` entries in `/conf/config.xml`).
+- Release identity: `release/v2.11-runtime.manifest` row 34 -> `d8100b4c…`, manifest SHA256 ->
+  `339c6d7a…`, `install-unattended.sh:36` re-pinned. Row count 39, target count 60/61 unchanged.
+
+### Verified
+
+`tests/test_carp_role_gate.py` -> `CARP_ROLE_GATE=PASS`; regression set `test_shutdown_drain`,
+`test_deferred_db_writes`, `test_service_host_gate`, `test_service_miss_hysteresis`,
+`test_port_discovery`, `test_phase3_infrastructure`, `test_fresh_install_defaults` all pass.
+Against a copy of the live testbed database, `init_db()` added the `carp_role` column,
+`service_observation_allowed()` returned `(True, None, '')` for `lan`/`opt1`, and
+`service_visibility_summary()` returned `None` (one active device in scope).
+
+### Residual risk
+
+The role is parsed from `ifconfig` text, so a format change degrades to "allowed" — the
+current behaviour, not a new failure. Detection is per-scan, so a failover is noticed on the
+next cycle (up to `scan_interval`, default 300 s) rather than immediately; during that window
+the old master may still alert while the new master starts to. A node that is `MASTER` for
+one vhid and `BACKUP` for another observes both segments; if both nodes are master for
+different segments, both alert, which is correct but means double notifications are possible
+by design. The visibility warning is a log line only, not a Status-page indicator.

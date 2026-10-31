@@ -936,6 +936,49 @@ Remaining: O4 — age stale `unavailable` rows to `unknown` and retire the 24 se
 not been seen since 2026-09-21.
 
 
+### Task 15 — HA safety: CARP role gate and visibility warning (Decision 50)
+
+**Recorded 31 October 2026.** Operator reported that production is an HA pair where `opt1` no longer
+exists (it is `wan` now) and asked whether the testbed's different interface layout mattered. It does,
+for two reasons: `Monitored interface "opt1" does not exist` makes `resolve_monitored_networks()` fail
+closed (so production would be scanning nothing), and — more importantly — my own O3a gate was unsafe on
+an HA standby.
+
+Root cause of the HA hole: `is_active` comes from hostwatch plus a ping fallback, and a CARP BACKUP node
+does not carry the traffic, so most devices read inactive there. Decision 48's host-active gate then
+suppresses outage verdicts on the standby. Silence from a node that cannot observe is correct, but it was
+emergent rather than declared, nothing prevented the standby from probing while blind, and there was no
+CARP awareness anywhere in the daemon (verified: zero `carp` references).
+
+Change set:
+
+- `parse_carp_roles()` (device -> `MASTER`/`BACKUP` from `ifconfig -a`), `detect_carp_role()` (master
+  wins over backup, `None` when no CARP), `service_observation_allowed()` returning
+  `(allowed, role, reason)`.
+- Consulted in `full_scan()` before discovery and alert processing, inside
+  `discover_infrastructure_services()` so every caller is covered, and in the `--discover-services` CLI
+  path, which returns `{"result": "skipped", "reason": "CARP backup node"}`.
+- `service_discovery_state.carp_role` (new column, `CREATE TABLE` + `ALTER TABLE` migration) makes the
+  transition log one line per role change instead of one per scan.
+- `service_visibility_summary()` logs `host-active gate is suppressing outage verdicts: 0 active devices
+  in monitored scope`, so a silenced gate cannot look like "everything is fine".
+
+New asset `tests/test_carp_role_gate.py` reporting `CARP_ROLE_GATE=PASS` (8 checks), written test-first
+and wired into CI. Non-HA behaviour is pinned by `CARP_ABSENT_ALLOWS`; an unreadable `ifconfig` fails
+open so a detection failure cannot disable monitoring.
+
+Live-schema check on a copy of the testbed database: `init_db()` added `carp_role`,
+`service_observation_allowed()` returned `(True, None, '')` for `lan`/`opt1`, and
+`service_visibility_summary()` returned `None`. The testbed has no CARP at all (zero `<carp>` in
+`/conf/config.xml`), so the BACKUP path cannot be proven live here — it is fixture-driven, and the
+production acceptance is one log line per role change on the standby.
+
+Operator action on production, independent of this code: check `monitored_interfaces` in
+`/var/db/devicemonitor/config.json`. If it still names `opt1`, monitoring has been dead since the HA
+change (fails closed); re-select the internal interface that now carries the segment — and do **not**
+select `wan`, which Task 16 addresses.
+
+
 ## 27 September 2026 v2.10 install-guard pin restoration
 
 Description: restored the guarded v2.10 installer, which aborted with

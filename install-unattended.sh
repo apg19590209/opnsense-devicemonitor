@@ -33,7 +33,7 @@ command -v nmap >/dev/null 2>&1 || NMAP_MISSING=1
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 cd "$SCRIPT_DIR"
 MANIFEST=release/v2.11-runtime.manifest
-[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = 7f9c5b890e403d138fd508065bb2995783cb220e5994fad036fa577b23144399 ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
+[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = 339c6d7addd50a20cdbd46e15c9f237dfbd46f67da2100774d9d862b1b0646f9 ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 39 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
 [ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = 2.11 ] || { echo 'ABORT: source version' >&2; exit 1; }
 LIVE_DEFAULTS=/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json

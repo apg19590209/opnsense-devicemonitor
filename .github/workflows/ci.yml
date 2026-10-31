@@ -85,6 +85,11 @@ jobs:
       - name: Validate service miss hysteresis (v2.11)
         run: python3 tests/test_service_miss_hysteresis.py
 
+      # v2.11 HA safety: a CARP backup node must not observe services, and a node that can see no
+      # hosts must say so instead of silently suppressing outage verdicts.
+      - name: Validate CARP role gate (v2.11)
+        run: python3 tests/test_carp_role_gate.py
+
       - name: Lint PHP sources
         run: |
           set -eu

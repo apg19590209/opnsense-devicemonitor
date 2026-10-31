@@ -839,8 +839,20 @@ def _apply_db_schema():
 
     c.execute('''CREATE TABLE IF NOT EXISTS service_discovery_state (
         id INTEGER PRIMARY KEY CHECK(id = 1),
-        last_run DATETIME
+        last_run DATETIME,
+        carp_role TEXT
     )''')
+
+    # CARP role observed on the previous run, so a transition is logged once.
+    discovery_columns = {
+        row[1]
+        for row in c.execute('PRAGMA table_info(service_discovery_state)')
+    }
+
+    if 'carp_role' not in discovery_columns:
+        c.execute(
+            'ALTER TABLE service_discovery_state ADD COLUMN carp_role TEXT'
+        )
 
     c.execute(
         '''
@@ -2888,6 +2900,174 @@ def record_service_miss(
         ''',
         [threshold] + params
     ).rowcount
+
+
+def parse_carp_roles(ifconfig_text):
+    """
+    Map interface device names to their CARP role from `ifconfig` output.
+
+    Returns ``{device: 'MASTER' | 'BACKUP'}`` for every interface that reports a
+    CARP state. `ifconfig` prints the state on the device block, for example
+    ``carp: BACKUP vhid 1 advbase 1 advskew 100``.
+    """
+    roles = {}
+    current = None
+
+    for line in str(ifconfig_text or '').splitlines():
+        if not line.strip():
+            continue
+
+        if not line[0].isspace():
+            current = line.split(':', 1)[0].strip()
+            continue
+
+        text = line.strip()
+
+        if not text.lower().startswith('carp:') or not current:
+            continue
+
+        fields = text.split()
+
+        if len(fields) < 2:
+            continue
+
+        role = fields[1].strip().upper()
+
+        if role in ('MASTER', 'BACKUP'):
+            roles[current] = role
+
+    return roles
+
+
+def detect_carp_role(devices, ifconfig_text):
+    """
+    Return the CARP role of this node for the given monitored devices.
+
+    ``MASTER`` wins over ``BACKUP``: a node that owns any monitored segment is
+    observing that segment and must keep reporting. ``None`` means the devices
+    carry no CARP state at all, which is the non-HA case.
+    """
+    roles = parse_carp_roles(ifconfig_text)
+    seen = {
+        roles[device]
+        for device in (devices or [])
+        if device in roles
+    }
+
+    if 'MASTER' in seen:
+        return 'MASTER'
+
+    if 'BACKUP' in seen:
+        return 'BACKUP'
+
+    return None
+
+
+def service_observation_allowed(networks, ifconfig_text=None):
+    """
+    Return ``(allowed, role, reason)`` for service observation on this node.
+
+    A CARP BACKUP node does not carry the monitored traffic, so hostwatch there
+    under-reports and the host-active gate would either suppress every outage or -
+    without the gate - invent them. Neither is a useful answer from a standby, so
+    observation is refused. A node with no CARP is unaffected.
+
+    ``ifconfig_text`` is injectable so the decision can be tested without a CARP
+    pair; when omitted the live output is read.
+    """
+    devices = [
+        str(network.get('device') or '').strip()
+        for network in (networks or [])
+    ]
+    devices = [device for device in devices if device]
+
+    if not devices:
+        return True, None, ''
+
+    if ifconfig_text is None:
+        try:
+            result = subprocess.run(
+                ['/sbin/ifconfig', '-a'],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            ifconfig_text = getattr(result, 'stdout', '') or ''
+        except (OSError, subprocess.TimeoutExpired) as e:
+            # An unreadable ifconfig must not silently disable observation.
+            return True, None, f'ifconfig unavailable: {e}'
+
+    role = detect_carp_role(devices, ifconfig_text)
+
+    if role == 'BACKUP':
+        return False, role, 'CARP backup node'
+
+    return True, role, ''
+
+
+def record_carp_role(role):
+    """
+    Persist the CARP role of the monitored devices; True when it changed.
+
+    Keeps the role log to one line per transition instead of one per scan.
+    """
+    value = str(role or '')
+
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            row = conn.execute(
+                'SELECT carp_role FROM service_discovery_state WHERE id = 1'
+            ).fetchone()
+
+            previous = str(row[0] or '') if row else ''
+
+            if previous == value:
+                return False
+
+            conn.execute(
+                'UPDATE service_discovery_state SET carp_role = ? WHERE id = 1',
+                (value,)
+            )
+            conn.commit()
+
+            return True
+
+    except sqlite3.Error:
+        return True
+
+
+def service_visibility_summary(conn, networks):
+    """
+    Warn when the host-active gate has nothing to observe.
+
+    With no active device inside the monitored scope, every outage verdict is
+    suppressed by design (Decision 48). That is indistinguishable from "nothing
+    is wrong" unless it is said out loud, so say it.
+    """
+    try:
+        rows = conn.execute(
+            'SELECT ip, is_active FROM devices'
+        ).fetchall()
+    except sqlite3.Error:
+        return None
+
+    active = 0
+
+    for ip, is_active in rows:
+        if not int(is_active or 0):
+            continue
+
+        if ip_is_in_scope(str(ip or ''), networks):
+            active += 1
+
+    if active:
+        return None
+
+    return (
+        'host-active gate is suppressing outage verdicts: '
+        '0 active devices in monitored scope'
+    )
 
 
 def _service_probe_candidates(conn, networks, limit=128):
@@ -5404,6 +5584,21 @@ def discover_phase3_services(networks):
 def discover_infrastructure_services(networks):
     """Run all supported infrastructure-service discovery within ``networks``."""
     services = []
+
+    allowed, _role, reason = service_observation_allowed(networks)
+
+    if not allowed:
+        log(f'[SERVICES] {reason}; service discovery skipped on this node')
+        return services
+
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            visibility_warning = service_visibility_summary(conn, networks)
+    except sqlite3.Error:
+        visibility_warning = None
+
+    if visibility_warning:
+        log(f'[SERVICES] {visibility_warning}')
 
     discoveries = (
         ('DHCP', discover_dhcp_servers),
@@ -8008,11 +8203,29 @@ def full_scan():
 
     # Infrastructure-service discovery is intentionally rate-limited.
     # It must not add DHCP/DNS probes to every normal monitoring cycle.
-    run_scheduled_service_discovery(networks=networks)
+    #
+    # A CARP BACKUP node does not carry the monitored traffic, so it must not
+    # reach liveness verdicts or alert on them. The role is persisted so the
+    # transition is logged once instead of on every scan.
+    allowed, carp_role, observation_reason = service_observation_allowed(networks)
 
-    # Process pending service alerts every full scan. Discovery is hourly, but
-    # failed delivery retries and cursor housekeeping should not wait an hour.
-    process_service_alerts(config, networks)
+    if record_carp_role(carp_role):
+        log(
+            f'[SERVICES] CARP role: {carp_role or "none"} '
+            f'({"observing" if allowed else observation_reason})'
+        )
+
+    if allowed:
+        run_scheduled_service_discovery(networks=networks)
+
+        # Process pending service alerts every full scan. Discovery is hourly, but
+        # failed delivery retries and cursor housekeeping should not wait an hour.
+        process_service_alerts(config, networks)
+    else:
+        log(
+            f'[SERVICES] {observation_reason}; '
+            'skipping service discovery and service alerts on this node'
+        )
 
     # 4. Notifications filtered by VLAN
     log(f"New devices: {len(new_devices)}, Online: {online}/{total}")
@@ -8565,6 +8778,16 @@ Examples:
         if error:
             print(f"ERROR: {error}", file=sys.stderr)
             return 2
+
+        allowed, role, reason = service_observation_allowed(networks)
+
+        if not allowed:
+            print(json.dumps({
+                'result': 'skipped',
+                'reason': reason,
+                'carp_role': role
+            }))
+            return 0
 
         services = discover_infrastructure_services(networks)
 
