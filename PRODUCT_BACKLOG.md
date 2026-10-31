@@ -561,7 +561,26 @@ so "someone has seen this host recently" is enough to keep its inventory;
 (`last_seen = MAX(COALESCE(last_seen,''), ?)`), so a replayed hostwatch value cannot undo a probe.
 
 (A) is the smallest change that stops this churn and is correct on its own terms; (B) removes the
-rewind that made it possible. Which is applied is an operator decision.
+rewind that made it possible. Both were applied as Decision 55, commit `9a300cd`, bundle
+`c2aedfc0…`, installed on both nodes (`.252` backup `install-v211.MBQu7J`, `.253` backup
+`install-v211.EJPCJH`), installed `scan_network.py` `71e2edfc…`.
+
+Field effect of the redeploy, measured on the master:
+
+- `(B)` is proven: the legacy `192.168.20.254` row moved from `2026-08-15 11:10:03` to
+  `2026-11-01 00:16:52` and stayed there instead of being rewound by the hostwatch import;
+- `(A)` is proven for that address: both of its rows are now fresh and its five services
+  (verified `00:16:18 … 00:16:52`) persist;
+- no address now has service rows with no fresh device row, and no address has a mixed stale/fresh
+  row set — the candidate set the predicate looks at is empty;
+- **but** the `00:17:06` cycle (the first scheduled discovery after this install) still logged
+  `aged 0 row(s) to unknown, retired 3 row(s)`, with the total unchanged at 116. Those three rows
+  could not be identified afterwards: no device row was refreshed between `00:17:06` and `00:25:00`,
+  no service row was verified after `00:17:06`, and the candidate query returns nothing. They were
+  therefore either genuinely abandoned rows retired once (correct behaviour) or authoritative
+  (config-derived) rows whose address never refreshes by design. The `01:17` cycle decides which:
+  `retired 0` means the churn is over, a repeat of `retired 3` means the authoritative path is the
+  remaining source and needs an insert-side guard.
 
 **Not caused by this item, recorded because it was observed during the deployment:** both nodes log
 chronic `database is locked` scan failures (14,760 on `.252` since 06-10-2026, 16,130 on `.253`
