@@ -20,6 +20,7 @@ These checks pin the replacement behaviour:
 
 The probes are driven with fake sockets, so no network traffic is generated.
 """
+import builtins
 import importlib.util
 import inspect
 import ipaddress
@@ -39,15 +40,43 @@ SOURCE = (
     / "DeviceMonitor"
     / "scan_network.py"
 )
+DEFAULTS = (
+    ROOT
+    / "src"
+    / "opnsense"
+    / "mvc"
+    / "app"
+    / "models"
+    / "OPNsense"
+    / "DeviceMonitor"
+    / "defaults.json"
+)
 
 
 def load_module():
+    """Load scan_network.py with defaults.json redirected to the checkout.
+
+    The module reads the *installed* defaults path at import time, which does not
+    exist on a CI runner, so the read is redirected to the repository copy.
+    """
+    original_open = builtins.open
+
+    def test_open(path, *args, **kwargs):
+        if str(path).endswith('/models/OPNsense/DeviceMonitor/defaults.json'):
+            path = DEFAULTS
+        return original_open(path, *args, **kwargs)
+
     spec = importlib.util.spec_from_file_location(
         "devicemonitor_probe_resilience_test",
         SOURCE,
     )
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    builtins.open = test_open
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        builtins.open = original_open
+
     module.log = lambda message: None
     return module
 

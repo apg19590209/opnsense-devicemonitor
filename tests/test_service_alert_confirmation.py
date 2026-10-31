@@ -23,6 +23,7 @@ service was reported offline and back online once per flap.
 All checks run against a temporary database with the lock and the PHP mail
 helper stubbed, so nothing is sent and no real state is touched.
 """
+import builtins
 import importlib.util
 import ipaddress
 import json
@@ -43,6 +44,17 @@ SOURCE = (
     / "DeviceMonitor"
     / "scan_network.py"
 )
+DEFAULTS = (
+    ROOT
+    / "src"
+    / "opnsense"
+    / "mvc"
+    / "app"
+    / "models"
+    / "OPNsense"
+    / "DeviceMonitor"
+    / "defaults.json"
+)
 
 MAC = "aa:bb:cc:dd:ee:10"
 IP = "192.168.50.20"
@@ -50,12 +62,29 @@ DETAILS = "DNS|192.168.50.20|53|udp|LAN|dns_query"
 
 
 def load_module():
+    """Load scan_network.py with defaults.json redirected to the checkout.
+
+    The module reads the *installed* defaults path at import time, which does not
+    exist on a CI runner, so the read is redirected to the repository copy.
+    """
+    original_open = builtins.open
+
+    def test_open(path, *args, **kwargs):
+        if str(path).endswith('/models/OPNsense/DeviceMonitor/defaults.json'):
+            path = DEFAULTS
+        return original_open(path, *args, **kwargs)
+
     spec = importlib.util.spec_from_file_location(
         "devicemonitor_alert_confirmation_test",
         SOURCE,
     )
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    builtins.open = test_open
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        builtins.open = original_open
+
     module.log = lambda message: None
     return module
 
