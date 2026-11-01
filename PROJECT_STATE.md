@@ -2,30 +2,34 @@
 
 ## Current state
 
-Last updated: 9 October 2026
+Last updated: 1 November 2026
 
-Branch: `feature/async-db-v2.11` — active development checkout (created from the
-`v2.10-development` tip `5cca3c9`; `v2.10-development` remains the released maintenance line)
+Branch: `main` — the published line. The v2.12 work was cut on
+`fix/scan-loop-and-alert-noise-20261101` and merged into `main` on 1 November 2026;
+`v2.10-development` remains the historical maintenance line.
 
 Authoritative development checkout: `/root/src/opnsense-devicemonitor-upstream`
 (FreeBSD 15.1-RELEASE amd64; OPNsense testbed host `192.168.20.23`)
 
-Latest released implementation commit: `1b7e42c278182c214fa465cea13ef1a2bc51623b` — tag `v2.10.2`,
-`docs: update PROJECT_STATE metadata header to align with v2.10/v2.10.1 release reality`. The tag was cut
-from the verified development HEAD on 30 September 2026 and published to `origin`; its history carries
-`0c1950bb6c4a62f180dad9a19245e7c6845e9607` (`fix/installer: install the nmap package dependency when it is
-absent (issue #4)`), the change that resolves Issue #4. Like `v2.10.1`, `v2.10.2` is a tag with no GitHub
-release published for it.
+Latest released implementation commit: `92072a53ff036fbb2b56eb663ef6d7a89fd0f36e` — tag `v2.12`,
+`docs(locale): name the v2.12 runtime manifest in the guarded-payload comment`. The tag was cut on
+1 November 2026 from `fix/scan-loop-and-alert-noise-20261101`, pushed to `origin`, and published as
+the GitHub release `Device Monitor v2.12` (1 November 2026 10:35 UTC; runtime asset
+`dm-v2.12-runtime.tar.gz`, 41-row `release/v2.12-runtime.manifest`).
 
-Earlier tags: `v2.10.1` = `5e2073425d03b613867a53aa4157bde45d43b2fc` (`docs: record the v2.10 production
-deployment to 45e8c86`; no GitHub release), `v2.10` = `1315c8022dce7fe720c6eb1a948b9e0497efdeca`.
+Earlier published release: tag `v2.11-patch1` = `a9294aed8fcb423f580cce11ea0dad15ca917456` —
+`DeviceMonitor Custom Patch Release v2.11-patch1` (9 October 2026 07:12 UTC; runtime asset
+`dm-v2.11-runtime.tar.gz`). There is no plain `v2.11` tag: `v2.11` exists only as the `-patch1`
+release name, `release/v2.11-notes.md` and `release/v2.11-runtime.manifest`.
 
-Latest published GitHub release: tag `v2.10` at `1315c8022dce7fe720c6eb1a948b9e0497efdeca` —
-`Device Monitor v2.10` (marked Latest; published 29 September 2026 12:49 UTC; runtime asset
-`dm-v2.10-runtime.tar.gz`) — unchanged by the `v2.10.2` tag push, which published a tag only.
+Earlier tags: `v2.10.2` = `1b7e42c278182c214fa465cea13ef1a2bc51623b` and `v2.10.1` =
+`5e2073425d03b613867a53aa4157bde45d43b2fc` (both tag-only, no GitHub release); `v2.10` =
+`1315c8022dce7fe720c6eb1a948b9e0497efdeca` (`Device Monitor v2.10`, published 29 September 2026
+12:49 UTC).
 
-Current development HEAD: the untagged `docs:` commit that records this release state, made after
-`v2.10.2`; apart from this note it is content-identical to `v2.10.2`.
+Current development HEAD: the merge commit that lands `fix/scan-loop-and-alert-noise-20261101`
+(through `92072a5`) on `main`, together with the README/README_CZ/PROJECT_STATE version-reference
+update described at the end of this file.
 
 Status:
 
@@ -5236,4 +5240,42 @@ rule audit, read-only findings and proposed text) and `.cline-reports/REPORT-202
 
 Next recommended step: push `feature/async-db-v2.11` and read the `ci.yml` run for `2747110` and
 `6c4887c`.
+
+## 1 November 2026 — v2.12 merged onto `main`; README and headers repointed from v2.10
+
+Reported symptom: the GitHub page appeared not to show 2.11 or 2.12. The releases
+themselves were live — `GET /repos/apg19590209/opnsense-devicemonitor/releases` returned
+`v2.12` (`Device Monitor v2.12`, `draft:false`, `prerelease:false`, published
+2026-11-01T10:35:21Z, asset `dm-v2.12-runtime.tar.gz`, 320,511 bytes) and
+`v2.11-patch1` (`DeviceMonitor Custom Patch Release v2.11-patch1`, published
+2026-10-09T07:12:05Z, asset `dm-v2.11-runtime.tar.gz`, 299,971 bytes), and the rendered
+`/releases` HTML listed both tag links. What was stale was the default branch:
+`origin/main` was at `a9294ae` (= `v2.11-patch1`), `git merge-base --is-ancestor v2.12
+origin/main` failed, and the v2.12 commit set — including `3758c6b`
+(`fix(about): stop the About tab from advertising v2.10`) — existed only on
+`fix/scan-loop-and-alert-noise-20261101`. `README.md` on both branches still instructed
+users to download `dm-v2.10-runtime.tar.gz` and `mkdir dm-v2.10`, so the repository landing
+page advertised v2.10 regardless of the release list. A second report driver: there is no
+plain `v2.11` tag, only `v2.11-patch1`, so a search for "2.11" finds nothing.
+
+Changes:
+
+- `main` created from `origin/main` and merged with
+  `origin/fix/scan-loop-and-alert-noise-20261101` (`--no-ff`, 41 files, +6316/−325),
+  bringing `d268680`…`92072a5` and therefore the `v2.12` tag target onto the default branch.
+- `README.md` installation section (download step, WinSCP upload, both shell blocks, the
+  fetch URL, the upgrade paragraph and the uninstaller note) repointed from `v2.10` to
+  `v2.12`; version history gains `v2.12` and `v2.11` entries above `v2.10`.
+- `README_CZ.md` installation section repointed the same way, with Czech `v2.12` and
+  `v2.11` history entries.
+- `PROJECT_STATE.md` header rewritten: branch `main`, latest released commit `92072a5`
+  (tag `v2.12`), `v2.11-patch1` as the earlier published release, the absence of a plain
+  `v2.11` tag stated explicitly, and the release status of the older tags restated.
+
+Historical bullets above are left as written: they record what was true on their dates
+(production on `2.10`, `v2.10.2` tag-only, and so on) and are not rewritten by this update.
+
+Not done: no tag was moved or re-cut (`v2.12` still dereferences to `92072a5`), no release
+was created or edited, and no installation, testbed or production deployment was performed —
+this change set is documentation and branch topology only.
 

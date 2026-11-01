@@ -40,6 +40,23 @@ The plugin automatically monitors the network and alerts you about:
 
 ## Version history
 
+### v2.12 (1 November 2026) — Scan reliability, state-change alerts and HA ownership
+
+- Scan cycles no longer abort on `database is locked`: every connection carries a 30 s timeout plus `PRAGMA busy_timeout`, the deferred writer is flushed before a queue row is updated, and a failed targeted scan still records its retry backoff.
+- Targeted-scan emails are state-change notifications: a scan mails only when the open-service inventory differs from the newest successful scan for that device. Unchanged scans are still recorded with `email_sent=0`.
+- Each email category can repeat an unchanged state after 0 (default, never), 5, 10, 15, 30, 45 or 60 minutes, or a custom value up to 1440.
+- A new MAC at a known address is an identity change (`IP_IDENTITY_CHANGED`), not a new device; randomised MACs always count, vendor MACs only inside `MAC_ROTATION_WINDOW_HOURS` (168 h).
+- Identity conflicts can be emailed (`identity_email_enabled`, `notify_identity_mail.php`) in addition to the webhook leg.
+- In an HA pair the CARP verdict gates every outbound alert, so only the MASTER mails or pushes; detection, history and the database still run on both nodes.
+- `deploy/` adds a git-only deployment path: `publish-devicemonitor.sh`, the hash-gated on-box installer `deploy-devicemonitor.sh` and `verify-devicemonitor.sh`, which runs daily from `/etc/cron.d/devicemonitor-drift`.
+- The About tab badge and its "Features and Enhancements" heading now both come from `defaults.json`, so the page cannot advertise an older release.
+
+### v2.11 (9 October 2026) — Asynchronous scan-history writer
+
+- Targeted Nmap scan history is written by one process-wide writer thread (`dm-db-writer`) instead of inline on the scan thread, so the SQLite write lock and its fsync leave the scan path. The synchronous path is retained as a fallback, and `flush_db_writes()` drains the queue from `atexit` and at the end of `full_scan()`.
+- The pre-scan history `INSERT` and the abort/failure `UPDATE` remain synchronous by design.
+- Changes no user-visible interface; the version metadata is bumped so the installer, the manifest and the installed payload agree on one release identity.
+
 ### v2.10 (September 2026) — Nine major UI language translations
 
 - Adds German, Spanish, French, Italian, Japanese, Dutch, Portuguese, Russian and Simplified Chinese translations in addition to the existing English and Czech.
@@ -315,16 +332,16 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 
 ### Method 1: Download runtime package + WinSCP
 
-1. Download the **v2.10 runtime package** from the v2.10 GitHub release assets.
+1. Download the **v2.12 runtime package** from the v2.12 GitHub release assets.
 2. Enable SSH in OPNsense: **System -> Settings -> Administration -> Secure Shell -> Enable**.
-3. Upload `dm-v2.10-runtime.tar.gz` to `/tmp/` using WinSCP.
+3. Upload `dm-v2.12-runtime.tar.gz` to `/tmp/` using WinSCP.
 4. Connect by SSH and install:
 
 ```sh
 cd /tmp
-mkdir dm-v2.10
-tar -xzf dm-v2.10-runtime.tar.gz -C dm-v2.10
-cd dm-v2.10
+mkdir dm-v2.12
+tar -xzf dm-v2.12-runtime.tar.gz -C dm-v2.12
+cd dm-v2.12
 sh install.sh --host YOUR-FIREWALL-HOSTNAME
 ```
 
@@ -339,10 +356,10 @@ installation starts the daemon with monitoring disabled by default).
 ```sh
 ssh root@your.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.10/dm-v2.10-runtime.tar.gz
-mkdir dm-v2.10
-tar -xzf dm-v2.10-runtime.tar.gz -C dm-v2.10
-cd dm-v2.10
+fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.12/dm-v2.12-runtime.tar.gz
+mkdir dm-v2.12
+tar -xzf dm-v2.12-runtime.tar.gz -C dm-v2.12
+cd dm-v2.12
 sh install.sh --host YOUR-FIREWALL-HOSTNAME
 ```
 
@@ -354,7 +371,7 @@ Before upgrading, back up the runtime data:
 tar -czf /root/devicemonitor-backup.tgz /var/db/devicemonitor
 ```
 
-Then install v2.10 using either method above. The installer validates the host,
+Then install v2.12 using either method above. The installer validates the host,
 source and dependencies before modifying files, and retains a rollback backup.
 It aborts on failed checks instead of continuing with a partial installation.
 
@@ -697,7 +714,7 @@ This removes all files, stops the daemon, disables autostart, and clears caches.
 sh uninstall.sh --silent
 ```
 
-The v2.10 installer upgrades files in place and does not invoke the uninstaller.
+The v2.12 installer upgrades files in place and does not invoke the uninstaller.
 
 ### Method 3: Manual
 

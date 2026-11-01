@@ -38,6 +38,23 @@ Plugin automaticky sleduje síť a upozorňuje na:
 
 ## Historie verzí
 
+### v2.12 (1. listopadu 2026) — Spolehlivost skenů, upozornění na změnu stavu a vlastnictví v HA
+
+- Skenovací cykly už nekončí chybou `database is locked`: každé spojení má 30s timeout a `PRAGMA busy_timeout`, odložený zapisovač se před aktualizací řádku fronty vyprázdní a neúspěšný cílený sken si i tak zapíše odklad opakování.
+- E-maily z cílených skenů jsou upozornění na změnu stavu: sken odešle zprávu jen tehdy, když se inventář otevřených služeb liší od posledního úspěšného skenu daného zařízení. Nezměněné skeny se ukládají s `email_sent=0`.
+- Každá e-mailová kategorie může opakovat nezměněný stav po 0 (výchozí, nikdy), 5, 10, 15, 30, 45 nebo 60 minutách, případně po vlastní hodnotě do 1440.
+- Nová MAC na známé adrese je změna identity (`IP_IDENTITY_CHANGED`), ne nové zařízení; randomizované MAC se počítají vždy, vendor MAC jen v rámci `MAC_ROTATION_WINDOW_HOURS` (168 h).
+- Konflikty identity lze posílat e-mailem (`identity_email_enabled`, `notify_identity_mail.php`) vedle webhook větve.
+- V HA páru rozhoduje verdikt CARP o všech odchozích upozorněních, takže mailuje nebo odesílá jen MASTER; detekce, historie a databáze běží na obou uzlech.
+- `deploy/` přidává nasazení pouze z gitu: `publish-devicemonitor.sh`, hashovaný instalátor na zařízení `deploy-devicemonitor.sh` a `verify-devicemonitor.sh`, který běží denně z `/etc/cron.d/devicemonitor-drift`.
+- Odznak verze na kartě About i nadpis „Features and Enhancements“ nyní pocházejí z `defaults.json`, takže stránka nemůže inzerovat starší vydání.
+
+### v2.11 (9. října 2026) — Asynchronní zapisovač historie skenů
+
+- Historie cílených Nmap skenů se zapisuje jedním procesovým vláknem (`dm-db-writer`) místo přímo ve skenovacím vlákně, takže zámek zápisu SQLite a jeho fsync opouštějí cestu skenu. Synchronní cesta zůstává jako záloha a `flush_db_writes()` vyprázdní frontu z `atexit` a na konci `full_scan()`.
+- `INSERT` historie před skenem a `UPDATE` při přerušení/selhání zůstávají synchronní záměrně.
+- Nemění uživatelské rozhraní; metadata verze se zvyšují, aby instalátor, manifest a nainstalovaný obsah odpovídaly jedné identitě vydání.
+
 ### v2.9 (září 2026) — Fail-closed scoping sledovaných rozhraní
 
 - Přidává **Sledovaná rozhraní**: detekce, priming, čítače stavů, upozornění a cílené skeny jsou omezeny na explicitně vybraná rozhraní; prázdný výběr fail-closed odmítne skenování.
@@ -308,7 +325,7 @@ Také odstraněno rozbité `configctl webgui restart` a `service php-fpm restart
 
 ### Metoda 1: WinSCP + SSH (doporučeno)
 
-**Krok 1:** Stáhni balíček `dm-v2.10-runtime.tar.gz` z příloh vydání v2.10 na GitHubu.
+**Krok 1:** Stáhni balíček `dm-v2.12-runtime.tar.gz` z příloh vydání v2.12 na GitHubu.
 
 **Krok 2:** Povol SSH na OPNsense:
 ```
@@ -320,9 +337,9 @@ System → Settings → Administration → Secure Shell → Enable
 **Krok 4:** Připoj se přes SSH a nainstaluj:
 ```bash
 cd /tmp
-mkdir dm-v2.10
-tar -xzf dm-v2.10-runtime.tar.gz -C dm-v2.10
-cd dm-v2.10
+mkdir dm-v2.12
+tar -xzf dm-v2.12-runtime.tar.gz -C dm-v2.12
+cd dm-v2.12
 sh install.sh --host NAZEV-VASEHO-FIREWALLU
 ```
 
@@ -335,10 +352,10 @@ Restart firewallu není potřeba. Instalátor restartuje `configd` a již běž�
 ```bash
 ssh root@tvoje.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.10/dm-v2.10-runtime.tar.gz
-mkdir dm-v2.10
-tar -xzf dm-v2.10-runtime.tar.gz -C dm-v2.10
-cd dm-v2.10
+fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.12/dm-v2.12-runtime.tar.gz
+mkdir dm-v2.12
+tar -xzf dm-v2.12-runtime.tar.gz -C dm-v2.12
+cd dm-v2.12
 sh install.sh --host NAZEV-VASEHO-FIREWALLU
 ```
 
@@ -651,7 +668,7 @@ Odstraní všechny soubory, zastaví daemon, vypne autostart a vyčistí cache. 
 sh uninstall.sh --silent
 ```
 
-Instalační program v2.10 aktualizuje soubory na místě a nevolá odinstalační program.
+Instalační program v2.12 aktualizuje soubory na místě a nevolá odinstalační program.
 
 ### Metoda 3: Ruční
 
