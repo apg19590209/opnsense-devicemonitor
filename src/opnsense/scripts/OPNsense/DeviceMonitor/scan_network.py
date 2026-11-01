@@ -9269,16 +9269,28 @@ def full_scan():
     total = len(scoped_macs)
     conn.close()
 
+    # Single alert source in an HA pair: only the node that owns the segment
+    # dispatches alerts. The standby keeps detecting and recording state, so a
+    # failover is immediate, but it stays quiet so the operator is not told the
+    # same thing twice.
+    allowed, carp_role, observation_reason = service_observation_allowed(networks)
+
     identity_alerts = new_high_identity_events + identity_reminders
     delivered = False
 
     # Email leg (identity_email_enabled) and webhook leg are independent: the
     # first rides the email transport, the second posts to the webhook URL.
-    if should_send_identity_mail(config, identity_alerts):
+    if allowed and should_send_identity_mail(config, identity_alerts):
         delivered = send_identity_mail(identity_alerts) or delivered
 
-    if should_send_identity_email(config, identity_alerts):
+    if allowed and should_send_identity_email(config, identity_alerts):
         delivered = send_identity_email(identity_alerts) or delivered
+
+    if not allowed and identity_alerts:
+        log(
+            f'[IDENTITY] {len(identity_alerts)} conflict event(s) not alerted: '
+            f'CARP {(carp_role or "backup").lower()} node'
+        )
 
     if delivered:
         try:
@@ -9293,8 +9305,6 @@ def full_scan():
     # A CARP BACKUP node does not carry the monitored traffic, so it must not
     # reach liveness verdicts or alert on them. The role is persisted so the
     # transition is logged once instead of on every scan.
-    allowed, carp_role, observation_reason = service_observation_allowed(networks)
-
     if record_carp_role(carp_role):
         log(
             f'[SERVICES] CARP role: {carp_role or "none"} '
@@ -9318,7 +9328,12 @@ def full_scan():
         f"New devices: {len(new_devices)}, MAC rotations: {mac_rotations}, "
         f"Online: {online}/{total}"
     )
-    if new_devices and config['enabled']:
+    if new_devices and config['enabled'] and not allowed:
+        log(
+            f'[ALERT] {len(new_devices)} new device(s) not announced: '
+            f'CARP {(carp_role or "backup").lower()} node'
+        )
+    elif new_devices and config['enabled']:
         email_vlans   = set(v.strip() for v in config.get('email_vlans',  '').split(',') if v.strip())
         webhook_vlans = set(v.strip() for v in config.get('webhook_vlans', '').split(',') if v.strip())
         email_devs    = [d for d in new_devices if not email_vlans   or d.get('vlan','') in email_vlans]
