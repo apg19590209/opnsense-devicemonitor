@@ -1,4 +1,4 @@
-b9c2a2e44e426040ce00182cc81f2f2a783eb888212eb4e8bd52b9d691fdf368 644 src/etc/inc/devicemonitor_locale.inc /usr/local/etc/inc/devicemonitor_locale.inc
+1404c3f2716f862027346dfcb7d54e981498253106feefc34546b571d428640f 644 src/etc/inc/devicemonitor_locale.inc /usr/local/etc/inc/devicemonitor_locale.inc
 cecdb6386624ca26de9cd5cdc5cd1454e88140b206464fa4d2f6ba9bf87b0cfd 644 src/etc/inc/plugins.inc.d/devicemonitor.inc /usr/local/etc/inc/plugins.inc.d/devicemonitor.inc
 710f07212a5de5d0df98ab435073827801fef1d696b40587570d0069afc665df 755 src/etc/rc.d/devicemonitor /usr/local/etc/rc.d/devicemonitor
 60955154dc0b6591fb42320d110d4bb08f394113bc9cd683d3416f2a754e1fde 644 src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ConfigController.php /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ConfigController.php
