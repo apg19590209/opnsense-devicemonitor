@@ -67,13 +67,28 @@ orig_run = m.subprocess.run
 orig_executor = m.ThreadPoolExecutor
 orig_sleep = m.time.sleep
 
+
+def ping_only(record):
+    """Record probe calls only; the CARP gate reads `ifconfig` via the same hook."""
+    def recorder(args, **kwargs):
+        if args and args[0] != "/sbin/ping":
+            return Result(0)
+        return record(args, **kwargs)
+
+    return recorder
+
 try:
     m.ThreadPoolExecutor = Executor
     m.time.sleep = lambda seconds: None
 
     # Selected /24 (opt1): every usable host except the interface IP is probed.
     calls = []
-    m.subprocess.run = lambda args, **kwargs: (calls.append((args, kwargs)) or Result(0))
+
+    def record_probe(args, **kwargs):
+        calls.append((args, kwargs))
+        return Result(0)
+
+    m.subprocess.run = ping_only(record_probe)
     m.prime_selected_interface_visibility([net("192.168.50.1", 24)])
 
     addresses = [call[0][4] for call in calls]
@@ -94,7 +109,12 @@ try:
 
     # Smaller network such as /25 is allowed (interface ip .254 -> .129..253).
     calls = []
-    m.subprocess.run = lambda args, **kwargs: (calls.append(args[4]) or Result(0))
+
+    def record_address(args, **kwargs):
+        calls.append(args[4])
+        return Result(0)
+
+    m.subprocess.run = ping_only(record_address)
     m.prime_selected_interface_visibility([net("192.168.50.254", 25)])
 
     assert len(calls) == 125
@@ -105,13 +125,22 @@ try:
 
     # Networks larger than /24 are rejected (no probe).
     calls = []
-    m.subprocess.run = lambda *args, **kwargs: (calls.append(True) or Result(0))
+
+    def record_any(args, **kwargs):
+        calls.append(True)
+        return Result(0)
+
+    m.subprocess.run = ping_only(record_any)
     m.prime_selected_interface_visibility([net("192.168.50.1", 23)])
     assert calls == []
 
     # Malformed interface IP fails soft (no probe).
     bad_ip = dict(net("192.168.50.1", 24), ip="not-an-ip")
-    m.subprocess.run = lambda *args, **kwargs: (_ for _ in ()).throw(Exception("ping should not run"))
+
+    def fail_probe(args, **kwargs):
+        raise Exception("ping should not run")
+
+    m.subprocess.run = ping_only(fail_probe)
     m.prime_selected_interface_visibility([bad_ip])
 
     # Empty selection is a no-op.
@@ -130,14 +159,14 @@ try:
         return Result(0)
 
     # /25 target set excludes .1/.2.
-    m.subprocess.run = mixed_ping
+    m.subprocess.run = ping_only(mixed_ping)
     m.prime_selected_interface_visibility([net("192.168.50.254", 25)])
     assert "192.168.50.1" not in seen
     assert len(seen) == 125
 
     # /24 target set includes .1/.2.
     seen = []
-    m.subprocess.run = mixed_ping
+    m.subprocess.run = ping_only(mixed_ping)
     m.prime_selected_interface_visibility([net("192.168.50.254", 24)])
     assert "192.168.50.1" in seen
     assert "192.168.50.2" in seen
@@ -146,7 +175,7 @@ try:
     # Full scan must prime Hostwatch before reading Hostwatch.
     full_source = inspect.getsource(m.full_scan)
     assert (
-        full_source.index("prime_selected_interface_visibility(networks)")
+        full_source.index("prime_selected_interface_visibility(networks")
         <
         full_source.index("devices = get_hostwatch_devices(networks)")
     )

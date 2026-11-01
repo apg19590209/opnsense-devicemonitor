@@ -5277,5 +5277,53 @@ Historical bullets above are left as written: they record what was true on their
 
 Not done: no tag was moved or re-cut (`v2.12` still dereferences to `92072a5`), no release
 was created or edited, and no installation, testbed or production deployment was performed —
-this change set is documentation and branch topology only.
+this change set is documentation and branch topology only, plus the non-HA verification
+asset recorded below.
+
+### Non-HA verification (same day)
+
+The v2.12 CARP gate is only safe if it is fail-open on a single-node firewall, so that is
+pinned by `tests/test_non_ha_operation.py`. It drives `full_scan()` end to end with the
+`ifconfig` output injected at the gate: a CARP-less node must prime visibility, run service
+discovery, process service alerts, send the identity mail and mail the new device, while the
+identical scan on a BACKUP node must do none of those. The BACKUP run is the negative
+control — without it, a harness that skipped every dispatch for any reason would still
+"pass" the non-HA case. The same file covers the three other fail-open shapes: an
+unreadable `ifconfig` (`OSError`), a timed-out `ifconfig` and an empty `ifconfig`, plus
+`carp: INIT` (a standby that has not settled) and a BACKUP state on an interface that is not
+monitored. It also proves the persisted role for a CARP-less node stays empty rather than
+`BACKUP`, and that a repeated observation is not re-logged. Registered in `.github/workflows/ci.yml`
+as the step after the v2.11 CARP role gate. Nothing in the plugin source was changed by this
+work: the audit found no CARP requirement outside the gate (no `carp` reference exists in
+`deploy/`, `install.sh` or `install-unattended.sh`).
+
+### v2.12 test regressions found by running the full CI suite on `main`
+
+Running every `python3 tests/*.py` step of `ci.yml` against the merged tree (24 of 27
+passed) surfaced three failures, all present at `92072a5` and none of them caused by the
+merge, plus one environmental failure:
+
+- `tests/test_release_manifest.py` was left pinned to `release/v2.11-runtime.manifest`
+  with 39 rows and `defaults.json` version `2.11`. The `release: v2.12` commit (`8ea1203`)
+  bumped the manifest, the installer pin and the payload but not this test, so CI would
+  have failed on `main` at `V211_RELEASE_MANIFEST`. Repointed to the 41-row v2.12 manifest
+  and version `2.12` (`V212_RELEASE_MANIFEST=PASS`).
+- `tests/test_hostwatch_lan_visibility.py` recorded every `subprocess.run` call and treated
+  each one as a ping, so the CARP gate's `/sbin/ifconfig -a` read inside
+  `prime_selected_interface_visibility()` raised `IndexError`; its ordering assertion also
+  still expected the pre-v2.12 one-argument priming call. The recorder now filters to
+  `/sbin/ping` and the ordering check matches the config-aware call.
+- `tests/test_probe_resilience.py` created its `device_services` table without
+  `last_checked`, which `record_service_miss()` writes, so the DNS retransmit check died on
+  `no such column: last_checked`. The column is added to the test schema.
+
+Not addressed, because it is deployment drift rather than code: on this host
+`tests/test_language_acceptance.py` compares each rendered view against the installed tree
+under `/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor`, which is still the
+pre-v2.12 payload (installed 31 October 2026), so `settings.volt` (the new repeat-interval
+UI) and `infrastructureservices.volt` differ from the source. It passes at `a9294ae`, and
+it passes on a runner with no installed tree because the engine falls back to
+`interpolate`; it will pass here once the v2.12 payload is deployed to the host.
+
+
 

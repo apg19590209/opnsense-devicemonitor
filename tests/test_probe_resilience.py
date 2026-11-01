@@ -298,7 +298,8 @@ def test_dns_probe_retransmits_identical_query():
                     status TEXT NOT NULL DEFAULT 'available',
                     detection_method TEXT NOT NULL,
                     confidence TEXT NOT NULL,
-                    miss_count INTEGER NOT NULL DEFAULT 0
+                    miss_count INTEGER NOT NULL DEFAULT 0,
+                    last_checked DATETIME DEFAULT NULL
                 )
                 '''
             )

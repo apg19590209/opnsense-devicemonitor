@@ -90,6 +90,12 @@ jobs:
       - name: Validate CARP role gate (v2.11)
         run: python3 tests/test_carp_role_gate.py
 
+      # v2.12 non-HA safety: the CARP gate must be fail-open. A node with no CARP, an unreadable
+      # `ifconfig`, a `carp: INIT` state or CARP on an unmonitored interface keeps priming,
+      # discovering, alerting and draining scans; the same scan on a BACKUP node goes silent.
+      - name: Validate non-HA operation (v2.12)
+        run: python3 tests/test_non_ha_operation.py
+
       # v2.11 HA safety: the WAN/uplink must never be selectable as a monitored segment.
       - name: Validate monitored interface selection (v2.11)
         run: python3 tests/test_monitored_interfaces.py
