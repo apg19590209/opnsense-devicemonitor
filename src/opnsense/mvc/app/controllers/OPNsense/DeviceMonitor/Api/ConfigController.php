@@ -209,6 +209,13 @@ class ConfigController extends ApiControllerBase
         $nmap_version_detection = $this->request->getPost('nmap_version_detection', 'string', '1');
         $nmap_max_per_cycle = (int)$this->request->getPost('nmap_max_per_cycle', 'int', 2);
 
+        /* Repeat interval for unchanged state, per email category, in minutes.
+         * 0 (the default) means "only when the state changes". */
+        $email_reminder_scan = (int)$this->request->getPost('email_reminder_scan', 'int', 0);
+        $email_reminder_service = (int)$this->request->getPost('email_reminder_service', 'int', 0);
+        $email_reminder_identity = (int)$this->request->getPost('email_reminder_identity', 'int', 0);
+        $email_reminder_new_device = (int)$this->request->getPost('email_reminder_new_device', 'int', 0);
+
         if (!in_array($identity_webhook_enabled, ['0', '1'], true)) {
             return ['result' => 'failed', 'message' => 'Invalid identity webhook enabled value'];
         }
@@ -366,6 +373,20 @@ class ConfigController extends ApiControllerBase
             return ['result' => 'failed', 'message' => 'Nmap scans per cycle must be between 1 and 10'];
         }
 
+        foreach ([
+            'email_reminder_scan' => $email_reminder_scan,
+            'email_reminder_service' => $email_reminder_service,
+            'email_reminder_identity' => $email_reminder_identity,
+            'email_reminder_new_device' => $email_reminder_new_device,
+        ] as $reminder_setting => $reminder_value) {
+            if ($reminder_value < 0 || $reminder_value > 1440) {
+                return [
+                    'result' => 'failed',
+                    'message' => 'Invalid ' . $reminder_setting . ' value (0-1440 minutes)'
+                ];
+            }
+        }
+
         $monitored_interfaces = [];
         $monitored_ranges = [];
         if ($monitored_interfaces_raw !== '') {
@@ -469,6 +490,10 @@ class ConfigController extends ApiControllerBase
         $config['nmap_host_timeout'] = $nmap_host_timeout;
         $config['nmap_version_detection'] = $nmap_version_detection;
         $config['nmap_max_per_cycle'] = $nmap_max_per_cycle;
+        $config['email_reminder_scan'] = $email_reminder_scan;
+        $config['email_reminder_service'] = $email_reminder_service;
+        $config['email_reminder_identity'] = $email_reminder_identity;
+        $config['email_reminder_new_device'] = $email_reminder_new_device;
 
         /* O4 / DM-BL-008c - sidecar translation toggle.
          * Written only when the form actually posts the field, so an older settings

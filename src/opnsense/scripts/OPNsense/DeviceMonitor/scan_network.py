@@ -1020,7 +1020,8 @@ def _apply_db_schema():
         interface TEXT,
         other_interface TEXT,
         details TEXT,
-        resolved_at DATETIME
+        resolved_at DATETIME,
+        notified_at DATETIME DEFAULT NULL
     )''')
 
     c.execute('''
@@ -1041,6 +1042,12 @@ def _apply_db_schema():
         c.execute(
             'ALTER TABLE device_identity_events '
             'ADD COLUMN lifecycle_id INTEGER DEFAULT NULL'
+        )
+    if 'notified_at' not in identity_columns:
+        # Backs the "repeat an unchanged conflict every N minutes" reminder.
+        c.execute(
+            'ALTER TABLE device_identity_events '
+            'ADD COLUMN notified_at DATETIME DEFAULT NULL'
         )
 
     backfill_device_lifecycles(conn)
@@ -6826,6 +6833,53 @@ def send_service_alert_email(events):
         return False
 
 
+def collect_service_alert_reminders(conn, config, now=None):
+    """Events for outages that are unchanged but due a repeat email.
+
+    ``email_reminder_service`` (minutes) of 0 means "transitions only", which
+    is the default. Reminders reuse the stored event payload and refresh
+    ``notified_at`` on delivery, so they repeat at most once per interval.
+    """
+    interval = 0
+    try:
+        interval = max(0, int(config.get('email_reminder_service') or 0))
+    except (TypeError, ValueError):
+        interval = 0
+
+    if interval <= 0:
+        return []
+
+    now = now or datetime.now()
+    cutoff = (now - timedelta(minutes=interval)).strftime('%Y-%m-%d %H:%M:%S')
+
+    try:
+        rows = conn.execute(
+            '''
+            SELECT event_json
+            FROM service_alert_pending
+            WHERE notified = 1
+              AND notified_at IS NOT NULL
+              AND notified_at <= ?
+            ''',
+            (cutoff,)
+        ).fetchall()
+    except sqlite3.Error:
+        return []
+
+    reminders = []
+
+    for (payload,) in rows:
+        try:
+            event = json.loads(payload)
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+        if isinstance(event, dict):
+            reminders.append(event)
+
+    return reminders
+
+
 def process_service_alerts(config, networks):
     """
     Process pending infrastructure-service alerts without affecting scan success.
@@ -6878,7 +6932,19 @@ def process_service_alerts(config, networks):
         finally:
             conn.close()
 
-        if not events and not expired:
+        # Optional repeat for outages that have not changed
+        # (email_reminder_service, minutes; 0 = transitions only). Collected
+        # before the early return so a standing outage still repeats.
+        reminders = []
+        try:
+            with sqlite3.connect(DB_FILE) as reminder_conn:
+                reminders = collect_service_alert_reminders(
+                    reminder_conn, config, now
+                )
+        except sqlite3.Error as e:
+            log(f'[SERVICE-EMAIL] Reminder lookup failed: {e}')
+
+        if not events and not expired and not reminders:
             return True
 
         if held or suppressed:
@@ -6899,10 +6965,24 @@ def process_service_alerts(config, networks):
             delivery_succeeded=delivery_succeeded,
         )
 
+        reminders_sent = False
+
+        if reminders:
+            reminders_sent = send_service_alert_email(reminders)
+
+            if reminders_sent:
+                log(
+                    '[SERVICE-EMAIL] Re-sent '
+                    f'{len(reminders)} unchanged-state reminder(s)'
+                )
+
         conn = sqlite3.connect(DB_FILE)
         try:
             if delivery_succeeded and deliverable:
                 commit_service_alert_delivery(conn, deliverable, now)
+
+            if reminders_sent:
+                commit_service_alert_delivery(conn, reminders, now)
 
             advanced = advance_service_alert_cursors(conn, plan)
         finally:
@@ -7432,6 +7512,44 @@ def scan_state_changed(device, services, ip):
     return previous != scan_state_signature(services)
 
 
+def scan_email_reminder_due(device, interval_minutes):
+    """True when an unchanged scan is due a repeat email.
+
+    ``interval_minutes`` of 0 means "only when the state changes", so an
+    unchanged scan is never mailed. Otherwise the last emailed scan for the
+    device must be at least that old.
+    """
+    if interval_minutes <= 0:
+        return False
+
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            row = conn.execute(
+                '''
+                SELECT finished_at
+                FROM nmap_scan_history
+                WHERE lower(mac) = ? AND email_sent = 1
+                  AND finished_at IS NOT NULL
+                ORDER BY id DESC
+                LIMIT 1
+                ''',
+                ((device.get('mac') or '').strip().lower(),)
+            ).fetchone()
+    except sqlite3.Error as e:
+        log(f"[NMAP] Reminder check failed for {device.get('ip')}: {e}")
+        return False
+
+    if row is None:
+        return True
+
+    try:
+        last_sent = datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')
+    except (TypeError, ValueError):
+        return True
+
+    return (datetime.now() - last_sent) >= timedelta(minutes=interval_minutes)
+
+
 def targeted_scan_and_email(device, config):
     """Run one targeted Nmap scan, email it, and return structured results."""
     ip = (device.get('ip') or '').strip()
@@ -7591,17 +7709,33 @@ def targeted_scan_and_email(device, config):
         'os_hint': os_hint,
     })
 
-    # Emails are state-change notifications: the scan always runs and its
-    # history row is always written, but an inventory identical to the last
-    # recorded scan is not mailed again.
+    # Emails are state-change notifications by default: the scan always runs
+    # and its history row is always written, but an inventory identical to the
+    # last recorded scan is only re-mailed when the configured repeat interval
+    # has elapsed (email_reminder_scan, minutes; 0 = never).
     if not scan_state_changed(device, services, ip):
-        details['email_sent'] = False
-        details['email_error'] = None
+        reminder_minutes = 0
+        try:
+            reminder_minutes = max(
+                0, int(config.get('email_reminder_scan') or 0)
+            )
+        except (TypeError, ValueError):
+            reminder_minutes = 0
+
+        if not scan_email_reminder_due(device, reminder_minutes):
+            details['email_sent'] = False
+            details['email_error'] = None
+            log(
+                f"[NMAP] Scan result unchanged for {ip}; email suppressed "
+                f"({len(services)} open service(s), repeat interval "
+                f"{reminder_minutes or 'off'})"
+            )
+            return True, "", details
+
         log(
-            f"[NMAP] Scan result unchanged for {ip}; email suppressed "
-            f"({len(services)} open service(s))"
+            f"[NMAP] Scan result unchanged for {ip}; sending "
+            f"{reminder_minutes}-minute reminder"
         )
-        return True, "", details
 
     payload = {
         'ip': ip,
@@ -7772,6 +7906,7 @@ def send_webhook_via_php_api(new_devices, in_scope_macs):
 def get_new_high_identity_events(conn, start_id):
     """Return qualifying identity events inserted during this scan cycle."""
     columns = [
+        'id',
         'detected_at',
         'event_type',
         'severity',
@@ -7785,7 +7920,7 @@ def get_new_high_identity_events(conn, start_id):
     ]
 
     rows = conn.execute('''
-        SELECT detected_at, event_type, severity, mac, other_mac,
+        SELECT id, detected_at, event_type, severity, mac, other_mac,
                ip, other_ip, interface, other_interface, details
         FROM device_identity_events
         WHERE id > ?
@@ -7798,6 +7933,65 @@ def get_new_high_identity_events(conn, start_id):
     ''', (int(start_id),)).fetchall()
 
     return [dict(zip(columns, row)) for row in rows]
+
+
+def get_pending_high_identity_reminders(conn, config):
+    """Unresolved high-severity conflicts that are due a repeat email.
+
+    ``email_reminder_identity`` (minutes) of 0 means "new events only", which
+    is the default.
+    """
+    interval = 0
+    try:
+        interval = max(0, int(config.get('email_reminder_identity') or 0))
+    except (TypeError, ValueError):
+        interval = 0
+
+    if interval <= 0:
+        return []
+
+    cutoff = (
+        datetime.now() - timedelta(minutes=interval)
+    ).strftime('%Y-%m-%d %H:%M:%S')
+
+    try:
+        rows = conn.execute(
+            '''
+            SELECT id, detected_at, event_type, severity, mac, other_mac,
+                   ip, other_ip, interface, other_interface, details
+            FROM device_identity_events
+            WHERE severity = 'high'
+              AND event_type IN (
+                  'IP_IDENTITY_CHANGED',
+                  'IPV6_IDENTITY_CHANGED'
+              )
+              AND resolved_at IS NULL
+              AND (notified_at IS NULL OR notified_at <= ?)
+            ORDER BY id ASC
+            ''',
+            (cutoff,)
+        ).fetchall()
+    except sqlite3.Error:
+        return []
+
+    columns = ['id', 'detected_at', 'event_type', 'severity', 'mac',
+               'other_mac', 'ip', 'other_ip', 'interface', 'other_interface',
+               'details']
+
+    return [dict(zip(columns, row)) for row in rows]
+
+
+def mark_identity_events_notified(conn, events):
+    """Record that these identity events were just emailed."""
+    ids = [event.get('id') for event in events if event.get('id')]
+    if not ids:
+        return
+
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn.executemany(
+        'UPDATE device_identity_events SET notified_at = ? WHERE id = ?',
+        [(now, event_id) for event_id in ids]
+    )
 
 
 def should_send_identity_email(config, events):
@@ -7987,6 +8181,57 @@ def detect_mac_rotation(conn, mac, ip, owners=None):
         'last_seen': owner_last_seen,
         'randomised': randomised,
     }
+
+
+def rotation_announcement_due(conn, mac, ip, config):
+    """True when a standing MAC rotation should be announced again.
+
+    A rotation is recorded as an identity event and is not announced as a new
+    device by default. With email_reminder_new_device set (minutes), the
+    announcement repeats once that interval has elapsed since the last one.
+    """
+    interval = 0
+    try:
+        interval = max(0, int(config.get('email_reminder_new_device') or 0))
+    except (TypeError, ValueError):
+        interval = 0
+
+    if interval <= 0:
+        return False
+
+    now = datetime.now()
+    row = conn.execute(
+        '''
+        SELECT id, notified_at
+        FROM device_identity_events
+        WHERE mac = ? AND event_type = 'IP_IDENTITY_CHANGED'
+          AND COALESCE(ip, '') = ?
+        ORDER BY id DESC
+        LIMIT 1
+        ''',
+        ((mac or '').lower(), (ip or '').strip())
+    ).fetchone()
+
+    if row is None:
+        return True
+
+    due = True
+
+    if row[1]:
+        try:
+            due = (
+                now - datetime.strptime(row[1], '%Y-%m-%d %H:%M:%S')
+            ) >= timedelta(minutes=interval)
+        except (TypeError, ValueError):
+            due = True
+
+    if due:
+        conn.execute(
+            'UPDATE device_identity_events SET notified_at = ? WHERE id = ?',
+            (now.strftime('%Y-%m-%d %H:%M:%S'), row[0])
+        )
+
+    return due
 
 
 def detect_recent_hostwatch_identity_events(conn, minutes=5, kea_leases=None, networks=None):
@@ -8487,7 +8732,7 @@ def write_visibility_prime_timestamp(timestamp):
         log(f'[DISCOVERY] Visibility priming: state write failed: {e}')
 
 
-def prime_selected_interface_visibility(networks):
+def prime_selected_interface_visibility(networks, config=None):
     """Prime Hostwatch visibility for quiet devices on selected subnets.
 
     Each resolved monitored subnet is probed with a bounded single-ICMP pass
@@ -8510,14 +8755,26 @@ def prime_selected_interface_visibility(networks):
         return
 
     now = time.time()
-    last_prime = read_visibility_prime_timestamp()
-    if last_prime and (now - last_prime) < VISIBILITY_PRIME_MIN_INTERVAL:
-        log(
-            "[DISCOVERY] Visibility priming skipped: last pass "
-            f"{int(now - last_prime)}s ago (minimum "
-            f"{VISIBILITY_PRIME_MIN_INTERVAL}s)"
-        )
-        return
+
+    # Optional rate limit. 0, the default, primes on every scan cycle (the
+    # historic behaviour: one ICMP echo per address per cycle). A positive
+    # value primes at most that often and then skips addresses Hostwatch has
+    # already observed recently.
+    interval = 0
+    if config:
+        try:
+            interval = max(0, int(config.get('visibility_prime_interval') or 0))
+        except (TypeError, ValueError):
+            interval = 0
+
+    if interval > 0:
+        last_prime = read_visibility_prime_timestamp()
+        if last_prime and (now - last_prime) < interval:
+            log(
+                "[DISCOVERY] Visibility priming skipped: last pass "
+                f"{int(now - last_prime)}s ago (minimum {interval}s)"
+            )
+            return
 
     all_targets = []
     for net in networks:
@@ -8546,27 +8803,30 @@ def prime_selected_interface_visibility(networks):
     if not all_targets:
         return
 
-    fresh_addresses = hostwatch_recently_seen_addresses(
-        VISIBILITY_PRIME_FRESH_WINDOW
-    )
-    if fresh_addresses:
-        skipped = [a for a in all_targets if a in fresh_addresses]
-        all_targets = [a for a in all_targets if a not in fresh_addresses]
-        if skipped:
-            log(
-                "[DISCOVERY] Visibility priming: "
-                f"{len(skipped)} address(es) already observed within "
-                f"{VISIBILITY_PRIME_FRESH_WINDOW}s were not probed"
-            )
+    if interval > 0:
+        fresh_addresses = hostwatch_recently_seen_addresses(
+            VISIBILITY_PRIME_FRESH_WINDOW
+        )
+        if fresh_addresses:
+            skipped = [a for a in all_targets if a in fresh_addresses]
+            all_targets = [a for a in all_targets if a not in fresh_addresses]
+            if skipped:
+                log(
+                    "[DISCOVERY] Visibility priming: "
+                    f"{len(skipped)} address(es) already observed within "
+                    f"{VISIBILITY_PRIME_FRESH_WINDOW}s were not probed"
+                )
 
     if not all_targets:
-        log("[DISCOVERY] Visibility priming skipped: nothing to probe")
-        write_visibility_prime_timestamp(now)
+        if interval > 0:
+            log("[DISCOVERY] Visibility priming skipped: nothing to probe")
+            write_visibility_prime_timestamp(now)
         return
 
-    # Record the pass before probing so an interrupted sweep is not retried
-    # on the very next cycle.
-    write_visibility_prime_timestamp(now)
+    if interval > 0:
+        # Record the pass before probing so an interrupted sweep is not
+        # retried on the very next cycle.
+        write_visibility_prime_timestamp(now)
 
     def probe(address):
         try:
@@ -8618,7 +8878,7 @@ def full_scan():
         f'Dnsmasq={capabilities["dnsmasq"]["configured"]}'
     )
 
-    prime_selected_interface_visibility(networks)
+    prime_selected_interface_visibility(networks, config)
 
     # 1. Data z hostwatch
     devices = get_hostwatch_devices(networks)
@@ -8861,6 +9121,13 @@ def full_scan():
                             f"({'randomised MAC' if rotation['randomised'] else 'new hardware address'}"
                             "): MAC rotation, not a new device"
                         )
+
+                    # Optional repeat: a standing rotation is announced again
+                    # once email_reminder_new_device minutes have elapsed.
+                    if rotation_announcement_due(
+                        conn, mac, device['ip'], config
+                    ):
+                        new_devices.append(device)
                 else:
                     new_devices.append(device)
 
@@ -8898,6 +9165,10 @@ def full_scan():
         identity_event_start_id,
     )
 
+    # Optional repeat for conflicts that are still unresolved
+    # (email_reminder_identity, minutes; 0 = new events only).
+    identity_reminders = get_pending_high_identity_reminders(conn, config)
+
     scoped_macs = scoped_device_macs(conn, networks)
     online = sum(
         1 for (mac,) in conn.execute(
@@ -8908,8 +9179,15 @@ def full_scan():
     total = len(scoped_macs)
     conn.close()
 
-    if should_send_identity_email(config, new_high_identity_events):
-        send_identity_email(new_high_identity_events)
+    identity_alerts = new_high_identity_events + identity_reminders
+
+    if should_send_identity_email(config, identity_alerts):
+        if send_identity_email(identity_alerts):
+            try:
+                with sqlite3.connect(DB_FILE) as notify_conn:
+                    mark_identity_events_notified(notify_conn, identity_alerts)
+            except sqlite3.Error as e:
+                log(f'[IDENTITY-EMAIL] Unable to record notification time: {e}')
 
     # Infrastructure-service discovery is intentionally rate-limited.
     # It must not add DHCP/DNS probes to every normal monitoring cycle.

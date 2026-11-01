@@ -48,6 +48,11 @@
     "nmap_host_timeout": "45",
     "nmap_version_detection": "1",
     "nmap_max_per_cycle": "2",
+    "email_reminder_scan": "0",
+    "email_reminder_service": "0",
+    "email_reminder_identity": "0",
+    "email_reminder_new_device": "0",
+    "visibility_prime_interval": "0",
     "sidecar_translation_enabled": "1"
   }
 }
