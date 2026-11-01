@@ -641,7 +641,7 @@
                         </tr>
 
                         <tr>
-                            <th colspan="2" style="padding-top:18px;">{{ devicemonitor_t('v2.10 Features and Enhancements') }}</th>
+                            <th colspan="2" style="padding-top:18px;"><span id="about-features-version">v2.11</span> {{ devicemonitor_t('Features and Enhancements') }}</th>
                         </tr>
                         <tr>
                             <td style="color:#888;">{{ devicemonitor_t('Developer') }}</td>
@@ -720,6 +720,7 @@ $().ready(function() {
     $.getJSON('/api/devicemonitor/config/getversion', function(d) {
         var v = 'v'+(d.version||'?');
         $('#about-version').text(v);
+        $('#about-features-version').text(v);
     });
 
     // Build VLAN checklist in a container
