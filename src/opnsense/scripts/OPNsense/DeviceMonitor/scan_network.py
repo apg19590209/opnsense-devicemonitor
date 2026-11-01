@@ -186,6 +186,7 @@ def load_config():
             'monitored_interfaces': DEFAULT_CONFIG.get('monitored_interfaces', ''),
             'email_enabled': DEFAULT_CONFIG.get('email_enabled', '1') == '1',
             'identity_webhook_enabled': DEFAULT_CONFIG.get('identity_webhook_enabled', '0') == '1',
+            'identity_email_enabled': DEFAULT_CONFIG.get('identity_email_enabled', '0') == '1',
             'service_email_enabled': DEFAULT_CONFIG.get('service_email_enabled', '0') == '1',
             'service_email_new': DEFAULT_CONFIG.get('service_email_new', '1') == '1',
             'service_email_unavailable': DEFAULT_CONFIG.get('service_email_unavailable', '1') == '1',
@@ -229,6 +230,7 @@ def load_config():
                 'monitored_interfaces': config.get('monitored_interfaces', DEFAULT_CONFIG.get('monitored_interfaces', '')),
                 'email_enabled': config.get('email_enabled', '1') == '1',
                 'identity_webhook_enabled': config.get('identity_webhook_enabled', DEFAULT_CONFIG.get('identity_webhook_enabled', '0')) == '1',
+                'identity_email_enabled': config.get('identity_email_enabled', DEFAULT_CONFIG.get('identity_email_enabled', '0')) == '1',
                 'service_email_enabled': config.get('service_email_enabled', DEFAULT_CONFIG.get('service_email_enabled', '0')) == '1',
                 'service_email_new': config.get('service_email_new', DEFAULT_CONFIG.get('service_email_new', '1')) == '1',
                 'service_email_unavailable': config.get('service_email_unavailable', DEFAULT_CONFIG.get('service_email_unavailable', '1')) == '1',
@@ -8022,6 +8024,84 @@ def should_send_identity_email(config, events):
     )
 
 
+def should_send_identity_mail(config, events):
+    """Return whether identity conflicts should also be emailed.
+
+    This is the email leg, independent of the webhook leg: it rides the normal
+    email transport and is gated by the identity_email_enabled subcategory
+    switch together with the email master switch and recipient.
+    """
+    return bool(
+        events
+        and config.get('enabled')
+        and config.get('email_enabled')
+        and config.get('identity_email_enabled')
+        and config.get('email_to')
+    )
+
+
+def send_identity_mail(events):
+    """Send one batched identity-conflict email without failing the scan."""
+    if not events:
+        return True
+
+    helper = (
+        '/usr/local/opnsense/scripts/OPNsense/'
+        'DeviceMonitor/notify_identity_mail.php'
+    )
+
+    try:
+        result = subprocess.run(
+            ['/usr/local/bin/php', helper],
+            input=json.dumps({'events': events}),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or '').strip()
+            log(
+                '[IDENTITY-MAIL] Failed: ' +
+                (detail[:500] if detail else f'exit {result.returncode}')
+            )
+            return False
+
+        try:
+            response = json.loads(result.stdout or '{}')
+        except (json.JSONDecodeError, TypeError):
+            log('[IDENTITY-MAIL] Failed: invalid helper response')
+            return False
+
+        status = response.get('result')
+
+        if status == 'skipped':
+            log(
+                '[IDENTITY-MAIL] Skipped: ' +
+                (str(response.get('message') or '').strip() or
+                 'helper declined notification')
+            )
+            return False
+
+        if status != 'sent':
+            log(
+                '[IDENTITY-MAIL] Failed: unexpected helper result ' +
+                repr(status)
+            )
+            return False
+
+        log(
+            f'[IDENTITY-MAIL] Sent batched alert for {len(events)} event(s)'
+        )
+        return True
+    except subprocess.TimeoutExpired:
+        log('[IDENTITY-MAIL] Failed: email process timed out')
+        return False
+    except Exception as e:
+        log(f'[IDENTITY-MAIL] Failed: {e}')
+        return False
+
+
 def send_identity_email(events):
     """Send one batched identity alert without affecting scan success."""
     if not events:
@@ -9190,14 +9270,22 @@ def full_scan():
     conn.close()
 
     identity_alerts = new_high_identity_events + identity_reminders
+    delivered = False
+
+    # Email leg (identity_email_enabled) and webhook leg are independent: the
+    # first rides the email transport, the second posts to the webhook URL.
+    if should_send_identity_mail(config, identity_alerts):
+        delivered = send_identity_mail(identity_alerts) or delivered
 
     if should_send_identity_email(config, identity_alerts):
-        if send_identity_email(identity_alerts):
-            try:
-                with sqlite3.connect(DB_FILE) as notify_conn:
-                    mark_identity_events_notified(notify_conn, identity_alerts)
-            except sqlite3.Error as e:
-                log(f'[IDENTITY-EMAIL] Unable to record notification time: {e}')
+        delivered = send_identity_email(identity_alerts) or delivered
+
+    if delivered:
+        try:
+            with sqlite3.connect(DB_FILE) as notify_conn:
+                mark_identity_events_notified(notify_conn, identity_alerts)
+        except sqlite3.Error as e:
+            log(f'[IDENTITY-EMAIL] Unable to record notification time: {e}')
 
     # Infrastructure-service discovery is intentionally rate-limited.
     # It must not add DHCP/DNS probes to every normal monitoring cycle.

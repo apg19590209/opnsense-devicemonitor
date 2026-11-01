@@ -345,6 +345,10 @@
                             <input type="checkbox" id="identity_webhook_enabled" />
                             <strong>{{ devicemonitor_t('Enable immediate webhook identity conflict alerts') }}</strong>
                         </label>
+                        <label style="margin:6px 0 0;display:block;">
+                            <input type="checkbox" id="identity_email_enabled" />
+                            <strong>{{ devicemonitor_t('Also email identity conflict alerts') }}</strong>
+                        </label>
                     </div>
                 </div>
 
@@ -830,6 +834,7 @@ $().ready(function() {
             );
             $('#email_enabled').prop('checked', d.email_enabled==='1');
             $('#identity_webhook_enabled').prop('checked', d.identity_webhook_enabled==='1');
+            $('#identity_email_enabled').prop('checked', d.identity_email_enabled==='1');
             $('#service_email_enabled').prop('checked', d.service_email_enabled==='1');
             $('#service_email_new').prop('checked', d.service_email_new===undefined ? true : d.service_email_new==='1');
             $('#service_email_unavailable').prop('checked', d.service_email_unavailable===undefined ? true : d.service_email_unavailable==='1');
@@ -934,6 +939,7 @@ $().ready(function() {
             webhook_enabled:  $('#webhook_enabled').is(':checked')?'1':'0',
             webhook_url:      $('#webhook_url').val(),
             identity_webhook_enabled: $('#identity_webhook_enabled').is(':checked')?'1':'0',
+            identity_email_enabled:   $('#identity_email_enabled').is(':checked')?'1':'0',
             webhook_vlans:    getSelectedVlans('webhook-vlan-list'),
             monitored_interfaces: getSelectedMonitoredInterfaces(),
             scan_interval: $('#scan_interval').val(),
