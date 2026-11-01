@@ -211,6 +211,11 @@ def load_config():
             'nmap_host_timeout': int(DEFAULT_CONFIG.get('nmap_host_timeout', 45)),
             'nmap_version_detection': DEFAULT_CONFIG.get('nmap_version_detection', '1') == '1',
             'nmap_max_per_cycle': int(DEFAULT_CONFIG.get('nmap_max_per_cycle', 2)),
+            'email_reminder_scan': int(DEFAULT_CONFIG.get('email_reminder_scan', 0) or 0),
+            'email_reminder_service': int(DEFAULT_CONFIG.get('email_reminder_service', 0) or 0),
+            'email_reminder_identity': int(DEFAULT_CONFIG.get('email_reminder_identity', 0) or 0),
+            'email_reminder_new_device': int(DEFAULT_CONFIG.get('email_reminder_new_device', 0) or 0),
+            'visibility_prime_interval': int(DEFAULT_CONFIG.get('visibility_prime_interval', 0) or 0),
             'apiEmailUrl': PATHS.get('apiEmailUrl', ''),
             'apiWebhookUrl': PATHS.get('apiWebhookUrl', '')
         }
@@ -249,6 +254,11 @@ def load_config():
                 'nmap_host_timeout': int(config.get('nmap_host_timeout', DEFAULT_CONFIG.get('nmap_host_timeout', 45))),
                 'nmap_version_detection': config.get('nmap_version_detection', DEFAULT_CONFIG.get('nmap_version_detection', '1')) == '1',
                 'nmap_max_per_cycle': int(config.get('nmap_max_per_cycle', DEFAULT_CONFIG.get('nmap_max_per_cycle', 2))),
+                'email_reminder_scan': int(config.get('email_reminder_scan', DEFAULT_CONFIG.get('email_reminder_scan', 0)) or 0),
+                'email_reminder_service': int(config.get('email_reminder_service', DEFAULT_CONFIG.get('email_reminder_service', 0)) or 0),
+                'email_reminder_identity': int(config.get('email_reminder_identity', DEFAULT_CONFIG.get('email_reminder_identity', 0)) or 0),
+                'email_reminder_new_device': int(config.get('email_reminder_new_device', DEFAULT_CONFIG.get('email_reminder_new_device', 0)) or 0),
+                'visibility_prime_interval': int(config.get('visibility_prime_interval', DEFAULT_CONFIG.get('visibility_prime_interval', 0)) or 0),
                 'apiEmailUrl': PATHS.get('apiEmailUrl', ''),
                 'apiWebhookUrl': PATHS.get('apiWebhookUrl', '')
             }
