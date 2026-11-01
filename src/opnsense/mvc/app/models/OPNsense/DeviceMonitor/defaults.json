@@ -1,5 +1,5 @@
 {
-  "version": "2.11",
+  "version": "2.12",
   "paths": {
     "dbFile": "/var/db/devicemonitor/devices.db",
     "configFile": "/var/db/devicemonitor/config.json",
@@ -17,6 +17,7 @@
     "monitored_interfaces": "",
     "email_enabled": "0",
     "identity_webhook_enabled": "0",
+    "identity_email_enabled": "0",
     "service_email_enabled": "0",
     "service_email_new": "1",
     "service_email_unavailable": "1",
@@ -48,6 +49,11 @@
     "nmap_host_timeout": "45",
     "nmap_version_detection": "1",
     "nmap_max_per_cycle": "2",
+    "email_reminder_scan": "0",
+    "email_reminder_service": "0",
+    "email_reminder_identity": "0",
+    "email_reminder_new_device": "0",
+    "visibility_prime_interval": "0",
     "sidecar_translation_enabled": "1"
   }
 }

@@ -65,6 +65,35 @@ jobs:
       - name: Validate shutdown drain (v2.11)
         run: python3 tests/test_shutdown_drain.py
 
+      # v2.11 service-liveness noise fix (O1): pins the probe retry/timeout/worker bounds that stop
+      # one lost packet from being reported as an outage. Fake sockets only — no network, no root.
+      - name: Validate service probe resilience (v2.11)
+        run: python3 tests/test_probe_resilience.py
+
+      # v2.11 service-liveness noise fix (O2): pins the alert confirmation stage — a flap is silent,
+      # a sustained outage is mailed once, and a recovery is only mailed for a reported outage.
+      - name: Validate service alert confirmation (v2.11)
+        run: python3 tests/test_service_alert_confirmation.py
+
+      # v2.11 service-liveness noise fix (O3a): an inactive host's services must keep their status,
+      # while an active host and an untracked endpoint still flip.
+      - name: Validate service host gate (v2.11)
+        run: python3 tests/test_service_host_gate.py
+
+      # v2.11 service-liveness noise fix (O3b): one failed observation must not flip a live host's
+      # service; the second consecutive miss does, and a success resets the counter.
+      - name: Validate service miss hysteresis (v2.11)
+        run: python3 tests/test_service_miss_hysteresis.py
+
+      # v2.11 HA safety: a CARP backup node must not observe services, and a node that can see no
+      # hosts must say so instead of silently suppressing outage verdicts.
+      - name: Validate CARP role gate (v2.11)
+        run: python3 tests/test_carp_role_gate.py
+
+      # v2.11 HA safety: the WAN/uplink must never be selectable as a monitored segment.
+      - name: Validate monitored interface selection (v2.11)
+        run: python3 tests/test_monitored_interfaces.py
+
       - name: Lint PHP sources
         run: |
           set -eu
@@ -1000,3 +1029,4 @@ jobs:
           php tests/test_pihole_config.php
           php tests/test_unbound_config.php
           php tests/test_loopback_monitoring.php
+          php tests/test_monitored_interfaces_php.php

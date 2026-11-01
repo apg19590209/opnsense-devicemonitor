@@ -79,6 +79,12 @@ class ConfigController extends ApiControllerBase
                         continue;
                     }
 
+                    // Never offer the uplink: the daemon refuses it too, and a
+                    // greyed-out entry is clearer than a save-time error.
+                    if ($this->isUplinkInterface($name, $ifData, $ipaddr)) {
+                        continue;
+                    }
+
                     $result[$name] = [
                         'name' => $name,
                         'description' => $descr !== '' ? $descr : strtoupper($name),
@@ -114,6 +120,42 @@ class ConfigController extends ApiControllerBase
         return $ipLong >= $loStart && $ipLong <= $loEnd;
     }
 
+    /**
+     * True when an interface is the WAN/uplink and must not be monitored.
+     *
+     * Mirrors resolve_monitored_networks() in scan_network.py: the assignment
+     * name "wan" is refused outright, and any interface carrying a gateway on a
+     * non-RFC1918 address is an uplink. A gateway on private space is an
+     * internal segment using policy routing and stays selectable.
+     */
+    private function isUplinkInterface($name, $ifData, $ipaddr)
+    {
+        if (strtolower((string)$name) === 'wan') {
+            return true;
+        }
+
+        $gateway = trim((string)($ifData->gateway ?? ''));
+
+        if ($gateway === '') {
+            return false;
+        }
+
+        $ipLong = ip2long($ipaddr);
+        if ($ipLong === false) {
+            return false;
+        }
+
+        foreach (['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'] as $cidr) {
+            [$network, $prefix] = explode('/', $cidr);
+            $range = $this->ipv4SubnetRange($network, (int)$prefix);
+            if ($range !== null && $ipLong >= $range[0] && $ipLong <= $range[1]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function setAction()
     {
         if (!$this->request->isPost()) {
@@ -125,6 +167,7 @@ class ConfigController extends ApiControllerBase
         $enabled = $this->request->getPost('enabled', 'string', '0');
         $email_enabled = $this->request->getPost('email_enabled', 'string', '0');
         $identity_webhook_enabled = $this->request->getPost('identity_webhook_enabled', 'string', '0');
+        $identity_email_enabled = $this->request->getPost('identity_email_enabled', 'string', '0');
         $service_email_enabled = $this->request->getPost('service_email_enabled', 'string', '0');
         $service_email_new = $this->request->getPost('service_email_new', 'string', '1');
         $service_email_unavailable = $this->request->getPost('service_email_unavailable', 'string', '1');
@@ -167,8 +210,19 @@ class ConfigController extends ApiControllerBase
         $nmap_version_detection = $this->request->getPost('nmap_version_detection', 'string', '1');
         $nmap_max_per_cycle = (int)$this->request->getPost('nmap_max_per_cycle', 'int', 2);
 
+        /* Repeat interval for unchanged state, per email category, in minutes.
+         * 0 (the default) means "only when the state changes". */
+        $email_reminder_scan = (int)$this->request->getPost('email_reminder_scan', 'int', 0);
+        $email_reminder_service = (int)$this->request->getPost('email_reminder_service', 'int', 0);
+        $email_reminder_identity = (int)$this->request->getPost('email_reminder_identity', 'int', 0);
+        $email_reminder_new_device = (int)$this->request->getPost('email_reminder_new_device', 'int', 0);
+
         if (!in_array($identity_webhook_enabled, ['0', '1'], true)) {
             return ['result' => 'failed', 'message' => 'Invalid identity webhook enabled value'];
+        }
+
+        if (!in_array($identity_email_enabled, ['0', '1'], true)) {
+            return ['result' => 'failed', 'message' => 'Invalid identity email enabled value'];
         }
 
         foreach ([
@@ -324,6 +378,20 @@ class ConfigController extends ApiControllerBase
             return ['result' => 'failed', 'message' => 'Nmap scans per cycle must be between 1 and 10'];
         }
 
+        foreach ([
+            'email_reminder_scan' => $email_reminder_scan,
+            'email_reminder_service' => $email_reminder_service,
+            'email_reminder_identity' => $email_reminder_identity,
+            'email_reminder_new_device' => $email_reminder_new_device,
+        ] as $reminder_setting => $reminder_value) {
+            if ($reminder_value < 0 || $reminder_value > 1440) {
+                return [
+                    'result' => 'failed',
+                    'message' => 'Invalid ' . $reminder_setting . ' value (0-1440 minutes)'
+                ];
+            }
+        }
+
         $monitored_interfaces = [];
         $monitored_ranges = [];
         if ($monitored_interfaces_raw !== '') {
@@ -359,6 +427,9 @@ class ConfigController extends ApiControllerBase
                 }
                 if ($this->isLoopbackIpv4($ipaddr)) {
                     return ['result' => 'failed', 'message' => 'Monitored interface "' . $name . '" uses a loopback address and cannot be monitored'];
+                }
+                if ($this->isUplinkInterface($name, $ifData, $ipaddr)) {
+                    return ['result' => 'failed', 'message' => 'Monitored interface "' . $name . '" is the WAN/uplink; Device Monitor monitors internal segments only'];
                 }
                 if (
                     $subnet === '' ||
@@ -414,6 +485,7 @@ class ConfigController extends ApiControllerBase
         $config['webhook_enabled'] = $webhook_enabled;
         $config['webhook_url'] = $webhook_url;
         $config['identity_webhook_enabled'] = $identity_webhook_enabled;
+        $config['identity_email_enabled'] = $identity_email_enabled;
         $config['scan_interval'] = (int)$scan_interval;
         $config['email_vlans'] = $email_vlans;
         $config['webhook_vlans'] = $webhook_vlans;
@@ -424,6 +496,10 @@ class ConfigController extends ApiControllerBase
         $config['nmap_host_timeout'] = $nmap_host_timeout;
         $config['nmap_version_detection'] = $nmap_version_detection;
         $config['nmap_max_per_cycle'] = $nmap_max_per_cycle;
+        $config['email_reminder_scan'] = $email_reminder_scan;
+        $config['email_reminder_service'] = $email_reminder_service;
+        $config['email_reminder_identity'] = $email_reminder_identity;
+        $config['email_reminder_new_device'] = $email_reminder_new_device;
 
         /* O4 / DM-BL-008c - sidecar translation toggle.
          * Written only when the form actually posts the field, so an older settings

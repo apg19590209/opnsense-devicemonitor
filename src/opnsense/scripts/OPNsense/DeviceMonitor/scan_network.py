@@ -53,6 +53,116 @@ CONFIG_FILE = PATHS['configFile']
 DB_FILE = PATHS['dbFile']
 DEFAULT_CONFIG = _defaults['config']
 PORT_DISCOVERY_LOCK = '/var/run/devicemonitor-port-discovery.lock'
+
+# ================================================================
+# SQLITE CONTENTION TUNING
+#
+# The deferred Nmap-history writer thread keeps its own write transaction
+# open while the main thread updates the targeted-scan queue. Every
+# connection used the driver's 5 s default, so a busy database raised
+# "database is locked" in the middle of a scan cycle. That exception
+# aborted full_scan() before the queue bookkeeping recorded
+# nmap_scan_attempts/nmap_next_attempt, so the retry backoff never
+# engaged and the head of the queue was rescanned on every cycle.
+#
+# Connections created by this module now wait for the writer instead of
+# failing fast.
+# ================================================================
+DB_BUSY_TIMEOUT_MS = 30000
+
+_sqlite_connect = sqlite3.connect
+
+
+def connect_db(*args, **kwargs):
+    """sqlite3.connect() that waits for a busy writer instead of aborting."""
+    kwargs.setdefault('timeout', DB_BUSY_TIMEOUT_MS / 1000.0)
+    conn = _sqlite_connect(*args, **kwargs)
+    try:
+        conn.execute(f'PRAGMA busy_timeout = {DB_BUSY_TIMEOUT_MS}')
+    except sqlite3.Error:
+        pass
+    return conn
+
+
+# Process-local patch: every sqlite3.connect() call site in this module
+# (including the deferred writer and read-only Hostwatch access) inherits
+# the busy timeout without touching each call site.
+sqlite3.connect = connect_db
+
+# ================================================================
+# MAC ROTATION POLICY
+#
+# A phone that randomises its Wi-Fi MAC keeps the same DHCP address, so the
+# new hardware address is an identity change of a device already on the
+# network, not a new device. A randomised MAC therefore always counts as a
+# rotation. A vendor (globally administered) MAC is a different physical
+# device, so it only counts as a rotation while the previous owner of the
+# address was still around; an address reused after that is genuinely new and
+# is still announced.
+# ================================================================
+MAC_ROTATION_WINDOW_HOURS = 168
+
+# ================================================================
+# SERVICE PROBE TUNING
+#
+# Infrastructure-service availability is decided by a single discovery
+# run per hour, so one impatient probe manufactures an hour-long outage.
+# Every timeout below sits above the initial TCP SYN retransmit timer,
+# each probe is attempted twice before a service may be called
+# unavailable, and the per-protocol worker caps keep the probe burst
+# small enough that the firewall does not drop its own traffic.
+# ================================================================
+SERVICE_PROBE_ATTEMPTS = 2
+SERVICE_PROBE_RETRY_DELAY = 0.25
+
+SERVICE_PROBE_TIMEOUTS = {
+    'dns': 3.0,
+    'ntp': 2.0,
+    'ssh': 2.5,
+    'web': 2.5,
+}
+
+SERVICE_PROBE_WORKERS = {
+    'ntp': 8,
+    'ssh': 12,
+    'web': 16,
+}
+
+# Consecutive failed observations required before a service is called
+# unavailable. Discovery runs hourly, so one bad sample would otherwise be
+# reported as a one-hour outage; a successful probe resets the count.
+SERVICE_MISS_THRESHOLD = 2
+
+# Stale-state ageing (O4). `unavailable` is a verdict about the run that
+# observed it, and nothing aged it, so an endpoint that was down once stayed
+# down forever. A row whose last successful verification is older than this is
+# no longer evidence of an outage and ages to `unknown`.
+SERVICE_UNKNOWN_AFTER_DAYS = 7
+
+# A host that has not been seen for this long has no service inventory worth
+# keeping, so its rows are retired. Keyed on `devices.last_seen`, never on
+# `devices.is_active`: a stopped hostwatch would otherwise empty the inventory.
+SERVICE_RETIRE_AFTER_DAYS = 30
+
+# RFC1918 space. A gateway interface inside these ranges is an internal segment
+# using policy routing; outside them it is an uplink and must not be monitored.
+PRIVATE_IPV4_NETWORKS = (
+    ipaddress.ip_network('10.0.0.0/8'),
+    ipaddress.ip_network('172.16.0.0/12'),
+    ipaddress.ip_network('192.168.0.0/16'),
+)
+
+# ================================================================
+# SERVICE ALERT CONFIRMATION
+#
+# Discovery runs hourly, so a first-time "service unavailable" is held
+# for longer than one run: if the matching recovery arrives inside that
+# window the pair is dropped without an email, and if the service is
+# still down the original event is released. A quiet window then stops
+# one flapping endpoint from mailing the operator repeatedly.
+# ================================================================
+SERVICE_ALERT_CONFIRM_SECONDS = 4320   # 72 min, longer than one 3600 s discovery run
+SERVICE_ALERT_QUIET_SECONDS = 21600    # 6 h between repeat outage emails per service
 # ================================================================
 
 
@@ -76,6 +186,7 @@ def load_config():
             'monitored_interfaces': DEFAULT_CONFIG.get('monitored_interfaces', ''),
             'email_enabled': DEFAULT_CONFIG.get('email_enabled', '1') == '1',
             'identity_webhook_enabled': DEFAULT_CONFIG.get('identity_webhook_enabled', '0') == '1',
+            'identity_email_enabled': DEFAULT_CONFIG.get('identity_email_enabled', '0') == '1',
             'service_email_enabled': DEFAULT_CONFIG.get('service_email_enabled', '0') == '1',
             'service_email_new': DEFAULT_CONFIG.get('service_email_new', '1') == '1',
             'service_email_unavailable': DEFAULT_CONFIG.get('service_email_unavailable', '1') == '1',
@@ -101,6 +212,11 @@ def load_config():
             'nmap_host_timeout': int(DEFAULT_CONFIG.get('nmap_host_timeout', 45)),
             'nmap_version_detection': DEFAULT_CONFIG.get('nmap_version_detection', '1') == '1',
             'nmap_max_per_cycle': int(DEFAULT_CONFIG.get('nmap_max_per_cycle', 2)),
+            'email_reminder_scan': int(DEFAULT_CONFIG.get('email_reminder_scan', 0) or 0),
+            'email_reminder_service': int(DEFAULT_CONFIG.get('email_reminder_service', 0) or 0),
+            'email_reminder_identity': int(DEFAULT_CONFIG.get('email_reminder_identity', 0) or 0),
+            'email_reminder_new_device': int(DEFAULT_CONFIG.get('email_reminder_new_device', 0) or 0),
+            'visibility_prime_interval': int(DEFAULT_CONFIG.get('visibility_prime_interval', 0) or 0),
             'apiEmailUrl': PATHS.get('apiEmailUrl', ''),
             'apiWebhookUrl': PATHS.get('apiWebhookUrl', '')
         }
@@ -114,6 +230,7 @@ def load_config():
                 'monitored_interfaces': config.get('monitored_interfaces', DEFAULT_CONFIG.get('monitored_interfaces', '')),
                 'email_enabled': config.get('email_enabled', '1') == '1',
                 'identity_webhook_enabled': config.get('identity_webhook_enabled', DEFAULT_CONFIG.get('identity_webhook_enabled', '0')) == '1',
+                'identity_email_enabled': config.get('identity_email_enabled', DEFAULT_CONFIG.get('identity_email_enabled', '0')) == '1',
                 'service_email_enabled': config.get('service_email_enabled', DEFAULT_CONFIG.get('service_email_enabled', '0')) == '1',
                 'service_email_new': config.get('service_email_new', DEFAULT_CONFIG.get('service_email_new', '1')) == '1',
                 'service_email_unavailable': config.get('service_email_unavailable', DEFAULT_CONFIG.get('service_email_unavailable', '1')) == '1',
@@ -139,6 +256,11 @@ def load_config():
                 'nmap_host_timeout': int(config.get('nmap_host_timeout', DEFAULT_CONFIG.get('nmap_host_timeout', 45))),
                 'nmap_version_detection': config.get('nmap_version_detection', DEFAULT_CONFIG.get('nmap_version_detection', '1')) == '1',
                 'nmap_max_per_cycle': int(config.get('nmap_max_per_cycle', DEFAULT_CONFIG.get('nmap_max_per_cycle', 2))),
+                'email_reminder_scan': int(config.get('email_reminder_scan', DEFAULT_CONFIG.get('email_reminder_scan', 0)) or 0),
+                'email_reminder_service': int(config.get('email_reminder_service', DEFAULT_CONFIG.get('email_reminder_service', 0)) or 0),
+                'email_reminder_identity': int(config.get('email_reminder_identity', DEFAULT_CONFIG.get('email_reminder_identity', 0)) or 0),
+                'email_reminder_new_device': int(config.get('email_reminder_new_device', DEFAULT_CONFIG.get('email_reminder_new_device', 0)) or 0),
+                'visibility_prime_interval': int(config.get('visibility_prime_interval', DEFAULT_CONFIG.get('visibility_prime_interval', 0)) or 0),
                 'apiEmailUrl': PATHS.get('apiEmailUrl', ''),
                 'apiWebhookUrl': PATHS.get('apiWebhookUrl', '')
             }
@@ -232,6 +354,29 @@ def resolve_monitored_networks(config):
             return None, (
                 f'Monitored interface "{name}" uses a loopback address '
                 f'({ip}); loopback interfaces cannot be monitored'
+            )
+
+        # Never point the scanner at the uplink. The assignment name is checked
+        # because it is what the operator reported (opt1 became wan), and the
+        # gateway marker is checked because it survives a rename. A gateway on a
+        # private address is an internal segment using policy routing, so it
+        # stays selectable; a public address behind a gateway is an uplink.
+        gateway = (node.findtext('gateway') or '').strip()
+
+        if name.lower() == 'wan':
+            return None, (
+                f'Monitored interface "{name}" is the WAN/uplink; '
+                'Device Monitor monitors internal segments only'
+            )
+
+        if gateway and not any(
+            address in network
+            for network in PRIVATE_IPV4_NETWORKS
+        ):
+            return None, (
+                f'Monitored interface "{name}" is an uplink '
+                f'(gateway "{gateway}" on public address {ip}); '
+                'Device Monitor monitors internal segments only'
             )
 
         if not subnet.isdigit():
@@ -723,8 +868,37 @@ def _apply_db_schema():
         version TEXT,
         first_detected DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         last_verified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        miss_count INTEGER NOT NULL DEFAULT 0,
+        last_checked DATETIME DEFAULT NULL,
         UNIQUE(ip, service_type, port, protocol, detection_method, interface)
     )''')
+
+    # Consecutive-failed-observation counter for existing databases.
+    service_columns = {
+        row[1]
+        for row in c.execute('PRAGMA table_info(device_services)')
+    }
+
+    if 'miss_count' not in service_columns:
+        c.execute(
+            'ALTER TABLE device_services '
+            'ADD COLUMN miss_count INTEGER NOT NULL DEFAULT 0'
+        )
+
+    # Last observation of any kind (success or miss) for existing databases.
+    # Ageing used `last_verified` alone, which only moves on success, so a row
+    # that is still being probed and failing looked abandoned and was aged to
+    # `unknown` again on every pass (Decision 54).
+    if 'last_checked' not in service_columns:
+        c.execute(
+            'ALTER TABLE device_services '
+            'ADD COLUMN last_checked DATETIME DEFAULT NULL'
+        )
+        c.execute(
+            'UPDATE device_services '
+            'SET last_checked = last_verified '
+            'WHERE last_checked IS NULL'
+        )
 
     c.execute('''
         CREATE INDEX IF NOT EXISTS idx_device_services_mac
@@ -783,8 +957,20 @@ def _apply_db_schema():
 
     c.execute('''CREATE TABLE IF NOT EXISTS service_discovery_state (
         id INTEGER PRIMARY KEY CHECK(id = 1),
-        last_run DATETIME
+        last_run DATETIME,
+        carp_role TEXT
     )''')
+
+    # CARP role observed on the previous run, so a transition is logged once.
+    discovery_columns = {
+        row[1]
+        for row in c.execute('PRAGMA table_info(service_discovery_state)')
+    }
+
+    if 'carp_role' not in discovery_columns:
+        c.execute(
+            'ALTER TABLE service_discovery_state ADD COLUMN carp_role TEXT'
+        )
 
     c.execute(
         '''
@@ -818,6 +1004,20 @@ def _apply_db_schema():
             COALESCE((SELECT MAX(id) FROM device_activity_events), 0)
         '''
     )
+    # Outstanding and recently delivered outage confirmations. A row is
+    # created the first time a service is reported unavailable and is removed
+    # by the matching recovery, so an unconfirmed down/recovered pair is never
+    # emailed. `notified = 0` marks a hold that is still awaiting the
+    # confirmation window; `notified_at` backs the per-service quiet window.
+    c.execute('''CREATE TABLE IF NOT EXISTS service_alert_pending (
+        service_key TEXT PRIMARY KEY,
+        mac TEXT NOT NULL DEFAULT '',
+        event_json TEXT NOT NULL,
+        held_at DATETIME NOT NULL,
+        notified INTEGER NOT NULL DEFAULT 0,
+        notified_at DATETIME DEFAULT NULL
+    )''')
+
     # Observational identity anomaly events. v2.7 Phase A records evidence
     # only; it does not automatically alert, block, merge, or delete devices.
     c.execute('''CREATE TABLE IF NOT EXISTS device_identity_events (
@@ -832,7 +1032,8 @@ def _apply_db_schema():
         interface TEXT,
         other_interface TEXT,
         details TEXT,
-        resolved_at DATETIME
+        resolved_at DATETIME,
+        notified_at DATETIME DEFAULT NULL
     )''')
 
     c.execute('''
@@ -853,6 +1054,12 @@ def _apply_db_schema():
         c.execute(
             'ALTER TABLE device_identity_events '
             'ADD COLUMN lifecycle_id INTEGER DEFAULT NULL'
+        )
+    if 'notified_at' not in identity_columns:
+        # Backs the "repeat an unchanged conflict every N minutes" reminder.
+        c.execute(
+            'ALTER TABLE device_identity_events '
+            'ADD COLUMN notified_at DATETIME DEFAULT NULL'
         )
 
     backfill_device_lifecycles(conn)
@@ -1974,6 +2181,44 @@ def is_device_active(last_seen_str, ip, was_active=False):
         pass
     return was_active and is_recently_seen(last_seen_str, minutes=30)
 
+def touch_device_last_seen(conn, ip, seen_at=None):
+    """Advance `devices.last_seen` for an address that just answered.
+
+    O4 refinement (DECISIONS.md 53). `devices.last_seen` is maintained by
+    hostwatch alone, so a host that hostwatch stops refreshing looks absent while
+    it still answers every probe. Service discovery has positive evidence of
+    presence, and without it the retirement pass deletes rows for an endpoint it
+    verified in the same run - every hour.
+
+    Only an existing device row is touched, and only forwards: this never invents
+    a device and never moves `last_seen` backwards. Returns the number of rows
+    advanced.
+    """
+    key = str(ip or '').strip()
+
+    if not key:
+        return 0
+
+    stamp = (
+        seen_at.strftime('%Y-%m-%d %H:%M:%S')
+        if hasattr(seen_at, 'strftime')
+        else str(seen_at or '').strip()
+    )
+
+    if not stamp:
+        stamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    return conn.execute(
+        '''
+        UPDATE devices
+        SET last_seen = ?
+        WHERE ip = ?
+          AND COALESCE(last_seen, '') < ?
+        ''',
+        (stamp, key, stamp)
+    ).rowcount
+
+
 def upsert_device_service(
     conn,
     mac,
@@ -1989,7 +2234,12 @@ def upsert_device_service(
     product='',
     version=''
 ):
-    """Insert or refresh one infrastructure-service endpoint."""
+    """Insert or refresh one infrastructure-service endpoint.
+
+    A successful active verification is also presence evidence for the address, so
+    an existing `devices` row has its `last_seen` advanced (DECISIONS.md 53). An
+    `authoritative` row is configuration, not an answer, and does not count.
+    """
     mac = (mac or '').strip().lower() or None
     ip = (ip or '').strip()
     interface = (interface or '').strip()
@@ -2015,9 +2265,10 @@ def upsert_device_service(
             product,
             version,
             first_detected,
-            last_verified
+            last_verified,
+            last_checked
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(
             ip,
             service_type,
@@ -2032,7 +2283,9 @@ def upsert_device_service(
             confidence = excluded.confidence,
             product = excluded.product,
             version = excluded.version,
-            last_verified = excluded.last_verified
+            last_verified = excluded.last_verified,
+            last_checked = excluded.last_checked,
+            miss_count = 0
         ''',
         (
             mac,
@@ -2048,10 +2301,50 @@ def upsert_device_service(
             version or '',
             verified_at,
             verified_at,
+            verified_at,
         )
     )
 
+    if (
+        str(status or '').strip().lower() == 'available'
+        and detection_method.lower() != 'authoritative'
+    ):
+        touch_device_last_seen(conn, ip, verified_at)
+
     return True
+
+
+def nmap_evidence_is_current(
+    finished_at,
+    now=None,
+    max_age_days=SERVICE_UNKNOWN_AFTER_DAYS
+):
+    """Is re-applied Nmap evidence recent enough to become inventory?
+
+    Phase-3 discovery does not run Nmap; it re-uses the structured evidence of
+    previous targeted scans, so a device whose last scan is weeks old would
+    otherwise be re-inventoried with a historical verification time on every
+    cycle. Retirement (Decision 55) then removes those rows again for an address
+    nobody has seen, which is a permanent rediscover-then-delete loop
+    (Decision 56). Evidence older than the ageing window is history, not
+    inventory.
+
+    An empty or unparseable timestamp counts as current: the caller falls back to
+    the observation time in that case, so no evidence is silently discarded.
+    """
+    text = str(finished_at or '').strip()
+
+    if not text:
+        return True
+
+    try:
+        stamp = datetime.strptime(text, '%Y-%m-%d %H:%M:%S')
+    except (TypeError, ValueError):
+        return True
+
+    now = now or datetime.now()
+
+    return now - stamp <= timedelta(days=max_age_days)
 
 
 def update_service_inventory_from_nmap(
@@ -2104,12 +2397,109 @@ def update_service_inventory_from_nmap(
     return recorded
 
 
-def discover_dns_servers(networks, timeout=1.5):
+def _dns_collect_responses(sock, pending, conn, found, verified_ips, deadline):
     """
-    Verify DNS servers using one real UDP DNS query per active IPv4 device.
+    Match DNS responses to outstanding queries until ``deadline``.
+
+    Verified candidates are removed from ``pending`` and recorded through
+    ``upsert_device_service``. Unmatched, malformed or foreign responses are
+    ignored, leaving their query pending so a retransmission pass can still
+    satisfy it.
+    """
+    while pending:
+        remaining = deadline - time.monotonic()
+
+        if remaining <= 0:
+            break
+
+        readable, _, _ = select.select(
+            [sock],
+            [],
+            [],
+            remaining
+        )
+
+        if not readable:
+            break
+
+        try:
+            data, source = sock.recvfrom(4096)
+        except OSError:
+            continue
+
+        if len(data) < 12:
+            continue
+
+        try:
+            (
+                rxid,
+                flags,
+                _questions,
+                _answers,
+                _authority,
+                _additional
+            ) = struct.unpack('!HHHHHH', data[:12])
+        except struct.error:
+            continue
+
+        candidate = pending.get(rxid)
+
+        if candidate is None:
+            continue
+
+        # The reply must come from the device that was queried.
+        if source[0] != candidate['ip']:
+            continue
+
+        # QR flag = this is a DNS response, not another query.
+        if not (flags & 0x8000):
+            continue
+
+        verified_at = datetime.now().strftime(
+            '%Y-%m-%d %H:%M:%S'
+        )
+
+        if upsert_device_service(
+            conn,
+            candidate['mac'],
+            candidate['ip'],
+            candidate['interface'],
+            'DNS',
+            53,
+            'udp',
+            'dns_query',
+            'verified',
+            verified_at
+        ):
+            item = {
+                'service_type': 'DNS',
+                'ip': candidate['ip'],
+                'mac': candidate['mac'],
+                'interface': candidate['interface'],
+                'port': 53,
+                'protocol': 'udp',
+                'confidence': 'verified'
+            }
+
+            found.append(item)
+            verified_ips.add(candidate['ip'])
+
+            log(
+                "[SERVICES] DNS server verified: "
+                f"{candidate['ip']}"
+            )
+
+        del pending[rxid]
+
+
+def discover_dns_servers(networks, timeout=SERVICE_PROBE_TIMEOUTS['dns']):
+    """
+    Verify DNS servers using real UDP DNS queries to active IPv4 devices.
 
     A device is recorded only when it returns a syntactically valid DNS
-    response with the matching transaction ID.
+    response with the matching transaction ID. Each unanswered query is
+    retransmitted once with the same transaction ID before the device may be
+    reported as no longer serving DNS.
     """
     init_db()
 
@@ -2266,6 +2656,7 @@ def discover_dns_servers(networks, timeout=1.5):
         sock.setblocking(False)
 
         pending = {}
+        packets = {}
 
         # example.com A query. We care about receiving a valid DNS
         # response, not what answer the resolver returns.
@@ -2305,119 +2696,66 @@ def discover_dns_servers(networks, timeout=1.5):
                         (candidate['ip'], 53)
                     )
                     pending[txid] = candidate
+                    packets[txid] = packet
                 except OSError:
                     continue
 
             found = []
             verified_ips = set()
-            deadline = time.monotonic() + float(timeout)
 
-            while pending:
-                remaining = deadline - time.monotonic()
-
-                if remaining <= 0:
+            for attempt in range(SERVICE_PROBE_ATTEMPTS):
+                if not pending:
                     break
 
-                readable, _, _ = select.select(
-                    [sock],
-                    [],
-                    [],
-                    remaining
-                )
+                if attempt:
+                    # Retransmit the identical query. The transaction ID is
+                    # unchanged, so a reply to either transmission is still
+                    # matched to the same candidate. A single lost UDP packet
+                    # must not be reported as an outage.
+                    time.sleep(SERVICE_PROBE_RETRY_DELAY)
 
-                if not readable:
-                    break
+                    for txid, packet in packets.items():
+                        if txid not in pending:
+                            continue
 
-                try:
-                    data, source = sock.recvfrom(4096)
-                except OSError:
-                    continue
+                        try:
+                            sock.sendto(
+                                packet,
+                                (pending[txid]['ip'], 53)
+                            )
+                        except OSError:
+                            continue
 
-                if len(data) < 12:
-                    continue
-
-                try:
-                    (
-                        rxid,
-                        flags,
-                        _questions,
-                        _answers,
-                        _authority,
-                        _additional
-                    ) = struct.unpack('!HHHHHH', data[:12])
-                except struct.error:
-                    continue
-
-                candidate = pending.get(rxid)
-
-                if candidate is None:
-                    continue
-
-                # The reply must come from the device that was queried.
-                if source[0] != candidate['ip']:
-                    continue
-
-                # QR flag = this is a DNS response, not another query.
-                if not (flags & 0x8000):
-                    continue
-
-                verified_at = datetime.now().strftime(
-                    '%Y-%m-%d %H:%M:%S'
-                )
-
-                if upsert_device_service(
+                _dns_collect_responses(
+                    sock,
+                    pending,
                     conn,
-                    candidate['mac'],
-                    candidate['ip'],
-                    candidate['interface'],
-                    'DNS',
-                    53,
-                    'udp',
-                    'dns_query',
-                    'verified',
-                    verified_at
-                ):
-                    item = {
-                        'service_type': 'DNS',
-                        'ip': candidate['ip'],
-                        'mac': candidate['mac'],
-                        'interface': candidate['interface'],
-                        'port': 53,
-                        'protocol': 'udp',
-                        'confidence': 'verified'
-                    }
-
-                    found.append(item)
-                    verified_ips.add(candidate['ip'])
-
-                    log(
-                        "[SERVICES] DNS server verified: "
-                        f"{candidate['ip']}"
-                    )
-
-                del pending[rxid]
+                    found,
+                    verified_ips,
+                    time.monotonic() + float(timeout)
+                )
 
             # Every candidate was actively queried during this run. Existing
             # dns_query inventory entries that did not answer are no longer
             # considered currently available. Preserve last_verified so the
             # UI can still show when the endpoint was last known-good.
+            host_gate = service_endpoint_host_gate(conn)
+
             for candidate in candidates:
                 candidate_ip = candidate['ip']
 
                 if candidate_ip in verified_ips:
                     continue
 
-                changed = conn.execute(
-                    '''
-                    UPDATE device_services
-                    SET status = 'unavailable'
-                    WHERE service_type = 'DNS'
-                      AND detection_method = 'dns_query'
-                      AND ip = ?
-                      AND status <> 'unavailable'
-                    ''',
-                    (candidate_ip,)
-                ).rowcount
+                if not host_gate(candidate_ip):
+                    continue
+
+                changed = record_service_miss(
+                    conn,
+                    'DNS',
+                    'dns_query',
+                    candidate_ip
+                )
 
                 if changed:
                     log(
@@ -2617,24 +2955,24 @@ def discover_dhcp_servers(networks):
                 (interface,)
             ).fetchall()
 
+            host_gate = service_endpoint_host_gate(conn)
+
             for row in known_rows:
                 known_ip = str(row[0] or '').strip()
 
                 if not known_ip or known_ip in verified_ips:
                     continue
 
-                changed = conn.execute(
-                    '''
-                    UPDATE device_services
-                    SET status = 'unavailable'
-                    WHERE service_type = 'DHCP'
-                      AND detection_method = 'dhcp_offer'
-                      AND ip = ?
-                      AND LOWER(interface) = LOWER(?)
-                      AND status <> 'unavailable'
-                    ''',
-                    (known_ip, interface)
-                ).rowcount
+                if not host_gate(known_ip):
+                    continue
+
+                changed = record_service_miss(
+                    conn,
+                    'DHCP',
+                    'dhcp_offer',
+                    known_ip,
+                    interface=interface
+                )
 
                 if changed:
                     log(
@@ -2658,6 +2996,485 @@ def _valid_service_probe_ipv4(ip):
         and not address.is_unspecified
         and not address.is_loopback
         and not address.is_multicast
+    )
+
+
+def service_endpoint_host_gate(conn):
+    """
+    Return a predicate for whether an endpoint's outage verdict is trustworthy.
+
+    A service can only be observed to have gone away while its host is still
+    being seen. An inactive host is still probed from `device_services`
+    inventory, so without this gate its services are written `unavailable` every
+    run and then "recover" when the host next answers - the offline/online pair
+    the operator reported.
+
+    An endpoint with no device record at all - a gateway, an untracked server,
+    the firewall itself - is not gated: missing inventory is not evidence of
+    absence, so the negative verdict is still allowed.
+    """
+    try:
+        rows = conn.execute(
+            '''
+            SELECT ip, is_active
+            FROM devices
+            WHERE ip IS NOT NULL
+              AND TRIM(ip) <> ''
+            '''
+        ).fetchall()
+    except sqlite3.Error:
+        return lambda ip: True
+
+    active = {}
+
+    for ip, is_active in rows:
+        key = str(ip or '').strip()
+
+        if not key:
+            continue
+
+        # Any record claiming the address is active keeps it observable.
+        active[key] = active.get(key, False) or int(is_active or 0) == 1
+
+    def host_gate(ip):
+        key = str(ip or '').strip()
+
+        if key not in active:
+            return True
+
+        return active[key]
+
+    return host_gate
+
+
+def record_service_miss(
+    conn,
+    service_type,
+    detection_method,
+    ip,
+    port=None,
+    interface=None,
+    threshold=SERVICE_MISS_THRESHOLD,
+    checked_at=None
+):
+    """
+    Record one failed observation of a service endpoint.
+
+    The row flips to `unavailable` only on the `threshold`-th consecutive miss;
+    until then only `miss_count` moves, so one lost probe no longer writes an
+    hour-long outage into the Devices view. A successful verification resets the
+    counter in `upsert_device_service()`.
+
+    `last_checked` is stamped on every observation, success or miss, because it is
+    the only timestamp that says "this endpoint is still being watched". Ageing
+    keys on it (Decision 54); `last_verified` keeps its meaning of last known-good.
+
+    Returns the number of rows whose counter was advanced.
+    """
+    clauses = [
+        'service_type = ?',
+        'detection_method = ?',
+        'ip = ?',
+    ]
+    params = [
+        str(service_type or '').strip().upper(),
+        str(detection_method or '').strip(),
+        str(ip or '').strip(),
+    ]
+
+    if port is not None:
+        try:
+            params.append(int(port))
+        except (TypeError, ValueError):
+            return 0
+
+        clauses.append('port = ?')
+
+    if interface:
+        clauses.append('LOWER(interface) = LOWER(?)')
+        params.append(str(interface).strip())
+
+    where = ' AND '.join(clauses)
+
+    try:
+        threshold = max(1, int(threshold))
+    except (TypeError, ValueError):
+        threshold = SERVICE_MISS_THRESHOLD
+
+    stamp = (
+        checked_at.strftime('%Y-%m-%d %H:%M:%S')
+        if hasattr(checked_at, 'strftime')
+        else str(checked_at or '').strip()
+    )
+
+    if not stamp:
+        stamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    return conn.execute(
+        f'''
+        UPDATE device_services
+        SET miss_count = COALESCE(miss_count, 0) + 1,
+            last_checked = ?,
+            status = CASE
+                         WHEN COALESCE(miss_count, 0) + 1 >= ?
+                             THEN 'unavailable'
+                         ELSE status
+                     END
+        WHERE {where}
+          AND status <> 'unavailable'
+        ''',
+        [stamp, threshold] + params
+    ).rowcount
+
+
+def age_stale_service_state(conn=None, now=None, dry_run=False):
+    """Age `unavailable` verdicts to `unknown` and retire rows for unseen hosts.
+
+    O4 (DECISIONS.md 52). An `unavailable` row records what one discovery run
+    observed, but nothing aged it, so an endpoint that was down once stayed down
+    forever - including the 24 rows whose hosts had not been seen since
+    2026-09-21. Two independent windows apply:
+
+      * an `unavailable` row whose last observation is older than
+        SERVICE_UNKNOWN_AFTER_DAYS becomes `unknown`: neither known up nor known
+        down is what the evidence supports. The observation timestamp is
+        `last_checked`, which both a success and a miss advance, so an endpoint
+        that is still being probed and failing is never aged; `last_verified`
+        keeps its meaning of last known-good (Decision 54);
+      * rows whose host address has not been seen in `devices.last_seen` for
+        SERVICE_RETIRE_AFTER_DAYS are deleted: the inventory of a host that no
+        longer exists is not an observation of anything.
+
+    Retirement keys on `last_seen`, never on `is_active`, because `is_active` is
+    hostwatch's opinion and a stopped hostwatch would make every host look
+    inactive (DECISIONS.md 48). The whole retirement pass is refused when no
+    device at all was seen inside the window - the signature of a broken
+    hostwatch rather than of a dead network. Rows whose address has no `devices`
+    record (gateway, firewall, untracked server) are never retired: missing
+    inventory is not evidence of absence, the rule
+    `service_endpoint_host_gate()` already applies to outage verdicts.
+
+    The ageing UPDATE also clears `miss_count`: the old streak describes the
+    period that was just aged away, so an endpoint that is still down has to
+    earn the verdict again instead of flipping back to `unavailable` on the
+    first fresh failure (Decision 49). It moves `status` through the activity
+    trigger, so a MAC-bearing row records one history-only `SERVICE_CHANGED`
+    event; that event type is never emailed (see
+    `select_service_alert_events()`). The DELETE does not fire that trigger, so
+    retirement leaves no history row behind, and the held-alert rows for a
+    retired endpoint are removed with it.
+
+    Returns ``(aged, retired)``. `dry_run` reports the same counts without
+    writing anything.
+    """
+    now = now or datetime.now()
+
+    if conn is None:
+        init_db()
+        owned = sqlite3.connect(DB_FILE)
+        try:
+            return age_stale_service_state(owned, now, dry_run)
+        finally:
+            owned.close()
+
+    unknown_cutoff = (
+        now - timedelta(days=SERVICE_UNKNOWN_AFTER_DAYS)
+    ).strftime('%Y-%m-%d %H:%M:%S')
+    retire_cutoff = (
+        now - timedelta(days=SERVICE_RETIRE_AFTER_DAYS)
+    ).strftime('%Y-%m-%d %H:%M:%S')
+
+    stale = '''
+        status = 'unavailable'
+          AND COALESCE(last_checked, last_verified, '') <> ''
+          AND COALESCE(last_checked, last_verified) < ?
+    '''
+
+    unseen_host = '''
+        EXISTS (
+            SELECT 1
+            FROM devices d
+            WHERE d.ip = device_services.ip
+              AND COALESCE(d.ip, '') <> ''
+        )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM devices d
+            WHERE d.ip = device_services.ip
+              AND COALESCE(d.ip, '') <> ''
+              AND COALESCE(d.last_seen, '') >= ?
+        )
+    '''
+
+    try:
+        if dry_run:
+            aged = conn.execute(
+                f'''
+                SELECT COUNT(*)
+                FROM device_services
+                WHERE {stale}
+                ''',
+                (unknown_cutoff,)
+            ).fetchone()[0]
+        else:
+            aged = conn.execute(
+                f'''
+                UPDATE device_services
+                SET status = 'unknown',
+                    miss_count = 0
+                WHERE {stale}
+                ''',
+                (unknown_cutoff,)
+            ).rowcount
+    except sqlite3.Error as e:
+        log(f"[SERVICES] Stale-state ageing failed: {e}")
+        return 0, 0
+
+    if not dry_run:
+        conn.commit()
+
+    try:
+        fresh_hosts = conn.execute(
+            '''
+            SELECT COUNT(*)
+            FROM devices
+            WHERE COALESCE(last_seen, '') >= ?
+            ''',
+            (retire_cutoff,)
+        ).fetchone()[0]
+    except sqlite3.Error as e:
+        log(f"[SERVICES] Retirement pre-check failed: {e}")
+        return aged, 0
+
+    if fresh_hosts == 0:
+        log(
+            "[SERVICES] Refusing retirement: no device seen within "
+            f"{SERVICE_RETIRE_AFTER_DAYS} days (hostwatch suspect)"
+        )
+        return aged, 0
+
+    try:
+        rows = conn.execute(
+            f'''
+            SELECT mac, ip, interface, service_type, port, protocol,
+                   detection_method
+            FROM device_services
+            WHERE {unseen_host}
+            ''',
+            (retire_cutoff,)
+        ).fetchall()
+    except sqlite3.Error as e:
+        log(f"[SERVICES] Retirement candidates failed: {e}")
+        return aged, 0
+
+    if not rows:
+        return aged, 0
+
+    if dry_run:
+        return aged, len(rows)
+
+    keys = [
+        service_alert_key({
+            'mac': mac,
+            'service_type': service_type,
+            'ip': ip,
+            'port': port,
+            'protocol': protocol,
+            'interface': interface,
+            'detection_method': detection_method,
+        })
+        for mac, ip, interface, service_type, port, protocol, detection_method
+        in rows
+    ]
+
+    try:
+        retired = conn.execute(
+            f'''
+            DELETE FROM device_services
+            WHERE {unseen_host}
+            ''',
+            (retire_cutoff,)
+        ).rowcount
+
+        if keys:
+            conn.executemany(
+                'DELETE FROM service_alert_pending WHERE service_key = ?',
+                [(key,) for key in keys]
+            )
+
+        conn.commit()
+    except sqlite3.Error as e:
+        log(f"[SERVICES] Retirement failed: {e}")
+        return aged, 0
+
+    return aged, retired
+
+
+def parse_carp_roles(ifconfig_text):
+    """
+    Map interface device names to their CARP role from `ifconfig` output.
+
+    Returns ``{device: 'MASTER' | 'BACKUP'}`` for every interface that reports a
+    CARP state. `ifconfig` prints the state on the device block, for example
+    ``carp: BACKUP vhid 1 advbase 1 advskew 100``.
+    """
+    roles = {}
+    current = None
+
+    for line in str(ifconfig_text or '').splitlines():
+        if not line.strip():
+            continue
+
+        if not line[0].isspace():
+            current = line.split(':', 1)[0].strip()
+            continue
+
+        text = line.strip()
+
+        if not text.lower().startswith('carp:') or not current:
+            continue
+
+        fields = text.split()
+
+        if len(fields) < 2:
+            continue
+
+        role = fields[1].strip().upper()
+
+        if role in ('MASTER', 'BACKUP'):
+            roles[current] = role
+
+    return roles
+
+
+def detect_carp_role(devices, ifconfig_text):
+    """
+    Return the CARP role of this node for the given monitored devices.
+
+    ``MASTER`` wins over ``BACKUP``: a node that owns any monitored segment is
+    observing that segment and must keep reporting. ``None`` means the devices
+    carry no CARP state at all, which is the non-HA case.
+    """
+    roles = parse_carp_roles(ifconfig_text)
+    seen = {
+        roles[device]
+        for device in (devices or [])
+        if device in roles
+    }
+
+    if 'MASTER' in seen:
+        return 'MASTER'
+
+    if 'BACKUP' in seen:
+        return 'BACKUP'
+
+    return None
+
+
+def service_observation_allowed(networks, ifconfig_text=None):
+    """
+    Return ``(allowed, role, reason)`` for service observation on this node.
+
+    A CARP BACKUP node does not carry the monitored traffic, so hostwatch there
+    under-reports and the host-active gate would either suppress every outage or -
+    without the gate - invent them. Neither is a useful answer from a standby, so
+    observation is refused. A node with no CARP is unaffected.
+
+    ``ifconfig_text`` is injectable so the decision can be tested without a CARP
+    pair; when omitted the live output is read.
+    """
+    devices = [
+        str(network.get('device') or '').strip()
+        for network in (networks or [])
+    ]
+    devices = [device for device in devices if device]
+
+    if not devices:
+        return True, None, ''
+
+    if ifconfig_text is None:
+        try:
+            result = subprocess.run(
+                ['/sbin/ifconfig', '-a'],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            ifconfig_text = getattr(result, 'stdout', '') or ''
+        except (OSError, subprocess.TimeoutExpired) as e:
+            # An unreadable ifconfig must not silently disable observation.
+            return True, None, f'ifconfig unavailable: {e}'
+
+    role = detect_carp_role(devices, ifconfig_text)
+
+    if role == 'BACKUP':
+        return False, role, 'CARP backup node'
+
+    return True, role, ''
+
+
+def record_carp_role(role):
+    """
+    Persist the CARP role of the monitored devices; True when it changed.
+
+    Keeps the role log to one line per transition instead of one per scan.
+    """
+    value = str(role or '')
+
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            row = conn.execute(
+                'SELECT carp_role FROM service_discovery_state WHERE id = 1'
+            ).fetchone()
+
+            previous = str(row[0] or '') if row else ''
+
+            if previous == value:
+                return False
+
+            conn.execute(
+                'UPDATE service_discovery_state SET carp_role = ? WHERE id = 1',
+                (value,)
+            )
+            conn.commit()
+
+            return True
+
+    except sqlite3.Error:
+        return True
+
+
+def service_visibility_summary(conn, networks):
+    """
+    Warn when the host-active gate has nothing to observe.
+
+    With no active device inside the monitored scope, every outage verdict is
+    suppressed by design (Decision 48). That is indistinguishable from "nothing
+    is wrong" unless it is said out loud, so say it.
+    """
+    try:
+        rows = conn.execute(
+            'SELECT ip, is_active FROM devices'
+        ).fetchall()
+    except sqlite3.Error:
+        return None
+
+    active = 0
+
+    for ip, is_active in rows:
+        if not int(is_active or 0):
+            continue
+
+        if ip_is_in_scope(str(ip or ''), networks):
+            active += 1
+
+    if active:
+        return None
+
+    return (
+        'host-active gate is suppressing outage verdicts: '
+        '0 active devices in monitored scope'
     )
 
 
@@ -2777,8 +3594,13 @@ def _nmap_tcp_service_candidates(conn, networks):
         return []
 
 
-def _probe_ntp_service(ip, timeout=0.8):
-    """Verify NTP using a real client request and matching originate time."""
+def _probe_ntp_service(ip, timeout=SERVICE_PROBE_TIMEOUTS['ntp']):
+    """
+    Verify NTP using a real client request and matching originate time.
+
+    One unanswered request is retried with the same originate timestamp, so a
+    single lost UDP packet cannot be read as "no NTP server here".
+    """
     request = bytearray(48)
 
     # LI=0, VN=4, Mode=3 (client)
@@ -2798,13 +3620,33 @@ def _probe_ntp_service(ip, timeout=0.8):
         fraction
     )
 
-    expected_originate = bytes(request[40:48])
+    payload = bytes(request)
+    expected_originate = payload[40:48]
 
+    for attempt in range(SERVICE_PROBE_ATTEMPTS):
+        result = _probe_ntp_service_attempt(
+            ip,
+            timeout,
+            payload,
+            expected_originate
+        )
+
+        if result is not None:
+            return result
+
+        if attempt + 1 < SERVICE_PROBE_ATTEMPTS:
+            time.sleep(SERVICE_PROBE_RETRY_DELAY)
+
+    return None
+
+
+def _probe_ntp_service_attempt(ip, timeout, payload, expected_originate):
+    """Perform one NTP client exchange for _probe_ntp_service."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     try:
         sock.settimeout(timeout)
-        sock.sendto(bytes(request), (ip, 123))
+        sock.sendto(payload, (ip, 123))
 
         data, source = sock.recvfrom(512)
 
@@ -2868,7 +3710,7 @@ def discover_ntp_servers(networks):
         targets = sorted(candidates.keys())
 
         if targets:
-            workers = min(16, len(targets))
+            workers = min(SERVICE_PROBE_WORKERS['ntp'], len(targets))
 
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 results = list(
@@ -2922,19 +3764,17 @@ def discover_ntp_servers(networks):
 
         tested = set(targets)
 
+        host_gate = service_endpoint_host_gate(conn)
+
         for row in previous:
             ip = (row[0] or '').strip()
 
-            if ip in tested and ip not in verified:
-                conn.execute(
-                    '''
-                    UPDATE device_services
-                    SET status = 'unavailable'
-                    WHERE ip = ?
-                      AND service_type = 'NTP'
-                      AND detection_method = 'ntp_query'
-                    ''',
-                    (ip,)
+            if ip in tested and ip not in verified and host_gate(ip):
+                record_service_miss(
+                    conn,
+                    'NTP',
+                    'ntp_query',
+                    ip
                 )
 
         conn.commit()
@@ -2989,8 +3829,27 @@ def _send_ssh_probe_disconnect(sock, banner):
         pass
 
 
-def _probe_ssh_service(target, timeout=0.8):
-    """Verify SSH by receiving an SSH protocol identification banner."""
+def _probe_ssh_service(target, timeout=SERVICE_PROBE_TIMEOUTS['ssh']):
+    """
+    Verify SSH by receiving an SSH protocol identification banner.
+
+    A failed attempt is retried once, so a single refused or dropped connection
+    cannot be read as "SSH is gone".
+    """
+    for attempt in range(SERVICE_PROBE_ATTEMPTS):
+        result = _probe_ssh_service_attempt(target, timeout)
+
+        if result is not None:
+            return result
+
+        if attempt + 1 < SERVICE_PROBE_ATTEMPTS:
+            time.sleep(SERVICE_PROBE_RETRY_DELAY)
+
+    return None
+
+
+def _probe_ssh_service_attempt(target, timeout):
+    """Perform one SSH banner exchange for _probe_ssh_service."""
     ip, port = target
 
     try:
@@ -3122,7 +3981,7 @@ def discover_ssh_servers(networks):
         target_list = sorted(targets.keys())
 
         if target_list:
-            workers = min(24, len(target_list))
+            workers = min(SERVICE_PROBE_WORKERS['ssh'], len(target_list))
 
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 results = list(
@@ -3178,23 +4037,21 @@ def discover_ssh_servers(networks):
 
         tested = set(target_list)
 
+        host_gate = service_endpoint_host_gate(conn)
+
         for ip, port, mac, interface in previous:
             try:
                 key = ((ip or '').strip(), int(port))
             except (TypeError, ValueError):
                 continue
 
-            if key in tested and key not in verified:
-                conn.execute(
-                    '''
-                    UPDATE device_services
-                    SET status = 'unavailable'
-                    WHERE ip = ?
-                      AND port = ?
-                      AND service_type = 'SSH'
-                      AND detection_method = 'ssh_banner'
-                    ''',
-                    key
+            if key in tested and key not in verified and host_gate(key[0]):
+                record_service_miss(
+                    conn,
+                    'SSH',
+                    'ssh_banner',
+                    key[0],
+                    port=key[1]
                 )
 
         conn.commit()
@@ -3207,12 +4064,30 @@ def discover_ssh_servers(networks):
     return discovered
 
 
-def _probe_web_service(target, timeout=0.6):
+def _probe_web_service(target, timeout=SERVICE_PROBE_TIMEOUTS['web']):
     """
     Verify an HTTP/HTTPS endpoint using a real request and HTTP response.
+
     TLS certificate validation is deliberately disabled because local
     infrastructure commonly uses private/self-signed certificates.
+
+    A failed attempt is retried once, so one dropped SYN or one slow
+    handshake cannot be read as "the web UI is gone".
     """
+    for attempt in range(SERVICE_PROBE_ATTEMPTS):
+        result = _probe_web_service_attempt(target, timeout)
+
+        if result is not None:
+            return result
+
+        if attempt + 1 < SERVICE_PROBE_ATTEMPTS:
+            time.sleep(SERVICE_PROBE_RETRY_DELAY)
+
+    return None
+
+
+def _probe_web_service_attempt(target, timeout):
+    """Perform one HTTP/HTTPS request for _probe_web_service."""
     ip, port, scheme = target
 
     try:
@@ -3433,7 +4308,7 @@ def discover_web_admin_services(networks):
         target_list = sorted(targets.keys())
 
         if target_list:
-            workers = min(32, len(target_list))
+            workers = min(SERVICE_PROBE_WORKERS['web'], len(target_list))
 
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 results = list(
@@ -3507,6 +4382,8 @@ def discover_web_admin_services(networks):
             for ip, port, scheme in target_list
         }
 
+        host_gate = service_endpoint_host_gate(conn)
+
         for ip, port, method, mac, interface in previous:
             try:
                 key = (
@@ -3517,17 +4394,13 @@ def discover_web_admin_services(networks):
             except (TypeError, ValueError):
                 continue
 
-            if key in tested and key not in verified:
-                conn.execute(
-                    '''
-                    UPDATE device_services
-                    SET status = 'unavailable'
-                    WHERE ip = ?
-                      AND port = ?
-                      AND service_type = 'WEB_ADMIN'
-                      AND detection_method = ?
-                    ''',
-                    key
+            if key in tested and key not in verified and host_gate(key[0]):
+                record_service_miss(
+                    conn,
+                    'WEB_ADMIN',
+                    key[2],
+                    key[0],
+                    port=key[1]
                 )
 
         conn.commit()
@@ -4324,6 +5197,8 @@ def _discover_local_wireguard(conn, candidates, networks):
         (method,)
     ).fetchall()
 
+    host_gate = service_endpoint_host_gate(conn)
+
     for ip, port, wg_interface in previous:
         try:
             key = (
@@ -4334,21 +5209,13 @@ def _discover_local_wireguard(conn, candidates, networks):
         except (TypeError, ValueError):
             continue
 
-        if key not in current:
-            conn.execute(
-                '''
-                UPDATE device_services
-                SET status = 'unavailable'
-                WHERE service_type = 'VPN'
-                  AND detection_method = ?
-                  AND ip = ?
-                  AND port = ?
-                ''',
-                (
-                    method,
-                    key[0],
-                    key[1]
-                )
+        if key not in current and host_gate(key[0]):
+            record_service_miss(
+                conn,
+                'VPN',
+                method,
+                key[0],
+                port=key[1]
             )
 
     return discovered
@@ -4669,6 +5536,7 @@ def discover_phase3_services(networks):
         )
 
         seen_nmap = set()
+        stale_nmap_evidence = 0
 
         for (
             ip,
@@ -4723,6 +5591,10 @@ def discover_phase3_services(networks):
                 or now_text
             )
 
+            if not nmap_evidence_is_current(evidence_time):
+                stale_nmap_evidence += 1
+                continue
+
             upsert_device_service(
                 conn,
                 meta.get('mac', ''),
@@ -4750,6 +5622,13 @@ def discover_phase3_services(networks):
                 'product': product or '',
                 'version': version or ''
             })
+
+        if stale_nmap_evidence:
+            log(
+                "[SERVICES] Skipped "
+                f"{stale_nmap_evidence} Nmap evidence row(s) older than "
+                f"{SERVICE_UNKNOWN_AFTER_DAYS} days"
+            )
 
         # ----------------------------------------------------
         # Build protocol verification targets
@@ -5064,6 +5943,8 @@ def discover_phase3_services(networks):
 
         tested = set(target_list)
 
+        host_gate = service_endpoint_host_gate(conn)
+
         for (
             service_type,
             ip,
@@ -5082,17 +5963,13 @@ def discover_phase3_services(networks):
             except (TypeError, ValueError):
                 continue
 
-            if key in tested and key not in verified:
-                conn.execute(
-                    '''
-                    UPDATE device_services
-                    SET status = 'unavailable'
-                    WHERE service_type = ?
-                      AND ip = ?
-                      AND port = ?
-                      AND detection_method = ?
-                    ''',
-                    key
+            if key in tested and key not in verified and host_gate(key[1]):
+                record_service_miss(
+                    conn,
+                    key[0],
+                    key[3],
+                    key[1],
+                    port=key[2]
                 )
 
         conn.commit()
@@ -5127,6 +6004,21 @@ def discover_phase3_services(networks):
 def discover_infrastructure_services(networks):
     """Run all supported infrastructure-service discovery within ``networks``."""
     services = []
+
+    allowed, _role, reason = service_observation_allowed(networks)
+
+    if not allowed:
+        log(f'[SERVICES] {reason}; service discovery skipped on this node')
+        return services
+
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            visibility_warning = service_visibility_summary(conn, networks)
+    except sqlite3.Error:
+        visibility_warning = None
+
+    if visibility_warning:
+        log(f'[SERVICES] {visibility_warning}')
 
     discoveries = (
         ('DHCP', discover_dhcp_servers),
@@ -5225,9 +6117,19 @@ def run_scheduled_service_discovery(interval_seconds=3600, networks=None):
 
         services = discover_infrastructure_services(networks)
 
+        # O4: age stale verdicts and retire the inventory of hosts that are no
+        # longer seen. Runs on the same hourly gate as discovery, so a row can
+        # never age without a discovery run having been attempted first.
+        aged, retired = age_stale_service_state()
+
         log(
             "[SERVICES] Scheduled discovery completed: "
             f"{len(services)} verified service(s)"
+        )
+
+        log(
+            "[SERVICES] Stale-state ageing: "
+            f"aged {aged} row(s) to unknown, retired {retired} row(s)"
         )
 
         return True
@@ -5466,6 +6368,247 @@ def select_service_alert_events(config, events, preferences=None):
     return selected
 
 
+def service_alert_key(event):
+    """Return the stable identity of the service an alert event belongs to."""
+    try:
+        port = int(event.get('port') or 0)
+    except (TypeError, ValueError):
+        port = 0
+
+    return '|'.join((
+        str(event.get('mac') or '').strip().lower(),
+        str(event.get('service_type') or ''),
+        str(event.get('ip') or ''),
+        str(port),
+        str(event.get('protocol') or '').lower(),
+        str(event.get('interface') or ''),
+        str(event.get('detection_method') or ''),
+    ))
+
+
+def _service_alert_timestamp(value):
+    """Parse a stored alert timestamp into a datetime, or None."""
+    if isinstance(value, datetime):
+        return value
+
+    text = str(value or '').strip()
+
+    if not text:
+        return None
+
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f'):
+        try:
+            return datetime.strptime(text, fmt)
+        except (TypeError, ValueError):
+            continue
+
+    return None
+
+
+def _service_alert_age_seconds(value, now):
+    """Return the age of a stored timestamp in seconds, or None."""
+    stamp = _service_alert_timestamp(value)
+
+    if stamp is None:
+        return None
+
+    return (now - stamp).total_seconds()
+
+
+def collect_expired_service_alert_holds(conn, now=None):
+    """
+    Return held outage events whose confirmation window has elapsed.
+
+    A hold is created the first time a service is reported unavailable and is
+    deleted by the matching recovery event. One that survives the whole window
+    is a real outage, so the original event is released for delivery. Holds are
+    stored with their original event payload, so a released outage still
+    reports the address, port and product that were observed.
+    """
+    now = now or datetime.now()
+
+    try:
+        rows = conn.execute(
+            '''
+            SELECT event_json, held_at
+            FROM service_alert_pending
+            WHERE notified = 0
+            '''
+        ).fetchall()
+    except sqlite3.Error:
+        return []
+
+    due = []
+
+    for payload, held_at in rows:
+        age = _service_alert_age_seconds(held_at, now)
+
+        if age is None or age < SERVICE_ALERT_CONFIRM_SECONDS:
+            continue
+
+        try:
+            event = json.loads(payload)
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+        if isinstance(event, dict):
+            due.append(event)
+
+    return due
+
+
+def apply_service_alert_confirmation(conn, selected, now=None):
+    """
+    Hold a first-time outage alert until a later observation confirms it.
+
+    Returns ``(deliverable, held, suppressed)``. Each outcome is decided here and
+    persisted in ``service_alert_pending``, which is the durable record: a held
+    event is not replayed from the cursor, and the matching recovery is matched
+    by service key when it is read later, so an outstanding hold never delays
+    alerts for other services. A recovery for an outage that was never emailed
+    removes the hold and is itself dropped, which is what turns a probe flap into
+    silence instead of two emails.
+    """
+    now = now or datetime.now()
+    stamp = now.strftime('%Y-%m-%d %H:%M:%S')
+
+    deliverable = []
+    held = {}
+    suppressed = []
+    handled = set()
+
+    for event in selected:
+        key = service_alert_key(event)
+        event_type = str(event.get('event_type') or '')
+
+        # A held outage and its recovery are separate events for the same
+        # service, so only the same (key, type) pair is deduplicated.
+        identity = (key, event_type)
+
+        if identity in handled:
+            continue
+
+        handled.add(identity)
+        mac = str(event.get('mac') or '').strip().lower()
+
+        row = conn.execute(
+            '''
+            SELECT notified, notified_at, held_at
+            FROM service_alert_pending
+            WHERE service_key = ?
+            ''',
+            (key,)
+        ).fetchone()
+
+        if event_type == 'SERVICE_UNAVAILABLE':
+            if row is None:
+                conn.execute(
+                    '''
+                    INSERT OR REPLACE INTO service_alert_pending (
+                        service_key, mac, event_json, held_at, notified,
+                        notified_at
+                    )
+                    VALUES (?, ?, ?, ?, 0, NULL)
+                    ''',
+                    (
+                        key,
+                        mac,
+                        json.dumps(event, sort_keys=True, default=str),
+                        stamp,
+                    )
+                )
+                held[key] = event
+                continue
+
+            if not int(row[0] or 0):
+                age = _service_alert_age_seconds(row[2], now)
+
+                if age is None or age < SERVICE_ALERT_CONFIRM_SECONDS:
+                    held[key] = event
+                    continue
+
+                deliverable.append(event)
+                continue
+
+            quiet_age = _service_alert_age_seconds(row[1], now)
+
+            if (
+                quiet_age is not None
+                and quiet_age < SERVICE_ALERT_QUIET_SECONDS
+            ):
+                suppressed.append(event)
+                continue
+
+            deliverable.append(event)
+            continue
+
+        if event_type == 'SERVICE_AVAILABLE':
+            if row is None:
+                suppressed.append(event)
+                continue
+
+            if not int(row[0] or 0):
+                conn.execute(
+                    'DELETE FROM service_alert_pending WHERE service_key = ?',
+                    (key,)
+                )
+                held.pop(key, None)
+                suppressed.append(event)
+                continue
+
+            deliverable.append(event)
+            continue
+
+        deliverable.append(event)
+
+    conn.commit()
+
+    return deliverable, list(held.values()), suppressed
+
+
+def commit_service_alert_delivery(conn, delivered, now=None):
+    """Record the confirmation outcome of a successful alert delivery."""
+    now = now or datetime.now()
+    stamp = now.strftime('%Y-%m-%d %H:%M:%S')
+
+    for event in delivered:
+        key = service_alert_key(event)
+        event_type = str(event.get('event_type') or '')
+
+        if event_type == 'SERVICE_UNAVAILABLE':
+            conn.execute(
+                '''
+                INSERT INTO service_alert_pending (
+                    service_key, mac, event_json, held_at, notified,
+                    notified_at
+                )
+                VALUES (?, ?, ?, ?, 1, ?)
+                ON CONFLICT(service_key) DO UPDATE SET
+                    mac = excluded.mac,
+                    event_json = excluded.event_json,
+                    held_at = excluded.held_at,
+                    notified = 1,
+                    notified_at = excluded.notified_at
+                ''',
+                (
+                    key,
+                    str(event.get('mac') or '').strip().lower(),
+                    json.dumps(event, sort_keys=True, default=str),
+                    stamp,
+                    stamp,
+                )
+            )
+            continue
+
+        if event_type == 'SERVICE_AVAILABLE':
+            conn.execute(
+                'DELETE FROM service_alert_pending WHERE service_key = ?',
+                (key,)
+            )
+
+    conn.commit()
+
+
 def plan_service_alert_cursor_advance(
     events,
     selected_events,
@@ -5702,6 +6845,53 @@ def send_service_alert_email(events):
         return False
 
 
+def collect_service_alert_reminders(conn, config, now=None):
+    """Events for outages that are unchanged but due a repeat email.
+
+    ``email_reminder_service`` (minutes) of 0 means "transitions only", which
+    is the default. Reminders reuse the stored event payload and refresh
+    ``notified_at`` on delivery, so they repeat at most once per interval.
+    """
+    interval = 0
+    try:
+        interval = max(0, int(config.get('email_reminder_service') or 0))
+    except (TypeError, ValueError):
+        interval = 0
+
+    if interval <= 0:
+        return []
+
+    now = now or datetime.now()
+    cutoff = (now - timedelta(minutes=interval)).strftime('%Y-%m-%d %H:%M:%S')
+
+    try:
+        rows = conn.execute(
+            '''
+            SELECT event_json
+            FROM service_alert_pending
+            WHERE notified = 1
+              AND notified_at IS NOT NULL
+              AND notified_at <= ?
+            ''',
+            (cutoff,)
+        ).fetchall()
+    except sqlite3.Error:
+        return []
+
+    reminders = []
+
+    for (payload,) in rows:
+        try:
+            event = json.loads(payload)
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+        if isinstance(event, dict):
+            reminders.append(event)
+
+    return reminders
+
+
 def process_service_alerts(config, networks):
     """
     Process pending infrastructure-service alerts without affecting scan success.
@@ -5711,6 +6901,13 @@ def process_service_alerts(config, networks):
     email delivery succeeds; only the safe prefix before the first selected row
     may advance after a delivery failure. Out-of-scope rows are never sent,
     acknowledged or advanced past.
+
+    Before delivery, outage events pass through the confirmation stage: a
+    first-time `SERVICE_UNAVAILABLE` is held for `SERVICE_ALERT_CONFIRM_SECONDS`
+    and a recovery that arrives inside that window cancels both emails, so a
+    probe flap produces no notification at all. The hold lives in
+    `service_alert_pending`, not in the cursor, so one outstanding outage cannot
+    delay an alert for another service.
 
     A non-blocking process lock serialises this read/send/cursor sequence so
     overlapping full scans cannot normally deliver the same pending alert.
@@ -5723,44 +6920,96 @@ def process_service_alerts(config, networks):
     try:
         init_db()
 
+        now = datetime.now()
+
         conn = sqlite3.connect(DB_FILE)
         try:
             events = get_pending_service_alert_events(conn, networks)
-            preferences = load_service_alert_preferences(conn, events)
+            expired = collect_expired_service_alert_holds(conn, now)
+            preferences = load_service_alert_preferences(
+                conn,
+                events + expired,
+            )
+            selected = select_service_alert_events(config, events, preferences)
+            selected += select_service_alert_events(
+                config,
+                expired,
+                preferences,
+            )
+            deliverable, held, suppressed = apply_service_alert_confirmation(
+                conn,
+                selected,
+                now,
+            )
         finally:
             conn.close()
 
-        if not events:
+        # Optional repeat for outages that have not changed
+        # (email_reminder_service, minutes; 0 = transitions only). Collected
+        # before the early return so a standing outage still repeats.
+        reminders = []
+        try:
+            with sqlite3.connect(DB_FILE) as reminder_conn:
+                reminders = collect_service_alert_reminders(
+                    reminder_conn, config, now
+                )
+        except sqlite3.Error as e:
+            log(f'[SERVICE-EMAIL] Reminder lookup failed: {e}')
+
+        if not events and not expired and not reminders:
             return True
 
-        selected = select_service_alert_events(config, events, preferences)
+        if held or suppressed:
+            log(
+                '[SERVICE-EMAIL] Held '
+                f'{len(held)} and dropped {len(suppressed)} '
+                'unconfirmed service event(s)'
+            )
+
         delivery_succeeded = False
 
-        if selected:
-            delivery_succeeded = send_service_alert_email(selected)
+        if deliverable:
+            delivery_succeeded = send_service_alert_email(deliverable)
 
         plan = plan_service_alert_cursor_advance(
             events,
-            selected,
+            deliverable,
             delivery_succeeded=delivery_succeeded,
         )
 
+        reminders_sent = False
+
+        if reminders:
+            reminders_sent = send_service_alert_email(reminders)
+
+            if reminders_sent:
+                log(
+                    '[SERVICE-EMAIL] Re-sent '
+                    f'{len(reminders)} unchanged-state reminder(s)'
+                )
+
         conn = sqlite3.connect(DB_FILE)
         try:
+            if delivery_succeeded and deliverable:
+                commit_service_alert_delivery(conn, deliverable, now)
+
+            if reminders_sent:
+                commit_service_alert_delivery(conn, reminders, now)
+
             advanced = advance_service_alert_cursors(conn, plan)
         finally:
             conn.close()
 
-        if selected and not delivery_succeeded:
+        if deliverable and not delivery_succeeded:
             log(
                 '[SERVICE-EMAIL] Delivery failed; selected events retained '
                 'for retry'
             )
             return False
 
-        if selected:
+        if deliverable:
             log(
-                f'[SERVICE-EMAIL] Processed {len(selected)} selected '
+                f'[SERVICE-EMAIL] Processed {len(deliverable)} confirmed '
                 'infrastructure service event(s)'
             )
         elif advanced:
@@ -6196,6 +7445,123 @@ def run_targeted_scan_with_history(device, config, scan_type):
     # email failure still causes automatic retry/backoff.
     return operation_success, error
 
+def scan_state_signature(services):
+    """Comparable signature of one scan's open-service inventory."""
+    return tuple(sorted(
+        (
+            str(service.get('port') or ''),
+            str(service.get('protocol') or '').lower(),
+            str(service.get('service') or ''),
+            str(service.get('product') or ''),
+            str(service.get('service_version') or ''),
+            str(service.get('extra_info') or ''),
+        )
+        for service in (services or [])
+    ))
+
+
+def previous_scan_state_signature(conn, mac):
+    """Signature of the newest completed successful scan for `mac`.
+
+    The scan in flight has no port rows yet (the deferred writer stores them
+    after the email decision), so the newest completed history row is always
+    the previously recorded state. ``None`` means there is no comparable
+    history: the first scan of a device must still be emailed.
+    """
+    row = conn.execute(
+        '''
+        SELECT id
+        FROM nmap_scan_history
+        WHERE lower(mac) = ? AND success = 1
+        ORDER BY id DESC
+        LIMIT 1
+        ''',
+        ((mac or '').strip().lower(),)
+    ).fetchone()
+
+    if row is None:
+        return None
+
+    ports = conn.execute(
+        '''
+        SELECT port, protocol, service, product, version, extra_info
+        FROM nmap_scan_ports
+        WHERE scan_history_id = ?
+        ''',
+        (row[0],)
+    ).fetchall()
+
+    return tuple(sorted(
+        (
+            str(port or ''),
+            str(protocol or '').lower(),
+            str(service or ''),
+            str(product or ''),
+            str(version or ''),
+            str(extra_info or ''),
+        )
+        for port, protocol, service, product, version, extra_info in ports
+    ))
+
+
+def scan_state_changed(device, services, ip):
+    """True when the scan differs from the state recorded for the device.
+
+    Emails are state-change notifications: an unchanged inventory is recorded
+    in history but never mailed again.
+    """
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            previous = previous_scan_state_signature(conn, device.get('mac'))
+    except sqlite3.Error as e:
+        # Unreadable history must not silence a real alert.
+        log(f"[NMAP] Unable to read previous scan state for {ip}: {e}")
+        return True
+
+    if previous is None:
+        return True
+
+    return previous != scan_state_signature(services)
+
+
+def scan_email_reminder_due(device, interval_minutes):
+    """True when an unchanged scan is due a repeat email.
+
+    ``interval_minutes`` of 0 means "only when the state changes", so an
+    unchanged scan is never mailed. Otherwise the last emailed scan for the
+    device must be at least that old.
+    """
+    if interval_minutes <= 0:
+        return False
+
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            row = conn.execute(
+                '''
+                SELECT finished_at
+                FROM nmap_scan_history
+                WHERE lower(mac) = ? AND email_sent = 1
+                  AND finished_at IS NOT NULL
+                ORDER BY id DESC
+                LIMIT 1
+                ''',
+                ((device.get('mac') or '').strip().lower(),)
+            ).fetchone()
+    except sqlite3.Error as e:
+        log(f"[NMAP] Reminder check failed for {device.get('ip')}: {e}")
+        return False
+
+    if row is None:
+        return True
+
+    try:
+        last_sent = datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')
+    except (TypeError, ValueError):
+        return True
+
+    return (datetime.now() - last_sent) >= timedelta(minutes=interval_minutes)
+
+
 def targeted_scan_and_email(device, config):
     """Run one targeted Nmap scan, email it, and return structured results."""
     ip = (device.get('ip') or '').strip()
@@ -6354,6 +7720,34 @@ def targeted_scan_and_email(device, config):
         'nmap_elapsed': elapsed_value,
         'os_hint': os_hint,
     })
+
+    # Emails are state-change notifications by default: the scan always runs
+    # and its history row is always written, but an inventory identical to the
+    # last recorded scan is only re-mailed when the configured repeat interval
+    # has elapsed (email_reminder_scan, minutes; 0 = never).
+    if not scan_state_changed(device, services, ip):
+        reminder_minutes = 0
+        try:
+            reminder_minutes = max(
+                0, int(config.get('email_reminder_scan') or 0)
+            )
+        except (TypeError, ValueError):
+            reminder_minutes = 0
+
+        if not scan_email_reminder_due(device, reminder_minutes):
+            details['email_sent'] = False
+            details['email_error'] = None
+            log(
+                f"[NMAP] Scan result unchanged for {ip}; email suppressed "
+                f"({len(services)} open service(s), repeat interval "
+                f"{reminder_minutes or 'off'})"
+            )
+            return True, "", details
+
+        log(
+            f"[NMAP] Scan result unchanged for {ip}; sending "
+            f"{reminder_minutes}-minute reminder"
+        )
 
     payload = {
         'ip': ip,
@@ -6524,6 +7918,7 @@ def send_webhook_via_php_api(new_devices, in_scope_macs):
 def get_new_high_identity_events(conn, start_id):
     """Return qualifying identity events inserted during this scan cycle."""
     columns = [
+        'id',
         'detected_at',
         'event_type',
         'severity',
@@ -6537,7 +7932,7 @@ def get_new_high_identity_events(conn, start_id):
     ]
 
     rows = conn.execute('''
-        SELECT detected_at, event_type, severity, mac, other_mac,
+        SELECT id, detected_at, event_type, severity, mac, other_mac,
                ip, other_ip, interface, other_interface, details
         FROM device_identity_events
         WHERE id > ?
@@ -6550,6 +7945,65 @@ def get_new_high_identity_events(conn, start_id):
     ''', (int(start_id),)).fetchall()
 
     return [dict(zip(columns, row)) for row in rows]
+
+
+def get_pending_high_identity_reminders(conn, config):
+    """Unresolved high-severity conflicts that are due a repeat email.
+
+    ``email_reminder_identity`` (minutes) of 0 means "new events only", which
+    is the default.
+    """
+    interval = 0
+    try:
+        interval = max(0, int(config.get('email_reminder_identity') or 0))
+    except (TypeError, ValueError):
+        interval = 0
+
+    if interval <= 0:
+        return []
+
+    cutoff = (
+        datetime.now() - timedelta(minutes=interval)
+    ).strftime('%Y-%m-%d %H:%M:%S')
+
+    try:
+        rows = conn.execute(
+            '''
+            SELECT id, detected_at, event_type, severity, mac, other_mac,
+                   ip, other_ip, interface, other_interface, details
+            FROM device_identity_events
+            WHERE severity = 'high'
+              AND event_type IN (
+                  'IP_IDENTITY_CHANGED',
+                  'IPV6_IDENTITY_CHANGED'
+              )
+              AND resolved_at IS NULL
+              AND (notified_at IS NULL OR notified_at <= ?)
+            ORDER BY id ASC
+            ''',
+            (cutoff,)
+        ).fetchall()
+    except sqlite3.Error:
+        return []
+
+    columns = ['id', 'detected_at', 'event_type', 'severity', 'mac',
+               'other_mac', 'ip', 'other_ip', 'interface', 'other_interface',
+               'details']
+
+    return [dict(zip(columns, row)) for row in rows]
+
+
+def mark_identity_events_notified(conn, events):
+    """Record that these identity events were just emailed."""
+    ids = [event.get('id') for event in events if event.get('id')]
+    if not ids:
+        return
+
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn.executemany(
+        'UPDATE device_identity_events SET notified_at = ? WHERE id = ?',
+        [(now, event_id) for event_id in ids]
+    )
 
 
 def should_send_identity_email(config, events):
@@ -6568,6 +8022,84 @@ def should_send_identity_email(config, events):
         and config.get('webhook_enabled')
         and config.get('webhook_url')
     )
+
+
+def should_send_identity_mail(config, events):
+    """Return whether identity conflicts should also be emailed.
+
+    This is the email leg, independent of the webhook leg: it rides the normal
+    email transport and is gated by the identity_email_enabled subcategory
+    switch together with the email master switch and recipient.
+    """
+    return bool(
+        events
+        and config.get('enabled')
+        and config.get('email_enabled')
+        and config.get('identity_email_enabled')
+        and config.get('email_to')
+    )
+
+
+def send_identity_mail(events):
+    """Send one batched identity-conflict email without failing the scan."""
+    if not events:
+        return True
+
+    helper = (
+        '/usr/local/opnsense/scripts/OPNsense/'
+        'DeviceMonitor/notify_identity_mail.php'
+    )
+
+    try:
+        result = subprocess.run(
+            ['/usr/local/bin/php', helper],
+            input=json.dumps({'events': events}),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or '').strip()
+            log(
+                '[IDENTITY-MAIL] Failed: ' +
+                (detail[:500] if detail else f'exit {result.returncode}')
+            )
+            return False
+
+        try:
+            response = json.loads(result.stdout or '{}')
+        except (json.JSONDecodeError, TypeError):
+            log('[IDENTITY-MAIL] Failed: invalid helper response')
+            return False
+
+        status = response.get('result')
+
+        if status == 'skipped':
+            log(
+                '[IDENTITY-MAIL] Skipped: ' +
+                (str(response.get('message') or '').strip() or
+                 'helper declined notification')
+            )
+            return False
+
+        if status != 'sent':
+            log(
+                '[IDENTITY-MAIL] Failed: unexpected helper result ' +
+                repr(status)
+            )
+            return False
+
+        log(
+            f'[IDENTITY-MAIL] Sent batched alert for {len(events)} event(s)'
+        )
+        return True
+    except subprocess.TimeoutExpired:
+        log('[IDENTITY-MAIL] Failed: email process timed out')
+        return False
+    except Exception as e:
+        log(f'[IDENTITY-MAIL] Failed: {e}')
+        return False
 
 
 def send_identity_email(events):
@@ -6668,6 +8200,128 @@ def record_identity_event(conn, mac, event_type, severity,
     ''', (mac, event_type, severity, ip, other_ip, other_mac,
           interface, other_interface, details))
     return True
+
+
+def build_ip_owner_index(conn):
+    """Map IPv4 address -> (mac, last_seen) of its most recent known owner.
+
+    Taken once before the device loop so the snapshot reflects the state before
+    this cycle records anything.
+    """
+    owners = {}
+
+    for ip, mac, last_seen in conn.execute(
+        '''
+        SELECT ip, mac, COALESCE(last_seen, '')
+        FROM devices
+        WHERE ip IS NOT NULL AND ip != ''
+        '''
+    ):
+        seen = last_seen or ''
+        current = owners.get(ip)
+        if current is None or seen > current[1]:
+            owners[ip] = (mac, seen)
+
+    return owners
+
+
+def detect_mac_rotation(conn, mac, ip, owners=None):
+    """Return the displaced owner when `mac` takes over a known address.
+
+    A randomised (locally administered) MAC appearing on an address another
+    device was using is the same host with a new hardware address, so it is
+    always an identity change rather than a new device: the device keeps its
+    address and only the hardware address changed.
+
+    A globally administered (vendor) MAC is a different physical device, so it
+    is only treated as a rotation while the previous owner was still around
+    (MAC_ROTATION_WINDOW_HOURS); an address reused after that is a genuinely
+    new device and must still be announced.
+
+    ``None`` means the address is unowned, still owned by this MAC, or the
+    takeover does not qualify.
+    """
+    if owners is None:
+        owners = build_ip_owner_index(conn)
+
+    owner = owners.get((ip or '').strip())
+    if not owner:
+        return None
+
+    owner_mac, owner_last_seen = owner
+    if not owner_mac or owner_mac.lower() == (mac or '').lower():
+        return None
+
+    randomised = is_locally_administered_mac(mac)
+
+    age = None
+    try:
+        age = datetime.now() - datetime.strptime(
+            owner_last_seen, '%Y-%m-%d %H:%M:%S'
+        )
+    except (TypeError, ValueError, OverflowError):
+        age = None
+
+    if not randomised:
+        if age is None or age > timedelta(hours=MAC_ROTATION_WINDOW_HOURS):
+            return None
+
+    return {
+        'mac': owner_mac,
+        'last_seen': owner_last_seen,
+        'randomised': randomised,
+    }
+
+
+def rotation_announcement_due(conn, mac, ip, config):
+    """True when a standing MAC rotation should be announced again.
+
+    A rotation is recorded as an identity event and is not announced as a new
+    device by default. With email_reminder_new_device set (minutes), the
+    announcement repeats once that interval has elapsed since the last one.
+    """
+    interval = 0
+    try:
+        interval = max(0, int(config.get('email_reminder_new_device') or 0))
+    except (TypeError, ValueError):
+        interval = 0
+
+    if interval <= 0:
+        return False
+
+    now = datetime.now()
+    row = conn.execute(
+        '''
+        SELECT id, notified_at
+        FROM device_identity_events
+        WHERE mac = ? AND event_type = 'IP_IDENTITY_CHANGED'
+          AND COALESCE(ip, '') = ?
+        ORDER BY id DESC
+        LIMIT 1
+        ''',
+        ((mac or '').lower(), (ip or '').strip())
+    ).fetchone()
+
+    if row is None:
+        return True
+
+    due = True
+
+    if row[1]:
+        try:
+            due = (
+                now - datetime.strptime(row[1], '%Y-%m-%d %H:%M:%S')
+            ) >= timedelta(minutes=interval)
+        except (TypeError, ValueError):
+            due = True
+
+    if due:
+        conn.execute(
+            'UPDATE device_identity_events SET notified_at = ? WHERE id = ?',
+            (now.strftime('%Y-%m-%d %H:%M:%S'), row[0])
+        )
+
+    return due
 
 
 def detect_recent_hostwatch_identity_events(conn, minutes=5, kea_leases=None, networks=None):
@@ -7114,7 +8768,61 @@ def apply_hostname_provenance(
     return device
 
 
-def prime_selected_interface_visibility(networks):
+# Visibility priming policy. The sweep exists so Hostwatch can observe
+# otherwise-quiet devices, but an ICMP pass over every address in the subnet
+# on every scan cycle is indistinguishable from a targeted scan to endpoint
+# security tooling: each host received one probe per scan_interval forever.
+# The sweep is therefore rate limited, and addresses Hostwatch has already
+# observed recently are skipped because they need no wake-up.
+VISIBILITY_PRIME_MIN_INTERVAL = 3600
+VISIBILITY_PRIME_FRESH_WINDOW = 3600
+VISIBILITY_PRIME_STATE = '/var/run/devicemonitor-visibility-prime.state'
+
+
+def hostwatch_recently_seen_addresses(window_seconds):
+    """IPv4 addresses Hostwatch observed within `window_seconds`."""
+    if not os.path.exists(HOSTWATCH_DB):
+        return set()
+
+    try:
+        conn = sqlite3.connect(f'file:{HOSTWATCH_DB}?mode=ro', uri=True)
+        try:
+            rows = conn.execute(
+                """
+                SELECT DISTINCT ip_address
+                FROM v_hosts
+                WHERE protocol = 'inet'
+                  AND last_seen >= datetime('now', ?)
+                """,
+                (f'-{int(window_seconds)} seconds',)
+            ).fetchall()
+        finally:
+            conn.close()
+    except sqlite3.Error as e:
+        log(f'[DISCOVERY] Visibility priming: Hostwatch read failed: {e}')
+        return set()
+
+    return {row[0] for row in rows if row and row[0]}
+
+
+def read_visibility_prime_timestamp():
+    """Epoch of the last completed priming pass, or 0.0 when unknown."""
+    try:
+        with open(VISIBILITY_PRIME_STATE, 'r') as state_file:
+            return float(state_file.read().strip() or 0)
+    except (OSError, ValueError):
+        return 0.0
+
+
+def write_visibility_prime_timestamp(timestamp):
+    try:
+        with open(VISIBILITY_PRIME_STATE, 'w') as state_file:
+            state_file.write(f'{timestamp}\n')
+    except OSError as e:
+        log(f'[DISCOVERY] Visibility priming: state write failed: {e}')
+
+
+def prime_selected_interface_visibility(networks, config=None):
     """Prime Hostwatch visibility for quiet devices on selected subnets.
 
     Each resolved monitored subnet is probed with a bounded single-ICMP pass
@@ -7124,6 +8832,39 @@ def prime_selected_interface_visibility(networks):
     """
     if not networks:
         return
+
+    # A CARP BACKUP node does not carry the monitored traffic: the MASTER
+    # already wakes the quiet devices on these segments. Sweeping from the
+    # standby only doubles the ICMP probes the endpoints see.
+    allowed, carp_role, _ = service_observation_allowed(networks)
+    if not allowed:
+        log(
+            "[DISCOVERY] Visibility priming skipped: CARP "
+            f"{(carp_role or 'backup').lower()} node"
+        )
+        return
+
+    now = time.time()
+
+    # Optional rate limit. 0, the default, primes on every scan cycle (the
+    # historic behaviour: one ICMP echo per address per cycle). A positive
+    # value primes at most that often and then skips addresses Hostwatch has
+    # already observed recently.
+    interval = 0
+    if config:
+        try:
+            interval = max(0, int(config.get('visibility_prime_interval') or 0))
+        except (TypeError, ValueError):
+            interval = 0
+
+    if interval > 0:
+        last_prime = read_visibility_prime_timestamp()
+        if last_prime and (now - last_prime) < interval:
+            log(
+                "[DISCOVERY] Visibility priming skipped: last pass "
+                f"{int(now - last_prime)}s ago (minimum {interval}s)"
+            )
+            return
 
     all_targets = []
     for net in networks:
@@ -7151,6 +8892,31 @@ def prime_selected_interface_visibility(networks):
 
     if not all_targets:
         return
+
+    if interval > 0:
+        fresh_addresses = hostwatch_recently_seen_addresses(
+            VISIBILITY_PRIME_FRESH_WINDOW
+        )
+        if fresh_addresses:
+            skipped = [a for a in all_targets if a in fresh_addresses]
+            all_targets = [a for a in all_targets if a not in fresh_addresses]
+            if skipped:
+                log(
+                    "[DISCOVERY] Visibility priming: "
+                    f"{len(skipped)} address(es) already observed within "
+                    f"{VISIBILITY_PRIME_FRESH_WINDOW}s were not probed"
+                )
+
+    if not all_targets:
+        if interval > 0:
+            log("[DISCOVERY] Visibility priming skipped: nothing to probe")
+            write_visibility_prime_timestamp(now)
+        return
+
+    if interval > 0:
+        # Record the pass before probing so an interrupted sweep is not
+        # retried on the very next cycle.
+        write_visibility_prime_timestamp(now)
 
     def probe(address):
         try:
@@ -7202,7 +8968,7 @@ def full_scan():
         f'Dnsmasq={capabilities["dnsmasq"]["configured"]}'
     )
 
-    prime_selected_interface_visibility(networks)
+    prime_selected_interface_visibility(networks, config)
 
     # 1. Data z hostwatch
     devices = get_hostwatch_devices(networks)
@@ -7232,6 +8998,11 @@ def full_scan():
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     conn = sqlite3.connect(DB_FILE)
     in_scope_macs = scoped_device_macs(conn, networks)
+
+    # Snapshot of who owned each address before this cycle writes anything, so
+    # a randomised MAC can be recognised as a rotation of that owner.
+    ip_owners = build_ip_owner_index(conn)
+    mac_rotations = 0
     previously_active = {
         r[0] for r in conn.execute('SELECT mac FROM devices WHERE is_active = 1')
         if r[0] in in_scope_macs
@@ -7310,8 +9081,9 @@ def full_scan():
                     '''
                     UPDATE devices
                     SET ip = ?, hostname = ?, hostname_source = ?, vendor = ?,
-                        vlan = ?, first_seen = ?, last_seen = ?, is_active = ?,
-                        lifecycle_id = NULL, return_pending = 1
+                        vlan = ?, first_seen = ?,
+                        last_seen = MAX(COALESCE(last_seen, ''), ?),
+                        is_active = ?, lifecycle_id = NULL, return_pending = 1
                     WHERE mac = ?
                     ''',
                     (
@@ -7370,7 +9142,8 @@ def full_scan():
             conn.execute('''
                 UPDATE devices
                 SET ip = ?, hostname = ?, hostname_source = ?, vendor = ?, vlan = ?,
-                    last_seen = ?, is_active = ?, lifecycle_id = ?
+                    last_seen = MAX(COALESCE(last_seen, ''), ?),
+                    is_active = ?, lifecycle_id = ?
                 WHERE mac = ?
             ''', (device['ip'], device['hostname'], device['hostname_source'],
                   device['vendor'], device['vlan'], last_seen, is_active,
@@ -7406,7 +9179,47 @@ def full_scan():
                   is_active, lifecycle_id))
 
             if is_truly_new:
-                new_devices.append(device)
+                rotation = detect_mac_rotation(
+                    conn, mac, device['ip'], ip_owners
+                )
+
+                if rotation:
+                    # Same address, different hardware address: a known device
+                    # rotated its MAC. Announce it as an identity change, not a
+                    # new device, so nothing is mailed and no targeted scan is
+                    # queued for it.
+                    mac_rotations += 1
+
+                    if record_identity_event(
+                        conn,
+                        mac,
+                        'IP_IDENTITY_CHANGED',
+                        'high',
+                        ip=device['ip'],
+                        details=json.dumps({
+                            'source': 'mac_rotation',
+                            'previous_mac': rotation['mac'],
+                            'previous_last_seen': rotation['last_seen'],
+                            'locally_administered':
+                                is_locally_administered_mac(mac),
+                        }, sort_keys=True),
+                        other_mac=rotation['mac']
+                    ):
+                        log(
+                            f"[IDENTITY] {device['ip']} reassigned from "
+                            f"{rotation['mac']} to {mac} "
+                            f"({'randomised MAC' if rotation['randomised'] else 'new hardware address'}"
+                            "): MAC rotation, not a new device"
+                        )
+
+                    # Optional repeat: a standing rotation is announced again
+                    # once email_reminder_new_device minutes have elapsed.
+                    if rotation_announcement_due(
+                        conn, mac, device['ip'], config
+                    ):
+                        new_devices.append(device)
+                else:
+                    new_devices.append(device)
 
     identity_event_start_id = conn.execute(
         'SELECT COALESCE(MAX(id), 0) FROM device_identity_events'
@@ -7442,6 +9255,10 @@ def full_scan():
         identity_event_start_id,
     )
 
+    # Optional repeat for conflicts that are still unresolved
+    # (email_reminder_identity, minutes; 0 = new events only).
+    identity_reminders = get_pending_high_identity_reminders(conn, config)
+
     scoped_macs = scoped_device_macs(conn, networks)
     online = sum(
         1 for (mac,) in conn.execute(
@@ -7452,20 +9269,71 @@ def full_scan():
     total = len(scoped_macs)
     conn.close()
 
-    if should_send_identity_email(config, new_high_identity_events):
-        send_identity_email(new_high_identity_events)
+    # Single alert source in an HA pair: only the node that owns the segment
+    # dispatches alerts. The standby keeps detecting and recording state, so a
+    # failover is immediate, but it stays quiet so the operator is not told the
+    # same thing twice.
+    allowed, carp_role, observation_reason = service_observation_allowed(networks)
+
+    identity_alerts = new_high_identity_events + identity_reminders
+    delivered = False
+
+    # Email leg (identity_email_enabled) and webhook leg are independent: the
+    # first rides the email transport, the second posts to the webhook URL.
+    if allowed and should_send_identity_mail(config, identity_alerts):
+        delivered = send_identity_mail(identity_alerts) or delivered
+
+    if allowed and should_send_identity_email(config, identity_alerts):
+        delivered = send_identity_email(identity_alerts) or delivered
+
+    if not allowed and identity_alerts:
+        log(
+            f'[IDENTITY] {len(identity_alerts)} conflict event(s) not alerted: '
+            f'CARP {(carp_role or "backup").lower()} node'
+        )
+
+    if delivered:
+        try:
+            with sqlite3.connect(DB_FILE) as notify_conn:
+                mark_identity_events_notified(notify_conn, identity_alerts)
+        except sqlite3.Error as e:
+            log(f'[IDENTITY-EMAIL] Unable to record notification time: {e}')
 
     # Infrastructure-service discovery is intentionally rate-limited.
     # It must not add DHCP/DNS probes to every normal monitoring cycle.
-    run_scheduled_service_discovery(networks=networks)
+    #
+    # A CARP BACKUP node does not carry the monitored traffic, so it must not
+    # reach liveness verdicts or alert on them. The role is persisted so the
+    # transition is logged once instead of on every scan.
+    if record_carp_role(carp_role):
+        log(
+            f'[SERVICES] CARP role: {carp_role or "none"} '
+            f'({"observing" if allowed else observation_reason})'
+        )
 
-    # Process pending service alerts every full scan. Discovery is hourly, but
-    # failed delivery retries and cursor housekeeping should not wait an hour.
-    process_service_alerts(config, networks)
+    if allowed:
+        run_scheduled_service_discovery(networks=networks)
+
+        # Process pending service alerts every full scan. Discovery is hourly, but
+        # failed delivery retries and cursor housekeeping should not wait an hour.
+        process_service_alerts(config, networks)
+    else:
+        log(
+            f'[SERVICES] {observation_reason}; '
+            'skipping service discovery and service alerts on this node'
+        )
 
     # 4. Notifications filtered by VLAN
-    log(f"New devices: {len(new_devices)}, Online: {online}/{total}")
-    if new_devices and config['enabled']:
+    log(
+        f"New devices: {len(new_devices)}, MAC rotations: {mac_rotations}, "
+        f"Online: {online}/{total}"
+    )
+    if new_devices and config['enabled'] and not allowed:
+        log(
+            f'[ALERT] {len(new_devices)} new device(s) not announced: '
+            f'CARP {(carp_role or "backup").lower()} node'
+        )
+    elif new_devices and config['enabled']:
         email_vlans   = set(v.strip() for v in config.get('email_vlans',  '').split(',') if v.strip())
         webhook_vlans = set(v.strip() for v in config.get('webhook_vlans', '').split(',') if v.strip())
         email_devs    = [d for d in new_devices if not email_vlans   or d.get('vlan','') in email_vlans]
@@ -7494,11 +9362,17 @@ def full_scan():
 
     # Drain a bounded number of queued targeted scans each cycle.
     # Retry backoff after failures: 15m, 1h, 6h, 24h, then stop.
+    #
+    # Targeted scans are queued and drained by the node that owns the segment
+    # (`allowed` is the CARP role verdict taken above), so a standby does not
+    # duplicate the MASTER's scans or its scan emails. Queued rows survive on
+    # the standby and drain normally after a failover.
     if (
         config['enabled']
         and config.get('email_enabled')
         and config.get('email_to')
         and config.get('targeted_nmap_enabled', True)
+        and allowed
     ):
         retry_now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         nmap_max_per_cycle = int(config.get('nmap_max_per_cycle', 2))
@@ -7524,66 +9398,76 @@ def full_scan():
                     if len(in_scope_scan_rows) >= nmap_max_per_cycle:
                         break
 
+        retry_delays = {
+            1: timedelta(minutes=15),
+            2: timedelta(hours=1),
+            3: timedelta(hours=6),
+            4: timedelta(hours=24),
+        }
+
         for device in in_scope_scan_rows:
-            success, error = run_targeted_scan_with_history(device, config, 'automatic')
+            mac = device['mac']
+
+            try:
+                success, error = run_targeted_scan_with_history(
+                    device, config, 'automatic'
+                )
+            except Exception as e:
+                # One broken targeted scan must never abort the cycle: the
+                # bookkeeping below is what carries the retry backoff.
+                success = False
+                error = f'Targeted scan raised: {e}'
+
+            # The finished scan handed its history row to the deferred
+            # writer. Let that commit land before the queue row is updated so
+            # the two writers never contend for the database lock.
+            flush_db_writes()
+
+            attempts = int(device.get('nmap_scan_attempts') or 0)
+            error = (error or 'Unknown targeted scan failure')[:1000]
+            next_attempt = None
 
             if success:
-                with sqlite3.connect(DB_FILE) as queue_conn:
-                    queue_conn.execute('''
-                        UPDATE devices
-                        SET nmap_scan_pending = 0,
-                            nmap_scan_attempts = 0,
-                            nmap_next_attempt = NULL,
-                            nmap_last_error = NULL
-                        WHERE mac = ?
-                    ''', (device['mac'],))
-
-                log(f"[NMAP] Targeted scan completed for {device['mac']}")
-                continue
-
-            attempts = int(device.get('nmap_scan_attempts') or 0) + 1
-            error = (error or 'Unknown targeted scan failure')[:1000]
-
-            retry_delays = {
-                1: timedelta(minutes=15),
-                2: timedelta(hours=1),
-                3: timedelta(hours=6),
-                4: timedelta(hours=24),
-            }
-
-            if attempts >= 5:
-                with sqlite3.connect(DB_FILE) as queue_conn:
-                    queue_conn.execute('''
-                        UPDATE devices
-                        SET nmap_scan_pending = 0,
-                            nmap_scan_attempts = ?,
-                            nmap_next_attempt = NULL,
-                            nmap_last_error = ?
-                        WHERE mac = ?
-                    ''', (attempts, error, device['mac']))
-
-                log(
-                    f"[NMAP] Targeted scan permanently failed for "
-                    f"{device['mac']} after {attempts} attempts: {error}"
-                )
+                pending = 0
+                attempts = 0
+                error = None
             else:
-                next_attempt = (
-                    datetime.now() + retry_delays[attempts]
-                ).strftime('%Y-%m-%d %H:%M:%S')
+                attempts += 1
+                if attempts >= 5:
+                    pending = 0
+                else:
+                    pending = 1
+                    next_attempt = (
+                        datetime.now() + retry_delays[attempts]
+                    ).strftime('%Y-%m-%d %H:%M:%S')
 
+            try:
                 with sqlite3.connect(DB_FILE) as queue_conn:
                     queue_conn.execute('''
                         UPDATE devices
-                        SET nmap_scan_pending = 1,
+                        SET nmap_scan_pending = ?,
                             nmap_scan_attempts = ?,
                             nmap_next_attempt = ?,
                             nmap_last_error = ?
                         WHERE mac = ?
-                    ''', (attempts, next_attempt, error, device['mac']))
+                    ''', (pending, attempts, next_attempt, error, mac))
+            except sqlite3.Error as e:
+                # The row keeps its previous state, so the scan is retried on
+                # the next cycle; a transient write failure is not fatal.
+                log(f"[NMAP] Queue bookkeeping failed for {mac}: {e}")
+                continue
 
+            if success:
+                log(f"[NMAP] Targeted scan completed for {mac}")
+            elif attempts >= 5:
+                log(
+                    f"[NMAP] Targeted scan permanently failed for "
+                    f"{mac} after {attempts} attempts: {error}"
+                )
+            else:
                 log(
                     f"[NMAP] Targeted scan attempt {attempts} failed for "
-                    f"{device['mac']}; retry scheduled for {next_attempt}: {error}"
+                    f"{mac}; retry scheduled for {next_attempt}: {error}"
                 )
 
         # v2.11 Task 1: every targeted scan above handed its history completion
@@ -7998,6 +9882,18 @@ Examples:
     )
 
     parser.add_argument(
+        '--age-services',
+        action='store_true',
+        help='Age stale service state to unknown and retire rows for unseen hosts'
+    )
+
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='With --age-services: report the counts without writing'
+    )
+
+    parser.add_argument(
         '--list-targets',
         action='store_true',
         help='Print resolved monitored interfaces and exit (no scanning)'
@@ -8008,12 +9904,35 @@ Examples:
     global DEBUG_LOGGING
     if args.verbose:
         DEBUG_LOGGING = True
+    if args.dry_run and not args.age_services:
+        parser.error('--dry-run requires --age-services')
+    if args.age_services:
+        aged, retired = age_stale_service_state(dry_run=args.dry_run)
+
+        print(json.dumps({
+            'result': 'ok',
+            'dry_run': bool(args.dry_run),
+            'aged': aged,
+            'retired': retired
+        }))
+        return 0
+
     if args.discover_services:
         config = load_config()
         networks, error = resolve_monitored_networks(config)
         if error:
             print(f"ERROR: {error}", file=sys.stderr)
             return 2
+
+        allowed, role, reason = service_observation_allowed(networks)
+
+        if not allowed:
+            print(json.dumps({
+                'result': 'skipped',
+                'reason': reason,
+                'carp_role': role
+            }))
+            return 0
 
         services = discover_infrastructure_services(networks)
 

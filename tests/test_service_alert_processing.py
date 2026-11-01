@@ -464,9 +464,14 @@ def test_failure_retry_success_and_disabled_cursor_behavior():
         module.send_service_alert_email = lambda events: False
         assert module.process_service_alerts(config, networks_fixture()) is False
 
+        # The held outage no longer stops the activity cursor: the hold lives in
+        # service_alert_pending and its recovery is matched by service key, so an
+        # outstanding outage cannot delay an alert for another service. The failed
+        # delivery still stops the device_services cursor before its first
+        # selected row.
         assert read_cursor(module) == (
             ids["discovered"],
-            ids["changed"],
+            ids["recovered"],
         )
         assert releases == [lock_token]
 

@@ -59,6 +59,73 @@
                 <div id="email_config">
                     <div class="row form-group">
                         <div class="col-md-3">
+                            <label>{{ devicemonitor_t('Repeat unchanged alerts') }}:</label>
+                        </div>
+                        <div class="col-md-9">
+                            <p class="help-block" style="margin-top:0;">
+                                {{ devicemonitor_t('Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats.') }}
+                            </p>
+                            <datalist id="reminder-minute-options">
+                                <option value="5"></option>
+                                <option value="10"></option>
+                                <option value="15"></option>
+                                <option value="30"></option>
+                                <option value="45"></option>
+                                <option value="60"></option>
+                            </datalist>
+
+                            <div class="form-inline" style="margin-bottom:6px;">
+                                <label for="email_reminder_scan" style="min-width:150px;font-weight:normal;">
+                                    {{ devicemonitor_t('Scan results') }}
+                                </label>
+                                <input type="number" id="email_reminder_scan" class="form-control"
+                                       list="reminder-minute-options" min="0" max="1440" step="1"
+                                       value="0" style="max-width:100px;" />
+                                <span class="help-block" style="display:inline;margin-left:6px;">
+                                    {{ devicemonitor_t('minutes') }}
+                                </span>
+                            </div>
+
+                            <div class="form-inline" style="margin-bottom:6px;">
+                                <label for="email_reminder_service" style="min-width:150px;font-weight:normal;">
+                                    {{ devicemonitor_t('Service outages') }}
+                                </label>
+                                <input type="number" id="email_reminder_service" class="form-control"
+                                       list="reminder-minute-options" min="0" max="1440" step="1"
+                                       value="0" style="max-width:100px;" />
+                                <span class="help-block" style="display:inline;margin-left:6px;">
+                                    {{ devicemonitor_t('minutes') }}
+                                </span>
+                            </div>
+
+                            <div class="form-inline" style="margin-bottom:6px;">
+                                <label for="email_reminder_identity" style="min-width:150px;font-weight:normal;">
+                                    {{ devicemonitor_t('Identity conflicts') }}
+                                </label>
+                                <input type="number" id="email_reminder_identity" class="form-control"
+                                       list="reminder-minute-options" min="0" max="1440" step="1"
+                                       value="0" style="max-width:100px;" />
+                                <span class="help-block" style="display:inline;margin-left:6px;">
+                                    {{ devicemonitor_t('minutes') }}
+                                </span>
+                            </div>
+
+                            <div class="form-inline" style="margin-bottom:6px;">
+                                <label for="email_reminder_new_device" style="min-width:150px;font-weight:normal;">
+                                    {{ devicemonitor_t('MAC change announcements') }}
+                                </label>
+                                <input type="number" id="email_reminder_new_device" class="form-control"
+                                       list="reminder-minute-options" min="0" max="1440" step="1"
+                                       value="0" style="max-width:100px;" />
+                                <span class="help-block" style="display:inline;margin-left:6px;">
+                                    {{ devicemonitor_t('minutes') }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row form-group">
+                        <div class="col-md-3">
                             <label>{{ devicemonitor_t('Email Recipient') }}:</label>
                         </div>
                         <div class="col-md-9">
@@ -277,6 +344,10 @@
                         <label style="margin:0;">
                             <input type="checkbox" id="identity_webhook_enabled" />
                             <strong>{{ devicemonitor_t('Enable immediate webhook identity conflict alerts') }}</strong>
+                        </label>
+                        <label style="margin:6px 0 0;display:block;">
+                            <input type="checkbox" id="identity_email_enabled" />
+                            <strong>{{ devicemonitor_t('Also email identity conflict alerts') }}</strong>
                         </label>
                     </div>
                 </div>
@@ -570,7 +641,7 @@
                         </tr>
 
                         <tr>
-                            <th colspan="2" style="padding-top:18px;">{{ devicemonitor_t('v2.10 Features and Enhancements') }}</th>
+                            <th colspan="2" style="padding-top:18px;"><span id="about-features-version">v2.12</span> {{ devicemonitor_t('Features and Enhancements') }}</th>
                         </tr>
                         <tr>
                             <td style="color:#888;">{{ devicemonitor_t('Developer') }}</td>
@@ -649,6 +720,7 @@ $().ready(function() {
     $.getJSON('/api/devicemonitor/config/getversion', function(d) {
         var v = 'v'+(d.version||'?');
         $('#about-version').text(v);
+        $('#about-features-version').text(v);
     });
 
     // Build VLAN checklist in a container
@@ -763,11 +835,15 @@ $().ready(function() {
             );
             $('#email_enabled').prop('checked', d.email_enabled==='1');
             $('#identity_webhook_enabled').prop('checked', d.identity_webhook_enabled==='1');
+            $('#identity_email_enabled').prop('checked', d.identity_email_enabled==='1');
             $('#service_email_enabled').prop('checked', d.service_email_enabled==='1');
             $('#service_email_new').prop('checked', d.service_email_new===undefined ? true : d.service_email_new==='1');
             $('#service_email_unavailable').prop('checked', d.service_email_unavailable===undefined ? true : d.service_email_unavailable==='1');
             $('#service_email_recovered').prop('checked', d.service_email_recovered===undefined ? true : d.service_email_recovered==='1');
             $('#email_to').val(d.email_to||'');
+            $.each(['email_reminder_scan','email_reminder_service','email_reminder_identity','email_reminder_new_device'], function(i, key) {
+                $('#' + key).val((d[key] === undefined || d[key] === null) ? 0 : d[key]);
+            });
             $('#email_from').val(d.email_from||'devicemonitor@opnsense.local');
             $('#email_method').val(d.email_method||'sendmail');
             $('#smtp_host').val(d.smtp_host||'');
@@ -849,6 +925,10 @@ $().ready(function() {
             service_email_unavailable: $('#service_email_unavailable').is(':checked')?'1':'0',
             service_email_recovered: $('#service_email_recovered').is(':checked')?'1':'0',
             email_to:         $('#email_to').val(),
+            email_reminder_scan:         $('#email_reminder_scan').val()||'0',
+            email_reminder_service:      $('#email_reminder_service').val()||'0',
+            email_reminder_identity:     $('#email_reminder_identity').val()||'0',
+            email_reminder_new_device:   $('#email_reminder_new_device').val()||'0',
             email_from:       $('#email_from').val(),
             email_method:     $('#email_method').val(),
             smtp_host:        $('#smtp_host').val(),
@@ -860,6 +940,7 @@ $().ready(function() {
             webhook_enabled:  $('#webhook_enabled').is(':checked')?'1':'0',
             webhook_url:      $('#webhook_url').val(),
             identity_webhook_enabled: $('#identity_webhook_enabled').is(':checked')?'1':'0',
+            identity_email_enabled:   $('#identity_email_enabled').is(':checked')?'1':'0',
             webhook_vlans:    getSelectedVlans('webhook-vlan-list'),
             monitored_interfaces: getSelectedMonitoredInterfaces(),
             scan_interval: $('#scan_interval').val(),

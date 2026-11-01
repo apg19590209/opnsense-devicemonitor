@@ -936,7 +936,6 @@ msgstr "Informazioni sulle interfacce di notifica"
 msgid "About Webhook Notifications"
 msgstr "Informazioni sulle notifiche webhook"
 
-
 # ============================================
 # v2.10 catalogue re-sync (new source strings)
 # ============================================
@@ -1586,3 +1585,14 @@ msgid "Triggers a webhook payload dispatch immediately upon detection of an exis
 msgstr "Triggers a webhook payload dispatch immediately upon detection of an existing MAC address switching between multiple IP addresses (IP Spoofing / Identity Hijacking). Recommended to leave enabled."
 msgid "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."
 msgstr "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."
+
+#: settings.volt - IP and MAC conflict email alerts
+msgid "Email high-severity conflict alerts"
+msgstr "Avvisi e-mail per conflitti di gravità elevata"
+
+#: settings.volt - IP and MAC conflict email alerts
+msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
+msgstr "Invia un'e-mail quando viene rilevato un nuovo conflitto di indirizzi IPv4 o IPv6 di gravità elevata."
+
+msgid "About Conflict Alerts"
+msgstr "Informazioni sugli avvisi di conflitto"

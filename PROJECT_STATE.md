@@ -604,6 +604,460 @@ with `subprocess.run(timeout=300)`, which Python escalates to SIGKILL. That is t
 `DECISIONS.md` 37.
 
 The decision itself is recorded as `DECISIONS.md` 41.
+### Task 8 — Service-liveness noise: false offline/online pairs (O1, probe hardening)
+
+**Recorded 31 October 2026.** Operator report: "too many false positives of services going offline then
+back online ... i don't believe the services go offline". Confirmed against
+`/var/db/devicemonitor/devices.db` on the testbed, and traced to the probe layer rather than to the
+monitored hosts.
+
+Evidence measured before any change (`device_activity_events`):
+
+- 36 service events in total — **26 `SERVICE_UNAVAILABLE` against 10 `SERVICE_AVAILABLE`**.
+- 8 complete down->up pairs; **7 of them lasted exactly 60 minutes**, i.e. exactly
+  `run_scheduled_service_discovery(interval_seconds=3600)`. A one-interval outage that clears itself on
+  the next run is a single bad sample, not an outage.
+- One outlier: `DNS|192.168.50.1` was written `unavailable` on 2026-09-30 22:47:54 and "recovered" on
+  2026-10-08 09:12:44 — 10,704 minutes, because nothing ages state when an endpoint leaves the probe set.
+- Per key: `DNS|10.0.2.15` 9 events, `DNS|192.168.56.2` 7, `WEB_ADMIN`:443 6, then SSH/NTP/SMB/RDP.
+
+Root causes, all in `scan_network.py`:
+
+1. Single-attempt probes with timeouts **below the initial TCP SYN retransmit timer**:
+   `_probe_web_service(timeout=0.6)`, `_probe_ssh_service(0.8)`, `_probe_ntp_service(0.8)`,
+   `discover_dns_servers(timeout=1.5)` (one UDP query, no retransmission).
+2. Burst concurrency of 16/24/32 workers (NTP/SSH/Web) multiplying that failure rate; the web path tests
+   four common ports per candidate.
+3. The first failure writing `status='unavailable'` unconditionally at seven sites, with no miss counter,
+   no grace window and no second opinion; `trg_device_services_status_activity` turns each flip into an
+   event and `select_service_alert_events()` emails **both** directions
+   (`service_email_unavailable` and `service_email_recovered` both default to `'1'`).
+
+Change set (O1 of five options presented; O2/O3 are the recorded follow-ups):
+
+- New "SERVICE PROBE TUNING" block: `SERVICE_PROBE_ATTEMPTS = 2`, `SERVICE_PROBE_RETRY_DELAY = 0.25`,
+  `SERVICE_PROBE_TIMEOUTS` (`dns` 3.0, `ntp` 2.0, `ssh` 2.5, `web` 2.5) and `SERVICE_PROBE_WORKERS`
+  (`ntp` 8, `ssh` 12, `web` 16).
+- `_probe_ssh_service`, `_probe_ntp_service` and `_probe_web_service` keep their signatures and delegate
+  to new single-attempt helpers (`_probe_ssh_service_attempt`, `_probe_ntp_service_attempt`,
+  `_probe_web_service_attempt`), retrying once before returning `None`.
+- The DNS receive loop moved into `_dns_collect_responses()` so `discover_dns_servers()` can retransmit
+  the **same packet with the same transaction ID** to every still-unanswered candidate; the reply to
+  either transmission still matches its candidate.
+- Worker caps read from `SERVICE_PROBE_WORKERS`.
+
+New regression asset `tests/test_probe_resilience.py` (fake sockets, no network, no root) reporting
+`PROBE_RESILIENCE=PASS` with `PROBE_TUNING_CONSTANTS`, `PROBE_SSH_RETRY_RECOVERS`,
+`PROBE_RETRY_BOUNDED`, `PROBE_WEB_RETRY_RECOVERS` and `PROBE_DNS_RETRANSMITS_SAME_TXID`. It is wired
+into `.github/workflows/ci.yml` as the step after the shutdown-drain step.
+
+Hash-chain bookkeeping: `scan_network.py` is manifest row 34, so per `DECISIONS.md` 39 the manifest and
+pin moved in the same change set — row `2364199c…` -> `2afb485b…`, manifest SHA256
+`d7ef21e4…` -> `73f5cd2b…` (still 39 rows), `install-unattended.sh:36` repinned. The target count is
+unchanged at 60/61, so `:37`, `:172` and `:173` needed no edit. `release/v2.10-runtime.manifest` remains
+byte-unchanged.
+
+Verification: `tests/test_probe_resilience.py`, `tests/test_phase3_infrastructure.py`,
+`tests/test_service_alert_processing.py` and `tests/test_release_manifest.py` all pass; the full local
+suite is 23 of 24 files, the single failure being the pre-existing `test_language_acceptance.py`
+deployment drift (testbed still carries the v2.10 `devices.volt`/`settings.volt`), which failed
+identically before this change.
+
+Recorded, not fixed by Task 8: one failed probe (after both attempts) still writes `unavailable`
+immediately and still emails the recovery; the state machine has no hysteresis, the alert path has no
+confirmation window, and stale `unavailable` states are never aged. O2 (alert-side
+confirmation/de-bounce) is implemented in Task 9 below; O3 (liveness hysteresis plus a host-active
+gate) and O4 (ageing stale state) of the analysis remain open. The decision itself is `DECISIONS.md` 46.
+
+
+
+### Task 9 — Service-liveness noise: alert confirmation (O2)
+
+**Recorded 31 October 2026.** Follow-up to Task 8. O1 stopped most bad samples at the probe
+layer; O2 stops the remaining ones from reaching the operator, because a flap that survives
+two probe attempts still produced two emails (down, then recovered one discovery run later).
+
+Change set:
+
+- `init_db()` creates `service_alert_pending` (`service_key` primary key, `mac`, `event_json`,
+  `held_at`, `notified`, `notified_at`) with `CREATE TABLE IF NOT EXISTS`, so no migration.
+- `apply_service_alert_confirmation()` holds a first-time `SERVICE_UNAVAILABLE` for
+  `SERVICE_ALERT_CONFIRM_SECONDS` (4320 s — deliberately one discovery run plus margin), deletes the
+  hold and drops both events when the matching `SERVICE_AVAILABLE` arrives inside that window, applies
+  `SERVICE_ALERT_QUIET_SECONDS` (21600 s) to repeat outage emails, and drops a recovery whose outage was
+  never emailed. Duplicate `(service_key, event_type)` pairs within one batch are collapsed.
+- `collect_expired_service_alert_holds()` releases the stored outage once the window has elapsed, so a
+  real outage is still reported with the original address, port and product.
+- `commit_service_alert_delivery()` marks the hold notified (or deletes it on recovery) **after** a
+  successful send; a failed delivery leaves `notified = 0` so the outage is retried next cycle.
+- `process_service_alerts()` fetches events, adds expired holds, re-applies the per-device and global
+  preference gates to both, runs the confirmation stage, sends, then commits the outcome and the cursor.
+  The hold lives in `service_alert_pending`, not in the cursor, so an outstanding outage cannot delay an
+  alert for another service. (The first cut *did* hold the cursor; a replay against the real testbed
+  database showed a per-device `service_recovered = off` preference pinning activity event 47 and
+  stalling everything behind it, so that was removed before commit.)
+
+Net effect on the recorded testbed signature: a one-interval down/up pair now produces **zero**
+emails instead of two; a real outage produces one outage email after the window and one recovery
+email, with no repeats for six hours.
+
+New asset `tests/test_service_alert_confirmation.py` reporting `SERVICE_ALERT_CONFIRMATION=PASS` with
+`ALERT_FLAP_SILENT`, `ALERT_OUTAGE_CONFIRMED_ONCE`, `ALERT_QUIET_WINDOW`,
+`ALERT_RECOVERY_AFTER_OUTAGE`, `ALERT_UNREPORTED_RECOVERY_DROPPED`, `ALERT_CONFIRMATION_RETRY` and
+`ALERT_HELD_OUTAGE_NOT_BLOCKING`, wired into CI after the probe-resilience step. In
+`tests/test_service_alert_processing.py` one cursor expectation was updated deliberately — the activity
+cursor after a failed delivery is now `ids["recovered"]` instead of `ids["changed"]`, because a held
+outage no longer stops that cursor; the other six checks are unmodified.
+
+Real-data replay (non-destructive): a copy of `devices.db` with the cursors reset produced **0 emails**
+for all 36 recorded service events (26 down, 10 up) across four cycles, ending at the real cursor maxima
+`(736, 48)`; the source database hash was unchanged afterwards.
+
+Hash-chain bookkeeping: `scan_network.py` row 34 `2afb485b…` -> `108f6524…`, manifest SHA256
+`73f5cd2b…` -> `84a530a2…` (still 39 rows), `install-unattended.sh:36` repinned; target count still
+60/61. `release/v2.10-runtime.manifest` remains byte-unchanged.
+
+Verification: full local suite 24 of 25 files pass; the single failure is the pre-existing
+`test_language_acceptance.py` deployment drift (testbed still carries the v2.10 `devices.volt` and
+`settings.volt`), measured identically before this work started.
+
+Recorded, not fixed: the state machine still flips `device_services.status` on one negative sample, so
+the Devices view can briefly show a service as unavailable after a flap — only the notification is
+suppressed. That is O3 (two-miss hysteresis plus a host-active gate) and O4 (ageing stale `unavailable`
+state instead of retaining it indefinitely), both still open. The decision is `DECISIONS.md` 47.
+
+Operator mitigation still recommended until O3 lands (O5 of the analysis, no code): set
+`service_email_recovered=0` in Settings to remove the "back online" half of every pair, and/or set
+`service_recovered=off` / `service_unavailable=off` per device in the per-device alert preferences for
+laptops, phones and televisions.
+
+### Task 10 — O1 + O2 deployed to the testbed and validated in a live scan cycle
+
+**Recorded 31 October 2026.** Operator authorised the testbed deployment (`192.168.20.23`) and the
+push to `origin` in the same instruction.
+
+Deployment: `/bin/sh install-unattended.sh --host OPNsense.internal --check` ->
+`CHECK_OK version=2.11 predecessor=2.10 files=60 core_locales=10 daemon_running=1`, then the real run ->
+`BACKUP_READY=/var/backups/devicemonitor/install-v211.navdmC`, `CORE_LOCALE_STATE=/var/backups/devicemonitor/core-locale`,
+`INSTALL_OK version=2.11 files=60 core_locales=10 backup=/var/backups/devicemonitor/install-v211.navdmC daemon_restarted=1`.
+Installed `scan_network.py` now matches the tree (`108f6524…`, previously `4fd87dc7…`).
+
+Monitoring was enabled for the observation window only (`enabled=1`,
+`monitored_interfaces="lan,opt1"`) by editing `/var/db/devicemonitor/config.json` directly, because the
+plugin's `set` API takes flat defaults for every unsupplied field and would have reset unrelated
+settings; the pre-change file is saved at `/tmp/config.json.pre-o1o2` and the GUI still shows the old
+values until an operator saves Settings. Email and service alerts remain disabled, so no mail was
+generated during validation.
+
+First live cycle (15:54–15:55): `Scheduled discovery completed: 55 verified service(s)`, web discovery
+28 verified, phase 3 none, then `[SERVICE-EMAIL] No selected alerts; advanced cursor state`. The
+`service_alert_pending` table was created on the live database by `init_db()` as designed. Second cycle
+(15:58) correctly reported `Scheduled discovery not due (175s since last run)` and produced **no new
+service events** — the 16 transitions from cycle 1 did not repeat.
+
+O2 proven on the fresh real data, non-destructively: a copy of `devices.db` with the alert cursors reset
+and the mail helper stubbed produced **0 emails for the 16 fresh `SERVICE_UNAVAILABLE` events** (17 holds
+recorded), and after injecting the matching `SERVICE_AVAILABLE` for a real service key
+(`DHCP|192.168.20.254|67|udp|re0|dhcp_offer`) it still produced **0 emails** — the flap pair was dropped
+as intended. The source database was verified byte-identical afterwards (`sha256sum -c`). The old code
+would have sent 16 outage emails and then 16 recovery emails for the same data.
+
+**New finding, and it reprioritises O3.** All 16 transitions came from hosts whose
+`devices.is_active = 0` with `last_seen = 2026-09-21` (`192.168.20.101`, `.103`, `.111`, `.177`), i.e.
+six-week-stale inventory; only **1 of 26** devices is currently active. SSH/NTP/WEB/phase-3 build their
+probe sets from `device_services` rows without any host-active gate, so a dead host's services are
+re-probed every hour and written `unavailable`. Probe impatience (O1) was the smaller contributor; the
+missing host-active gate is the dominant one. O3 must therefore cover the gate, not only the two-miss
+hysteresis, and O4's ageing would also retire those 24 stale service rows.
+
+Incident, recorded rather than glossed: a `service devicemonitor restart` issued inside a 30-second
+command window was interrupted between stop and start and left the daemon down at 15:57:01. It was
+restored with `/usr/local/etc/rc.d/devicemonitor onestart` (new PID, scan resumed at 15:57:50). Restarts
+on this host should be run detached and polled, not inline.
+
+CI: the first push (`0c6aeae`) failed in `Validate service probe resilience (v2.11)` with
+`FileNotFoundError: /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json` — both new
+assets loaded `scan_network.py` without redirecting the installed defaults path, which exists on the
+testbed but not on a runner. Fixed in `e940eb2` by adopting the `builtins.open` redirect already used by
+`tests/test_shutdown_drain.py`; run `41170669799` then completed **success** in 32 s. This is the reason
+local `PASS` alone is not deployment evidence.
+
+
+### Task 11 — Service-liveness noise: host-active gate (O3a)
+
+**Recorded 31 October 2026.** Follow-up to Tasks 8–10. The first deployed cycle proved the
+dominant noise source was not probe impatience: **all 16 `SERVICE_UNAVAILABLE` events came from hosts
+with `devices.is_active = 0` and `last_seen = 2026-09-21`** (`192.168.20.101`, `.103`, `.111`, `.177`),
+with only 1 of 26 devices active. SSH/NTP/Web/phase-3 build probe sets from `device_services` rows
+without consulting host liveness, so a dead host's services were re-probed hourly, failed, and were
+written `unavailable`; when the host next answered they flipped back — the reported offline/online pair.
+
+Change set:
+
+- New `service_endpoint_host_gate(conn)` returning a predicate: an endpoint whose device record says
+  `is_active = 0` is not written `unavailable`; an endpoint on an active device flips as before; an
+  endpoint with **no** device record (gateway, untracked server, the firewall itself) still flips, so the
+  gate fails open rather than silencing genuine infrastructure outages.
+- All seven negative-verdict sites consult it: DNS, DHCP, NTP, SSH, Web/Admin, WireGuard/VPN and the
+  phase-3 protocol verifiers. One `SELECT ip, is_active FROM devices` per discovery function, reused
+  across the marking loop; an address mapped to several device records counts as active if any is.
+
+New asset `tests/test_service_host_gate.py` reporting `SERVICE_HOST_GATE=PASS` with
+`HOST_GATE_HELPER`, `HOST_GATE_INACTIVE_UNTOUCHED`, `HOST_GATE_ACTIVE_FLIPS`,
+`HOST_GATE_UNTRACKED_FAILS_OPEN` — the last two are the regression pin proving detection was not
+weakened. Written test-first; the first run failed with `AttributeError: module has no attribute
+'service_endpoint_host_gate'` as intended. Wired into CI.
+
+Hash-chain bookkeeping: row 34 `108f6524…` -> `17b3e944…`, manifest SHA256 `84a530a2…` -> `ed96e6fc…`,
+`install-unattended.sh:36` repinned; row count 39 and target count 60/61 unchanged.
+
+Verification: full local suite **26 of 26 pass**, including `tests/test_phase3_infrastructure.py`,
+`tests/test_port_discovery.py` and all three alert assets. The previously failing
+`tests/test_language_acceptance.py` now reports `LANGUAGE_ACCEPTANCE=PASS failures=0`: the Task 10
+deployment updated the installed `devices.volt`/`settings.volt` to the v2.11 tree, which removes the
+deployment drift that had failed since before this work began.
+
+Not yet deployed — the gate is committed and pushed only. The next live cycle after a deployment of
+`17b3e944…` should show **zero** new `SERVICE_UNAVAILABLE` events for the four inactive hosts, which is
+the acceptance check for this task. Decision recorded as `DECISIONS.md` 48; O3b (two-miss hysteresis) and
+O4 (age stale rows to `unknown`) remain open.
+
+
+### Task 12 — O3a deployed and accepted: inactive hosts no longer flip
+
+**Recorded 31 October 2026.** Operator authorised the second testbed deployment in the same
+instruction that authorised the O3a work.
+
+Deployment: `--check` -> `CHECK_OK version=2.11 predecessor=2.11 files=60 core_locales=10
+daemon_running=1`, then `BACKUP_READY=/var/backups/devicemonitor/install-v211.L081JN`,
+`INSTALL_OK version=2.11 files=60 core_locales=10 backup=…L081JN daemon_restarted=1`. Installed
+`scan_network.py` is now `17b3e944…` (was `108f6524…`); daemon restarted and resumed scanning.
+
+Acceptance cycle. `service_discovery_state.last_run` was set back to `2026-10-01 00:00:00` so the next
+daemon cycle would run discovery instead of waiting for the hourly gate — a one-row, reversible lever on
+derived state. The following cycle (16:25:57–16:27:33) reported
+`Scheduled discovery completed: 56 verified service(s)` and `device_activity_events` stayed at **64:
+zero new events**, with the four inactive hosts still at their previous status. Under the pre-gate code
+the same cycle shape produced 16 `SERVICE_UNAVAILABLE` events (Task 10).
+
+Controlled proof, because a stable status could also mean "nothing changed". On a copy of the live
+database the 10 service rows belonging to `192.168.20.101`, `.103`, `.111` and `.177` were forced back
+to `available` (which itself fired the activity trigger: 64 -> 74 events), then the real
+`discover_ssh_servers()`, `discover_web_admin_services()` and `discover_ntp_servers()` were run against
+that copy with the live monitored networks (`lan`, `opt1`). Result: **all 10 rows still `available`,
+events still 74** — every flip was gated. Pre-gate code would have flipped all 10 and written 10 more
+events. `service_endpoint_host_gate('192.168.20.101')` is `False` while
+`service_endpoint_host_gate('192.168.20.23')` (the firewall, no `devices` row) is `True`, confirming the
+fail-open side still allows genuine infrastructure verdicts. The live database was byte-identical
+afterwards (`sha256sum -c`).
+
+State left on the testbed: O3a installed; monitoring enabled for `lan,opt1`
+(`/tmp/config.json.pre-o1o2` holds the pre-session file); email and service alerts still disabled;
+`service_discovery_state.last_run` is a normal timestamp again.
+
+Remaining: O3b (two-miss hysteresis, so a live host's single failed probe stops flipping the Devices
+view) and O4 (age stale `unavailable` rows to `unknown` and retire the 24 service rows from
+2026-09-21, which also closes the blind spot O3a introduces for hosts that stay off).
+
+
+### Task 13 — Service-liveness noise: two-miss hysteresis (O3b)
+
+**Recorded 31 October 2026.** Follow-up to Tasks 8–12. O3a stopped unobservable hosts from voting;
+a *live* host still flipped on one failed observation, and because discovery runs hourly that single bad
+sample was rendered as a one-hour outage in the Devices view.
+
+Change set:
+
+- `device_services.miss_count INTEGER NOT NULL DEFAULT 0`, added for new databases in
+  `CREATE TABLE IF NOT EXISTS` and for existing ones through the `PRAGMA table_info` + `ALTER TABLE`
+  pattern already used for `nmap_scan_history`.
+- `record_service_miss(conn, service_type, detection_method, ip, port=None, interface=None)` replaces all
+  seven ad-hoc `SET status = 'unavailable'` statements (DNS, DHCP, NTP, SSH, Web/Admin, WireGuard/VPN,
+  phase-3). One statement increments the counter and flips the byte only when
+  `SERVICE_MISS_THRESHOLD` (2) is reached, via a `CASE` expression, guarded by
+  `AND status <> 'unavailable'` so repeated failures cannot write repeated transitions.
+- `upsert_device_service()` resets `miss_count = 0` on every successful verification, so recovery stays
+  first-success and isolated losses never accumulate.
+
+`grep -c "SET status = 'unavailable'"` over `scan_network.py` is now **0**: no discovery path can flip a
+service outside the helper.
+
+New asset `tests/test_service_miss_hysteresis.py` reporting `SERVICE_MISS_HYSTERESIS=PASS` with
+`MISS_THRESHOLD_CONSTANT`, `MISS_FIRST_RUN_QUIET`, `MISS_SECOND_RUN_FLIPS`, `MISS_SUCCESS_RESETS` and
+`MISS_ALREADY_DOWN_NO_REPEAT`; written test-first (first run failed with
+`AttributeError: module has no attribute 'SERVICE_MISS_THRESHOLD'`). Wired into CI.
+
+Three existing assets were updated because the behaviour they pin changed, each with a comment naming
+`DECISIONS.md` 49: `tests/test_service_host_gate.py` (same gate, two failing runs before the flip),
+`tests/test_phase3_infrastructure.py` (a second failing cycle before `PHASE3_UNAVAILABLE`) and
+`tests/test_probe_resilience.py` (one unanswered DNS run now asserts `available` with `miss_count = 1`,
+then flips on the next run). The first failure of that last one was a genuine fixture gap rather than an
+expectation change: its hand-built `device_services` table lacked the new column, and the run stopped with
+`sqlite3.OperationalError: no such column: miss_count`, which is exactly the schema the production
+`init_db()` guarantees.
+
+Hash-chain bookkeeping: row 34 `17b3e944…` -> `2b8cd11b…`, manifest SHA256 `ed96e6fc…` -> `7f9c5b89…`,
+`install-unattended.sh:36` repinned; row count 39 and target count 60/61 unchanged.
+
+Not yet deployed. Acceptance after deployment: a live host whose service fails one discovery run must
+stay `available` with `miss_count = 1`, and flip only on the second consecutive failure. Decision recorded
+as `DECISIONS.md` 49. O4 (age stale `unavailable` rows to `unknown`, retire the 24 rows from 2026-09-21)
+remains open.
+
+
+### Task 14 — O3b deployed: two-miss hysteresis live, schema migrated in place
+
+**Recorded 31 October 2026.** Operator authorised the third testbed deployment.
+
+Deployment: `--check` -> `CHECK_OK version=2.11 predecessor=2.11 files=60 core_locales=10
+daemon_running=1`, then `BACKUP_READY=/var/backups/devicemonitor/install-v211.5WKg0k`,
+`INSTALL_OK version=2.11 files=60 core_locales=10 backup=…5WKg0k daemon_restarted=1`. Installed
+`scan_network.py` is now `2b8cd11b…` (was `17b3e944…`); daemon restarted and resumed scanning.
+
+Schema migration, in place on the live database: `pragma_table_info('device_services')` returned **0**
+rows named `miss_count` before the deploy and **1** after the first `init_db()` call, so the
+`ALTER TABLE` path works on a real v2.11 database rather than only on a fresh one. The post-deploy cycle
+(16:44:41–16:45:15) completed normally with `device_activity_events` still at **64** and
+`SUM(miss_count)` still **0**.
+
+Controlled proof of the threshold against the migrated live schema (copy of the live database, source
+verified byte-identical afterwards): target `192.168.20.1:53` (`dns_query`, two rows).
+
+- run 1 -> rows stayed `available`, `miss_count = 1`, events 64 -> **64** (no transition);
+- run 2 -> rows became `unavailable`, `miss_count = 2`, events 64 -> **65** (one transition, not two);
+- run 3 -> `changed = 0`, events still **65** (an already-unavailable row is never rewritten).
+
+Pre-hysteresis code flipped both rows on run 1 and wrote the event then, which is the one-interval
+"outage" the operator kept seeing in the Devices view.
+
+State on the testbed: O1 + O2 + O3a + O3b installed (`2b8cd11b…`); monitoring enabled on `lan,opt1`
+(pre-session config at `/tmp/config.json.pre-o1o2`); email and service alerts still disabled.
+Remaining: O4 — age stale `unavailable` rows to `unknown` and retire the 24 service rows whose hosts have
+not been seen since 2026-09-21.
+
+
+### Task 15 — HA safety: CARP role gate and visibility warning (Decision 50)
+
+**Recorded 31 October 2026.** Operator reported that production is an HA pair where `opt1` no longer
+exists (it is `wan` now) and asked whether the testbed's different interface layout mattered. It does,
+for two reasons: `Monitored interface "opt1" does not exist` makes `resolve_monitored_networks()` fail
+closed (so production would be scanning nothing), and — more importantly — my own O3a gate was unsafe on
+an HA standby.
+
+Root cause of the HA hole: `is_active` comes from hostwatch plus a ping fallback, and a CARP BACKUP node
+does not carry the traffic, so most devices read inactive there. Decision 48's host-active gate then
+suppresses outage verdicts on the standby. Silence from a node that cannot observe is correct, but it was
+emergent rather than declared, nothing prevented the standby from probing while blind, and there was no
+CARP awareness anywhere in the daemon (verified: zero `carp` references).
+
+Change set:
+
+- `parse_carp_roles()` (device -> `MASTER`/`BACKUP` from `ifconfig -a`), `detect_carp_role()` (master
+  wins over backup, `None` when no CARP), `service_observation_allowed()` returning
+  `(allowed, role, reason)`.
+- Consulted in `full_scan()` before discovery and alert processing, inside
+  `discover_infrastructure_services()` so every caller is covered, and in the `--discover-services` CLI
+  path, which returns `{"result": "skipped", "reason": "CARP backup node"}`.
+- `service_discovery_state.carp_role` (new column, `CREATE TABLE` + `ALTER TABLE` migration) makes the
+  transition log one line per role change instead of one per scan.
+- `service_visibility_summary()` logs `host-active gate is suppressing outage verdicts: 0 active devices
+  in monitored scope`, so a silenced gate cannot look like "everything is fine".
+
+New asset `tests/test_carp_role_gate.py` reporting `CARP_ROLE_GATE=PASS` (8 checks), written test-first
+and wired into CI. Non-HA behaviour is pinned by `CARP_ABSENT_ALLOWS`; an unreadable `ifconfig` fails
+open so a detection failure cannot disable monitoring.
+
+Live-schema check on a copy of the testbed database: `init_db()` added `carp_role`,
+`service_observation_allowed()` returned `(True, None, '')` for `lan`/`opt1`, and
+`service_visibility_summary()` returned `None`. The testbed has no CARP at all (zero `<carp>` in
+`/conf/config.xml`), so the BACKUP path cannot be proven live here — it is fixture-driven, and the
+production acceptance is one log line per role change on the standby.
+
+Operator action on production, independent of this code: check `monitored_interfaces` in
+`/var/db/devicemonitor/config.json`. If it still names `opt1`, monitoring has been dead since the HA
+change (fails closed); re-select the internal interface that now carries the segment — and do **not**
+select `wan`, which Task 16 addresses.
+
+
+### Task 16 — HA safety: the WAN/uplink can no longer be monitored (Decision 51)
+
+**Recorded 31 October 2026.** Operator: production is an HA pair where `opt1` no longer exists and the
+uplink is now `wan`; the WAN link cannot be brought down, so any remedy had to stay inside Device
+Monitor's own settings.
+
+Verified exposure before the change: the resolver accepted any *static* IPv4 interface, and a fixture
+proved it — `wan / em0 / 203.0.113.10/24` was accepted and produced `203.0.113.0/24` as a monitored
+network. A DHCP/PPPoE WAN was already refused by the existing static-IPv4 rule, so the exposure existed
+only for a static uplink.
+
+Change set:
+
+- `resolve_monitored_networks()` refuses an interface named `wan`, and refuses any interface carrying a
+  `<gateway>` child whose address is outside RFC1918. A gateway on RFC1918 space (policy routing) and a
+  public segment with no gateway (DMZ) stay selectable.
+- `PRIVATE_IPV4_NETWORKS` is an explicit RFC1918 tuple: the first implementation used
+  `ipaddress.is_private`, which Python reports as `True` for TEST-NET/documentation ranges, so a public
+  uplink was still accepted — caught by the new test before commit.
+- `ConfigController::isUplinkInterface()` mirrors the rule; the picker (`getmonitoredinterfacesAction()`)
+  no longer offers the uplink and `setAction()` refuses to save it.
+
+New assets, written test-first: `tests/test_monitored_interfaces.py` reporting
+`MONITORED_INTERFACES=PASS` with seven checks (including `MONITORED_INTERNAL_GATEWAY_ALLOWED` and
+`MONITORED_DMZ_ALLOWED` as the "do not over-refuse" pins), and `tests/test_monitored_interfaces_php.php`
+reporting `MONITORED_INTERFACES_PHP=PASS` through a namespaced `simplexml_load_file()` override, so no
+host configuration is read. Both are wired into CI; `php -l` clean on the controller.
+
+Hash-chain bookkeeping: row 34 `scan_network.py` -> `bd4c0604…`, row 4 `ConfigController.php` ->
+`21c1ed8f…`, manifest SHA256 -> `8ae03861…`, `install-unattended.sh:36` re-pinned; row count 39 and
+target count 60/61 unchanged.
+
+**No link is touched.** The change reads `/conf/config.xml` and the read-only interface list; it
+configures, raises, bounces nothing, and cannot bring the WAN down. The installer still restarts only
+configd and the devicemonitor daemon.
+
+Operator action on production: in Device Monitor's Settings re-select an **internal** interface. If the
+box now has no internal IPv4 interface, the honest outcome is "not monitoring" — the resolver fails
+closed and says why; it will no longer fall back to the uplink.
+
+Full local Python suite: **29 of 29 pass**. Not deployed; deployment needs a separate authorisation.
+
+
+### Task 17 — HA safety deployed: CARP role gate and uplink refusal live on the testbed
+
+**Recorded 31 October 2026.** Operator authorised deployment of `a225104` to `192.168.20.23`.
+
+Deployment: `--check` -> `CHECK_OK version=2.11 predecessor=2.11 files=60 core_locales=10
+daemon_running=1`, then `BACKUP_READY=/var/backups/devicemonitor/install-v211.2aLlS8`,
+`INSTALL_OK version=2.11 files=60 core_locales=10 backup=…2aLlS8 daemon_restarted=1`. Installed digests
+now match the tree: `scan_network.py` `2b8cd11b…` -> `bd4c0604…`, `ConfigController.php` -> `21c1ed8f…`;
+daemon restarted (PID 17110).
+
+Live schema: `init_db()` added `service_discovery_state.carp_role` on the running database, and the first
+post-deploy cycle (17:59:29–18:00:04) completed with `device_activity_events` still at **64** — no
+flips — and no `CARP role` transition line, which is correct here: the role is `None` (no CARP on this
+host) and an unchanged role is not logged. `service_observation_allowed()` on the live selection
+(`lan`, `opt1`) returns `(True, None, '')`.
+
+Installed-bytes proof of the uplink rule, driving the deployed `resolve_monitored_networks()` with an
+injected configuration tree (read-only, no host configuration read):
+
+```
+lan     -> ALLOWED  ['lan']
+wan     -> REFUSED  Monitored interface "wan" is the WAN/uplink; …
+opt3    -> REFUSED  Monitored interface "opt3" is an uplink (gateway "WAN2_GW" on public address 198.51.100.2); …
+opt4    -> ALLOWED  ['opt4']              (gateway on RFC1918 = policy routing)
+lan,wan -> REFUSED
+```
+
+Recorded limitation: the WAN rule cannot be exercised end-to-end on this host because its own `wan` is
+DHCP and was already refused by the pre-existing static-IPv4 rule; the refusal above is therefore proven
+against injected configuration data, not against the live uplink. The CARP BACKUP path is likewise
+fixture-proven only, because the host has no CARP pair (zero `<carp>` in `/conf/config.xml`).
+
+Testbed state: O1 + O2 + O3a + O3b + Decisions 50/51 installed; monitoring enabled on `lan,opt1`
+(pre-session config at `/tmp/config.json.pre-o1o2`); email and service alerts still disabled. Remaining
+open item is O4 (age stale `unavailable` rows to `unknown`, retire the 24 service rows from 2026-09-21).
+
 
 ## 27 September 2026 v2.10 install-guard pin restoration
 

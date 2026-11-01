@@ -1,5 +1,6 @@
 #!/bin/sh
-# Build dm-v2.11-runtime.tar.gz from an explicit allow-list.
+# Build dm-v$VERSION-runtime.tar.gz from an explicit allow-list.
+#   VERSION defaults to 2.12; override with VERSION=x.y to cut another release.
 #
 # The bundle is NOT just the manifest: install-unattended.sh:97-123 compiles all 11
 # locale .po files (hardcoded list, unconditional ABORT on a missing one) and the
@@ -7,18 +8,20 @@
 # additionally ship stale __pycache__/*.pyc, so the set is built explicitly.
 set -eu
 
+VERSION=${VERSION:-2.12}
+
 # Repo root is the parent of this script's own directory (release/), so the bundler is
 # location-independent instead of hardcoding one developer's absolute checkout path.
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 REPO=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 BUILD=/tmp/dm-bundle-stage
-OUT=/tmp/dm-v2.11-runtime.tar.gz
+OUT=/tmp/dm-v${VERSION}-runtime.tar.gz
 LIST=/tmp/dm-bundle-list.txt
 
 cd "$REPO"
 
 # 1. Manifest payload: the 38 hash-verified install targets.
-awk '{print $3}' release/v2.11-runtime.manifest > "$LIST"
+awk '{print $3}' release/v${VERSION}-runtime.manifest > "$LIST"
 
 # 2. The .po catalogues the installer compiles (includes the 9 the manifest omits).
 find src -name '*.po' >> "$LIST"
@@ -29,7 +32,7 @@ printf '%s\n' \
     install.sh \
     uninstall.sh \
     install-unattended.sh \
-    release/v2.11-runtime.manifest \
+    release/v${VERSION}-runtime.manifest \
     release/merge-opnsense-catalog.sh >> "$LIST"
 
 sort -u "$LIST" -o "$LIST"
