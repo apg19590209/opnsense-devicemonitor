@@ -55,6 +55,54 @@ DEFAULT_CONFIG = _defaults['config']
 PORT_DISCOVERY_LOCK = '/var/run/devicemonitor-port-discovery.lock'
 
 # ================================================================
+# SQLITE CONTENTION TUNING
+#
+# The deferred Nmap-history writer thread keeps its own write transaction
+# open while the main thread updates the targeted-scan queue. Every
+# connection used the driver's 5 s default, so a busy database raised
+# "database is locked" in the middle of a scan cycle. That exception
+# aborted full_scan() before the queue bookkeeping recorded
+# nmap_scan_attempts/nmap_next_attempt, so the retry backoff never
+# engaged and the head of the queue was rescanned on every cycle.
+#
+# Connections created by this module now wait for the writer instead of
+# failing fast.
+# ================================================================
+DB_BUSY_TIMEOUT_MS = 30000
+
+_sqlite_connect = sqlite3.connect
+
+
+def connect_db(*args, **kwargs):
+    """sqlite3.connect() that waits for a busy writer instead of aborting."""
+    kwargs.setdefault('timeout', DB_BUSY_TIMEOUT_MS / 1000.0)
+    conn = _sqlite_connect(*args, **kwargs)
+    try:
+        conn.execute(f'PRAGMA busy_timeout = {DB_BUSY_TIMEOUT_MS}')
+    except sqlite3.Error:
+        pass
+    return conn
+
+
+# Process-local patch: every sqlite3.connect() call site in this module
+# (including the deferred writer and read-only Hostwatch access) inherits
+# the busy timeout without touching each call site.
+sqlite3.connect = connect_db
+
+# ================================================================
+# MAC ROTATION POLICY
+#
+# A phone that randomises its Wi-Fi MAC keeps the same DHCP address, so the
+# new hardware address is an identity change of a device already on the
+# network, not a new device. A randomised MAC therefore always counts as a
+# rotation. A vendor (globally administered) MAC is a different physical
+# device, so it only counts as a rotation while the previous owner of the
+# address was still around; an address reused after that is genuinely new and
+# is still announced.
+# ================================================================
+MAC_ROTATION_WINDOW_HOURS = 168
+
+# ================================================================
 # SERVICE PROBE TUNING
 #
 # Infrastructure-service availability is decided by a single discovery
@@ -7305,6 +7353,85 @@ def run_targeted_scan_with_history(device, config, scan_type):
     # email failure still causes automatic retry/backoff.
     return operation_success, error
 
+def scan_state_signature(services):
+    """Comparable signature of one scan's open-service inventory."""
+    return tuple(sorted(
+        (
+            str(service.get('port') or ''),
+            str(service.get('protocol') or '').lower(),
+            str(service.get('service') or ''),
+            str(service.get('product') or ''),
+            str(service.get('service_version') or ''),
+            str(service.get('extra_info') or ''),
+        )
+        for service in (services or [])
+    ))
+
+
+def previous_scan_state_signature(conn, mac):
+    """Signature of the newest completed successful scan for `mac`.
+
+    The scan in flight has no port rows yet (the deferred writer stores them
+    after the email decision), so the newest completed history row is always
+    the previously recorded state. ``None`` means there is no comparable
+    history: the first scan of a device must still be emailed.
+    """
+    row = conn.execute(
+        '''
+        SELECT id
+        FROM nmap_scan_history
+        WHERE lower(mac) = ? AND success = 1
+        ORDER BY id DESC
+        LIMIT 1
+        ''',
+        ((mac or '').strip().lower(),)
+    ).fetchone()
+
+    if row is None:
+        return None
+
+    ports = conn.execute(
+        '''
+        SELECT port, protocol, service, product, version, extra_info
+        FROM nmap_scan_ports
+        WHERE scan_history_id = ?
+        ''',
+        (row[0],)
+    ).fetchall()
+
+    return tuple(sorted(
+        (
+            str(port or ''),
+            str(protocol or '').lower(),
+            str(service or ''),
+            str(product or ''),
+            str(version or ''),
+            str(extra_info or ''),
+        )
+        for port, protocol, service, product, version, extra_info in ports
+    ))
+
+
+def scan_state_changed(device, services, ip):
+    """True when the scan differs from the state recorded for the device.
+
+    Emails are state-change notifications: an unchanged inventory is recorded
+    in history but never mailed again.
+    """
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            previous = previous_scan_state_signature(conn, device.get('mac'))
+    except sqlite3.Error as e:
+        # Unreadable history must not silence a real alert.
+        log(f"[NMAP] Unable to read previous scan state for {ip}: {e}")
+        return True
+
+    if previous is None:
+        return True
+
+    return previous != scan_state_signature(services)
+
+
 def targeted_scan_and_email(device, config):
     """Run one targeted Nmap scan, email it, and return structured results."""
     ip = (device.get('ip') or '').strip()
@@ -7463,6 +7590,18 @@ def targeted_scan_and_email(device, config):
         'nmap_elapsed': elapsed_value,
         'os_hint': os_hint,
     })
+
+    # Emails are state-change notifications: the scan always runs and its
+    # history row is always written, but an inventory identical to the last
+    # recorded scan is not mailed again.
+    if not scan_state_changed(device, services, ip):
+        details['email_sent'] = False
+        details['email_error'] = None
+        log(
+            f"[NMAP] Scan result unchanged for {ip}; email suppressed "
+            f"({len(services)} open service(s))"
+        )
+        return True, "", details
 
     payload = {
         'ip': ip,
@@ -7777,6 +7916,77 @@ def record_identity_event(conn, mac, event_type, severity,
     ''', (mac, event_type, severity, ip, other_ip, other_mac,
           interface, other_interface, details))
     return True
+
+
+def build_ip_owner_index(conn):
+    """Map IPv4 address -> (mac, last_seen) of its most recent known owner.
+
+    Taken once before the device loop so the snapshot reflects the state before
+    this cycle records anything.
+    """
+    owners = {}
+
+    for ip, mac, last_seen in conn.execute(
+        '''
+        SELECT ip, mac, COALESCE(last_seen, '')
+        FROM devices
+        WHERE ip IS NOT NULL AND ip != ''
+        '''
+    ):
+        seen = last_seen or ''
+        current = owners.get(ip)
+        if current is None or seen > current[1]:
+            owners[ip] = (mac, seen)
+
+    return owners
+
+
+def detect_mac_rotation(conn, mac, ip, owners=None):
+    """Return the displaced owner when `mac` takes over a known address.
+
+    A randomised (locally administered) MAC appearing on an address another
+    device was using is the same host with a new hardware address, so it is
+    always an identity change rather than a new device: the device keeps its
+    address and only the hardware address changed.
+
+    A globally administered (vendor) MAC is a different physical device, so it
+    is only treated as a rotation while the previous owner was still around
+    (MAC_ROTATION_WINDOW_HOURS); an address reused after that is a genuinely
+    new device and must still be announced.
+
+    ``None`` means the address is unowned, still owned by this MAC, or the
+    takeover does not qualify.
+    """
+    if owners is None:
+        owners = build_ip_owner_index(conn)
+
+    owner = owners.get((ip or '').strip())
+    if not owner:
+        return None
+
+    owner_mac, owner_last_seen = owner
+    if not owner_mac or owner_mac.lower() == (mac or '').lower():
+        return None
+
+    randomised = is_locally_administered_mac(mac)
+
+    age = None
+    try:
+        age = datetime.now() - datetime.strptime(
+            owner_last_seen, '%Y-%m-%d %H:%M:%S'
+        )
+    except (TypeError, ValueError, OverflowError):
+        age = None
+
+    if not randomised:
+        if age is None or age > timedelta(hours=MAC_ROTATION_WINDOW_HOURS):
+            return None
+
+    return {
+        'mac': owner_mac,
+        'last_seen': owner_last_seen,
+        'randomised': randomised,
+    }
 
 
 def detect_recent_hostwatch_identity_events(conn, minutes=5, kea_leases=None, networks=None):
@@ -8223,6 +8433,60 @@ def apply_hostname_provenance(
     return device
 
 
+# Visibility priming policy. The sweep exists so Hostwatch can observe
+# otherwise-quiet devices, but an ICMP pass over every address in the subnet
+# on every scan cycle is indistinguishable from a targeted scan to endpoint
+# security tooling: each host received one probe per scan_interval forever.
+# The sweep is therefore rate limited, and addresses Hostwatch has already
+# observed recently are skipped because they need no wake-up.
+VISIBILITY_PRIME_MIN_INTERVAL = 3600
+VISIBILITY_PRIME_FRESH_WINDOW = 3600
+VISIBILITY_PRIME_STATE = '/var/run/devicemonitor-visibility-prime.state'
+
+
+def hostwatch_recently_seen_addresses(window_seconds):
+    """IPv4 addresses Hostwatch observed within `window_seconds`."""
+    if not os.path.exists(HOSTWATCH_DB):
+        return set()
+
+    try:
+        conn = sqlite3.connect(f'file:{HOSTWATCH_DB}?mode=ro', uri=True)
+        try:
+            rows = conn.execute(
+                """
+                SELECT DISTINCT ip_address
+                FROM v_hosts
+                WHERE protocol = 'inet'
+                  AND last_seen >= datetime('now', ?)
+                """,
+                (f'-{int(window_seconds)} seconds',)
+            ).fetchall()
+        finally:
+            conn.close()
+    except sqlite3.Error as e:
+        log(f'[DISCOVERY] Visibility priming: Hostwatch read failed: {e}')
+        return set()
+
+    return {row[0] for row in rows if row and row[0]}
+
+
+def read_visibility_prime_timestamp():
+    """Epoch of the last completed priming pass, or 0.0 when unknown."""
+    try:
+        with open(VISIBILITY_PRIME_STATE, 'r') as state_file:
+            return float(state_file.read().strip() or 0)
+    except (OSError, ValueError):
+        return 0.0
+
+
+def write_visibility_prime_timestamp(timestamp):
+    try:
+        with open(VISIBILITY_PRIME_STATE, 'w') as state_file:
+            state_file.write(f'{timestamp}\n')
+    except OSError as e:
+        log(f'[DISCOVERY] Visibility priming: state write failed: {e}')
+
+
 def prime_selected_interface_visibility(networks):
     """Prime Hostwatch visibility for quiet devices on selected subnets.
 
@@ -8232,6 +8496,27 @@ def prime_selected_interface_visibility(networks):
     selected subnets; the LAN is never primed unless explicitly selected.
     """
     if not networks:
+        return
+
+    # A CARP BACKUP node does not carry the monitored traffic: the MASTER
+    # already wakes the quiet devices on these segments. Sweeping from the
+    # standby only doubles the ICMP probes the endpoints see.
+    allowed, carp_role, _ = service_observation_allowed(networks)
+    if not allowed:
+        log(
+            "[DISCOVERY] Visibility priming skipped: CARP "
+            f"{(carp_role or 'backup').lower()} node"
+        )
+        return
+
+    now = time.time()
+    last_prime = read_visibility_prime_timestamp()
+    if last_prime and (now - last_prime) < VISIBILITY_PRIME_MIN_INTERVAL:
+        log(
+            "[DISCOVERY] Visibility priming skipped: last pass "
+            f"{int(now - last_prime)}s ago (minimum "
+            f"{VISIBILITY_PRIME_MIN_INTERVAL}s)"
+        )
         return
 
     all_targets = []
@@ -8260,6 +8545,28 @@ def prime_selected_interface_visibility(networks):
 
     if not all_targets:
         return
+
+    fresh_addresses = hostwatch_recently_seen_addresses(
+        VISIBILITY_PRIME_FRESH_WINDOW
+    )
+    if fresh_addresses:
+        skipped = [a for a in all_targets if a in fresh_addresses]
+        all_targets = [a for a in all_targets if a not in fresh_addresses]
+        if skipped:
+            log(
+                "[DISCOVERY] Visibility priming: "
+                f"{len(skipped)} address(es) already observed within "
+                f"{VISIBILITY_PRIME_FRESH_WINDOW}s were not probed"
+            )
+
+    if not all_targets:
+        log("[DISCOVERY] Visibility priming skipped: nothing to probe")
+        write_visibility_prime_timestamp(now)
+        return
+
+    # Record the pass before probing so an interrupted sweep is not retried
+    # on the very next cycle.
+    write_visibility_prime_timestamp(now)
 
     def probe(address):
         try:
@@ -8341,6 +8648,11 @@ def full_scan():
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     conn = sqlite3.connect(DB_FILE)
     in_scope_macs = scoped_device_macs(conn, networks)
+
+    # Snapshot of who owned each address before this cycle writes anything, so
+    # a randomised MAC can be recognised as a rotation of that owner.
+    ip_owners = build_ip_owner_index(conn)
+    mac_rotations = 0
     previously_active = {
         r[0] for r in conn.execute('SELECT mac FROM devices WHERE is_active = 1')
         if r[0] in in_scope_macs
@@ -8517,7 +8829,40 @@ def full_scan():
                   is_active, lifecycle_id))
 
             if is_truly_new:
-                new_devices.append(device)
+                rotation = detect_mac_rotation(
+                    conn, mac, device['ip'], ip_owners
+                )
+
+                if rotation:
+                    # Same address, different hardware address: a known device
+                    # rotated its MAC. Announce it as an identity change, not a
+                    # new device, so nothing is mailed and no targeted scan is
+                    # queued for it.
+                    mac_rotations += 1
+
+                    if record_identity_event(
+                        conn,
+                        mac,
+                        'IP_IDENTITY_CHANGED',
+                        'high',
+                        ip=device['ip'],
+                        details=json.dumps({
+                            'source': 'mac_rotation',
+                            'previous_mac': rotation['mac'],
+                            'previous_last_seen': rotation['last_seen'],
+                            'locally_administered':
+                                is_locally_administered_mac(mac),
+                        }, sort_keys=True),
+                        other_mac=rotation['mac']
+                    ):
+                        log(
+                            f"[IDENTITY] {device['ip']} reassigned from "
+                            f"{rotation['mac']} to {mac} "
+                            f"({'randomised MAC' if rotation['randomised'] else 'new hardware address'}"
+                            "): MAC rotation, not a new device"
+                        )
+                else:
+                    new_devices.append(device)
 
     identity_event_start_id = conn.execute(
         'SELECT COALESCE(MAX(id), 0) FROM device_identity_events'
@@ -8593,7 +8938,10 @@ def full_scan():
         )
 
     # 4. Notifications filtered by VLAN
-    log(f"New devices: {len(new_devices)}, Online: {online}/{total}")
+    log(
+        f"New devices: {len(new_devices)}, MAC rotations: {mac_rotations}, "
+        f"Online: {online}/{total}"
+    )
     if new_devices and config['enabled']:
         email_vlans   = set(v.strip() for v in config.get('email_vlans',  '').split(',') if v.strip())
         webhook_vlans = set(v.strip() for v in config.get('webhook_vlans', '').split(',') if v.strip())
@@ -8623,11 +8971,17 @@ def full_scan():
 
     # Drain a bounded number of queued targeted scans each cycle.
     # Retry backoff after failures: 15m, 1h, 6h, 24h, then stop.
+    #
+    # Targeted scans are queued and drained by the node that owns the segment
+    # (`allowed` is the CARP role verdict taken above), so a standby does not
+    # duplicate the MASTER's scans or its scan emails. Queued rows survive on
+    # the standby and drain normally after a failover.
     if (
         config['enabled']
         and config.get('email_enabled')
         and config.get('email_to')
         and config.get('targeted_nmap_enabled', True)
+        and allowed
     ):
         retry_now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         nmap_max_per_cycle = int(config.get('nmap_max_per_cycle', 2))
@@ -8653,66 +9007,76 @@ def full_scan():
                     if len(in_scope_scan_rows) >= nmap_max_per_cycle:
                         break
 
+        retry_delays = {
+            1: timedelta(minutes=15),
+            2: timedelta(hours=1),
+            3: timedelta(hours=6),
+            4: timedelta(hours=24),
+        }
+
         for device in in_scope_scan_rows:
-            success, error = run_targeted_scan_with_history(device, config, 'automatic')
+            mac = device['mac']
+
+            try:
+                success, error = run_targeted_scan_with_history(
+                    device, config, 'automatic'
+                )
+            except Exception as e:
+                # One broken targeted scan must never abort the cycle: the
+                # bookkeeping below is what carries the retry backoff.
+                success = False
+                error = f'Targeted scan raised: {e}'
+
+            # The finished scan handed its history row to the deferred
+            # writer. Let that commit land before the queue row is updated so
+            # the two writers never contend for the database lock.
+            flush_db_writes()
+
+            attempts = int(device.get('nmap_scan_attempts') or 0)
+            error = (error or 'Unknown targeted scan failure')[:1000]
+            next_attempt = None
 
             if success:
-                with sqlite3.connect(DB_FILE) as queue_conn:
-                    queue_conn.execute('''
-                        UPDATE devices
-                        SET nmap_scan_pending = 0,
-                            nmap_scan_attempts = 0,
-                            nmap_next_attempt = NULL,
-                            nmap_last_error = NULL
-                        WHERE mac = ?
-                    ''', (device['mac'],))
-
-                log(f"[NMAP] Targeted scan completed for {device['mac']}")
-                continue
-
-            attempts = int(device.get('nmap_scan_attempts') or 0) + 1
-            error = (error or 'Unknown targeted scan failure')[:1000]
-
-            retry_delays = {
-                1: timedelta(minutes=15),
-                2: timedelta(hours=1),
-                3: timedelta(hours=6),
-                4: timedelta(hours=24),
-            }
-
-            if attempts >= 5:
-                with sqlite3.connect(DB_FILE) as queue_conn:
-                    queue_conn.execute('''
-                        UPDATE devices
-                        SET nmap_scan_pending = 0,
-                            nmap_scan_attempts = ?,
-                            nmap_next_attempt = NULL,
-                            nmap_last_error = ?
-                        WHERE mac = ?
-                    ''', (attempts, error, device['mac']))
-
-                log(
-                    f"[NMAP] Targeted scan permanently failed for "
-                    f"{device['mac']} after {attempts} attempts: {error}"
-                )
+                pending = 0
+                attempts = 0
+                error = None
             else:
-                next_attempt = (
-                    datetime.now() + retry_delays[attempts]
-                ).strftime('%Y-%m-%d %H:%M:%S')
+                attempts += 1
+                if attempts >= 5:
+                    pending = 0
+                else:
+                    pending = 1
+                    next_attempt = (
+                        datetime.now() + retry_delays[attempts]
+                    ).strftime('%Y-%m-%d %H:%M:%S')
 
+            try:
                 with sqlite3.connect(DB_FILE) as queue_conn:
                     queue_conn.execute('''
                         UPDATE devices
-                        SET nmap_scan_pending = 1,
+                        SET nmap_scan_pending = ?,
                             nmap_scan_attempts = ?,
                             nmap_next_attempt = ?,
                             nmap_last_error = ?
                         WHERE mac = ?
-                    ''', (attempts, next_attempt, error, device['mac']))
+                    ''', (pending, attempts, next_attempt, error, mac))
+            except sqlite3.Error as e:
+                # The row keeps its previous state, so the scan is retried on
+                # the next cycle; a transient write failure is not fatal.
+                log(f"[NMAP] Queue bookkeeping failed for {mac}: {e}")
+                continue
 
+            if success:
+                log(f"[NMAP] Targeted scan completed for {mac}")
+            elif attempts >= 5:
+                log(
+                    f"[NMAP] Targeted scan permanently failed for "
+                    f"{mac} after {attempts} attempts: {error}"
+                )
+            else:
                 log(
                     f"[NMAP] Targeted scan attempt {attempts} failed for "
-                    f"{device['mac']}; retry scheduled for {next_attempt}: {error}"
+                    f"{mac}; retry scheduled for {next_attempt}: {error}"
                 )
 
         # v2.11 Task 1: every targeted scan above handed its history completion
