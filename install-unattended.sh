@@ -32,10 +32,10 @@ NMAP_MISSING=0
 command -v nmap >/dev/null 2>&1 || NMAP_MISSING=1
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 cd "$SCRIPT_DIR"
-MANIFEST=release/v2.13.1-runtime.manifest
-[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = 4dc36ca37af3bf4f67361c6eb1b3c4215fec123ca6fcee272ae5e85e2dbf013a ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
+MANIFEST=release/v2.13.2-runtime.manifest
+[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = b0a8fb661f4ea3341a46267d572f1bdc3def7454574aed252eff258d3858b485 ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 40 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
-[ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = 2.13.1 ] || { echo 'ABORT: source version' >&2; exit 1; }
+[ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = 2.13.2 ] || { echo 'ABORT: source version' >&2; exit 1; }
 LIVE_DEFAULTS=/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
 if [ -f "$LIVE_DEFAULTS" ]; then
     installed=$(python3 - "$LIVE_DEFAULTS" <<'PY'
@@ -43,7 +43,7 @@ import json,sys
 print(json.load(open(sys.argv[1]))['version'])
 PY
 ) || { echo 'ABORT: installed defaults invalid' >&2; exit 1; }
-    case "$installed" in 2.8|2.9|2.10|2.11|2.12|2.13) :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
+    case "$installed" in 2.8|2.9|2.10|2.11|2.12|2.13|2.13.1) :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
 elif [ -d /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor ]; then
     echo 'ABORT: partial existing installation' >&2; exit 1
 else
@@ -173,7 +173,7 @@ expected=61
 [ "$FRESH" = 0 ] || expected=62
 [ "$count" = "$expected" ] || { echo 'ABORT: target count' >&2; exit 1; }
 [ "$NMAP_MISSING" = 0 ] || printf 'NOTICE: nmap is not installed; a real installation runs pkg install -y nmap\n'
-printf 'CHECK_OK version=2.13.1 predecessor=%s files=%s core_locales=%s daemon_running=%s host=%s\n' "$installed" "$count" "$CORE_LOCALES" "$WAS_RUNNING" "$EXPECTED_HOST"
+printf 'CHECK_OK version=2.13.2 predecessor=%s files=%s core_locales=%s daemon_running=%s host=%s\n' "$installed" "$count" "$CORE_LOCALES" "$WAS_RUNNING" "$EXPECTED_HOST"
 [ "$CHECK_ONLY" = 0 ] || exit 0
 mkdir -p /var/backups/devicemonitor
 BACKUP=$(mktemp -d /var/backups/devicemonitor/install-v213.XXXXXX)
@@ -311,4 +311,4 @@ c.close()
 PY
 fi
 MUTATING=0
-printf 'INSTALL_OK version=2.13.1 files=%s core_locales=%s backup=%s daemon_restarted=%s\n' "$count" "$CORE_LOCALES" "$BACKUP" "$WAS_RUNNING"
+printf 'INSTALL_OK version=2.13.2 files=%s core_locales=%s backup=%s daemon_restarted=%s\n' "$count" "$CORE_LOCALES" "$BACKUP" "$WAS_RUNNING"

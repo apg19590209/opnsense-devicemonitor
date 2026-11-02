@@ -2617,3 +2617,34 @@ is node-local inventory hygiene, not observation, and a long-lived standby curre
 accumulates stale verdicts (`.252` holds 8 `unavailable` rows) that only age after a
 failover. Moving the call above `if allowed:` would fix that and would touch only that
 node's own database, but it is a behaviour change and needs to be taken deliberately.
+
+## 60. A standby ages its own inventory, even though it observes nothing
+
+### Decision
+
+`age_stale_service_state_on_standby()` runs from the observation-refused branch of the
+scan cycle, so a CARP standby ages and retires rows in **its own** database while
+discovery, service alerts and failover notifications stay gated on observation.
+
+### Reason
+
+Decision 52 put ageing inside `run_scheduled_service_discovery()`, so it inherited the
+observation gate. A long-lived standby therefore accumulated stale verdicts that nobody
+cleared until a failover: `.252` held 8 `unavailable` rows with no ageing cycle in its
+log, against 49 cycles on `.253`. Retirement is node-local inventory hygiene, not an
+observation of the network, so gating it buys nothing and costs accuracy at failover:
+the promoted node would start from a stale inventory.
+
+### Evidence
+
+`tests/test_carp_role_gate.py::test_backup_still_ages_its_own_inventory` drives the
+helper against a temporary database built by the real `init_db()` and asserts that a
+30-day-old `unavailable` row ages to `unknown` while the surrounding gate still refuses
+discovery. The standby log line is `[SERVICES] Stale-state ageing (standby): aged N…`,
+so the two paths are distinguishable in the field.
+
+### Residual risk
+
+The standby now writes to `device_services` during what used to be a read-only path.
+Nothing is notified, discovery still does not run there, and the only rows it can delete
+are ones its own retirement rules would have deleted anyway.

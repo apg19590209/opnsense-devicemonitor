@@ -4,7 +4,7 @@ import hashlib
 import json
 
 root = Path(__file__).resolve().parents[1]
-manifest = root / 'release/v2.13.1-runtime.manifest'
+manifest = root / 'release/v2.13.2-runtime.manifest'
 rows = [line.split() for line in manifest.read_text().splitlines()]
 assert len(rows) == 40
 assert all(len(row) == 4 for row in rows)
@@ -31,5 +31,5 @@ for digest, mode, source, target in rows:
 defaults = json.loads(
     (root / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json').read_text()
 )
-assert defaults['version'] == '2.13.1'
-print('V2131_RELEASE_MANIFEST=PASS')
+assert defaults['version'] == '2.13.2'
+print('V2132_RELEASE_MANIFEST=PASS')

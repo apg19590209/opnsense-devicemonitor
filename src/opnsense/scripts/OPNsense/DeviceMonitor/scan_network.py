@@ -3026,6 +3026,27 @@ def touch_device_last_seen(conn, ip, seen_at=None):
     ).rowcount
 
 
+def age_stale_service_state_on_standby(observation_reason='CARP backup node'):
+    """Age this node's own service inventory while service observation is refused.
+
+    Decision 60. Discovery, alerts and failover notifications are all gated on
+    observation, because a standby does not carry the monitored traffic. Retirement
+    and ageing are not observation: they are hygiene of this node's own database.
+    Without them a long-lived standby accumulates `unavailable` verdicts that nobody
+    clears until a failover, which is exactly the state Decision 52 set out to remove.
+
+    Returns ``(aged, retired)``. The caller logs the counts; nothing is notified.
+    """
+    aged, retired = age_stale_service_state()
+
+    log(
+        '[SERVICES] Stale-state ageing (standby): '
+        f'aged {aged} row(s) to unknown, retired {retired} row(s)'
+    )
+
+    return aged, retired
+
+
 def nmap_evidence_is_current(
     finished_at,
     now=None,
@@ -8693,6 +8714,9 @@ def full_scan():
         # failed delivery retries and cursor housekeeping should not wait an hour.
         process_service_alerts(config, networks)
     else:
+        # Decision 60: retirement is node-local hygiene, not observation, so a
+        # standby ages its own inventory even though it alerts on nothing.
+        age_stale_service_state_on_standby(observation_reason)
         log(
             f'[SERVICES] {observation_reason}; '
             'skipping service discovery and service alerts on this node'

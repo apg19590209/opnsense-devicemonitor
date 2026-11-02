@@ -24,6 +24,7 @@ import os
 import sqlite3
 import tempfile
 from contextlib import closing
+from datetime import datetime, timedelta
 from pathlib import Path
 
 
@@ -274,10 +275,52 @@ def main():
     test_backup_node_denies_observation()
     test_absent_carp_allows()
     test_backup_skips_discovery()
+    test_backup_still_ages_its_own_inventory()
     test_full_scan_consults_the_role()
     test_visibility_summary()
 
     print("CARP_ROLE_GATE=PASS")
+
+
+def test_backup_still_ages_its_own_inventory():
+    """Decision 60: observation is refused, inventory hygiene is not."""
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        fresh = (datetime.now() - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+        old = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            conn.execute(
+                "INSERT INTO devices (mac, ip, last_seen) VALUES (?, ?, ?)",
+                ("aa:bb:cc:dd:ee:60", "198.51.100.60", fresh),
+            )
+            conn.execute(
+                "INSERT INTO device_services (mac, ip, interface, service_type, "
+                "port, protocol, status, detection_method, confidence, "
+                "first_detected, last_verified, last_checked) "
+                "VALUES (?, ?, 'VLAN60', 'SSH', 22, 'tcp', 'unavailable', "
+                "'ssh_banner', 'verified', ?, ?, ?)",
+                ("aa:bb:cc:dd:ee:60", "198.51.100.60", old, old, old),
+            )
+            conn.commit()
+
+        aged, retired = module.age_stale_service_state_on_standby()
+
+        assert (aged, retired) == (1, 0), (aged, retired)
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            status = conn.execute(
+                "SELECT status FROM device_services WHERE ip = ?",
+                ("198.51.100.60",),
+            ).fetchone()[0]
+
+        assert status == "unknown", status
+
+    print("STANDBY_AGES_INVENTORY=PASS")
 
 
 if __name__ == "__main__":
