@@ -418,6 +418,33 @@ done < release/v2.13.2-runtime.manifest
 
 ### Upgrading an existing installation
 
+### Upgrading from 2.10, 2.11 or 2.12
+
+Install the current bundle **directly** - no staged hop is required. The installer
+accepts `2.8`, `2.9`, `2.10`, `2.11`, `2.12`, `2.13` and `2.13.1` as predecessors and
+reaches the same final state from any of them:
+
+| Property | Evidence |
+|---|---|
+| Every schema change is additive (`CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN`), so one `init_db()` migrates in place | `tests/test_upgrade_from_v2_10.py` builds a database with the **v2.10 code**, then upgrades it with the shipped code |
+| Added columns are backfilled, never left `NULL` for existing rows | that test asserts `last_checked` is backfilled from the old `last_verified` |
+| Device and service rows survive, and re-running the migration changes nothing | same test: 1 device / 2 services before and after, two extra `init_db()` calls are no-ops |
+| No file is orphaned | the 2.10 manifest (38 targets) is a subset of the current one (40): nothing was removed, `notify_failover.php` and `actions_devicemonitor_update.conf` are added |
+| An old `config.json` gains the new keys instead of losing its values | the model merges `defaults.json` under the saved file: 35 saved keys become 39, `ha_carp_enabled` / `ha_role_override` default in, operator values are kept |
+
+There is no 2.12 **release** to install: the 2.12 line was recovered as
+`v2.12-baseline`, which is a source baseline and not an installable payload. A firewall
+that reports `2.12` (as the CARP pair did) upgrades to the current bundle in one step.
+
+On a CARP pair, upgrade the master first, verify, then the standby, so the virtual IP
+keeps being served. Keep the pre-upgrade data backup and the installer's
+`install-v213.<id>/` rollback directory until you have seen a clean scan cycle.
+
+> **Maintenance rule:** the installer never prunes. If a future release removes a
+> runtime file, that removal has to be handled explicitly (an `uninstall.sh` step or a
+> documented manual `rm`), otherwise nodes upgraded from an older line keep the stale
+> copy. Today no such file exists.
+
 Back up the runtime data first — it is not part of the bundle:
 
 ```sh

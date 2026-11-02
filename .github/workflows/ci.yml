@@ -112,6 +112,13 @@ jobs:
       - name: Validate device lifecycle return path
         run: python3 tests/test_device_lifecycle_return.py
 
+      # Supported-predecessor claim: a database built by the v2.10 code must reach the
+      # current schema in one init_db() with its rows intact (2.8-2.13.1 are all
+      # accepted predecessors, so the 2.10/2.11 lines install directly). Reads the
+      # v2.10 tag, which the checkout above fetches with fetch-depth: 0.
+      - name: Validate upgrade from v2.10
+        run: python3 tests/test_upgrade_from_v2_10.py
+
       - name: Lint PHP sources
         run: |
           set -eu
