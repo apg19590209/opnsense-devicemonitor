@@ -5482,3 +5482,34 @@ failures (14,760 occurrences on `.252` since 06-10-2026 and 16,130 on `.253` sin
 and 636 of them before 18:00 today), and the targeted-Nmap email path reports
 `/usr/local/sbin/sendmail: not found`. Neither is caused by O4-ageing; the ageing pass uses its own
 short-lived connection and commits before the retirement query.
+
+## O4 ageing is absent from the running 2.12 line (2 November 2026)
+
+While recovering the uncommitted 2.12 tree as `d04739a` and releasing the HA / CARP
+feature on top of it as 2.13 (`59d6d08`), `tests/test_service_ageing.py` turned red and
+stayed red. The cause is not the HA work: the tree that runs on the testbed and on the
+CARP pair has **no ageing implementation at all**.
+
+Evidence, all read-only:
+
+- `grep -rn 'UNKNOWN_AFTER|RETIRE_AFTER|age_stale' /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/`
+  on the testbed returns nothing, for both the pre-HA snapshots and the deployed 2.13.
+- `git show 0ad95b0:src/.../scan_network.py` (v2.11) contains 9 references, added by
+  `6258914`, `d266698` and `9a300cd` ("v2.11 O4, Decision 54/55").
+- This document records O4 as deployed and pinned by `tests/test_service_ageing.py`.
+
+So the 2.12 line is a fork that predates or reverts the O4 work, and everything this
+document says about O4 being live describes a build the firewalls are not running.
+`tests/test_service_ageing.py` is therefore **left failing on purpose**: it is the only
+coverage pinning the missing behaviour, and deleting it would erase the discrepancy
+instead of resolving it.
+
+The one gate that was genuinely stale and is now fixed is `tests/test_carp_role_gate.py`:
+its `service_observation_allowed` stub lacked the `config` keyword that every call site
+passes since the HA change.
+
+Open decision: either the O4 ageing functions are restored on top of 2.13 (port
+`age_stale_service_state`, `SERVICE_UNKNOWN_AFTER_DAYS`, `SERVICE_RETIRE_AFTER_DAYS` and
+their call sites from `0ad95b0`), or O4 is formally withdrawn and the test retired with
+that rationale. Until then 2.13 matches what already runs and removes nothing; it simply
+does not restore what the records claim is there.

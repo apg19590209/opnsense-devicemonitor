@@ -183,7 +183,7 @@ def test_backup_skips_discovery():
             "service discovery ran on a CARP backup node"
         )
 
-    module.service_observation_allowed = lambda networks, text=None: (
+    module.service_observation_allowed = lambda networks, text=None, config=None: (
         False,
         "BACKUP",
         "CARP backup node",
