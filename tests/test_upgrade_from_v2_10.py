@@ -84,6 +84,7 @@ def test_v2_10_database_upgrades_in_place():
 
         old = load(source, 'sn210')
         old.DB_FILE = str(db)
+        old.log = lambda message: None
         old.init_db()
 
         with sqlite3.connect(db) as conn:
@@ -116,6 +117,8 @@ def test_v2_10_database_upgrades_in_place():
 
         new = load(stage(CURRENT.read_text(), tmp, 'scan_network_current.py'), 'sn_current')
         new.DB_FILE = str(db)
+        # The daemon logs to /var/log/devicemonitor.log, which a CI runner cannot write.
+        new.log = lambda message: None
         new.init_db()
 
         with sqlite3.connect(db) as conn:
