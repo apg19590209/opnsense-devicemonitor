@@ -37,6 +37,23 @@ def load(path, name):
     return module
 
 
+def stage(text, tmp, name):
+    """Write a module whose defaults.json path points at the checkout copy.
+
+    Both the v2.10 module and the shipped one load defaults.json from the absolute
+    OPNsense path, which does not exist on a CI runner. Rewriting it keeps the test
+    hermetic without touching the shipped source.
+    """
+    repo_defaults = ROOT / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json'
+    text = text.replace(
+        "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json",
+        str(repo_defaults),
+    )
+    target = tmp / name
+    target.write_text(text)
+    return target
+
+
 def columns(conn, table):
     return {row[1] for row in conn.execute('PRAGMA table_info(%s)' % table)}
 
@@ -52,19 +69,7 @@ def old_source(tmp):
     if 'def init_db' not in text:
         return None
 
-    # The v2.10 module loads defaults.json from the absolute OPNsense path, which does
-    # not exist on a CI runner. Point it at the checkout's own copy so the test is
-    # hermetic; only PATHS/defaults are read at import time and the database path is
-    # overridden below.
-    repo_defaults = ROOT / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json'
-    text = text.replace(
-        "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json",
-        str(repo_defaults),
-    )
-
-    target = tmp / 'scan_network_210.py'
-    target.write_text(text)
-    return target
+    return stage(text, tmp, 'scan_network_210.py')
 
 
 def test_v2_10_database_upgrades_in_place():
@@ -109,7 +114,7 @@ def test_v2_10_database_upgrades_in_place():
             )
             conn.commit()
 
-        new = load(CURRENT, 'sn_current')
+        new = load(stage(CURRENT.read_text(), tmp, 'scan_network_current.py'), 'sn_current')
         new.DB_FILE = str(db)
         new.init_db()
 
