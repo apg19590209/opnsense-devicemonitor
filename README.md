@@ -6,6 +6,14 @@
 
 Plugin for automatic network device monitoring in OPNsense firewall. Detects new devices on the network using the native OPNsense hostwatch database and sends email or webhook notifications.
 
+> **Current release: 2.13.2** — commit `74e1f6f` on `release/2.13`, tag `v2.13.2`, payload
+> `release/v2.13.2-runtime.manifest` (40 targets), running on the testbed `192.168.20.23`
+> and on the CARP pair `192.168.20.253` (master) / `.252` (standby). It carries the
+> recovered 2.12 baseline, the HA / CARP feature (Settings → HA / CARP) and the restored
+> O4 service-state ageing. The install steps below still describe the v2.10 flow and the
+> authoritative procedure is `install-unattended.sh --host <hostname>` from the bundle;
+> see `PROJECT_STATE.md` for the current release block and the deployment records.
+
 > **Translations:** the interface is available in English, Czech, German, French, Spanish, Italian, Portuguese (Brazil), Dutch, Russian, Japanese and Simplified Chinese. All translations except English and Czech are machine-generated — native-speaker corrections are welcome.
 
 ---
