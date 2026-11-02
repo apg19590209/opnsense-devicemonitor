@@ -8,9 +8,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Device Monitor 2.10\n"
-"POT-Creation-Date: 2026-04-10 00:00+0000\n"
-"PO-Revision-Date: 2026-04-10 00:00+0000\n"
+"Project-Id-Version: Device Monitor 2.12\n"
+"POT-Creation-Date: 2026-11-02 03:16+0000\n"
+"PO-Revision-Date: 2026-11-02 03:15+0000\n"
 "Last-Translator: Device Monitor contributors\n"
 "Language-Team: Russian\n"
 "Language: ru_RU\n"
@@ -520,14 +520,6 @@ msgstr "Не разрешено"
 msgid "Resolved"
 msgstr "Разрешено"
 
-#: settings.volt - IP and MAC conflict email alerts
-msgid "Email high-severity conflict alerts"
-msgstr "Уведомления о конфликтах высокой серьёзности по почте"
-
-#: settings.volt - IP and MAC conflict email alerts
-msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
-msgstr "Отправить письмо при обнаружении нового конфликта адресов IPv4 или IPv6 высокой серьёзности."
-
 msgid "IP and MAC Conflicts"
 msgstr "Конфликты IP и MAC"
 
@@ -926,9 +918,6 @@ msgstr "Об имени пользователя SMTP"
 
 msgid "About Test Email"
 msgstr "О тестовом письме"
-
-msgid "About Conflict Alerts"
-msgstr "О конфликтных уведомлениях"
 
 msgid "About Infrastructure Service Alerts"
 msgstr "Об уведомлениях о службах инфраструктуры"
@@ -1574,3 +1563,171 @@ msgstr "Всего устройств"
 
 msgid "Stopped"
 msgstr "Остановлено"
+
+# ============================================
+# [settings.volt] Settings subtab: HA / CARP and webhook identity alerts
+# ============================================
+
+#: settings.volt
+msgid "A CARP standby does not carry the monitored traffic, so hostwatch there under-reports and every liveness verdict would be wrong. With this enabled a standby node skips infrastructure-service discovery and service alerts instead of inventing outages."
+msgstr "Резервный узел CARP не пропускает наблюдаемый трафик, поэтому hostwatch там занижает данные и любой вывод о доступности был бы неверным. Если включено, резервный узел пропускает обнаружение инфраструктурных служб и оповещения о службах, вместо того чтобы выдумывать сбои."
+
+#: settings.volt
+msgid "A backup override suppresses service discovery even when CARP awareness is enabled."
+msgstr "Принудительная роль backup подавляет обнаружение служб даже при включённом обнаружении CARP."
+
+#: settings.volt
+msgid "Always act as backup (never observe)"
+msgstr "Всегда работать как backup (не наблюдать)"
+
+#: settings.volt
+msgid "Always act as master"
+msgstr "Всегда работать как master"
+
+#: settings.volt
+msgid "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
+msgstr "Применяется только к отслеживаемым интерфейсам. Узел без состояния CARP не затрагивается, поэтому автономный межсетевой экран продолжает наблюдение."
+
+#: settings.volt
+msgid "Automatic (from CARP state)"
+msgstr "Автоматически (по состоянию CARP)"
+
+#: settings.volt
+msgid "Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance."
+msgstr "Автоматически считывает состояние CARP из ifconfig. Укажите явную роль, если у отслеживаемых интерфейсов нет собственного адреса CARP, или чтобы закрепить узел на время обслуживания."
+
+#: settings.volt
+msgid "CARP awareness"
+msgstr "Обнаружение CARP"
+
+#: settings.volt
+msgid "Defer service observation to the CARP master"
+msgstr "Передать наблюдение за службами мастер-узлу CARP"
+
+#: settings.volt
+msgid "Delivery uses whichever channels are enabled on the Email and Webhook tabs; a disabled channel is skipped."
+msgstr "Доставка использует каналы, включённые на вкладках «Электронная почта» и «Webhook»; отключённый канал пропускается."
+
+#: settings.volt
+msgid "Detected role"
+msgstr "Обнаруженная роль"
+
+#: settings.volt
+msgid "Effective mode"
+msgstr "Действующий режим"
+
+#: settings.volt
+msgid "Enable sidecar catalogue translations"
+msgstr "Включить переводы из побочного каталога"
+
+#: settings.volt
+msgid "Failover notification"
+msgstr "Уведомление о переключении"
+
+#: settings.volt
+msgid "Forces the interface to use the dedicated translation file of this plugin. If disabled, labels may default to English."
+msgstr "Принудительно использовать собственный файл перевода этого плагина в интерфейсе. Если выключено, подписи могут остаться на английском."
+
+#: settings.volt
+msgid "HA / CARP"
+msgstr "HA / CARP"
+
+#: settings.volt
+msgid "Live CARP status"
+msgstr "Текущее состояние CARP"
+
+#: settings.volt
+msgid "No CARP virtual IP defined on this firewall."
+msgstr "На этом межсетевом экране не задано ни одного виртуального IP-адреса CARP."
+
+#: settings.volt
+msgid "Notify when this node changes CARP role"
+msgstr "Уведомлять при смене роли CARP на этом узле"
+
+#: settings.volt
+msgid "Plugin Options"
+msgstr "Параметры плагина"
+
+#: settings.volt
+msgid "Read-only view of this node: the role ifconfig reports for the monitored interfaces, and the CARP virtual IPs defined on this firewall. Nothing here is saved."
+msgstr "Представление только для чтения: роль, которую ifconfig сообщает для отслеживаемых интерфейсов, и виртуальные IP-адреса CARP, заданные на этом межсетевом экране. Ничего не сохраняется."
+
+#: settings.volt
+msgid "Reports a MASTER/BACKUP transition once, through the configured email and webhook channels. Without this the transition is only written to the Device Monitor log."
+msgstr "Однократно сообщает о переходе MASTER/BACKUP через настроенные каналы электронной почты и webhook. Без этого переход только записывается в журнал Device Monitor."
+
+#: settings.volt
+msgid "Role override"
+msgstr "Переопределение роли"
+
+#: settings.volt
+msgid "Send Test Webhook"
+msgstr "Отправить тестовый webhook"
+
+#: settings.volt
+msgid "Service observation"
+msgstr "Наблюдение за службами"
+
+#: settings.volt
+msgid "State"
+msgstr "Состояние"
+
+#: settings.volt
+msgid "VHID"
+msgstr "VHID"
+
+#: settings.volt
+msgid "Virtual IP"
+msgstr "Виртуальный IP"
+
+#: settings.volt
+msgid "Identity conflict alerts"
+msgstr "Оповещения о конфликте идентичности"
+
+#: settings.volt
+msgid "Send a high-severity IPv4 or IPv6 address conflict alert to the webhook endpoint."
+msgstr "Отправляет оповещение высокой важности о конфликте адреса IPv4 или IPv6 на конечную точку webhook."
+
+#: settings.volt
+msgid "Language"
+msgstr "Язык"
+
+#: settings.volt
+msgid "Plugin translations (sidecar catalogue)"
+msgstr "Переводы плагина (побочный каталог)"
+
+#: settings.volt
+msgid "Translate Device Monitor strings from the plugin sidecar catalogue. When disabled, the plugin uses the stock OPNsense core catalogues only."
+msgstr "Переводит строки Device Monitor из побочного каталога плагина. Если выключено, плагин использует только штатные каталоги ядра OPNsense."
+
+#: settings.volt
+msgid "Enable immediate webhook identity conflict alerts"
+msgstr "Включить немедленные webhook-оповещения о конфликтах идентичности"
+
+#: settings.volt
+msgid "Enables the primary high-speed HTTP POST notification engine. This serves as the master transport route used to instantly dispatch both asset summaries (New Device Discoveries) and high-severity security events to your monitoring endpoints."
+msgstr "Включает основной высокоскоростной механизм уведомлений HTTP POST. Он служит главным транспортом для мгновенной отправки как сводок об устройствах (новые устройства), так и событий безопасности высокой важности на ваши точки мониторинга."
+
+#: settings.volt
+msgid "Triggers a webhook payload dispatch immediately upon detection of an existing MAC address switching between multiple IP addresses (IP Spoofing / Identity Hijacking). Recommended to leave enabled."
+msgstr "Немедленно запускает отправку полезной нагрузки webhook при обнаружении того, что существующий MAC-адрес переключается между несколькими IP-адресами (подмена IP / захват идентичности). Рекомендуется оставить включённым."
+
+#: settings.volt
+msgid "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."
+msgstr "Выберите сетевые интерфейсы, которые следует активно отслеживать на изменения состава устройств и конфликты идентичности."
+
+# ============================================
+# [settings.volt] HA / CARP live status values
+# ============================================
+
+#: settings.volt
+msgid "observing"
+msgstr "наблюдает"
+
+#: settings.volt
+msgid "suppressed"
+msgstr "подавлено"
+
+#: settings.volt
+msgid "unknown"
+msgstr "неизвестно"

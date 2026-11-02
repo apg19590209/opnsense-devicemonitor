@@ -1,5 +1,5 @@
 {
-  "version": "2.12",
+  "version": "2.13",
   "paths": {
     "dbFile": "/var/db/devicemonitor/devices.db",
     "configFile": "/var/db/devicemonitor/config.json",
@@ -48,6 +48,9 @@
     "nmap_host_timeout": "45",
     "nmap_version_detection": "1",
     "nmap_max_per_cycle": "2",
-    "sidecar_translation_enabled": "1"
+    "sidecar_translation_enabled": "1",
+    "ha_carp_enabled": "1",
+    "ha_role_override": "auto",
+    "ha_notify_failover": "0"
   }
 }

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Guarded Device Monitor v2.11 installation on OPNsense/FreeBSD.
+# Guarded Device Monitor v2.13 installation on OPNsense/FreeBSD.
 set -eu
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 EXPECTED_HOST=
@@ -32,10 +32,10 @@ NMAP_MISSING=0
 command -v nmap >/dev/null 2>&1 || NMAP_MISSING=1
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 cd "$SCRIPT_DIR"
-MANIFEST=release/v2.11-runtime.manifest
-[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = ce1ecb81cc750d882e15377e8d0309b2e8599450f9c0be3e61be0d4155cdc32b ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
-[ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 39 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
-[ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = 2.11 ] || { echo 'ABORT: source version' >&2; exit 1; }
+MANIFEST=release/v2.13-runtime.manifest
+[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = 9f230b288413ed7d42bb7615c79f5d11992b08e270a715f59c1c09e5f98e8e7c ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
+[ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 40 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
+[ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = 2.13 ] || { echo 'ABORT: source version' >&2; exit 1; }
 LIVE_DEFAULTS=/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
 if [ -f "$LIVE_DEFAULTS" ]; then
     installed=$(python3 - "$LIVE_DEFAULTS" <<'PY'
@@ -43,14 +43,14 @@ import json,sys
 print(json.load(open(sys.argv[1]))['version'])
 PY
 ) || { echo 'ABORT: installed defaults invalid' >&2; exit 1; }
-    case "$installed" in 2.8|2.9|2.10|2.11) :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
+    case "$installed" in 2.8|2.9|2.10|2.11|2.12) :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
 elif [ -d /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor ]; then
     echo 'ABORT: partial existing installation' >&2; exit 1
 else
     installed=fresh
 fi
 [ ! -e /etc/rc.d/devicemonitor ] && [ ! -L /etc/rc.d/devicemonitor ] || [ "$(readlink /etc/rc.d/devicemonitor)" = /usr/local/etc/rc.d/devicemonitor ] || { echo 'ABORT: rc link collision' >&2; exit 1; }
-STAGE=$(mktemp -d /tmp/dm_install_v211.XXXXXX)
+STAGE=$(mktemp -d /tmp/dm_install_v213.XXXXXX)
 BACKUP=
 MUTATING=0
 WAS_RUNNING=0
@@ -167,16 +167,16 @@ while read -r hash mode source target; do
     id=$((id + 1))
 done < "$STAGE/items"
 count=$id
-# 39 manifest rows + 11 sidecar catalogues + one merged core-domain catalogue per locale that
+# 40 manifest rows + 11 sidecar catalogues + one merged core-domain catalogue per locale that
 # can host one (all but en_US); a fresh install adds rc.conf.
-expected=60
-[ "$FRESH" = 0 ] || expected=61
+expected=61
+[ "$FRESH" = 0 ] || expected=62
 [ "$count" = "$expected" ] || { echo 'ABORT: target count' >&2; exit 1; }
 [ "$NMAP_MISSING" = 0 ] || printf 'NOTICE: nmap is not installed; a real installation runs pkg install -y nmap\n'
-printf 'CHECK_OK version=2.11 predecessor=%s files=%s core_locales=%s daemon_running=%s host=%s\n' "$installed" "$count" "$CORE_LOCALES" "$WAS_RUNNING" "$EXPECTED_HOST"
+printf 'CHECK_OK version=2.13 predecessor=%s files=%s core_locales=%s daemon_running=%s host=%s\n' "$installed" "$count" "$CORE_LOCALES" "$WAS_RUNNING" "$EXPECTED_HOST"
 [ "$CHECK_ONLY" = 0 ] || exit 0
 mkdir -p /var/backups/devicemonitor
-BACKUP=$(mktemp -d /var/backups/devicemonitor/install-v211.XXXXXX)
+BACKUP=$(mktemp -d /var/backups/devicemonitor/install-v213.XXXXXX)
 mkdir "$BACKUP/files"
 cp "$STAGE/plan" "$BACKUP/plan"
 while read -r id old new mode source target; do
@@ -300,4 +300,4 @@ c.close()
 PY
 fi
 MUTATING=0
-printf 'INSTALL_OK version=2.11 files=%s core_locales=%s backup=%s daemon_restarted=%s\n' "$count" "$CORE_LOCALES" "$BACKUP" "$WAS_RUNNING"
+printf 'INSTALL_OK version=2.13 files=%s core_locales=%s backup=%s daemon_restarted=%s\n' "$count" "$CORE_LOCALES" "$BACKUP" "$WAS_RUNNING"

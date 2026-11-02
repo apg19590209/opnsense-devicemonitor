@@ -7,9 +7,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Device Monitor 2.10\n"
-"POT-Creation-Date: 2026-04-10 00:00+0000\n"
-"PO-Revision-Date: 2026-04-10 00:00+0100\n"
+"Project-Id-Version: Device Monitor 2.12\n"
+"POT-Creation-Date: 2026-11-02 03:16+0000\n"
+"PO-Revision-Date: 2026-11-02 03:15+0000\n"
 "Last-Translator: Device Monitor contributors\n"
 "Language-Team: Czech\n"
 "Language: cs_CZ\n"
@@ -1585,3 +1585,135 @@ msgid "Triggers a webhook payload dispatch immediately upon detection of an exis
 msgstr "Triggers a webhook payload dispatch immediately upon detection of an existing MAC address switching between multiple IP addresses (IP Spoofing / Identity Hijacking). Recommended to leave enabled."
 msgid "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."
 msgstr "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."
+
+# ============================================
+# [settings.volt] Settings subtab: HA / CARP and webhook identity alerts
+# ============================================
+
+#: settings.volt
+msgid "A CARP standby does not carry the monitored traffic, so hostwatch there under-reports and every liveness verdict would be wrong. With this enabled a standby node skips infrastructure-service discovery and service alerts instead of inventing outages."
+msgstr "Záložní uzel CARP nepřenáší sledovaný provoz, takže hostwatch zde hlásí méně a každé vyhodnocení dostupnosti by bylo chybné. Je-li tato volba zapnuta, záložní uzel přeskakuje zjišťování infrastrukturních služeb a upozornění na služby, místo aby si výpadky vymýšlel."
+
+#: settings.volt
+msgid "A backup override suppresses service discovery even when CARP awareness is enabled."
+msgstr "Přepsání na backup potlačí zjišťování služeb, i když je rozpoznávání CARP zapnuto."
+
+#: settings.volt
+msgid "Always act as backup (never observe)"
+msgstr "Vždy vystupovat jako backup (nikdy nesledovat)"
+
+#: settings.volt
+msgid "Always act as master"
+msgstr "Vždy vystupovat jako master"
+
+#: settings.volt
+msgid "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
+msgstr "Platí pouze pro sledovaná rozhraní. Uzel bez stavu CARP není ovlivněn, samostatný firewall tedy sleduje dál."
+
+#: settings.volt
+msgid "Automatic (from CARP state)"
+msgstr "Automaticky (ze stavu CARP)"
+
+#: settings.volt
+msgid "Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance."
+msgstr "Automaticky čte stav CARP z ifconfig. Použijte výslovnou roli, pokud sledovaná rozhraní nemají vlastní CARP adresu, nebo chcete-li uzel během údržby připnout."
+
+#: settings.volt
+msgid "CARP awareness"
+msgstr "Rozpoznávání CARP"
+
+#: settings.volt
+msgid "Defer service observation to the CARP master"
+msgstr "Přenechat sledování služeb CARP masteru"
+
+#: settings.volt
+msgid "Delivery uses whichever channels are enabled on the Email and Webhook tabs; a disabled channel is skipped."
+msgstr "Doručení použije kanály zapnuté na kartách Email a Webhook; vypnutý kanál se přeskakuje."
+
+#: settings.volt
+msgid "Detected role"
+msgstr "Zjištěná role"
+
+#: settings.volt
+msgid "Effective mode"
+msgstr "Účinný režim"
+
+#: settings.volt
+msgid "Enable sidecar catalogue translations"
+msgstr "Zapnout překlady z doplňkového katalogu"
+
+#: settings.volt
+msgid "Failover notification"
+msgstr "Notifikace přepnutí"
+
+#: settings.volt
+msgid "Forces the interface to use the dedicated translation file of this plugin. If disabled, labels may default to English."
+msgstr "Vynutí použití vlastního překladového souboru tohoto pluginu pro rozhraní. Je-li vypnuto, popisky mohou zůstat v angličtině."
+
+#: settings.volt
+msgid "HA / CARP"
+msgstr "HA / CARP"
+
+#: settings.volt
+msgid "Live CARP status"
+msgstr "Aktuální stav CARP"
+
+#: settings.volt
+msgid "No CARP virtual IP defined on this firewall."
+msgstr "Na tomto firewallu není definována žádná virtuální IP CARP."
+
+#: settings.volt
+msgid "Notify when this node changes CARP role"
+msgstr "Upozornit, když tento uzel změní roli CARP"
+
+#: settings.volt
+msgid "Plugin Options"
+msgstr "Možnosti pluginu"
+
+#: settings.volt
+msgid "Read-only view of this node: the role ifconfig reports for the monitored interfaces, and the CARP virtual IPs defined on this firewall. Nothing here is saved."
+msgstr "Pohled pouze pro čtení: role, kterou ifconfig hlásí pro sledovaná rozhraní, a virtuální IP CARP definované na tomto firewallu. Nic se neukládá."
+
+#: settings.volt
+msgid "Reports a MASTER/BACKUP transition once, through the configured email and webhook channels. Without this the transition is only written to the Device Monitor log."
+msgstr "Jednou ohlásí přechod MASTER/BACKUP přes nakonfigurované e-mailové a webhook kanály. Bez toho se přechod zapíše jen do protokolu Device Monitoru."
+
+#: settings.volt
+msgid "Role override"
+msgstr "Přepsání role"
+
+#: settings.volt
+msgid "Send Test Webhook"
+msgstr "Odeslat testovací webhook"
+
+#: settings.volt
+msgid "Service observation"
+msgstr "Sledování služeb"
+
+#: settings.volt
+msgid "State"
+msgstr "Stav"
+
+#: settings.volt
+msgid "VHID"
+msgstr "VHID"
+
+#: settings.volt
+msgid "Virtual IP"
+msgstr "Virtuální IP"
+
+# ============================================
+# [settings.volt] HA / CARP live status values
+# ============================================
+
+#: settings.volt
+msgid "observing"
+msgstr "sleduje"
+
+#: settings.volt
+msgid "suppressed"
+msgstr "potlačeno"
+
+#: settings.volt
+msgid "unknown"
+msgstr "neznámé"

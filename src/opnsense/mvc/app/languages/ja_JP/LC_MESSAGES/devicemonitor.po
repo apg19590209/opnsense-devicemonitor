@@ -8,9 +8,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Device Monitor 2.10\n"
-"POT-Creation-Date: 2026-04-10 00:00+0000\n"
-"PO-Revision-Date: 2026-04-10 00:00+0000\n"
+"Project-Id-Version: Device Monitor 2.12\n"
+"POT-Creation-Date: 2026-11-02 03:16+0000\n"
+"PO-Revision-Date: 2026-11-02 03:15+0000\n"
 "Last-Translator: Device Monitor contributors\n"
 "Language-Team: Japanese\n"
 "Language: ja_JP\n"
@@ -520,14 +520,6 @@ msgstr "未解決"
 msgid "Resolved"
 msgstr "解決済み"
 
-#: settings.volt - IP and MAC conflict email alerts
-msgid "Email high-severity conflict alerts"
-msgstr "高重大度の競合メールアラート"
-
-#: settings.volt - IP and MAC conflict email alerts
-msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
-msgstr "高重大度の新しいIPv4またはIPv6アドレス競合が検出されたときにメールを送信します。"
-
 msgid "IP and MAC Conflicts"
 msgstr "IP/MAC競合"
 
@@ -926,9 +918,6 @@ msgstr "SMTPユーザー名について"
 
 msgid "About Test Email"
 msgstr "テストメールについて"
-
-msgid "About Conflict Alerts"
-msgstr "競合アラートについて"
 
 msgid "About Infrastructure Service Alerts"
 msgstr "インフラサービスアラートについて"
@@ -1574,3 +1563,171 @@ msgstr "デバイス合計"
 
 msgid "Stopped"
 msgstr "停止中"
+
+# ============================================
+# [settings.volt] Settings subtab: HA / CARP and webhook identity alerts
+# ============================================
+
+#: settings.volt
+msgid "A CARP standby does not carry the monitored traffic, so hostwatch there under-reports and every liveness verdict would be wrong. With this enabled a standby node skips infrastructure-service discovery and service alerts instead of inventing outages."
+msgstr "CARP の待機ノードは監視対象のトラフィックを通過させないため、hostwatch は過小に報告し、活性の判定はすべて誤りになります。これを有効にすると、待機ノードは停止を捏造する代わりに、インフラストラクチャサービスの検出とサービスアラートを省略します。"
+
+#: settings.volt
+msgid "A backup override suppresses service discovery even when CARP awareness is enabled."
+msgstr "バックアップへの強制は、CARP 認識が有効でもサービス検出を抑止します。"
+
+#: settings.volt
+msgid "Always act as backup (never observe)"
+msgstr "常にバックアップとして動作（監視しない）"
+
+#: settings.volt
+msgid "Always act as master"
+msgstr "常にマスターとして動作"
+
+#: settings.volt
+msgid "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
+msgstr "監視対象インターフェースにのみ適用されます。CARP 状態のないノードは影響を受けないため、単独のファイアウォールは観測を続けます。"
+
+#: settings.volt
+msgid "Automatic (from CARP state)"
+msgstr "自動（CARP 状態から）"
+
+#: settings.volt
+msgid "Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance."
+msgstr "自動では ifconfig から CARP 状態を読み取ります。監視対象インターフェースが独自の CARP アドレスを持たない場合や、メンテナンス中にノードを固定したい場合は、明示的なロールを指定してください。"
+
+#: settings.volt
+msgid "CARP awareness"
+msgstr "CARP 認識"
+
+#: settings.volt
+msgid "Defer service observation to the CARP master"
+msgstr "サービス観測を CARP マスターに委ねる"
+
+#: settings.volt
+msgid "Delivery uses whichever channels are enabled on the Email and Webhook tabs; a disabled channel is skipped."
+msgstr "配信には「メール」および「Webhook」タブで有効なチャネルを使用します。無効なチャネルはスキップされます。"
+
+#: settings.volt
+msgid "Detected role"
+msgstr "検出されたロール"
+
+#: settings.volt
+msgid "Effective mode"
+msgstr "有効モード"
+
+#: settings.volt
+msgid "Enable sidecar catalogue translations"
+msgstr "サイドカーカタログの翻訳を有効化"
+
+#: settings.volt
+msgid "Failover notification"
+msgstr "フェイルオーバー通知"
+
+#: settings.volt
+msgid "Forces the interface to use the dedicated translation file of this plugin. If disabled, labels may default to English."
+msgstr "インターフェースでこのプラグイン専用の翻訳ファイルを強制的に使用します。無効にすると、ラベルが英語のままになる場合があります。"
+
+#: settings.volt
+msgid "HA / CARP"
+msgstr "HA / CARP"
+
+#: settings.volt
+msgid "Live CARP status"
+msgstr "CARP の現在の状態"
+
+#: settings.volt
+msgid "No CARP virtual IP defined on this firewall."
+msgstr "このファイアウォールには CARP 仮想 IP が定義されていません。"
+
+#: settings.volt
+msgid "Notify when this node changes CARP role"
+msgstr "このノードの CARP ロール変更時に通知"
+
+#: settings.volt
+msgid "Plugin Options"
+msgstr "プラグインオプション"
+
+#: settings.volt
+msgid "Read-only view of this node: the role ifconfig reports for the monitored interfaces, and the CARP virtual IPs defined on this firewall. Nothing here is saved."
+msgstr "このノードの読み取り専用表示です。監視対象インターフェースについて ifconfig が報告するロールと、このファイアウォールで定義された CARP 仮想 IP を表示します。ここでの内容は保存されません。"
+
+#: settings.volt
+msgid "Reports a MASTER/BACKUP transition once, through the configured email and webhook channels. Without this the transition is only written to the Device Monitor log."
+msgstr "MASTER/BACKUP の切り替えを、設定済みのメールおよび Webhook チャネルで 1 回だけ通知します。無効の場合、切り替えは Device Monitor のログにのみ記録されます。"
+
+#: settings.volt
+msgid "Role override"
+msgstr "ロールの強制"
+
+#: settings.volt
+msgid "Send Test Webhook"
+msgstr "テスト Webhook を送信"
+
+#: settings.volt
+msgid "Service observation"
+msgstr "サービス観測"
+
+#: settings.volt
+msgid "State"
+msgstr "状態"
+
+#: settings.volt
+msgid "VHID"
+msgstr "VHID"
+
+#: settings.volt
+msgid "Virtual IP"
+msgstr "仮想 IP"
+
+#: settings.volt
+msgid "Identity conflict alerts"
+msgstr "ID 競合アラート"
+
+#: settings.volt
+msgid "Send a high-severity IPv4 or IPv6 address conflict alert to the webhook endpoint."
+msgstr "IPv4 または IPv6 アドレスの競合に関する重大度の高いアラートを Webhook エンドポイントに送信します。"
+
+#: settings.volt
+msgid "Language"
+msgstr "言語"
+
+#: settings.volt
+msgid "Plugin translations (sidecar catalogue)"
+msgstr "プラグイン翻訳（サイドカーカタログ）"
+
+#: settings.volt
+msgid "Translate Device Monitor strings from the plugin sidecar catalogue. When disabled, the plugin uses the stock OPNsense core catalogues only."
+msgstr "Device Monitor の文言をプラグインのサイドカーカタログから翻訳します。無効にすると、プラグインは OPNsense 標準のコアカタログのみを使用します。"
+
+#: settings.volt
+msgid "Enable immediate webhook identity conflict alerts"
+msgstr "Webhook による ID 競合の即時アラートを有効化"
+
+#: settings.volt
+msgid "Enables the primary high-speed HTTP POST notification engine. This serves as the master transport route used to instantly dispatch both asset summaries (New Device Discoveries) and high-severity security events to your monitoring endpoints."
+msgstr "主要な高速 HTTP POST 通知エンジンを有効にします。これは、資産サマリ（新規デバイスの検出）と重大度の高いセキュリティイベントの両方を監視エンドポイントへ即座に送信するための主要な伝送経路として機能します。"
+
+#: settings.volt
+msgid "Triggers a webhook payload dispatch immediately upon detection of an existing MAC address switching between multiple IP addresses (IP Spoofing / Identity Hijacking). Recommended to leave enabled."
+msgstr "既存の MAC アドレスが複数の IP アドレス間で切り替わったことを検出すると、直ちに Webhook ペイロードの送信を開始します（IP スプーフィング / ID 乗っ取り）。有効のままにすることを推奨します。"
+
+#: settings.volt
+msgid "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."
+msgstr "デバイス構成の変化と ID 競合を積極的に監視するネットワークインターフェースを選択します。"
+
+# ============================================
+# [settings.volt] HA / CARP live status values
+# ============================================
+
+#: settings.volt
+msgid "observing"
+msgstr "観測中"
+
+#: settings.volt
+msgid "suppressed"
+msgstr "抑止中"
+
+#: settings.volt
+msgid "unknown"
+msgstr "不明"

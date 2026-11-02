@@ -8,9 +8,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Device Monitor 2.10\n"
-"POT-Creation-Date: 2026-04-10 00:00+0000\n"
-"PO-Revision-Date: 2026-04-10 00:00+0000\n"
+"Project-Id-Version: Device Monitor 2.12\n"
+"POT-Creation-Date: 2026-11-02 03:16+0000\n"
+"PO-Revision-Date: 2026-11-02 03:15+0000\n"
 "Last-Translator: Device Monitor contributors\n"
 "Language-Team: Spanish\n"
 "Language: es_ES\n"
@@ -520,14 +520,6 @@ msgstr "Sin resolver"
 msgid "Resolved"
 msgstr "Resuelto"
 
-#: settings.volt - IP and MAC conflict email alerts
-msgid "Email high-severity conflict alerts"
-msgstr "Alertas por correo de conflictos de alta gravedad"
-
-#: settings.volt - IP and MAC conflict email alerts
-msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
-msgstr "Enviar un correo cuando se detecte un nuevo conflicto de dirección IPv4 o IPv6 de alta gravedad."
-
 msgid "IP and MAC Conflicts"
 msgstr "Conflictos de IP y MAC"
 
@@ -926,9 +918,6 @@ msgstr "Acerca del nombre de usuario SMTP"
 
 msgid "About Test Email"
 msgstr "Acerca del correo de prueba"
-
-msgid "About Conflict Alerts"
-msgstr "Acerca de las alertas de conflicto"
 
 msgid "About Infrastructure Service Alerts"
 msgstr "Acerca de las alertas de servicios de infraestructura"
@@ -1574,3 +1563,171 @@ msgstr "Total de dispositivos"
 
 msgid "Stopped"
 msgstr "Detenido"
+
+# ============================================
+# [settings.volt] Settings subtab: HA / CARP and webhook identity alerts
+# ============================================
+
+#: settings.volt
+msgid "A CARP standby does not carry the monitored traffic, so hostwatch there under-reports and every liveness verdict would be wrong. With this enabled a standby node skips infrastructure-service discovery and service alerts instead of inventing outages."
+msgstr "Un nodo en espera CARP no transporta el tráfico supervisado, por lo que hostwatch informa de menos y cualquier veredicto de disponibilidad sería incorrecto. Con esta opción activada, un nodo en espera omite el descubrimiento de servicios de infraestructura y las alertas de servicio en lugar de inventar caídas."
+
+#: settings.volt
+msgid "A backup override suppresses service discovery even when CARP awareness is enabled."
+msgstr "La anulación a respaldo suprime el descubrimiento de servicios incluso con la detección de CARP activada."
+
+#: settings.volt
+msgid "Always act as backup (never observe)"
+msgstr "Actuar siempre como respaldo (no supervisar nunca)"
+
+#: settings.volt
+msgid "Always act as master"
+msgstr "Actuar siempre como maestro"
+
+#: settings.volt
+msgid "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
+msgstr "Se aplica solo a las interfaces supervisadas. Un nodo sin estado CARP no se ve afectado, por lo que un firewall autónomo sigue observando."
+
+#: settings.volt
+msgid "Automatic (from CARP state)"
+msgstr "Automático (según el estado CARP)"
+
+#: settings.volt
+msgid "Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance."
+msgstr "Automático lee el estado CARP de ifconfig. Use un rol explícito cuando las interfaces supervisadas no tengan una dirección CARP propia, o para fijar un nodo durante el mantenimiento."
+
+#: settings.volt
+msgid "CARP awareness"
+msgstr "Detección de CARP"
+
+#: settings.volt
+msgid "Defer service observation to the CARP master"
+msgstr "Delegar la observación de servicios al maestro CARP"
+
+#: settings.volt
+msgid "Delivery uses whichever channels are enabled on the Email and Webhook tabs; a disabled channel is skipped."
+msgstr "La entrega usa los canales habilitados en las pestañas Correo electrónico y Webhook; un canal deshabilitado se omite."
+
+#: settings.volt
+msgid "Detected role"
+msgstr "Rol detectado"
+
+#: settings.volt
+msgid "Effective mode"
+msgstr "Modo efectivo"
+
+#: settings.volt
+msgid "Enable sidecar catalogue translations"
+msgstr "Activar las traducciones del catálogo sidecar"
+
+#: settings.volt
+msgid "Failover notification"
+msgstr "Notificación de conmutación por error"
+
+#: settings.volt
+msgid "Forces the interface to use the dedicated translation file of this plugin. If disabled, labels may default to English."
+msgstr "Fuerza el uso del archivo de traducción propio de este plugin en la interfaz. Si está desactivado, las etiquetas pueden quedar en inglés."
+
+#: settings.volt
+msgid "HA / CARP"
+msgstr "HA / CARP"
+
+#: settings.volt
+msgid "Live CARP status"
+msgstr "Estado CARP en vivo"
+
+#: settings.volt
+msgid "No CARP virtual IP defined on this firewall."
+msgstr "No hay ninguna IP virtual CARP definida en este firewall."
+
+#: settings.volt
+msgid "Notify when this node changes CARP role"
+msgstr "Notificar cuando este nodo cambie de rol CARP"
+
+#: settings.volt
+msgid "Plugin Options"
+msgstr "Opciones del plugin"
+
+#: settings.volt
+msgid "Read-only view of this node: the role ifconfig reports for the monitored interfaces, and the CARP virtual IPs defined on this firewall. Nothing here is saved."
+msgstr "Vista de solo lectura de este nodo: el rol que ifconfig informa para las interfaces supervisadas y las IP virtuales CARP definidas en este firewall. No se guarda nada."
+
+#: settings.volt
+msgid "Reports a MASTER/BACKUP transition once, through the configured email and webhook channels. Without this the transition is only written to the Device Monitor log."
+msgstr "Informa una vez de la transición MASTER/BACKUP a través de los canales de correo electrónico y webhook configurados. Sin esta opción, la transición solo se escribe en el registro de Device Monitor."
+
+#: settings.volt
+msgid "Role override"
+msgstr "Anulación del rol"
+
+#: settings.volt
+msgid "Send Test Webhook"
+msgstr "Enviar webhook de prueba"
+
+#: settings.volt
+msgid "Service observation"
+msgstr "Observación de servicios"
+
+#: settings.volt
+msgid "State"
+msgstr "Estado"
+
+#: settings.volt
+msgid "VHID"
+msgstr "VHID"
+
+#: settings.volt
+msgid "Virtual IP"
+msgstr "IP virtual"
+
+#: settings.volt
+msgid "Identity conflict alerts"
+msgstr "Alertas de conflicto de identidad"
+
+#: settings.volt
+msgid "Send a high-severity IPv4 or IPv6 address conflict alert to the webhook endpoint."
+msgstr "Envía una alerta de gravedad alta por un conflicto de dirección IPv4 o IPv6 al endpoint del webhook."
+
+#: settings.volt
+msgid "Language"
+msgstr "Idioma"
+
+#: settings.volt
+msgid "Plugin translations (sidecar catalogue)"
+msgstr "Traducciones del plugin (catálogo sidecar)"
+
+#: settings.volt
+msgid "Translate Device Monitor strings from the plugin sidecar catalogue. When disabled, the plugin uses the stock OPNsense core catalogues only."
+msgstr "Traduce los textos de Device Monitor desde el catálogo sidecar del plugin. Si está desactivado, el plugin usa únicamente los catálogos del núcleo de OPNsense."
+
+#: settings.volt
+msgid "Enable immediate webhook identity conflict alerts"
+msgstr "Activar alertas inmediatas de conflicto de identidad por webhook"
+
+#: settings.volt
+msgid "Enables the primary high-speed HTTP POST notification engine. This serves as the master transport route used to instantly dispatch both asset summaries (New Device Discoveries) and high-severity security events to your monitoring endpoints."
+msgstr "Activa el motor principal de notificaciones HTTP POST de alta velocidad. Es la ruta de transporte maestra que envía al instante tanto los resúmenes de activos (nuevos dispositivos) como los eventos de seguridad de gravedad alta a sus endpoints de supervisión."
+
+#: settings.volt
+msgid "Triggers a webhook payload dispatch immediately upon detection of an existing MAC address switching between multiple IP addresses (IP Spoofing / Identity Hijacking). Recommended to leave enabled."
+msgstr "Dispara el envío inmediato de una carga útil al webhook al detectar que una dirección MAC existente cambia entre varias direcciones IP (suplantación de IP / secuestro de identidad). Se recomienda mantenerlo activado."
+
+#: settings.volt
+msgid "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."
+msgstr "Seleccione las interfaces de red que se supervisarán activamente en busca de cambios en el inventario de dispositivos y conflictos de identidad."
+
+# ============================================
+# [settings.volt] HA / CARP live status values
+# ============================================
+
+#: settings.volt
+msgid "observing"
+msgstr "observando"
+
+#: settings.volt
+msgid "suppressed"
+msgstr "suprimido"
+
+#: settings.volt
+msgid "unknown"
+msgstr "desconocido"

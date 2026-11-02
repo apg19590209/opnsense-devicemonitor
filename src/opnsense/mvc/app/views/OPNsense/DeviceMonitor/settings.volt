@@ -46,6 +46,139 @@
              blank panel. -->
         <div class="tab-content dm-settings-panes">
 
+            <!-- TAB 1: Monitoring -->
+            <div role="tabpanel" class="tab-pane active" id="tab-monitoring">
+                <form class="dm-pane-form">
+                <div class="row form-group">
+                    <div class="col-md-3">
+                        <strong>{{ devicemonitor_t('Enable Monitoring') }}</strong>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Enable Monitoring') }}" data-content="{{ devicemonitor_t('Enable automatic network monitoring') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="col-md-9">
+                        <input type="checkbox" id="enabled" />
+                    </div>
+                </div>
+                <div class="row form-group">
+                    <div class="col-md-3">
+                        <strong>{{ devicemonitor_t('Monitored Interfaces') }}</strong>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Monitored Interfaces') }}" data-content="{{ devicemonitor_t('Only devices on selected interfaces are scanned. With no selection, scanning is refused.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="col-md-9">
+                        <div style="margin-top:6px;border:1px solid #444;border-radius:4px;padding:8px;max-width:450px;max-height:200px;overflow-y:auto;" id="monitored-interface-list"></div>
+                        <div id="monitored-interface-warning" class="text-danger" style="margin-top:6px;display:none;">
+                            <i class="fa fa-exclamation-triangle"></i> {{ devicemonitor_t('Monitoring is enabled but no interface is selected. Scans will be refused.') }}
+                        </div>
+                    </div>
+                </div>
+                <div class="row form-group">
+                    <div class="col-md-3">
+                        <strong>{{ devicemonitor_t('Scan Interval') }}</strong>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Scan Interval') }}" data-content="{{ devicemonitor_t('Seconds between scans (60-3600)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="col-md-9">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="number" id="scan_interval" class="form-control" value="300" min="60" max="3600" style="max-width:120px;" />
+                            <span class="text-muted">{{ devicemonitor_t('seconds') }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding:10px 0 0 0;">
+                    <button type="button"
+                            class="btn btn-primary btn-apply"
+                            id="btn-apply-monitoring">
+                        <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
+                    </button>
+                </div>
+                </form>
+            </div>
+
+            <!-- TAB 2: Nmap Scanning -->
+            <div role="tabpanel" class="tab-pane" id="tab-nmap">
+                <form class="dm-pane-form">
+                <div class="row form-group">
+                    <div class="col-xs-12 col-md-3">
+                        <h4 style="margin:5px 0;">{{ devicemonitor_t('Targeted Nmap Scanning') }} <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Targeted Nmap Scanning') }}" data-content="{{ devicemonitor_t('Optional detailed scan performed for newly detected devices after notification.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button></h4>
+                    </div>
+                </div>
+
+                <div class="row form-group">
+                    <div class="col-md-3">
+                        <strong>{{ devicemonitor_t('Enable Targeted Nmap') }}</strong>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Enable Targeted Nmap') }}" data-content="{{ devicemonitor_t('Automatically scan newly detected devices') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="col-md-9">
+                        <input type="checkbox" id="targeted_nmap_enabled" />
+                    </div>
+                </div>
+
+                <div class="row form-group">
+                    <div class="col-md-3">
+                        <strong>{{ devicemonitor_t('Top TCP Ports') }}</strong>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Top TCP Ports') }}" data-content="{{ devicemonitor_t('Number of most common TCP ports to scan (1-1000)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="col-md-9">
+                        <input type="number" id="nmap_top_ports" class="form-control" value="100" min="1" max="1000" style="max-width:120px;" />
+                    </div>
+                </div>
+
+                <div class="row form-group">
+                    <div class="col-md-3">
+                        <strong>{{ devicemonitor_t('Timing Template') }}</strong>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Timing Template') }}" data-content="{{ devicemonitor_t('Nmap timing template. T4 is the default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="col-md-9">
+                        <select id="nmap_timing" class="form-control" style="max-width:180px;">
+                            <option value="0">T0</option>
+                            <option value="1">T1</option>
+                            <option value="2">T2</option>
+                            <option value="3">T3</option>
+                            <option value="4">T4</option>
+                            <option value="5">T5</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row form-group">
+                    <div class="col-md-3">
+                        <strong>{{ devicemonitor_t('Host Timeout') }}</strong>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Host Timeout') }}" data-content="{{ devicemonitor_t('Maximum Nmap scan time per device (10-300 seconds)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="col-md-9">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="number" id="nmap_host_timeout" class="form-control" value="45" min="10" max="300" style="max-width:120px;" />
+                            <span class="text-muted">{{ devicemonitor_t('seconds') }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row form-group">
+                    <div class="col-md-3">
+                        <strong>{{ devicemonitor_t('Version Detection') }}</strong>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Version Detection') }}" data-content="{{ devicemonitor_t('Detect services and versions using light detection') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="col-md-9">
+                        <input type="checkbox" id="nmap_version_detection" />
+                    </div>
+                </div>
+
+                <div class="row form-group">
+                    <div class="col-md-3">
+                        <strong>{{ devicemonitor_t('Maximum Scans Per Cycle') }}</strong>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Maximum Scans Per Cycle') }}" data-content="{{ devicemonitor_t('Maximum queued targeted scans processed during one monitoring cycle (1-10)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="col-md-9">
+                        <input type="number" id="nmap_max_per_cycle" class="form-control" value="2" min="1" max="10" style="max-width:120px;" />
+                    </div>
+                </div>
+                <div style="padding:10px 0 0 0;">
+                    <button type="button" class="btn btn-primary btn-apply" id="btn-apply-nmap">
+                        <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
+                    </button>
+                </div>
+                </form>
+            </div>
+
             <!-- TAB 3: Email -->
             <div role="tabpanel" class="tab-pane" id="tab-email">
                 <form class="dm-pane-form">
@@ -264,7 +397,7 @@
 
                     <div class="row form-group">
                         <div class="col-md-3">
-                            <strong>Send Test Webhook</strong>
+                            <strong>{{ devicemonitor_t('Send Test Webhook') }}</strong>
                         </div>
                         <div class="col-md-9">
                             <button type="button" id="test_webhook" class="btn btn-default btn-sm">
@@ -302,139 +435,6 @@
                 </div>
                 <div style="padding:10px 0 0 0;">
                     <button type="button" class="btn btn-primary btn-apply" id="btn-apply-webhook">
-                        <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
-                    </button>
-                </div>
-                </form>
-            </div>
-
-            <!-- TAB 1: Monitoring -->
-            <div role="tabpanel" class="tab-pane active" id="tab-monitoring">
-                <form class="dm-pane-form">
-                <div class="row form-group">
-                    <div class="col-md-3">
-                        <strong>{{ devicemonitor_t('Enable Monitoring') }}</strong>
-                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Enable Monitoring') }}" data-content="{{ devicemonitor_t('Enable automatic network monitoring') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                    </div>
-                    <div class="col-md-9">
-                        <input type="checkbox" id="enabled" />
-                    </div>
-                </div>
-                <div class="row form-group">
-                    <div class="col-md-3">
-                        <strong>{{ devicemonitor_t('Monitored Interfaces') }}</strong>
-                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Monitored Interfaces') }}" data-content="{{ devicemonitor_t('Only devices on selected interfaces are scanned. With no selection, scanning is refused.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                    </div>
-                    <div class="col-md-9">
-                        <div style="margin-top:6px;border:1px solid #444;border-radius:4px;padding:8px;max-width:450px;max-height:200px;overflow-y:auto;" id="monitored-interface-list"></div>
-                        <div id="monitored-interface-warning" class="text-danger" style="margin-top:6px;display:none;">
-                            <i class="fa fa-exclamation-triangle"></i> {{ devicemonitor_t('Monitoring is enabled but no interface is selected. Scans will be refused.') }}
-                        </div>
-                    </div>
-                </div>
-                <div class="row form-group">
-                    <div class="col-md-3">
-                        <strong>{{ devicemonitor_t('Scan Interval') }}</strong>
-                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Scan Interval') }}" data-content="{{ devicemonitor_t('Seconds between scans (60-3600)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                    </div>
-                    <div class="col-md-9">
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <input type="number" id="scan_interval" class="form-control" value="300" min="60" max="3600" style="max-width:120px;" />
-                            <span class="text-muted">{{ devicemonitor_t('seconds') }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="padding:10px 0 0 0;">
-                    <button type="button"
-                            class="btn btn-primary btn-apply"
-                            id="btn-apply-monitoring">
-                        <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
-                    </button>
-                </div>
-                </form>
-            </div>
-
-            <!-- TAB 2: Nmap Scanning -->
-            <div role="tabpanel" class="tab-pane" id="tab-nmap">
-                <form class="dm-pane-form">
-                <div class="row form-group">
-                    <div class="col-xs-12 col-md-3">
-                        <h4 style="margin:5px 0;">{{ devicemonitor_t('Targeted Nmap Scanning') }} <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Targeted Nmap Scanning') }}" data-content="{{ devicemonitor_t('Optional detailed scan performed for newly detected devices after notification.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button></h4>
-                    </div>
-                </div>
-
-                <div class="row form-group">
-                    <div class="col-md-3">
-                        <strong>{{ devicemonitor_t('Enable Targeted Nmap') }}</strong>
-                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Enable Targeted Nmap') }}" data-content="{{ devicemonitor_t('Automatically scan newly detected devices') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                    </div>
-                    <div class="col-md-9">
-                        <input type="checkbox" id="targeted_nmap_enabled" />
-                    </div>
-                </div>
-
-                <div class="row form-group">
-                    <div class="col-md-3">
-                        <strong>{{ devicemonitor_t('Top TCP Ports') }}</strong>
-                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Top TCP Ports') }}" data-content="{{ devicemonitor_t('Number of most common TCP ports to scan (1-1000)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                    </div>
-                    <div class="col-md-9">
-                        <input type="number" id="nmap_top_ports" class="form-control" value="100" min="1" max="1000" style="max-width:120px;" />
-                    </div>
-                </div>
-
-                <div class="row form-group">
-                    <div class="col-md-3">
-                        <strong>{{ devicemonitor_t('Timing Template') }}</strong>
-                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Timing Template') }}" data-content="{{ devicemonitor_t('Nmap timing template. T4 is the default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                    </div>
-                    <div class="col-md-9">
-                        <select id="nmap_timing" class="form-control" style="max-width:180px;">
-                            <option value="0">T0</option>
-                            <option value="1">T1</option>
-                            <option value="2">T2</option>
-                            <option value="3">T3</option>
-                            <option value="4">T4</option>
-                            <option value="5">T5</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="row form-group">
-                    <div class="col-md-3">
-                        <strong>{{ devicemonitor_t('Host Timeout') }}</strong>
-                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Host Timeout') }}" data-content="{{ devicemonitor_t('Maximum Nmap scan time per device (10-300 seconds)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                    </div>
-                    <div class="col-md-9">
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <input type="number" id="nmap_host_timeout" class="form-control" value="45" min="10" max="300" style="max-width:120px;" />
-                            <span class="text-muted">{{ devicemonitor_t('seconds') }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row form-group">
-                    <div class="col-md-3">
-                        <strong>{{ devicemonitor_t('Version Detection') }}</strong>
-                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Version Detection') }}" data-content="{{ devicemonitor_t('Detect services and versions using light detection') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                    </div>
-                    <div class="col-md-9">
-                        <input type="checkbox" id="nmap_version_detection" />
-                    </div>
-                </div>
-
-                <div class="row form-group">
-                    <div class="col-md-3">
-                        <strong>{{ devicemonitor_t('Maximum Scans Per Cycle') }}</strong>
-                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Maximum Scans Per Cycle') }}" data-content="{{ devicemonitor_t('Maximum queued targeted scans processed during one monitoring cycle (1-10)') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
-                    </div>
-                    <div class="col-md-9">
-                        <input type="number" id="nmap_max_per_cycle" class="form-control" value="2" min="1" max="10" style="max-width:120px;" />
-                    </div>
-                </div>
-                <div style="padding:10px 0 0 0;">
-                    <button type="button" class="btn btn-primary btn-apply" id="btn-apply-nmap">
                         <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
                     </button>
                 </div>
@@ -540,12 +540,12 @@
                 <div class="row form-group">
                     <div class="col-md-3">
                         <strong>{{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}</strong>
-                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}" data-content="Forces the interface to use the plugin's dedicated translation file. If disabled, labels may default to English."><i class="fa fa-info-circle" aria-hidden="true"></i></button>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Plugin translations (sidecar catalogue)') }}" data-content="{{ devicemonitor_t('Forces the interface to use the dedicated translation file of this plugin. If disabled, labels may default to English.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                     </div>
                     <div class="col-md-9">
                         <label style="margin:0;">
                             <input type="checkbox" id="sidecar_translation_enabled" />
-                            <strong>Enable sidecar catalogue translations</strong>
+                            <strong>{{ devicemonitor_t('Enable sidecar catalogue translations') }}</strong>
                         </label>
                     </div>
                 </div>
@@ -560,7 +560,124 @@
                 </form>
             </div>
 
-            <!-- TAB 6: About -->
+            <!-- TAB 6: HA / CARP -->
+            <div role="tabpanel" class="tab-pane" id="tab-ha">
+                <form class="dm-pane-form">
+                <div class="row form-group">
+                    <div class="col-md-3">
+                        <strong>{{ devicemonitor_t('CARP awareness') }}</strong>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('CARP awareness') }}"
+                                data-content="{{ devicemonitor_t('A CARP standby does not carry the monitored traffic, so hostwatch there under-reports and every liveness verdict would be wrong. With this enabled a standby node skips infrastructure-service discovery and service alerts instead of inventing outages.') }}">
+                            <i class="fa fa-info-circle" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="col-md-9">
+                        <label style="margin:0;">
+                            <input type="checkbox" id="ha_carp_enabled" />
+                            <strong>{{ devicemonitor_t('Defer service observation to the CARP master') }}</strong>
+                        </label>
+                        <div class="text-muted" style="margin-top:6px;max-width:600px;">
+                            {{ devicemonitor_t('Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing.') }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row form-group">
+                    <div class="col-md-3">
+                        <strong>{{ devicemonitor_t('Role override') }}</strong>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Role override') }}"
+                                data-content="{{ devicemonitor_t('Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance.') }}">
+                            <i class="fa fa-info-circle" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="col-md-9">
+                        <select id="ha_role_override" class="form-control" style="max-width:260px;">
+                            <option value="auto">{{ devicemonitor_t('Automatic (from CARP state)') }}</option>
+                            <option value="master">{{ devicemonitor_t('Always act as master') }}</option>
+                            <option value="backup">{{ devicemonitor_t('Always act as backup (never observe)') }}</option>
+                        </select>
+                        <div class="text-muted" style="margin-top:6px;">
+                            {{ devicemonitor_t('A backup override suppresses service discovery even when CARP awareness is enabled.') }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row form-group">
+                    <div class="col-md-3">
+                        <strong>{{ devicemonitor_t('Failover notification') }}</strong>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Failover notification') }}"
+                                data-content="{{ devicemonitor_t('Reports a MASTER/BACKUP transition once, through the configured email and webhook channels. Without this the transition is only written to the Device Monitor log.') }}">
+                            <i class="fa fa-info-circle" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="col-md-9">
+                        <label style="margin:0;">
+                            <input type="checkbox" id="ha_notify_failover" />
+                            <strong>{{ devicemonitor_t('Notify when this node changes CARP role') }}</strong>
+                        </label>
+                        <div class="text-muted" style="margin-top:6px;max-width:600px;">
+                            {{ devicemonitor_t('Delivery uses whichever channels are enabled on the Email and Webhook tabs; a disabled channel is skipped.') }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row form-group">
+                    <div class="col-md-3">
+                        <strong>{{ devicemonitor_t('Live CARP status') }}</strong>
+                        <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Live CARP status') }}"
+                                data-content="{{ devicemonitor_t('Read-only view of this node: the role ifconfig reports for the monitored interfaces, and the CARP virtual IPs defined on this firewall. Nothing here is saved.') }}">
+                            <i class="fa fa-info-circle" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="col-md-9">
+                        <table class="table table-condensed dm-status-table" id="ha-status-table">
+                            <tbody>
+                                <tr>
+                                    <td style="width:40%;color:#888;">{{ devicemonitor_t('Detected role') }}</td>
+                                    <td id="ha-status-role">-</td>
+                                </tr>
+                                <tr>
+                                    <td style="color:#888;">{{ devicemonitor_t('Effective mode') }}</td>
+                                    <td id="ha-status-mode">-</td>
+                                </tr>
+                                <tr>
+                                    <td style="color:#888;">{{ devicemonitor_t('Service observation') }}</td>
+                                    <td id="ha-status-observation">-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table class="table table-condensed dm-status-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ devicemonitor_t('Virtual IP') }}</th>
+                                    <th>{{ devicemonitor_t('VHID') }}</th>
+                                    <th>{{ devicemonitor_t('State') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ha-status-vips">
+                                <tr>
+                                    <td colspan="3" class="text-muted">{{ devicemonitor_t('No CARP virtual IP defined on this firewall.') }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-default btn-sm" id="btn-ha-status-refresh">
+                            <i class="fa fa-refresh" aria-hidden="true"></i> {{ devicemonitor_t('Refresh') }}
+                        </button>
+                    </div>
+                </div>
+
+                <div style="padding:10px 0 0 0;">
+                    <button type="button"
+                            class="btn btn-primary btn-apply"
+                            id="btn-apply-ha">
+                        <i class="fa fa-check"></i> {{ devicemonitor_t('Apply') }}
+                    </button>
+                </div>
+                </form>
+            </div>
+
+
+            <!-- TAB 7: About -->
             <div role="tabpanel" class="tab-pane" id="tab-about">
                 <form class="dm-pane-form">
                 <div style="max-width:600px;padding:10px 0;">
@@ -612,6 +729,12 @@
 
 <style>
 .dm-info { border:0; background:transparent; color:#337ab7; padding:0 3px; cursor:pointer; }
+/* Tab geometry lives here rather than in inline style attributes so the nav and
+ * the pane area stay in step; the same classes are used by every subtab. */
+.dm-settings-tabs { margin:10px 0 0 0; }
+.dm-settings-panes { padding:15px 0; }
+.dm-status-table { margin-bottom:8px; }
+.dm-status-table td:first-child { color:#888; }
 </style>
 <script>
 $().ready(function() {
@@ -626,6 +749,16 @@ $().ready(function() {
     $('.dm-info').on('keydown', function(event) {
         if (event.key === 'Escape') { $(this).popover('hide').trigger('blur'); }
     });
+    /* Bootstrap 3 activates a tab but never updates the ARIA state, so the
+     * static aria-selected attributes would go stale after the first click.
+     * Keep them truthful for assistive technology. */
+    $('.dm-settings-tabs a[data-toggle="tab"]').on('shown.bs.tab', function(event) {
+        $('.dm-settings-tabs a[data-toggle="tab"]').attr('aria-selected', 'false');
+        $(event.target).attr('aria-selected', 'true');
+    });
+    /* The CARP table is a live reading: refresh it when the subtree is opened
+     * rather than only when the page finished loading. */
+    $('a[href="#tab-ha"]').on('shown.bs.tab', loadHaStatus);
     var returnPath = new URLSearchParams(window.location.search).get('return');
     if (returnPath && /^\/ui\/devicemonitor\/index\/devicehistory\?mac=[0-9a-fA-F:%]+$/.test(returnPath)) {
         $('#return-to-device-details').attr('href', returnPath).show();
@@ -638,7 +771,16 @@ $().ready(function() {
         config_error:  {{ lang.query('Error saving configuration')|json_encode(15) }},
         test_sent:     {{ lang.query('Test email sent to')|json_encode(15) }},
         test_failed:   {{ lang.query('Failed to send email')|json_encode(15) }},
-        saving:        {{ lang.query('Saving...')|json_encode(15) }}
+        saving:        {{ lang.query('Saving...')|json_encode(15) }},
+        /* The HA / CARP status words reach the script through the same encoded
+         * lang.query path as every other string here: the installer merges the
+         * plugin catalogues into the core domain (DM-BL-008c), so lang.query does
+         * resolve them, and only a literal accepted by the JS renderer may appear
+         * inside a script body. */
+        status_unknown:    {{ lang.query('unknown')|json_encode(15) }},
+        status_observing:  {{ lang.query('observing')|json_encode(15) }},
+        status_suppressed: {{ lang.query('suppressed')|json_encode(15) }},
+        no_carp_vips:      {{ lang.query('No CARP virtual IP defined on this firewall.')|json_encode(15) }}
     };
 
     var allVlanNames = {};
@@ -735,6 +877,11 @@ $().ready(function() {
             $('#pihole_url').val(d.pihole_url||'');
             $('#pihole_password').val(d.pihole_password||'');
             $('#unbound_enabled').prop('checked', d.unbound_enabled==='1');
+            /* HA / CARP: an absent key means "not yet written", so fall back to
+             * the defaults in defaults.json rather than unchecking the box. */
+            $('#ha_carp_enabled').prop('checked', d.ha_carp_enabled===undefined ? true : d.ha_carp_enabled==='1');
+            $('#ha_notify_failover').prop('checked', d.ha_notify_failover==='1');
+            $('#ha_role_override').val(d.ha_role_override||'auto');
             $('#targeted_nmap_enabled').prop(
                 'checked',
                 String(
@@ -799,6 +946,8 @@ $().ready(function() {
             toggleAdGuardConfig();
             togglePiHoleConfig();
             toggleUnboundConfig();
+            updateHaControls();
+            loadHaStatus();
         }});
     }
 
@@ -832,6 +981,58 @@ $().ready(function() {
         // enable/disable checkbox. Kept as a no-op for symmetry with the other
         // providers so the checkbox state is simply read on save.
     }
+
+    /* The role override is only meaningful while CARP awareness is on: with
+     * awareness off the daemon observes on every node regardless of role. */
+    function updateHaControls() {
+        $('#ha_role_override').prop('disabled', !$('#ha_carp_enabled').is(':checked'));
+    }
+
+    /* Read-only CARP view. The role is decoded on the server so the page never
+     * re-implements the ifconfig parsing the daemon already performs. Every
+     * value is written with .text(), never .html(): the interface and state
+     * strings come from ifconfig output. */
+    function loadHaStatus() {
+        $('#ha-status-role, #ha-status-mode, #ha-status-observation').text(translations.status_unknown);
+
+        $.ajax({ url:'/api/devicemonitor/config/getcarpstatus', type:'GET', success:function(d) {
+            d = d || {};
+
+            $('#ha-status-role').text(d.role && d.role !== 'none' ? d.role : translations.status_unknown);
+            $('#ha-status-mode').text(d.mode || translations.status_unknown);
+            $('#ha-status-observation').text(
+                d.observing ? translations.status_observing
+                            : (d.reason || translations.status_suppressed)
+            );
+
+            var $body = $('#ha-status-vips').empty();
+            var vips = d.vips || [];
+
+            if (!vips.length) {
+                $body.append(
+                    $('<tr>').append(
+                        $('<td>').attr('colspan', 3).addClass('text-muted').text(translations.no_carp_vips)
+                    )
+                );
+                return;
+            }
+
+            vips.forEach(function(v) {
+                $body.append(
+                    $('<tr>').append(
+                        $('<td>').text(v.vip || ''),
+                        $('<td>').text(v.vhid || ''),
+                        $('<td>').text(v.state || translations.status_unknown)
+                    )
+                );
+            });
+        }, error:function() {
+            $('#ha-status-role, #ha-status-mode, #ha-status-observation').text(translations.status_unknown);
+        }});
+    }
+
+    $('#ha_carp_enabled').change(updateHaControls);
+    $('#btn-ha-status-refresh').click(loadHaStatus);
     $('#email_enabled').change(toggleEmailConfig);
     $('#service_email_enabled').change(toggleServiceEmailOptions);
     $('#email_method').change(toggleEmailMethod);
@@ -853,6 +1054,9 @@ $().ready(function() {
             pihole_url:      $('#pihole_url').val(),
             pihole_password: $('#pihole_password').val(),
             unbound_enabled: $('#unbound_enabled').is(':checked')?'1':'0',
+            ha_carp_enabled: $('#ha_carp_enabled').is(':checked')?'1':'0',
+            ha_role_override: $('#ha_role_override').val(),
+            ha_notify_failover: $('#ha_notify_failover').is(':checked')?'1':'0',
             email_enabled:    $('#email_enabled').is(':checked')?'1':'0',
             service_email_enabled: $('#service_email_enabled').is(':checked')?'1':'0',
             service_email_new: $('#service_email_new').is(':checked')?'1':'0',
@@ -903,7 +1107,15 @@ $().ready(function() {
         }});
     }
 
-    $('.btn-apply').click(function(){ saveConfig($(this)); });
+    /* Every pane shares one save path, so the CARP status is refreshed after a
+     * successful save: toggling awareness changes what the daemon will do on the
+     * next cycle and the read-only table must not keep the previous verdict. */
+    $('.btn-apply').click(function(){
+        saveConfig($(this), function() {
+            showToast(translations.config_saved, 'success');
+            loadHaStatus();
+        });
+    });
 
     $('#btn-test-email').click(function() {
         var email=$('#email_to').val();

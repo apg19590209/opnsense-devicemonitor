@@ -152,6 +152,9 @@ def load_config():
             'nmap_host_timeout': int(DEFAULT_CONFIG.get('nmap_host_timeout', 45)),
             'nmap_version_detection': DEFAULT_CONFIG.get('nmap_version_detection', '1') == '1',
             'nmap_max_per_cycle': int(DEFAULT_CONFIG.get('nmap_max_per_cycle', 2)),
+            'ha_carp_enabled': DEFAULT_CONFIG.get('ha_carp_enabled', '1') == '1',
+            'ha_role_override': DEFAULT_CONFIG.get('ha_role_override', 'auto'),
+            'ha_notify_failover': DEFAULT_CONFIG.get('ha_notify_failover', '0') == '1',
             'apiEmailUrl': PATHS.get('apiEmailUrl', ''),
             'apiWebhookUrl': PATHS.get('apiWebhookUrl', '')
         }
@@ -190,6 +193,9 @@ def load_config():
                 'nmap_host_timeout': int(config.get('nmap_host_timeout', DEFAULT_CONFIG.get('nmap_host_timeout', 45))),
                 'nmap_version_detection': config.get('nmap_version_detection', DEFAULT_CONFIG.get('nmap_version_detection', '1')) == '1',
                 'nmap_max_per_cycle': int(config.get('nmap_max_per_cycle', DEFAULT_CONFIG.get('nmap_max_per_cycle', 2))),
+                'ha_carp_enabled': config.get('ha_carp_enabled', DEFAULT_CONFIG.get('ha_carp_enabled', '1')) == '1',
+                'ha_role_override': config.get('ha_role_override', DEFAULT_CONFIG.get('ha_role_override', 'auto')),
+                'ha_notify_failover': config.get('ha_notify_failover', DEFAULT_CONFIG.get('ha_notify_failover', '0')) == '1',
                 'apiEmailUrl': PATHS.get('apiEmailUrl', ''),
                 'apiWebhookUrl': PATHS.get('apiWebhookUrl', '')
             }
@@ -226,6 +232,9 @@ def load_config():
             'nmap_host_timeout': 45,
             'nmap_version_detection': True,
             'nmap_max_per_cycle': 2,
+            'ha_carp_enabled': True,
+            'ha_role_override': 'auto',
+            'ha_notify_failover': False,
             'apiEmailUrl': PATHS.get('apiEmailUrl'),
             'apiWebhookUrl': PATHS.get('apiWebhookUrl')
         }
@@ -2994,7 +3003,7 @@ def detect_carp_role(devices, ifconfig_text):
     return None
 
 
-def service_observation_allowed(networks, ifconfig_text=None):
+def service_observation_allowed(networks, ifconfig_text=None, config=None):
     """
     Return ``(allowed, role, reason)`` for service observation on this node.
 
@@ -3003,9 +3012,31 @@ def service_observation_allowed(networks, ifconfig_text=None):
     without the gate - invent them. Neither is a useful answer from a standby, so
     observation is refused. A node with no CARP is unaffected.
 
+    Two settings from the HA / CARP tab modify the verdict:
+
+    ``ha_role_override`` pins the role instead of reading it from ifconfig, which
+    is the only way to steer a node whose monitored interfaces carry no CARP
+    address of their own. ``ha_carp_enabled`` turns the deferral off entirely, so
+    every node observes; the role is still reported because it is logged and may
+    drive a failover notification.
+
     ``ifconfig_text`` is injectable so the decision can be tested without a CARP
     pair; when omitted the live output is read.
     """
+    settings = config or {}
+
+    override = str(settings.get('ha_role_override') or 'auto').strip().lower()
+
+    if override not in ('auto', 'master', 'backup'):
+        override = 'auto'
+
+    aware = settings.get('ha_carp_enabled', True)
+
+    if isinstance(aware, str):
+        aware = aware == '1'
+
+    forced = {'master': 'MASTER', 'backup': 'BACKUP'}.get(override)
+
     devices = [
         str(network.get('device') or '').strip()
         for network in (networks or [])
@@ -3013,7 +3044,9 @@ def service_observation_allowed(networks, ifconfig_text=None):
     devices = [device for device in devices if device]
 
     if not devices:
-        return True, None, ''
+        # Nothing monitored means nothing to observe; the override is still
+        # reported so the UI and the transition log agree.
+        return True, forced, ''
 
     if ifconfig_text is None:
         try:
@@ -3027,12 +3060,14 @@ def service_observation_allowed(networks, ifconfig_text=None):
             ifconfig_text = getattr(result, 'stdout', '') or ''
         except (OSError, subprocess.TimeoutExpired) as e:
             # An unreadable ifconfig must not silently disable observation.
-            return True, None, f'ifconfig unavailable: {e}'
+            if forced == 'BACKUP' and aware:
+                return False, forced, 'role override: backup'
+            return True, forced, f'ifconfig unavailable: {e}'
 
-    role = detect_carp_role(devices, ifconfig_text)
+    role = forced or detect_carp_role(devices, ifconfig_text)
 
-    if role == 'BACKUP':
-        return False, role, 'CARP backup node'
+    if role == 'BACKUP' and aware:
+        return False, role, ('role override: backup' if forced else 'CARP backup node')
 
     return True, role, ''
 
@@ -3067,6 +3102,64 @@ def record_carp_role(role):
     except sqlite3.Error:
         return True
 
+
+def read_carp_role():
+    """Return the persisted CARP role, or '' when nothing has been recorded."""
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            row = conn.execute(
+                'SELECT carp_role FROM service_discovery_state WHERE id = 1'
+            ).fetchone()
+
+            return str(row[0] or '') if row else ''
+
+    except sqlite3.Error:
+        return ''
+
+
+def send_failover_notification(role, previous, allowed, reason):
+    """
+    Report one CARP role transition through the configured channels.
+
+    Called only when ``record_carp_role`` reports a transition and the HA / CARP
+    tab has failover notification enabled, so a node that flaps does not produce
+    a message per scan. Delivery happens in the helper, which owns the channel
+    guards; a failure here is logged and never aborts the scan.
+    """
+    helper = (
+        '/usr/local/opnsense/scripts/OPNsense/'
+        'DeviceMonitor/notify_failover.php'
+    )
+
+    payload = {
+        'hostname': socket.gethostname(),
+        'role': str(role or 'none'),
+        'previous': str(previous or 'none'),
+        'observing': bool(allowed),
+        'reason': str(reason or ''),
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+    }
+
+    try:
+        result = subprocess.run(
+            ['/usr/local/bin/php', helper],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or '').strip()[:200]
+            log(f'[HA] failover notification failed: {detail}')
+            return False
+
+        return True
+
+    except (OSError, subprocess.SubprocessError) as e:
+        log(f'[HA] failover notification error: {e}')
+        return False
 
 
 def service_visibility_summary(conn, networks):
@@ -8242,13 +8335,31 @@ def full_scan():
     # A CARP BACKUP node does not carry the monitored traffic, so it must not
     # reach liveness verdicts or alert on them. The role is persisted so the
     # transition is logged once instead of on every scan.
-    allowed, carp_role, observation_reason = service_observation_allowed(networks)
+    allowed, carp_role, observation_reason = service_observation_allowed(
+        networks,
+        config=config,
+    )
+
+    # Read before the write: record_carp_role reports True both for a genuine
+    # transition and for the first observation after install, and only the former
+    # should reach the notification channels.
+    previous_carp_role = read_carp_role()
 
     if record_carp_role(carp_role):
         log(
             f'[SERVICES] CARP role: {carp_role or "none"} '
             f'({"observing" if allowed else observation_reason})'
         )
+
+        # One message per transition, never per scan: record_carp_role only
+        # returns True when the persisted role actually changed.
+        if config.get('ha_notify_failover') and previous_carp_role:
+            send_failover_notification(
+                carp_role,
+                previous_carp_role,
+                allowed,
+                observation_reason,
+            )
 
     if allowed:
         run_scheduled_service_discovery(networks=networks)

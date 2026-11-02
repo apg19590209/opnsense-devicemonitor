@@ -97,6 +97,157 @@ class ConfigController extends ApiControllerBase
         } catch (\Exception $e) {}
         return $result;
     }
+    /**
+     * Read-only CARP state for the monitored interfaces plus the CARP virtual IPs
+     * defined on this firewall. Consumed by the HA / CARP subtab.
+     *
+     * The role is derived the same way the daemon derives it: `ifconfig` prints
+     * ``carp: MASTER|BACKUP vhid N ...`` on the device block, and MASTER wins over
+     * BACKUP because a node that owns any monitored segment is observing it.
+     * Nothing is stored, so the page can refresh this on demand.
+     */
+    public function getcarpstatusAction()
+    {
+        $model = new DeviceMonitor();
+        $config = $model->getConfig();
+
+        $override = strtolower(trim((string)($config['ha_role_override'] ?? 'auto')));
+        if (!in_array($override, ['auto', 'master', 'backup'], true)) {
+            $override = 'auto';
+        }
+
+        /* An absent key means the setting predates the HA tab; the daemon then
+         * behaves as it always has (CARP aware), which is what '1' means here. */
+        $aware = !isset($config['ha_carp_enabled']) || ((string)$config['ha_carp_enabled'] === '1');
+
+        $interfaceDevices = [];
+        $vips = [];
+
+        try {
+            $xml = @simplexml_load_file('/conf/config.xml');
+
+            if ($xml && isset($xml->interfaces)) {
+                foreach ($xml->interfaces->children() as $ifName => $ifData) {
+                    $device = trim((string)($ifData->if ?? ''));
+                    if ($device !== '') {
+                        $interfaceDevices[(string)$ifName] = $device;
+                    }
+                }
+            }
+
+            if ($xml && isset($xml->virtualip->vip)) {
+                foreach ($xml->virtualip->vip as $vip) {
+                    if (strtolower(trim((string)($vip->mode ?? ''))) !== 'carp') {
+                        continue;
+                    }
+                    $vips[] = [
+                        'interface' => trim((string)($vip->interface ?? '')),
+                        'vhid' => trim((string)($vip->vhid ?? '')),
+                        'subnet' => trim((string)($vip->subnet ?? '')),
+                        'descr' => trim((string)($vip->descr ?? '')),
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            // An unreadable config.xml is a standalone node, not an error.
+        }
+
+        $monitored = [];
+        foreach (explode(',', (string)($config['monitored_interfaces'] ?? '')) as $name) {
+            $name = trim($name);
+            if ($name !== '') {
+                $monitored[] = $name;
+            }
+        }
+
+        $states = $this->carpStates();
+
+        $seen = [];
+        foreach ($monitored as $name) {
+            $device = $interfaceDevices[$name] ?? '';
+            if ($device !== '' && isset($states[$device])) {
+                $seen[$states[$device]] = true;
+            }
+        }
+
+        $role = 'none';
+        if (isset($seen['MASTER'])) {
+            $role = 'MASTER';
+        } elseif (isset($seen['BACKUP'])) {
+            $role = 'BACKUP';
+        }
+
+        $mode = ($override === 'auto') ? $role : strtoupper($override);
+
+        $observing = true;
+        $reason = '';
+        if ($aware && $mode === 'BACKUP') {
+            $observing = false;
+            $reason = ($override === 'backup') ? 'role override: backup' : 'CARP backup node';
+        }
+
+        $rows = [];
+        foreach ($vips as $vip) {
+            $device = $interfaceDevices[$vip['interface']] ?? '';
+            $label = ($vip['subnet'] !== '') ? $vip['subnet'] : $vip['interface'];
+            if ($vip['descr'] !== '') {
+                $label .= ' (' . $vip['descr'] . ')';
+            }
+            $rows[] = [
+                'vip' => $label,
+                'vhid' => $vip['vhid'],
+                'state' => ($device !== '' && isset($states[$device])) ? $states[$device] : 'unknown',
+            ];
+        }
+
+        return [
+            'result' => 'ok',
+            'role' => $role,
+            'mode' => $mode,
+            'override' => $override,
+            'observing' => $observing,
+            'reason' => $reason,
+            'monitored_interfaces' => $monitored,
+            'vips' => $rows,
+        ];
+    }
+
+    /**
+     * Map interface device names to their CARP state from `ifconfig -a`.
+     * @return array<string,string>
+     */
+    private function carpStates()
+    {
+        $states = [];
+        $output = [];
+
+        @exec('/sbin/ifconfig -a 2>/dev/null', $output);
+
+        $device = null;
+
+        foreach ($output as $line) {
+            if (!preg_match('/^\s/', $line)) {
+                if (preg_match('/^([A-Za-z0-9_.\-]+):/', $line, $match)) {
+                    $device = $match[1];
+                }
+                continue;
+            }
+
+            if ($device === null || stripos(ltrim($line), 'carp:') !== 0) {
+                continue;
+            }
+
+            $fields = preg_split('/\s+/', trim($line));
+            $state = strtoupper((string)($fields[1] ?? ''));
+
+            if ($state === 'MASTER' || $state === 'BACKUP') {
+                $states[$device] = $state;
+            }
+        }
+
+        return $states;
+    }
+
     private function ipv4SubnetRange($ip, $prefix)
     {
         $ipLong = ip2long($ip);
@@ -194,8 +345,23 @@ class ConfigController extends ApiControllerBase
         $pihole_password = $this->request->getPost('pihole_password', 'string', '');
 
         $unbound_enabled = $this->request->getPost('unbound_enabled', 'string', '0');
-        if (!in_array($ha_role_override, ['auto', 'master', 'backup'], true)) {
 
+        /* HA / CARP. The role override is a closed set: anything else falls back
+         * to detection so a corrupted POST can never pin a node silently. */
+        $ha_carp_enabled = $this->request->getPost('ha_carp_enabled', 'string', '1');
+        $ha_role_override = strtolower(trim($this->request->getPost('ha_role_override', 'string', 'auto')));
+        $ha_notify_failover = $this->request->getPost('ha_notify_failover', 'string', '0');
+
+        if (!in_array($ha_carp_enabled, ['0', '1'], true)) {
+            return ['result' => 'failed', 'message' => 'Invalid ha_carp_enabled value'];
+        }
+
+        if (!in_array($ha_notify_failover, ['0', '1'], true)) {
+            return ['result' => 'failed', 'message' => 'Invalid ha_notify_failover value'];
+        }
+
+        if (!in_array($ha_role_override, ['auto', 'master', 'backup'], true)) {
+            return ['result' => 'failed', 'message' => 'Invalid ha_role_override value'];
         }
 
         $webhook_enabled = $this->request->getPost('webhook_enabled', 'string', '0');
@@ -459,6 +625,9 @@ class ConfigController extends ApiControllerBase
         $config['pihole_url'] = $pihole_url;
         $config['pihole_password'] = $pihole_password;
         $config['unbound_enabled'] = $unbound_enabled;
+        $config['ha_carp_enabled'] = $ha_carp_enabled;
+        $config['ha_role_override'] = $ha_role_override;
+        $config['ha_notify_failover'] = $ha_notify_failover;
         $config['webhook_enabled'] = $webhook_enabled;
         $config['webhook_url'] = $webhook_url;
         $config['identity_webhook_enabled'] = $identity_webhook_enabled;
