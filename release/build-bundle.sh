@@ -30,7 +30,8 @@ printf '%s\n' \
     uninstall.sh \
     install-unattended.sh \
     release/v2.13.2-runtime.manifest \
-    release/merge-opnsense-catalog.sh >> "$LIST"
+    release/merge-opnsense-catalog.sh \
+    release/compute-prune.sh >> "$LIST"
 
 sort -u "$LIST" -o "$LIST"
 echo "allow-list entries: $(wc -l < "$LIST" | tr -d ' ')"

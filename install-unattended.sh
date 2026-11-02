@@ -51,6 +51,7 @@ else
 fi
 [ ! -e /etc/rc.d/devicemonitor ] && [ ! -L /etc/rc.d/devicemonitor ] || [ "$(readlink /etc/rc.d/devicemonitor)" = /usr/local/etc/rc.d/devicemonitor ] || { echo 'ABORT: rc link collision' >&2; exit 1; }
 STAGE=$(mktemp -d /tmp/dm_install_v213.XXXXXX)
+INSTALLED_LIST=/var/db/devicemonitor/installed-manifest.txt
 BACKUP=
 MUTATING=0
 WAS_RUNNING=0
@@ -79,6 +80,15 @@ cleanup() {
                 fi
             fi
         done < "$BACKUP/plan"
+        if [ -f "$BACKUP/prune" ]; then
+            while read -r prune_id old_hash target; do
+                if [ ! -e "$target" ]; then
+                    cp -p "$BACKUP/files/$prune_id" "$target" || echo "ROLLBACK_FAILED=$target" >&2
+                else
+                    echo "ROLLBACK_CONFLICT=$target" >&2
+                fi
+            done < "$BACKUP/prune"
+        fi
         if [ "$RC_LINK_CREATED" = 1 ]; then rm -f /etc/rc.d/devicemonitor; fi
         if [ "$CONFIGD_CHANGED" = 1 ]; then service configd restart || echo 'ROLLBACK_CONFIGD_RESTART_FAILED' >&2; fi
         if [ "$WAS_RUNNING" = 1 ]; then service devicemonitor restart || echo 'ROLLBACK_DAEMON_RESTART_FAILED' >&2; fi
@@ -173,7 +183,14 @@ expected=61
 [ "$FRESH" = 0 ] || expected=62
 [ "$count" = "$expected" ] || { echo 'ABORT: target count' >&2; exit 1; }
 [ "$NMAP_MISSING" = 0 ] || printf 'NOTICE: nmap is not installed; a real installation runs pkg install -y nmap\n'
-printf 'CHECK_OK version=2.13.2 predecessor=%s files=%s core_locales=%s daemon_running=%s host=%s\n' "$installed" "$count" "$CORE_LOCALES" "$WAS_RUNNING" "$EXPECTED_HOST"
+# Files a previous install recorded that this manifest no longer ships. Computed before any
+# mutation so --check can report them, and so a failed prune plan aborts the whole run.
+: > "$STAGE/prune-targets"
+if [ -f "$INSTALLED_LIST" ]; then
+    /bin/sh "$SCRIPT_DIR/release/compute-prune.sh" "$INSTALLED_LIST" "$MANIFEST" > "$STAGE/prune-targets" || { echo 'ABORT: prune plan' >&2; exit 1; }
+fi
+PRUNABLE=$(wc -l < "$STAGE/prune-targets" | tr -d ' ')
+printf 'CHECK_OK version=2.13.2 predecessor=%s files=%s core_locales=%s prunable=%s daemon_running=%s host=%s\n' "$installed" "$count" "$CORE_LOCALES" "$PRUNABLE" "$WAS_RUNNING" "$EXPECTED_HOST"
 [ "$CHECK_ONLY" = 0 ] || exit 0
 mkdir -p /var/backups/devicemonitor
 BACKUP=$(mktemp -d /var/backups/devicemonitor/install-v213.XXXXXX)
@@ -196,6 +213,21 @@ PY
 fi
 [ ! -f /var/db/devicemonitor/config.json ] || cp -p /var/db/devicemonitor/config.json "$BACKUP/config.json"
 printf 'BACKUP_READY=%s\n' "$BACKUP"
+# Pruned targets are backed up in the same directory as the plan, so one rollback step
+# restores both the replaced files and the ones this install removes.
+if [ "$PRUNABLE" -gt 0 ]; then
+    : > "$BACKUP/prune"
+    prune_id=0
+    while read -r target; do
+        [ -f "$target" ] || continue
+        prune_id=$((prune_id + 1))
+        old_hash=$(sha256 -q "$target")
+        cp -p "$target" "$BACKUP/files/prune-$prune_id"
+        [ "$(sha256 -q "$BACKUP/files/prune-$prune_id")" = "$old_hash" ] || { echo "ABORT: prune backup $target" >&2; exit 1; }
+        printf '%s %s %s\n' "prune-$prune_id" "$old_hash" "$target" >> "$BACKUP/prune"
+    done < "$STAGE/prune-targets"
+    printf 'PRUNE_PLANNED=%s\n' "$(wc -l < "$BACKUP/prune" | tr -d ' ')"
+fi
 # DM-BL-008c: preserve the pristine core catalogues once, before the first merge, so that
 # uninstall.sh can restore them exactly (or delete a file this installer created itself). The
 # record is first-write-wins per locale: a later install must never treat its own merged output
@@ -259,6 +291,15 @@ while read -r id old new mode source target; do
     install -m "$mode" -o "$owner" -g "$group" "$source" "$target"
     [ "$(sha256 -q "$target")" = "$new" ] || { echo "ABORT: poststate $target" >&2; exit 1; }
 done < "$BACKUP/plan"
+PRUNED=0
+if [ -f "$BACKUP/prune" ]; then
+    while read -r prune_id old_hash target; do
+        rm -f "$target" || { echo "ABORT: prune $target" >&2; exit 1; }
+        [ ! -e "$target" ] || { echo "ABORT: prune left $target" >&2; exit 1; }
+        PRUNED=$((PRUNED + 1))
+    done < "$BACKUP/prune"
+    printf 'PRUNED=%s\n' "$PRUNED"
+fi
 if [ ! -e /etc/rc.d/devicemonitor ]; then
     ln -s /usr/local/etc/rc.d/devicemonitor /etc/rc.d/devicemonitor
     RC_LINK_CREATED=1
@@ -310,5 +351,10 @@ assert c.execute('PRAGMA quick_check').fetchone()[0]=='ok'
 c.close()
 PY
 fi
+# Record the exact target set this install owns. A later install diffs its manifest against
+# this file to prune files the plugin no longer ships; nothing else is ever scanned.
+mkdir -p /var/db/devicemonitor
+awk '{print $4}' "$MANIFEST" | sort -u > "$INSTALLED_LIST"
+chmod 644 "$INSTALLED_LIST"
 MUTATING=0
-printf 'INSTALL_OK version=2.13.2 files=%s core_locales=%s backup=%s daemon_restarted=%s\n' "$count" "$CORE_LOCALES" "$BACKUP" "$WAS_RUNNING"
+printf 'INSTALL_OK version=2.13.2 files=%s core_locales=%s pruned=%s backup=%s daemon_restarted=%s\n' "$count" "$CORE_LOCALES" "$PRUNED" "$BACKUP" "$WAS_RUNNING"

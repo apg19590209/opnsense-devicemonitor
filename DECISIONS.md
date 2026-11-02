@@ -2648,3 +2648,36 @@ so the two paths are distinguishable in the field.
 The standby now writes to `device_services` during what used to be a read-only path.
 Nothing is notified, discovery still does not run there, and the only rows it can delete
 are ones its own retirement rules would have deleted anyway.
+
+## 61. The installer prunes files it previously installed but no longer ships
+
+### Decision
+
+Every successful install records the target list it owns in
+`/var/db/devicemonitor/installed-manifest.txt`. The next install diffs that record against
+its own manifest with `release/compute-prune.sh`, backs each stale file up into the
+rollback directory and deletes it after the replacement loop. `--check` reports
+`prunable=<n>`; `INSTALL_OK` reports `pruned=<n>`; a rollback restores the pruned files
+together with the replaced ones.
+
+### Reason
+
+A manifest-driven installer only ever writes. Removing a runtime file in a later release
+would therefore leave the old copy on every node that upgraded from an older line, and
+nothing would ever notice. Until now that was documented as a maintenance rule, which
+means it depended on somebody remembering.
+
+### Evidence
+
+`tests/test_prune_plan.py` pins the two properties that make the deletion safe: a target
+the manifest still ships is never reported, and a recorded path outside the namespaces
+the manifest may own (`/usr/local/opnsense/`, `/usr/local/etc/rc.d/devicemonitor`,
+`/usr/local/etc/inc/plugins.inc.d/devicemonitor.inc`,
+`/usr/local/etc/inc/devicemonitor_locale.inc`) is never reported. A missing record and a
+record identical to the manifest both prune nothing.
+
+### Residual risk
+
+The first install after this change has no record yet, so it prunes nothing; the record
+starts with that install. Deleting the record disables pruning rather than causing a
+scan, by design: the installer only touches files it can prove it wrote.

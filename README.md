@@ -375,7 +375,7 @@ aborts before touching anything. Add `--check` for a dry run, which validates
 everything and prints a report without writing:
 
 ```text
-CHECK_OK version=2.13.2 predecessor=2.13.1 files=61 core_locales=10 daemon_running=1 host=...
+CHECK_OK version=2.13.2 predecessor=2.13.1 files=61 core_locales=10 prunable=0 daemon_running=1 host=...
 ```
 
 ### What the installer verifies and does
@@ -395,6 +395,13 @@ CHECK_OK version=2.13.2 predecessor=2.13.1 files=61 core_locales=10 daemon_runni
    and stops the installation if the daemon does not come back.
 6. Re-hashes every installed file and runs `PRAGMA quick_check` on
    `/var/db/devicemonitor/devices.db`.
+7. **Prunes** what a previous install owned but this manifest no longer ships: the
+   target list recorded at `/var/db/devicemonitor/installed-manifest.txt` is diffed
+   against the new manifest by `release/compute-prune.sh`, each stale file is backed
+   up into the rollback directory and then removed. Paths outside the plugin's own
+   namespaces are ignored, so a corrupted record cannot make the installer delete
+   something that was never its own. The run reports `pruned=<n>` in `INSTALL_OK`, and
+   a rollback restores the pruned files together with the replaced ones.
 
 Any mismatch rolls the node back from the plan and prints
 `ROLLBACK_ATTEMPTED=/var/backups/devicemonitor/install-v213.<id>`. Nothing is
@@ -440,10 +447,11 @@ On a CARP pair, upgrade the master first, verify, then the standby, so the virtu
 keeps being served. Keep the pre-upgrade data backup and the installer's
 `install-v213.<id>/` rollback directory until you have seen a clean scan cycle.
 
-> **Maintenance rule:** the installer never prunes. If a future release removes a
-> runtime file, that removal has to be handled explicitly (an `uninstall.sh` step or a
-> documented manual `rm`), otherwise nodes upgraded from an older line keep the stale
-> copy. Today no such file exists.
+> **Removed files are pruned.** Each install records the target list it owns in
+> `/var/db/devicemonitor/installed-manifest.txt`; the next install diffs that against
+> its manifest and removes the difference after backing it up, so an upgrade never
+> leaves a dead file behind. `--check` reports how many would go (`prunable=<n>`) and
+> `INSTALL_OK` reports how many did (`pruned=<n>`).
 
 Back up the runtime data first — it is not part of the bundle:
 

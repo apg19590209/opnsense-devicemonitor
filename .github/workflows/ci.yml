@@ -116,8 +116,11 @@ jobs:
       # current schema in one init_db() with its rows intact (2.8-2.13.1 are all
       # accepted predecessors, so the 2.10/2.11 lines install directly). Reads the
       # v2.10 tag, which the checkout above fetches with fetch-depth: 0.
-      - name: Validate upgrade from v2.10
-        run: python3 tests/test_upgrade_from_v2_10.py
+      - name: Validate every accepted predecessor upgrade
+        run: python3 tests/test_upgrade_predecessors.py
+
+      - name: Validate the prune plan
+        run: python3 tests/test_prune_plan.py
 
       - name: Lint PHP sources
         run: |
