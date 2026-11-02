@@ -10,9 +10,9 @@ Plugin for automatic network device monitoring in OPNsense firewall. Detects new
 > `release/v2.13.2-runtime.manifest` (40 targets), running on the testbed `192.168.20.23`
 > and on the CARP pair `192.168.20.253` (master) / `.252` (standby). It carries the
 > recovered 2.12 baseline, the HA / CARP feature (Settings → HA / CARP) and the restored
-> O4 service-state ageing. The install steps below still describe the v2.10 flow and the
-> authoritative procedure is `install-unattended.sh --host <hostname>` from the bundle;
-> see `PROJECT_STATE.md` for the current release block and the deployment records.
+> O4 service-state ageing. The Installation section below documents the guarded
+> `install-unattended.sh --host <hostname>` flow for this payload; `PROJECT_STATE.md`
+> holds the current release block, the deployment records and the rollback ids.
 
 > **Translations:** the interface is available in English, Czech, German, French, Spanish, Italian, Portuguese (Brazil), Dutch, Russian, Japanese and Simplified Chinese. All translations except English and Czech are machine-generated — native-speaker corrections are welcome.
 
@@ -47,6 +47,22 @@ The plugin automatically monitors the network and alerts you about:
 ---
 
 ## Version history
+
+### v2.13.2 (November 2026) - HA / CARP awareness and restored service-state ageing
+
+- **HA / CARP tab** under Services -> Device Monitor -> Settings: detected role, effective
+  mode, whether this node is observing, and the CARP virtual IPs with their state.
+- **Standby safety**: a CARP backup does not observe services, so infrastructure-service
+  discovery and service alerts are deferred to the master instead of inventing outages.
+  `ha_carp_enabled`, `ha_role_override` (auto / master / backup) and
+  `ha_notify_failover` control it; the notifier reports role transitions on the existing
+  email and webhook channels.
+- **A standby ages its own inventory** even while it refuses observation, so a long-lived
+  backup does not accumulate stale verdicts until a failover.
+- **Service-state ageing restored** on this line: `unavailable` verdicts age to `unknown`
+  after 7 days without observation, rows for hosts unseen for 30 days are retired, the
+  pass refuses to run when no host looks fresh (a stopped hostwatch), and an address with
+  no device row is never retired. Operators can run it with `--age-services [--dry-run]`.
 
 ### v2.10 (September 2026) — Nine major UI language translations
 
@@ -321,64 +337,110 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 
 ## Installation
 
-### Method 1: Download runtime package + WinSCP
+Current payload: `dm-v2.13.2-runtime.tar.gz`, built from `release/v2.13.2-runtime.manifest`
+(40 hash-verified targets). The bundle carries the runtime files, the 11 gettext
+catalogues, `install.sh` / `install-unattended.sh` / `uninstall.sh`, the manifest and the
+catalogue merge helper. `install.sh` is a thin wrapper that execs
+`install-unattended.sh`, which is the authoritative procedure.
 
-1. Download the **v2.10 runtime package** from the v2.10 GitHub release assets.
-2. Enable SSH in OPNsense: **System -> Settings -> Administration -> Secure Shell -> Enable**.
-3. Upload `dm-v2.10-runtime.tar.gz` to `/tmp/` using WinSCP.
-4. Connect by SSH and install:
+### Method 1: bundle over WinSCP
+
+1. Download `dm-v2.13.2-runtime.tar.gz` from the release assets.
+2. Enable SSH in OPNsense: **System → Settings → Administration → Secure Shell → Enable**.
+3. Upload the bundle to `/tmp/` with WinSCP.
+4. Extract and install:
 
 ```sh
 cd /tmp
-mkdir dm-v2.10
-tar -xzf dm-v2.10-runtime.tar.gz -C dm-v2.10
-cd dm-v2.10
-sh install.sh --host YOUR-FIREWALL-HOSTNAME
+mkdir dm-v2.13.2
+tar -xzf dm-v2.13.2-runtime.tar.gz -C dm-v2.13.2
+cd dm-v2.13.2
+sh install.sh --host "$(/bin/hostname)"
 ```
 
-Replace `YOUR-FIREWALL-HOSTNAME` with the exact output of `/bin/hostname`. The
-installer checks the host, source, dependencies and predecessor before changing
-installed files. For a dry run, add `--check`. No reboot is normally required; installation restarts
-`configd` and restarts Device Monitor only if it was already running (a fresh
-installation starts the daemon with monitoring disabled by default).
-
-### Method 2: Direct SSH
+### Method 2: direct SSH
 
 ```sh
 ssh root@your.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.10/dm-v2.10-runtime.tar.gz
-mkdir dm-v2.10
-tar -xzf dm-v2.10-runtime.tar.gz -C dm-v2.10
-cd dm-v2.10
-sh install.sh --host YOUR-FIREWALL-HOSTNAME
+fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.13.2/dm-v2.13.2-runtime.tar.gz
+mkdir dm-v2.13.2
+tar -xzf dm-v2.13.2-runtime.tar.gz -C dm-v2.13.2
+cd dm-v2.13.2
+sh install.sh --host "$(/bin/hostname)"
+```
+
+`--host` must match the exact output of `/bin/hostname`, otherwise the installer
+aborts before touching anything. Add `--check` for a dry run, which validates
+everything and prints a report without writing:
+
+```text
+CHECK_OK version=2.13.2 predecessor=2.13.1 files=61 core_locales=10 daemon_running=1 host=...
+```
+
+### What the installer verifies and does
+
+1. Runs as root, on FreeBSD, on OPNsense, with a hostname matching `--host`.
+2. Reads the installed version and accepts a predecessor of 2.8 … 2.13.1.
+   A payload installed on an unexpected version aborts rather than upgrading blind.
+3. Checks the pinned SHA256 of the manifest, its row count (40) and the staged
+   target count (61, or 62 on a fresh install), then hashes **every** source file
+   before a single installed file is replaced.
+4. Writes a plan of `old hash → new hash` per target and a timestamped rollback
+   backup under `/var/backups/devicemonitor/install-v213.<id>/` (`files/` + `plan`).
+5. Installs with the mode recorded in the manifest, compiles the 11 catalogues with
+   `msgfmt --check`, merges the plugin keys into the 10 core catalogues that can host
+   them (DM-BL-008c, pristine copies recorded for `uninstall.sh`), clears the OPNsense
+   menu cache, restarts `configd`, cycles the daemon (stop → wait for exit → start)
+   and stops the installation if the daemon does not come back.
+6. Re-hashes every installed file and runs `PRAGMA quick_check` on
+   `/var/db/devicemonitor/devices.db`.
+
+Any mismatch rolls the node back from the plan and prints
+`ROLLBACK_ATTEMPTED=/var/backups/devicemonitor/install-v213.<id>`. Nothing is
+left half-installed.
+
+### Verifying after install
+
+```sh
+/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh   # expect: running
+grep -m1 version /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
+```
+
+To prove the node matches the bundle byte for byte, from the extracted bundle:
+
+```sh
+cd /tmp/dm-v2.13.2
+while read -r h m s t; do
+    [ "$(sha256 -q "$t")" = "$h" ] || echo "MISMATCH $t"
+done < release/v2.13.2-runtime.manifest
 ```
 
 ### Upgrading an existing installation
 
-Before upgrading, back up the runtime data:
+Back up the runtime data first — it is not part of the bundle:
 
 ```sh
 tar -czf /root/devicemonitor-backup.tgz /var/db/devicemonitor
 ```
 
-Then install v2.10 using either method above. The installer validates the host,
-source and dependencies before modifying files, and retains a rollback backup.
-It aborts on failed checks instead of continuing with a partial installation.
+Then install as above. Configuration (`/var/db/devicemonitor/config.json`) and the
+device database are preserved; new settings keys appear automatically because the
+model merges `defaults.json` under the saved configuration.
 
-Existing configuration and device data are preserved during the upgrade.
-
-After installation, verify the daemon:
+To roll back, either re-run the previous bundle, or restore in place:
 
 ```sh
-/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
+service devicemonitor stop
+BASE=/var/backups/devicemonitor/install-v213.<id>
+while read -r id old new mode src dest; do
+    [ "$old" = absent ] || cp -p "$BASE/files/$id" "$dest"
+done < "$BASE/plan"
+service devicemonitor start
 ```
 
-Expected result:
-
-```text
-running
-```
+A CARP pair is upgraded one node at a time — master first, then standby — so the
+VIP keeps being served while the other node restarts its daemon.
 
 ### Targeted Nmap scanning in v2.6
 
