@@ -31,5 +31,5 @@ for digest, mode, source, target in rows:
 defaults = json.loads(
     (root / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json').read_text()
 )
-assert defaults['version'] == '2.13'
-print('V213_RELEASE_MANIFEST=PASS')
+assert defaults['version'] == '2.13.1'
+print('V2131_RELEASE_MANIFEST=PASS')
