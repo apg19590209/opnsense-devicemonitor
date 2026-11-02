@@ -2,10 +2,26 @@
 
 ## Current state
 
-Last updated: 9 October 2026
+Last updated: 3 November 2026
 
-Branch: `feature/async-db-v2.11` — active development checkout (created from the
-`v2.10-development` tip `5cca3c9`; `v2.10-development` remains the released maintenance line)
+Branch: `release/2.13` (HEAD `19f8d4d`) — the released line. `baseline/2.12` (`d04739a`)
+holds the recovered pre-HA 2.12 tree; `feature/async-db-v2.11` (`0ad95b0`) is the
+historical v2.11 development branch.
+
+### Current release: 2.13.1
+
+| Item | Value |
+|---|---|
+| Commit | `19f8d4d` on `release/2.13` (tag `v2.13.1`) |
+| Payload | `release/v2.13-runtime.manifest`, 40 rows, staged targets 61 |
+| Bundle | `/tmp/dm-v2.13-runtime.tar.gz`, 335 870 bytes, sha256 `41e5a5d9bea2f6c4bd88ea603eea5716b9969abc41c62ba5365d0d6bf79739f0` |
+| Deployed | `192.168.20.23` (testbed), `.253` (CARP master), `.252` (CARP standby) |
+| Rollback | `/var/backups/devicemonitor/install-v213.{97t9Ns,.SAA2LN,.eLrgfA}` |
+| Gates | 15 of 15 CI gates green; `test_service_ageing` included (Decision 59) |
+
+2.13 (`59d6d08`) was the same payload without O4 ageing and was superseded within the
+hour by 2.13.1; it was never tagged. `install-v213.{8h11R7,bsp83b,f0Psxp}` are the
+2.13-era and rolled-back-attempt backups.
 
 Authoritative development checkout: `/root/src/opnsense-devicemonitor-upstream`
 (FreeBSD 15.1-RELEASE amd64; OPNsense testbed host `192.168.20.23`)
@@ -5513,3 +5529,26 @@ Open decision: either the O4 ageing functions are restored on top of 2.13 (port
 their call sites from `0ad95b0`), or O4 is formally withdrawn and the test retired with
 that rationale. Until then 2.13 matches what already runs and removes nothing; it simply
 does not restore what the records claim is there.
+
+## O4 divergence closed: ageing restored in 2.13.1 (3 November 2026)
+
+The section above ("O4 ageing is absent from the running 2.12 line") is **closed**. The
+restore shipped as 2.13.1 (`19f8d4d`, tag `v2.13.1`) and is running on all three nodes;
+`tests/test_service_ageing.py` is green and the suite is 15 of 15. Decision 59 carries
+the full record, including the correction to Decision 57 about when a standby starts
+suppressing observation.
+
+### Deployment records
+
+| When | Version | Node | Result | Backup |
+|---|---|---|---|---|
+| 3 Nov 2026 00:01 | 2.13 | `.23` | INSTALL_OK files=61 | `install-v213.f0Psxp` |
+| 3 Nov 2026 00:06 | 2.13 | `.253` (master) | INSTALL_OK files=61 | `install-v213.8h11R7` |
+| 3 Nov 2026 00:09 | 2.13 | `.252` (standby) | INSTALL_OK files=61 | `install-v213.eLrgfA` |
+| 3 Nov 2026 00:24 | 2.13.1 | `.23` | first attempt ROLLBACK_ATTEMPTED (daemon start race, installer fixed), second attempt INSTALL_OK | `install-v213.bsp83b` (rolled back), `install-v213.97t9Ns` |
+| 3 Nov 2026 00:29 | 2.13.1 | `.253` (master) | INSTALL_OK files=61 | `install-v213.SAA2LN` |
+| 3 Nov 2026 00:31 | 2.13.1 | `.252` (standby) | INSTALL_OK files=61 | (own `install-v213.*` dir) |
+
+Post-deployment reconciliation: all 40 manifest rows hash-match on each node; `.253` logs
+`Stale-state ageing: aged 1 row(s) to unknown, retired 0 row(s)`; standby dry-run `0/0`;
+testbed backlog `38/42` (monitoring disabled there, left in place).

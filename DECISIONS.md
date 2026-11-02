@@ -2532,6 +2532,11 @@ while still inventorying devices (`New devices: 0, Online: 36/60`); the master l
 
 ## 58. The running 2.12 line has no O4 ageing, and the test stays red
 
+> **Superseded by Decision 59** (3 November 2026). The gap described here was real in
+> the 2.13 payload, which was deployed for under an hour. O4 was restored in 2.13.1 and
+> is now running on the testbed and on both CARP nodes; `tests/test_service_ageing.py`
+> is green. This entry is retained as the record of how the divergence was found.
+
 ### Decision
 
 The 2.12 tree that the testbed and the firewalls run contains no ageing
@@ -2560,3 +2565,55 @@ Until one of the two remedies is chosen - restore the O4 functions and their cal
 on top of 2.13, or withdraw O4 and retire the test with that rationale - the suite has
 a permanent red gate and the ageing behaviour described in Decisions 53-56 is not
 running on any firewall.
+
+## 59. O4 ageing is restored in 2.13.1 and runs behind the hourly discovery gate
+
+### Decision
+
+The O4 work of Decisions 52-56 is restored on the 2.12-based line and shipped as
+2.13.1, which runs on the testbed `192.168.20.23`, the CARP master `192.168.20.253`
+and the CARP standby `192.168.20.252`. The version was advanced from 2.13 because all
+three nodes already reported 2.13 and a re-install of the same number would have been
+indistinguishable from the payload that had no ageing.
+
+Ageing stays exactly where v2.11 put it: inside `run_scheduled_service_discovery()`, so
+it runs on the hourly discovery gate. A node that refuses service observation - a CARP
+standby - therefore does not age either. That is deliberate continuity with the
+original implementation and is listed as an open question below, not as a defect.
+
+### Reason
+
+Decision 58 recorded that the running line carried no ageing at all while this document
+claimed O4 was deployed. Restoring it was the alternative to withdrawing O4 and retiring
+the test: the coverage already existed and the behaviour is wanted on a firewall whose
+service inventory otherwise keeps every `unavailable` verdict forever.
+
+### Evidence
+
+- `.253` (master): 49 `[SERVICES] Stale-state ageing:` cycles since the install, the
+  latest `aged 1 row(s) to unknown, retired 0 row(s)` at 00:30:26.
+- `scan_network.py --age-services --dry-run`: `.253` `aged 0, retired 0`; `.252`
+  `aged 0, retired 0`; `.23` `aged 38, retired 42` (the testbed backlog, left in place
+  because monitoring is disabled there).
+- `device_services.last_checked` is present on all three nodes; `PRAGMA table_info`
+  before the install had only `last_verified` and `miss_count`.
+- Payload parity: all 40 entries of `release/v2.13-runtime.manifest` hash-match on every
+  node, and `scan_network.py` is `65a132bc…` in the repository and on all three.
+- `tests/test_service_ageing.py` green, all eight checks.
+
+### Correction to Decision 57
+
+Decision 57 states that a standby begins suppressing service discovery and alerts when
+the HA payload lands. It was already suppressing: `.252` logs
+`[SERVICES] CARP role: BACKUP (CARP backup node)` from 31 October 19:14, 1065 lines at
+the 300-second interval, because the observation gate shipped with the 2.12 daemon. The
+2.13 work added the settings surface, the three `ha_*` knobs and the failover notifier;
+it did not change when the gate engages.
+
+### Open question
+
+Should ageing and retirement run on a standby outside the observation gate? Retirement
+is node-local inventory hygiene, not observation, and a long-lived standby currently
+accumulates stale verdicts (`.252` holds 8 `unavailable` rows) that only age after a
+failover. Moving the call above `if allowed:` would fix that and would touch only that
+node's own database, but it is a behaviour change and needs to be taken deliberately.
