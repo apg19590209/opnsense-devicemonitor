@@ -1240,10 +1240,6 @@ msgstr "Unavailable"
 msgid "Unavailable service recovered"
 msgstr "Unavailable service recovered"
 
-#: infrastructureservices.volt
-msgid "Unknown"
-msgstr "Unknown"
-
 #: settings.volt
 msgid "Username"
 msgstr "Username"

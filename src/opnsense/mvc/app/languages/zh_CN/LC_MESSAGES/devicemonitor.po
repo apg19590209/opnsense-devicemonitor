@@ -96,10 +96,6 @@ msgstr "IP 地址"
 msgid "Hostname"
 msgstr "主机名"
 
-#: infrastructureservices.volt
-msgid "Unknown"
-msgstr "未知"
-
 #: devices.volt - table column header
 msgid "Vendor"
 msgstr "厂商"
@@ -524,13 +520,13 @@ msgstr "未解决"
 msgid "Resolved"
 msgstr "已解决"
 
-#: settings.volt - IP and MAC conflict webhook alerts
-msgid "Identity conflict alerts"
-msgstr "标识冲突警报"
+#: settings.volt - IP and MAC conflict email alerts
+msgid "Email high-severity conflict alerts"
+msgstr "高严重性冲突邮件警报"
 
-#: settings.volt - IP and MAC conflict webhook alerts
-msgid "Send a high-severity IPv4 or IPv6 address conflict alert to the webhook endpoint."
-msgstr "将新的高严重性 IPv4 或 IPv6 地址冲突警报发送到 Webhook 端点。"
+#: settings.volt - IP and MAC conflict email alerts
+msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
+msgstr "当检测到新的高严重性 IPv4 或 IPv6 地址冲突时发送电子邮件。"
 
 msgid "IP and MAC Conflicts"
 msgstr "IP 和 MAC 冲突"
@@ -930,6 +926,9 @@ msgstr "关于 SMTP 用户名"
 
 msgid "About Test Email"
 msgstr "关于测试邮件"
+
+msgid "About Conflict Alerts"
+msgstr "关于冲突警报"
 
 msgid "About Infrastructure Service Alerts"
 msgstr "关于基础设施服务警报"
@@ -1575,18 +1574,3 @@ msgstr "设备总数"
 
 msgid "Stopped"
 msgstr "已停止"
-
-msgid "Language"
-msgstr "语言"
-msgid "Plugin translations (sidecar catalogue)"
-msgstr "插件翻译（附属目录）"
-msgid "Translate Device Monitor strings from the plugin sidecar catalogue. When disabled, the plugin uses the stock OPNsense core catalogues only."
-msgstr "从插件的附属目录翻译 Device Monitor 字符串。禁用时，插件仅使用 OPNsense 自带的核心目录。"
-msgid "Enable immediate webhook identity conflict alerts"
-msgstr "Enable immediate webhook identity conflict alerts"
-msgid "Enables the primary high-speed HTTP POST notification engine. This serves as the master transport route used to instantly dispatch both asset summaries (New Device Discoveries) and high-severity security events to your monitoring endpoints."
-msgstr "Enables the primary high-speed HTTP POST notification engine. This serves as the master transport route used to instantly dispatch both asset summaries (New Device Discoveries) and high-severity security events to your monitoring endpoints."
-msgid "Triggers a webhook payload dispatch immediately upon detection of an existing MAC address switching between multiple IP addresses (IP Spoofing / Identity Hijacking). Recommended to leave enabled."
-msgstr "Triggers a webhook payload dispatch immediately upon detection of an existing MAC address switching between multiple IP addresses (IP Spoofing / Identity Hijacking). Recommended to leave enabled."
-msgid "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."
-msgstr "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."

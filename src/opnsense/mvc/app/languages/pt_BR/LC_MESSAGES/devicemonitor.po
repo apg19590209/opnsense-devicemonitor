@@ -96,10 +96,6 @@ msgstr "Endereço IP"
 msgid "Hostname"
 msgstr "Nome de host"
 
-#: infrastructureservices.volt
-msgid "Unknown"
-msgstr "Desconhecido"
-
 #: devices.volt - table column header
 msgid "Vendor"
 msgstr "Fabricante"
@@ -524,13 +520,13 @@ msgstr "Não resolvido"
 msgid "Resolved"
 msgstr "Resolvido"
 
-#: settings.volt - IP and MAC conflict webhook alerts
-msgid "Identity conflict alerts"
-msgstr "Alertas de conflito de identidade"
+#: settings.volt - IP and MAC conflict email alerts
+msgid "Email high-severity conflict alerts"
+msgstr "Alertas de conflito de alta gravidade por e-mail"
 
-#: settings.volt - IP and MAC conflict webhook alerts
-msgid "Send a high-severity IPv4 or IPv6 address conflict alert to the webhook endpoint."
-msgstr "Enviar um alerta de novo conflito de endereço IPv4 ou IPv6 de alta gravidade para o endpoint do webhook."
+#: settings.volt - IP and MAC conflict email alerts
+msgid "Send an email when a new high-severity IPv4 or IPv6 address conflict is detected."
+msgstr "Enviar um e-mail quando um novo conflito de endereço IPv4 ou IPv6 de alta gravidade for detectado."
 
 msgid "IP and MAC Conflicts"
 msgstr "Conflitos de IP e MAC"
@@ -930,6 +926,9 @@ msgstr "Sobre o nome de usuário SMTP"
 
 msgid "About Test Email"
 msgstr "Sobre o e-mail de teste"
+
+msgid "About Conflict Alerts"
+msgstr "Sobre alertas de conflito"
 
 msgid "About Infrastructure Service Alerts"
 msgstr "Sobre alertas de serviços de infraestrutura"
@@ -1575,18 +1574,3 @@ msgstr "Total de dispositivos"
 
 msgid "Stopped"
 msgstr "Parado"
-
-msgid "Language"
-msgstr "Idioma"
-msgid "Plugin translations (sidecar catalogue)"
-msgstr "Traduções do plugin (catálogo sidecar)"
-msgid "Translate Device Monitor strings from the plugin sidecar catalogue. When disabled, the plugin uses the stock OPNsense core catalogues only."
-msgstr "Traduz as strings do Device Monitor a partir do catálogo sidecar do plugin. Quando desativado, o plugin usa apenas os catálogos principais do OPNsense."
-msgid "Enable immediate webhook identity conflict alerts"
-msgstr "Enable immediate webhook identity conflict alerts"
-msgid "Enables the primary high-speed HTTP POST notification engine. This serves as the master transport route used to instantly dispatch both asset summaries (New Device Discoveries) and high-severity security events to your monitoring endpoints."
-msgstr "Enables the primary high-speed HTTP POST notification engine. This serves as the master transport route used to instantly dispatch both asset summaries (New Device Discoveries) and high-severity security events to your monitoring endpoints."
-msgid "Triggers a webhook payload dispatch immediately upon detection of an existing MAC address switching between multiple IP addresses (IP Spoofing / Identity Hijacking). Recommended to leave enabled."
-msgstr "Triggers a webhook payload dispatch immediately upon detection of an existing MAC address switching between multiple IP addresses (IP Spoofing / Identity Hijacking). Recommended to leave enabled."
-msgid "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."
-msgstr "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."

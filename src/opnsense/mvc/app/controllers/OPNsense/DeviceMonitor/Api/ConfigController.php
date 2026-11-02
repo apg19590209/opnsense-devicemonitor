@@ -194,6 +194,9 @@ class ConfigController extends ApiControllerBase
         $pihole_password = $this->request->getPost('pihole_password', 'string', '');
 
         $unbound_enabled = $this->request->getPost('unbound_enabled', 'string', '0');
+        if (!in_array($ha_role_override, ['auto', 'master', 'backup'], true)) {
+
+        }
 
         $webhook_enabled = $this->request->getPost('webhook_enabled', 'string', '0');
         $webhook_url = $this->request->getPost('webhook_url', 'string', '');

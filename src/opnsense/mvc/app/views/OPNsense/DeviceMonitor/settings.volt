@@ -1,40 +1,50 @@
 <div class="content-box">
     <div class="content-box-main">
 
-        <ul class="nav nav-tabs" role="tablist" style="margin:10px 0 0 0;">
+        <ul class="nav nav-tabs dm-settings-tabs" role="tablist">
             <li role="presentation" class="active">
-                <a href="#tab-monitoring" role="tab" data-toggle="tab">
-                    <i class="fa fa-desktop"></i> {{ devicemonitor_t('Monitoring') }}
+                <a href="#tab-monitoring" role="tab" data-toggle="tab" aria-controls="tab-monitoring" aria-selected="true">
+                    <i class="fa fa-desktop" aria-hidden="true"></i> {{ devicemonitor_t('Monitoring') }}
                 </a>
             </li>
             <li role="presentation">
-                <a href="#tab-nmap" role="tab" data-toggle="tab">
-                    <i class="fa fa-search"></i> {{ devicemonitor_t('Nmap Scanning') }}
+                <a href="#tab-nmap" role="tab" data-toggle="tab" aria-controls="tab-nmap" aria-selected="false">
+                    <i class="fa fa-search" aria-hidden="true"></i> {{ devicemonitor_t('Nmap Scanning') }}
                 </a>
             </li>
             <li role="presentation">
-                <a href="#tab-email" role="tab" data-toggle="tab">
-                    <i class="fa fa-envelope-o"></i> {{ devicemonitor_t('Email Notifications') }}
+                <a href="#tab-email" role="tab" data-toggle="tab" aria-controls="tab-email" aria-selected="false">
+                    <i class="fa fa-envelope-o" aria-hidden="true"></i> {{ devicemonitor_t('Email Notifications') }}
                 </a>
             </li>
             <li role="presentation">
-                <a href="#tab-webhook" role="tab" data-toggle="tab">
-                    <i class="fa fa-bell-o"></i> {{ devicemonitor_t('Webhook Notifications') }}
+                <a href="#tab-webhook" role="tab" data-toggle="tab" aria-controls="tab-webhook" aria-selected="false">
+                    <i class="fa fa-bell-o" aria-hidden="true"></i> {{ devicemonitor_t('Webhook Notifications') }}
                 </a>
             </li>
             <li role="presentation">
-                <a href="#tab-pluginoptions" role="tab" data-toggle="tab">
-                    <i class="fa fa-cog"></i> Plugin Options
+                <a href="#tab-pluginoptions" role="tab" data-toggle="tab" aria-controls="tab-pluginoptions" aria-selected="false">
+                    <i class="fa fa-cog" aria-hidden="true"></i> {{ devicemonitor_t('Plugin Options') }}
                 </a>
             </li>
             <li role="presentation">
-                <a href="#tab-about" role="tab" data-toggle="tab">
-                    <i class="fa fa-info-circle"></i> {{ devicemonitor_t('About') }}
+                <a href="#tab-ha" role="tab" data-toggle="tab" aria-controls="tab-ha" aria-selected="false">
+                    <i class="fa fa-clone" aria-hidden="true"></i> {{ devicemonitor_t('HA / CARP') }}
+                </a>
+            </li>
+            <li role="presentation">
+                <a href="#tab-about" role="tab" data-toggle="tab" aria-controls="tab-about" aria-selected="false">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i> {{ devicemonitor_t('About') }}
                 </a>
             </li>
         </ul>
 
-        <div class="tab-content" style="padding:15px 0;">
+        <!-- Panes are addressed by id, not by position: the DOM order below is
+             Monitoring, Nmap, Email, Webhook, Plugin Options, HA/CARP and About,
+             which matches the tab order above. `active` must sit on exactly one
+             pane and on the matching list item, otherwise the first paint shows a
+             blank panel. -->
+        <div class="tab-content dm-settings-panes">
 
             <!-- TAB 3: Email -->
             <div role="tabpanel" class="tab-pane" id="tab-email">

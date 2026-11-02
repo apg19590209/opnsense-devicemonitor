@@ -23,10 +23,6 @@
                         {{ devicemonitor_t('Stale') }}:
                         <strong id="services-stale">0</strong>
                     </span>
-                    <span>
-                        {{ devicemonitor_t('Unknown') }}:
-                        <strong id="services-unknown">0</strong>
-                    </span>
                 </div>
             </div>
 
@@ -76,9 +72,6 @@
                     </option>
                     <option value="stale">
                         {{ devicemonitor_t('Stale') }}
-                    </option>
-                    <option value="unknown">
-                        {{ devicemonitor_t('Unknown') }}
                     </option>
                 </select>
 
@@ -646,9 +639,6 @@ $(document).ready(function() {
         } else if (status === 'stale') {
             className = 'label-warning';
             label = 'Stale';
-        } else if (status === 'unknown') {
-            className = 'label-default';
-            label = 'Unknown';
         }
 
         return $('<span>')
@@ -1416,7 +1406,6 @@ $(document).ready(function() {
                 var available = 0;
                 var unavailable = 0;
                 var stale = 0;
-                var unknown = 0;
 
                 allServices.forEach(function(row) {
                     if (row.archived) return;
@@ -1429,8 +1418,6 @@ $(document).ready(function() {
                         unavailable++;
                     } else if (status === 'stale') {
                         stale++;
-                    } else if (status === 'unknown') {
-                        unknown++;
                     }
                 });
 
@@ -1440,7 +1427,6 @@ $(document).ready(function() {
                 $('#services-available').text(available);
                 $('#services-unavailable').text(unavailable);
                 $('#services-stale').text(stale);
-                $('#services-unknown').text(unknown);
 
                 populateTypes(
                     data && Array.isArray(data.types)
