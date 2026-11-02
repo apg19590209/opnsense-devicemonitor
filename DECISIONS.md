@@ -2491,3 +2491,72 @@ days rather than keeping it indefinitely, which is the intent but will look like
 who expected the Scans tab's evidence to persist in the Services view. Probe-based discovery (DNS,
 DHCP, NTP, SSH, web, RDP, SMB, LDAP, VPN) is unaffected, because those rows carry a live observation
 time.
+
+## 57. HA / CARP is released on the recovered 2.12 baseline, and a standby must not observe services
+
+### Decision
+
+The HA / CARP work is released as v2.13 on top of `d04739a`, which recovers the
+uncommitted 2.12 tree as the new baseline. The feature is three things: a read-only
+`getcarpstatus` view for the Settings tab, three persisted settings
+(`ha_carp_enabled`, `ha_role_override`, `ha_notify_failover`), and a daemon gate that
+refuses service discovery and service alerts on a node whose monitored interfaces
+report `carp: BACKUP`. `ha_carp_enabled` defaults to `1`, so the gate is on by
+default and only a node with CARP state is affected.
+
+The four HA status words in the script body use `lang.query()`, not
+`devicemonitor_t()`, because the JS renderer accepts only the encoded `lang.query()`
+literal, and the installer's DM-BL-008c core-catalogue merge is what makes those
+plugin keys resolve there.
+
+### Reason
+
+A CARP backup does not carry the monitored traffic, so hostwatch there under-reports
+and every liveness verdict is wrong in one direction or the other. Deferring the
+judgement to the master is the only reading of a standby that does not invent outages.
+
+The release had to sit on the running tree rather than on v2.11: the 2.12 daemon
+refactor had never been committed, so a v2.11-based payload would have downgraded it
+on every node. Recovering the baseline and re-applying HA as its own commit keeps the
+review honest and makes the deployed files byte-identical to the repository.
+
+### Evidence
+
+`192.168.20.23` (testbed), `.253` (master) and `.252` (standby) all run
+`version 2.13`, `files=61`, with identical SHA256 for `settings.volt`
+(`60ba1caf...`), `scan_network.py` (`aa67dab0...`) and `ConfigController.php`
+(`493b78b5...`). The standby logs
+`[SERVICES] CARP backup node; skipping service discovery and service alerts on this node`
+while still inventorying devices (`New devices: 0, Online: 36/60`); the master logs
+`[SERVICES] CARP role: MASTER (observing)` and keeps `carp: MASTER vhid 1 advskew 0`.
+
+## 58. The running 2.12 line has no O4 ageing, and the test stays red
+
+### Decision
+
+The 2.12 tree that the testbed and the firewalls run contains no ageing
+implementation, so `tests/test_service_ageing.py` cannot pass against it. It is left
+failing, with the discrepancy recorded here and in `PROJECT_STATE.md`, instead of being
+deleted or rewritten to match the code.
+
+### Reason
+
+This document records O4 as deployed and pinned by that test. A red gate that says
+"the shipped code does not contain what the record claims" is the correct signal; a
+green gate achieved by editing the assertion would hide the divergence, and deleting
+the test would erase the only coverage of the behaviour.
+
+### Evidence
+
+`grep -rn 'UNKNOWN_AFTER|RETIRE_AFTER|age_stale' /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/`
+returns nothing on the testbed, on the master and on the standby, before and after the
+2.13 deployment. `git show 0ad95b0:src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py`
+carries nine references, introduced by `6258914`, `d266698` and `9a300cd`
+("v2.11 O4", Decisions 54 and 55).
+
+### Residual risk
+
+Until one of the two remedies is chosen - restore the O4 functions and their call sites
+on top of 2.13, or withdraw O4 and retire the test with that rationale - the suite has
+a permanent red gate and the ageing behaviour described in Decisions 53-56 is not
+running on any firewall.
