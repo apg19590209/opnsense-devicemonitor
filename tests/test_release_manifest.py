@@ -4,7 +4,7 @@ import hashlib
 import json
 
 root = Path(__file__).resolve().parents[1]
-manifest = root / 'release/v2.13-runtime.manifest'
+manifest = root / 'release/v2.13.1-runtime.manifest'
 rows = [line.split() for line in manifest.read_text().splitlines()]
 assert len(rows) == 40
 assert all(len(row) == 4 for row in rows)

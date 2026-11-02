@@ -15,6 +15,10 @@ on:
       # match pull requests whose target is this feature branch. The eventual PR into
       # `v2.10-development` is already covered by the entry below.
       - feature/async-db-v2.11
+      # 2.13 release line (3 November 2026): the recovered 2.12 baseline plus the HA / CARP
+      # feature and the restored O4 ageing. Listed so pushes to the released branch are
+      # validated remotely instead of resting on a local run.
+      - release/2.13
   pull_request:
     branches:
       - v2.5-development
@@ -99,6 +103,14 @@ jobs:
       # v2.11 HA safety: the WAN/uplink must never be selectable as a monitored segment.
       - name: Validate monitored interface selection (v2.11)
         run: python3 tests/test_monitored_interfaces.py
+
+      # Device lifecycle and activity history: both suites existed but were never listed,
+      # so a regression in either would only have been caught by a manual run.
+      - name: Validate device activity events
+        run: python3 tests/test_device_activity_events.py
+
+      - name: Validate device lifecycle return path
+        run: python3 tests/test_device_lifecycle_return.py
 
       - name: Lint PHP sources
         run: |

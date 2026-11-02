@@ -18,7 +18,7 @@ LIST=/tmp/dm-bundle-list.txt
 cd "$REPO"
 
 # 1. Manifest payload: the 38 hash-verified install targets.
-awk '{print $3}' release/v2.13-runtime.manifest > "$LIST"
+awk '{print $3}' release/v2.13.1-runtime.manifest > "$LIST"
 
 # 2. The .po catalogues the installer compiles (includes the 9 the manifest omits).
 find src -name '*.po' >> "$LIST"
@@ -29,7 +29,7 @@ printf '%s\n' \
     install.sh \
     uninstall.sh \
     install-unattended.sh \
-    release/v2.13-runtime.manifest \
+    release/v2.13.1-runtime.manifest \
     release/merge-opnsense-catalog.sh >> "$LIST"
 
 sort -u "$LIST" -o "$LIST"

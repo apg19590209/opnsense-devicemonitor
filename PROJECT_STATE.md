@@ -13,7 +13,7 @@ historical v2.11 development branch.
 | Item | Value |
 |---|---|
 | Commit | `19f8d4d` on `release/2.13` (tag `v2.13.1`) |
-| Payload | `release/v2.13-runtime.manifest`, 40 rows, staged targets 61 |
+| Payload | `release/v2.13.1-runtime.manifest`, 40 rows, staged targets 61 |
 | Bundle | `/tmp/dm-v2.13-runtime.tar.gz`, 335 870 bytes, sha256 `41e5a5d9bea2f6c4bd88ea603eea5716b9969abc41c62ba5365d0d6bf79739f0` |
 | Deployed | `192.168.20.23` (testbed), `.253` (CARP master), `.252` (CARP standby) |
 | Rollback | `/var/backups/devicemonitor/install-v213.{97t9Ns,.SAA2LN,.eLrgfA}` |

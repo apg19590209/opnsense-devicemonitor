@@ -32,7 +32,7 @@ NMAP_MISSING=0
 command -v nmap >/dev/null 2>&1 || NMAP_MISSING=1
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 cd "$SCRIPT_DIR"
-MANIFEST=release/v2.13-runtime.manifest
+MANIFEST=release/v2.13.1-runtime.manifest
 [ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = 4dc36ca37af3bf4f67361c6eb1b3c4215fec123ca6fcee272ae5e85e2dbf013a ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 40 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
 [ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = 2.13.1 ] || { echo 'ABORT: source version' >&2; exit 1; }
