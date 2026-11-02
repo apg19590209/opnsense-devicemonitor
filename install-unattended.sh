@@ -43,7 +43,9 @@ import json,sys
 print(json.load(open(sys.argv[1]))['version'])
 PY
 ) || { echo 'ABORT: installed defaults invalid' >&2; exit 1; }
-    case "$installed" in 2.8|2.9|2.10|2.11|2.12|2.13|2.13.1) :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
+    # 2.13.2 is accepted so the same payload can be re-installed as a repair: every target
+    # is hash-verified, unchanged files are left alone and the prune plan still runs.
+    case "$installed" in 2.8|2.9|2.10|2.11|2.12|2.13|2.13.1|2.13.2) :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
 elif [ -d /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor ]; then
     echo 'ABORT: partial existing installation' >&2; exit 1
 else
