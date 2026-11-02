@@ -271,7 +271,18 @@ if [ "$FRESH" = 1 ]; then /usr/local/etc/rc.configure_plugins; fi
 CONFIGD_CHANGED=1
 service configd restart
 if [ "$WAS_RUNNING" = 1 ]; then
-    service devicemonitor restart
+    # `service ... restart` runs stop and start back to back, and the daemon can still
+    # hold its pid file when start runs: on 2026-11-03 that produced "daemon: process
+    # already running" and "failed to start", which rolled back an otherwise complete
+    # installation. Stop, wait for the process to be gone, then start.
+    service devicemonitor stop || :
+    stopped=0
+    while [ "$stopped" -lt 20 ]; do
+        pgrep -f '^/usr/local/bin/python3 /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py$' >/dev/null || break
+        sleep 1
+        stopped=$((stopped + 1))
+    done
+    service devicemonitor start
 elif [ "$FRESH" = 1 ]; then
     service devicemonitor start
 fi
