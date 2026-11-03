@@ -22,7 +22,35 @@ the brief and is recorded here as *awaiting scope* so nothing is silently droppe
 | H3b | CI guard only compared two builds in one checkout | CI test that builds from two separate clean checkouts and compares SHA-256 | **done** — `tests/test_bundle_determinism.py` clones the tested commit twice, stamps each checkout with a different timestamp, and requires identical bytes |
 | H3c | `3131b8b4…` presented as the artifact identity | New canonical digest issued and every reference updated; `3131b8b4…` recorded as superseded | **done** — canonical identity `859c2638…` / 346 870 bytes in `release/bundle-digest.txt`; `3131b8b4…` recorded there as superseded with the reason |
 
-## Phase 2 — pruning (brief truncated; scope to be supplied)
+## Phase 2 phase — acceptance criteria (agreed before coding)
+
+Backups for this phase: `/root/dm-review-backups/20261103-r2-phase2` (`tree-90bfcc5.tar.gz`,
+sha256 `38be5b8e0b176a1f23308cd89ec07a1f195c7d88ea4f2fdd67c41d924b5486a3`; `HASHES.txt` for the
+16 files in scope; `ROLLBACK.txt`).
+
+| # | Acceptance criterion (must be an executable test, not a static assertion) | Planned test |
+|---|---|---|
+| M1 | A bare-path record entry prunes **only** when the on-disk digest matches published legacy evidence; an unevidenced or modified file is retained with an explicit reason | `test_prune_plan.py::test_bare_record_requires_evidence`, `::test_bare_record_modified_retained` |
+| M2 | Every unresolved restore conflict yields a non-zero helper status and an explicit `ROLLBACK_STATUS=INCOMPLETE` from the installer | `test_prune_apply.py::test_conflicts_are_failures`, `::test_restore_summary` |
+| M3 | The plan's database backup is a SQLite-consistent snapshot that passes `quick_check` and preserves every row | `test_plan_sqlite_backup.py` (documented snippet, plus a live read-only run when present) |
+| M4 | Post-success manual rollback restores the previous record; a fresh install's record is removed | `test_rollback_isolated.py::test_manual_rollback_restores_the_pre_install_state`, `::test_fresh_install_rollback_removes_the_new_record`, plus an explicit post-success assertion |
+| M5 | The installer itself executes an install, a prune, an injected failure, a rollback and a record check in isolation | **partial** — helper-level end-to-end (`test_rollback_isolated.py`, `test_prune_apply.py`). Running `install-unattended.sh` off-target needs a sandbox mode in the production script; see the open item |
+| M6 | Repair behaviour for mode/ownership is defined, enforced and regression-covered; unsafe drift (e.g. 0777) never survives | `test_repair_permissions.py` + `install-unattended.sh` `repaired=` reporting |
+| L5 | No temporary record file survives a failed run | `test_installer_status.py::test_failed_run_leaves_no_record_temp` (static-free check on the shipped script text is insufficient → see note) |
+| L6 | A prune target modified after the plan is not deleted (or aborts the run) | `test_prune_apply.py::test_changed_target_is_not_deleted` |
+| L7 | A planned prune target that was never deleted is not reported as a conflict | `test_prune_apply.py::test_untouched_prune_target_is_not_a_conflict` |
+| L8 | `build-release-inputs.sh` never leaves a partial `release-inputs.sha256` | `test_release_inputs.py::test_generator_is_atomic` |
+| L9 | `legacy-targets.txt` provenance names each manifest once, with the tags that carried it | `test_legacy_evidence.py::test_provenance_names_each_manifest_once` |
+| L10 | The release trust boundary is documented (what the tarball digest binds, what it does not) | `DECISIONS.md` Decision 63/64 + `verification` note |
+| U1 | Legacy bare-path pruning covered executably | same tests as M1 |
+| U2 | Installer wiring under test | **open** with M5 |
+| U3 | `--check` non-mutation proven executably | **open** with M5 |
+| U4 | `unchanged=60` verified executably on the target host | `test_upgrade_prediction.py` (host-only, read-only) |
+| U5 | Catalogue generation and merge are deterministic | `test_catalogue_determinism.py` |
+| U6 | Rollback conflict behaviour covered end to end | helper level via M2/L7; installer level open with M5 |
+| U7 | Plan abort conditions exercised beyond the zero-candidate case | **open** with M5 |
+| U8 | Published 2.13.2 fallback (proven impossible) | closed by H2a |
+
 
 | # | Reviewer finding | Status |
 |---|---|---|
