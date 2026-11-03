@@ -2991,7 +2991,7 @@ documentation commit. The suite-count correction it drove is applied in
 **Portable archive construction.** `release/build-bundle.sh` now probes the *tar implementation*
 from the binary itself (`tar --version`, matched against `bsdtar` and `GNU tar`), not the
 operating system, and picks flags per implementation: `--uid/--gid/--uname/--gname` for bsdtar,
-`--owner=--group=--uname=--gname=` for GNU tar. An implementation it cannot identify is refused
+`--owner=root:0 --group=wheel:0` for GNU tar. An implementation it cannot identify is refused
 (`UNSUPPORTED_TAR`), and a functional probe — a one-file archive built with the chosen flags and
 parsed by `release/normalize-bundle-tar.py --check` — rejects any producer that writes pax or GNU
 extended headers instead of canonical ustar.
@@ -3043,4 +3043,20 @@ fail-safe cases and the local acceptance results. Tests: `tests/test_bundle_dete
 (two checkouts, canonical metadata, GNU-style encoding collapse, recorded digest) and
 `tests/test_bundle_build_safety.py`.
 
+
+### Correction after the second CI run (#41611564118)
+
+The first version of the GNU flag list used `--owner=`/`--group=` **and** `--uname=`/`--gname=`.
+GNU tar 1.35 has no `--uname`/`--gname` options at all; the runner answered
+`tar: unrecognized option '--uname=root'` and the functional probe correctly refused to build
+(step 32 failed, no archive was created and nothing was fingerprinted). The GNU arm is now
+`--format=ustar --owner=root:0 --group=wheel:0`, which sets the symbolic name and the numeric id in
+one option each; the bsdtar arm, the implementation detection and the probe are unchanged, and the
+archive identity did not move.
+
+Two regression cases were added to `tests/test_bundle_build_safety.py` — a static assertion over the
+flag strings (refuses `--uname/--gname/--uid/--gid` in the GNU arm) and a full build driven through
+a shim that models GNU tar's option grammar — plus a local run through a real GNU-format producer
+(`bsdtar --format=gnutar`). All three produce `ce92a09a…` / 348 920 bytes.
+`verification/BUNDLE-PORTABILITY-20261103.md` §8 records the run, the error and the results.
 

@@ -113,8 +113,11 @@ case $TAR_FLAVOUR in
         TAR_OPTS="--format ustar --uid 0 --gid 0 --uname root --gname wheel"
         ;;
     gnu)
-        # GNU tar spells ownership as --owner/--group; --uid/--gid are bsdtar-only.
-        TAR_OPTS="--format=ustar --owner=0 --group=0 --uname=root --gname=wheel"
+        # GNU tar 1.35 has no --uname/--gname (those are bsdtar); ownership is spelled
+        # --owner=NAME:UID and --group=NAME:GID, which set both the symbolic name and the
+        # numeric id. Run #41611564118 proved the previous --uname=/--gname= spelling is
+        # rejected outright: "tar: unrecognized option '--uname=root'".
+        TAR_OPTS="--format=ustar --owner=root:0 --group=wheel:0"
         ;;
     *)
         printf '%s\n' \

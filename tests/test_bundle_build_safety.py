@@ -10,6 +10,7 @@ Each case runs the real `release/build-bundle.sh` against a fake tool on `DM_TAR
 nothing is built from a clone, so the cases are fast and touch only a temporary directory.
 """
 import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -123,12 +124,97 @@ def test_empty_tar_is_fatal():
     print('  empty tar            rejected, no archive written')
 
 
+def build_script():
+    return (ROOT / 'release/build-bundle.sh').read_text()
+
+
+def flag_strings():
+    """Extract the per-implementation TAR_OPTS assignment from the build script."""
+    found = {}
+    for flavour in ('bsdtar', 'gnu'):
+        match = re.search(r'^\s{4}%s\)\n(?:.*\n)*?\s+TAR_OPTS="([^"]+)"' % flavour,
+                          build_script(), re.M)
+        assert match, 'no TAR_OPTS for %s' % flavour
+        found[flavour] = match.group(1)
+    return found
+
+
+def test_gnu_flag_string_is_valid_for_gnu_tar():
+    """Guard the exact defect from run #41611564118: GNU tar has no --uname/--gname.
+
+    GNU tar 1.35 answers `tar: unrecognized option '--uname=root'`, which aborted the build
+    at the functional probe. This asserts the spelling statically, so the regression is caught
+    even on a host where only bsdtar is installed.
+    """
+    flags = flag_strings()
+    gnu = flags['gnu']
+    for forbidden in ('--uname', '--gname', '--uid', '--gid'):
+        assert forbidden not in gnu, (forbidden, gnu)
+    for required in ('--format=ustar', '--owner=root:0', '--group=wheel:0'):
+        assert required in gnu, (required, gnu)
+    bsdtar = flags['bsdtar']
+    for required in ('--format ustar', '--uid 0', '--gid 0', '--uname root', '--gname wheel'):
+        assert required in bsdtar, (required, bsdtar)
+    print('  gnu flags             %s' % gnu)
+    print('  bsdtar flags          %s' % bsdtar)
+
+
+def test_gnu_option_grammar_accepts_the_build():
+    """Run the real build through a tar that rejects what GNU tar 1.35 rejects.
+
+    A shim models GNU tar's option grammar — `--version` says GNU tar 1.35, any `--uname`/
+    `--gname`/`--uid`/`--gid` is an "unrecognized option" (exit 2), and `--format=ustar` /
+    `--owner=NAME:UID` / `--group=NAME:GID` are accepted — then archives with the local
+    bsdtar so the resulting bytes can be compared with the recorded identity. This is a
+    grammar model, not the GNU binary: the real tool is exercised by the CI runner, which is
+    where the original failure appeared.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        shim = tmp / 'gnu-tar-shim'
+        shim.write_text(
+            '#!/bin/sh\n'
+            'case " $* " in\n'
+            '  *" --version "*) echo "tar (GNU tar) 1.35"; exit 0 ;;\n'
+            'esac\n'
+            'for arg in "$@"; do\n'
+            '  case "$arg" in\n'
+            '    --uname*|--gname*|--uid*|--gid*)\n'
+            '      echo "tar: unrecognized option \'$arg\'" >&2; exit 2 ;;\n'
+            '  esac\n'
+            'done\n'
+            'filtered=""\n'
+            'for arg in "$@"; do\n'
+            '  case "$arg" in\n'
+            '    --format=*|--owner=*|--group=*) ;;\n'
+            '    *) filtered="$filtered $arg" ;;\n'
+            '  esac\n'
+            'done\n'
+            'exec %s --format ustar --uid 0 --gid 0 --uname root --gname wheel $filtered\n'
+            % REAL_TAR)
+        shim.chmod(0o755)
+        done, out = run_build(tmp, {'DM_TAR': str(shim)})
+        assert done.returncode == 0, (done.stdout, done.stderr)
+        assert 'tar implementation: gnu' in done.stdout, done.stdout
+        assert 'TAR_FORMAT=canonical-ustar members=1' in done.stdout, done.stdout
+        assert 'TAR_CANONICALISED members=58' in done.stdout, done.stdout
+        digest = re.search(r'^bundle sha256: ([0-9a-f]{64})$', done.stdout, re.M)
+        assert digest, done.stdout
+        recorded = re.search(r'^sha256 ([0-9a-f]{64})$',
+                             (ROOT / 'release/bundle-digest.txt').read_text(), re.M)
+        assert recorded, 'release/bundle-digest.txt has no sha256 line'
+        assert digest.group(1) == recorded.group(1), (digest.group(1), recorded.group(1))
+    print('  gnu grammar path      accepted, identity %s' % digest.group(1)[:16])
+
+
 CASES = [
     test_tar_failure_is_fatal,
     test_unknown_tar_implementation_is_refused,
     test_pax_archive_is_refused,
     test_gzip_failure_is_fatal,
     test_empty_tar_is_fatal,
+    test_gnu_flag_string_is_valid_for_gnu_tar,
+    test_gnu_option_grammar_accepts_the_build,
 ]
 
 

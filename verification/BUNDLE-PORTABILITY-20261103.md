@@ -105,7 +105,7 @@ payload-scope paragraph and the new Decision 67.
 | Check | Command | Result |
 |---|---|---|
 | Bundle determinism (4 cases) | `python3 tests/test_bundle_determinism.py` | `BUNDLE_DETERMINISM=PASS cases=4` — two checkouts identical; canonical metadata 58 members, uid/gid 0, root/wheel, mtime `15125334400`; GNU-style input collapsed to 1 656 320 identical bytes; recorded digest matched |
-| Build fail-safe (5 cases) | `python3 tests/test_bundle_build_safety.py` | `BUNDLE_BUILD_SAFETY=PASS cases=5` — failing tar, empty tar, failing gzip, unknown tar and pax producer all rejected with no archive left |
+| Build fail-safe (5 cases) | `python3 tests/test_bundle_build_safety.py` | `BUNDLE_BUILD_SAFETY=PASS cases=5` — failing tar, empty tar, failing gzip, unknown tar and pax producer all rejected with no archive left (the suite grew to **7 cases** after run #41611564118; see §8) |
 | CI wiring | `python3 tests/test_ci_config.py` | `CI_CONFIG=PASS cases=5`; 43 suites referenced, 43 present, 60 steps |
 | Pinned inputs | `sh release/verify-release-inputs.sh` | `VERIFY_OK=4` |
 | Manifest vs tree | re-hash of `release/v2.13.3-runtime.manifest` | 40 ok, 0 mismatched |
@@ -138,3 +138,68 @@ Rollback:
 2. **GNU tar path unproven on real GNU tar** until that push; the runner will exercise it.
 3. **DM-BL-009** (`main` divergence 14/41) untouched and still **OPEN**.
 4. No deployment, tag or release was performed; the 2.13.3 bundle remains unpublished.
+
+## 8. Second CI run (#41611564118) and the GNU flag correction
+
+The repair above was pushed as `8ff76ef` and run `#41611564118`
+(`https://github.com/apg19590209/opnsense-devicemonitor/actions/runs/41611564118`) **failed at step
+32 — "Verify the release bundle inputs"**. It did not fail the way the first run did:
+
+```
+tar implementation: gnu (tar - tar (GNU tar) 1.35)
+tar: unrecognized option '--uname=root'
+TAR_PROBE_FAILED=tar (flags rejected: --format=ustar --owner=0 --group=0 --uname=root --gname=wheel)
+##[error]Process completed with exit code 1.
+```
+
+Reading:
+
+- **The detection and the fail-safe worked.** The runner was correctly identified as GNU tar 1.35,
+  the functional probe refused the flag set, the build exited non-zero, and **no archive was
+  produced or fingerprinted** — there is no 20-byte artefact this time. Steps 1–31 passed
+  (including predecessors `passed=8 skipped=0` and repair permissions `PASS cases=4`); steps 33–61
+  were skipped.
+- **The remaining defect was my GNU flag spelling.** GNU tar has no `--uname`/`--gname` options;
+  those are bsdtar's. GNU expresses ownership as `--owner=NAME[:UID]` and `--group=NAME[:GID]`,
+  which set the symbolic name *and* the numeric id.
+
+Correction (`release/build-bundle.sh`, gnu arm only — the bsdtar arm, the detection and the probe
+are unchanged):
+
+```sh
+TAR_OPTS="--format=ustar --owner=root:0 --group=wheel:0"
+```
+
+**The identity did not change**, which is the point of canonicalisation: the same tree still builds
+`ce92a09a2d0ffd79bea33ca3087137264c5ef1ff992bb983b3d7e4dbf738befd` / 348 920 bytes.
+
+### Verification performed locally
+
+| Check | Result |
+|---|---|
+| `tests/test_bundle_build_safety.py` | `BUNDLE_BUILD_SAFETY=PASS cases=7` — the 5 original cases plus the two new GNU ones |
+| GNU flag grammar (static) | `gnu flags: --format=ustar --owner=root:0 --group=wheel:0`; assertion refuses `--uname`, `--gname`, `--uid`, `--gid` in the GNU arm and pins the bsdtar arm |
+| GNU option grammar (model) | a shim that answers `GNU tar 1.35` and rejects `--uname/--gname/--uid/--gid` with "unrecognized option" runs the real build start to finish: probe accepted, `TAR_CANONICALISED members=58`, identity `ce92a09a…` = recorded |
+| Real GNU-format producer | `bsdtar --format=gnutar` (GNU tar *format*, real libarchive) through the same pipeline: `TAR_CANONICALISED members=58`, `archive bytes: 348920`, `bundle sha256: ce92a09a…` = recorded |
+| `tests/test_bundle_determinism.py` | `BUNDLE_DETERMINISM=PASS cases=4` |
+| `tests/test_ci_config.py` | `CI_CONFIG=PASS cases=5` |
+| Pinned inputs | `VERIFY_OK=4`; manifest 40/40 |
+| `v2.13.2` | tag `011100a0…` → `74e1f6f`, manifest unchanged vs the tag |
+
+**Not verified here:** the actual GNU tar 1.35 binary. This host is the OPNsense appliance: it has
+bsdtar 3.8.7 only, the OPNsense repository carries no `gtar`, there is no Linux compat layer and no
+container runtime, and installing packages on the appliance is out of scope. The GNU *grammar* is
+therefore modelled and the GNU *format* is produced by a real tool, but the flags will only be
+exercised for real by the runner on the next authorised push.
+
+### Outstanding after this correction
+
+1. **H1b stays open** — remote CI has failed twice; a green run is still the only closure.
+2. **Real GNU tar path unproven locally** (see above); the next authorised push is the test.
+3. **M5 stays open** — the installer's own process is still not executed by any test (needs a
+   sandboxed installer mode).
+4. **DM-BL-009 stays open** — `origin/main` divergence 14 behind / 41 ahead, merge base `40cced8`.
+5. **Coverage note:** `release/normalize-bundle-tar.py` and `build-bundle.sh` are build-time tools
+   and are not in `release/release-inputs.sha256` (which pins only files the installer executes).
+   If build-time tools must be pinned too, that is a separate change.
+
