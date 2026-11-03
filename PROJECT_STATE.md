@@ -30,9 +30,9 @@ Decision 60) → `2.13.3` (pruning remediation, Decision 62).
 |---|---|
 | Branch | `fix/pruning-remediation-20261103` (untagged), built on `15be258`; see `git log` for the current tip |
 | Payload | `release/v2.13.3-runtime.manifest`, 40 rows, staged targets 61 (62 fresh) |
-| Bundle | `dm-v2.13.3-runtime.tar.gz`, 348 920 bytes, sha256 `ce92a09a2d0ffd79bea33ca3087137264c5ef1ff992bb983b3d7e4dbf738befd` — built at `/tmp`, **not published**; reproducible from any clean checkout, any timezone and either tar implementation (Decision 63, Decision 67, `release/bundle-digest.txt`). The previous identity `451a03f4…` / 348 932 bytes is retired: it was timezone-dependent and unbuildable on GNU tar) |
+| Bundle | `dm-v2.13.3-runtime.tar.gz`, 1 656 468 bytes, sha256 `7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2` — built at `/tmp`, **not published**; byte-identical on FreeBSD and Linux, any timezone, either tar implementation (Decision 63, 67, 68; `release/bundle-digest.txt`). The archive is deliberately uncompressed (stored deflate blocks) so the identity cannot depend on the host compressor; earlier identities `ce92a09a…` / 348 920, `b29e1166…` / 349 052 and `451a03f4…` / 348 932 are retired and recorded as superseded |
 | Deployed | nowhere. Deployment to `.23` is a separate gated phase; `.253` / `.252` are out of scope |
-| Gates | 43 suites referenced by `.github/workflows/ci.yml` (60 steps); the 10 new or rewritten suites pass locally. Run #41609297193 (first remote run, commit `cedd411`) **failed** at "Verify the bundle is deterministic across checkouts"; Decision 67 fixed both causes (portable archive construction, fail-safe build) |
+| Gates | 44 suites referenced by `.github/workflows/ci.yml` (61 steps); the 11 new or rewritten suites pass locally. Runs #41609297193, #41611564118 and #41627234610 all failed at the bundle step; Decisions 67-68 fixed the tar flags, the archive termination and the compressor |
 | New behaviour | Pruning requires proof of ownership (including for bare-path records), the record covers generated targets, every executed input is pinned, a repair install is idempotent and enforces mode/ownership, rollback reports COMPLETE/INCOMPLETE and restores the record (Decisions 62-64) |
 
 ### Workspace and repository protection (3 November 2026, Decision 65)

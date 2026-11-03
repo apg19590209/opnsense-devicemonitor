@@ -5,6 +5,13 @@
 # checkout and fails when these values do not match, so this file cannot drift silently.
 #
 # Superseded identities:
+#   ce92a09a2d0ffd79bea33ca3087137264c5ef1ff992bb983b3d7e4dbf738befd  348920 bytes
+#       (Decision 67: bsdtar + BSD gzip on FreeBSD. Not cross-platform — GNU tar padded the
+#        archive to its 10 KiB record boundary and GNU gzip compressed it differently, so the
+#        same commit produced the b29e1166... variant on the runner. Retired by Decision 68.)
+#   b29e1166a75a823fda1a8a2997aac4131d14681e9acb0e7cd38ead79e5615550  349052 bytes
+#       (run #41627234610: GNU tar 1.35 + GNU gzip on ubuntu-latest. Recorded as the measured
+#        proof of the two remaining dependencies; never published.)
 #   451a03f4bc04542ea36c36ce7df42faaf5c3e044e574ea991e74d4f5a4570ae8  348932 bytes
 #       (Phase 2 final, but timezone-dependent: the member mtime came from `touch -t`, which
 #        reads the local timezone, so an AEDT host produced this identity while TZ=UTC0 gave
@@ -21,5 +28,5 @@
 #       (before archival metadata was normalised; reproducible only inside the original
 #        working copy, because member mtimes came from that checkout)
 version 2.13.3
-bytes 348920
-sha256 ce92a09a2d0ffd79bea33ca3087137264c5ef1ff992bb983b3d7e4dbf738befd
+bytes 1656468
+sha256 7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2

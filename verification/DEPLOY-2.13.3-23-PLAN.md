@@ -5,12 +5,15 @@ run. Scope is `192.168.20.23` only. `.253` (CARP master) and `.252` (CARP standb
 explicitly out of scope for this phase and must not be touched.
 
 Branch under test: `fix/pruning-remediation-20261103`.
-Bundle: `dm-v2.13.3-runtime.tar.gz`, 348 920 bytes,
-sha256 `ce92a09a2d0ffd79bea33ca3087137264c5ef1ff992bb983b3d7e4dbf738befd`
+Bundle: `dm-v2.13.3-runtime.tar.gz`, 1 656 468 bytes,
+sha256 `7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2`
 (the bundle identity is reproducible — `release/bundle-digest.txt` records it and
-`tests/test_bundle_determinism.py` rebuilds it from two clean checkouts *and* from a
-GNU-style re-encoding of the headers; Decision 67 retired the earlier `451a03f4…` identity,
-which depended on the builder's timezone and on bsdtar; the 2.13.2 bundle is
+`tests/test_bundle_determinism.py` rebuilds it from two clean checkouts while
+`tests/test_bundle_reproducibility.py` pins canonical tar termination and a stored-block gzip
+header; Decisions 67-68 retired the earlier `ce92a09a…`, `b29e1166…` and `451a03f4…`
+identities, which depended on the builder's timezone, tar termination and gzip implementation;
+the archive is uncompressed by design, 1.66 MB instead of 349 KB, because determinism outranks
+payload size; the 2.13.2 bundle is
 untouched).
 
 ## 0. Authorisation gate
@@ -31,7 +34,7 @@ untouched).
 cd /root/src/opnsense-devicemonitor-upstream            # authoritative checkout
 git rev-parse --abbrev-ref HEAD                        # fix/pruning-remediation-20261103
 git status --porcelain                                 # empty
-sha256 -q /tmp/dm-v2.13.3-runtime.tar.gz               # ce92a09a...
+sha256 -q /tmp/dm-v2.13.3-runtime.tar.gz               # 7f389248...
 
 /bin/hostname                                          # OPNsense.internal
 /usr/local/sbin/opnsense-version                       # OPNsense 26.7.7 (>= 26.1.5)

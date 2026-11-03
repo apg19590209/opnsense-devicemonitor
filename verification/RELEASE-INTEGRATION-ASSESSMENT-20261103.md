@@ -78,7 +78,7 @@ sits on `0765c55` and `6448a5a`, the sibling-repair and predecessor fixes). The 
 
 | Check | Result |
 |---|---|
-| `release/bundle-digest.txt` | `version 2.13.3`, `bytes 348920`, `sha256 ce92a09a2d0ffd79bea33ca3087137264c5ef1ff992bb983b3d7e4dbf738befd` (at assessment time this read `451a03f4…` / 348 932 bytes; that identity was retired by Decision 67 as timezone- and bsdtar-dependent) |
+| `release/bundle-digest.txt` | `version 2.13.3`, `bytes 1656468`, `sha256 7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2` (at assessment time this read `451a03f4…` / 348 932; retired by Decisions 67-68 together with `ce92a09a…` / 348 920 and `b29e1166…` / 349 052, because the identity depended on the builder's timezone, tar termination and gzip implementation) |
 | Same identity elsewhere | `PROJECT_STATE.md:33`, `verification/DEPLOY-2.13.3-23-PLAN.md:9,32`, `verification/REVIEW-R2-REMEDIATION-20261103.md:168` — all identical; `fc53aaa1…`, `859c2638…`, `3131b8b4…` appear only as documented superseded identities |
 | Pinned install inputs | `sh release/verify-release-inputs.sh` → `VERIFY_OK=4`, exit 0 |
 | `release/v2.13.3-runtime.manifest` vs tree | 40 rows re-hashed read-only → 40 ok, 0 mismatched |
@@ -135,7 +135,7 @@ necessary**, and neither was performed.
 | Pre-commit guard active | `git config core.hooksPath` | `.githooks` |
 | No unqualified count | `grep -rn '38 distinct\|38 referenced' verification/` | only the dated "as measured at `e33ac1e`" mention and the "38 → 42" correction remain |
 | Suite count matches workflow | `grep -oE 'tests/test_[A-Za-z0-9_]+\.py' .github/workflows/ci.yml \| sort -u \| wc -l` | `42` |
-| Bundle identity intact | `cat release/bundle-digest.txt` | `ce92a09a…` / 348920 |
+| Bundle identity intact | `cat release/bundle-digest.txt` | `7f389248…` / 1656468 |
 | Pinned inputs intact | `sh release/verify-release-inputs.sh` | `VERIFY_OK=4` |
 | Tag untouched | `git rev-parse v2.13.2` / `git ls-remote --tags origin refs/tags/v2.13.2` | `011100a0…` → `74e1f6f` |
 | DM-BL-009 still open | `grep -n 'DM-BL-009' PRODUCT_BACKLOG.md` | header still `**OPEN**` |

@@ -112,14 +112,21 @@ def rewrite(header, mode, size):
 
 
 def walk(data, transform=None):
+    """Canonicalise members and terminate the archive with exactly two zero blocks.
+
+    The tail after the final member is producer-dependent: bsdtar writes the two POSIX
+    end-of-archive blocks, GNU tar writes those plus padding to its 10 KiB record boundary
+    (run #41627234610 showed 1 024 bytes locally versus 3 584 on the runner). Everything
+    after the last member must be zero, and the canonical archive keeps exactly two blocks,
+    so the result no longer depends on which tar produced the input.
+    """
     out = bytearray()
     position = 0
     members = 0
     while position + BLOCK <= len(data):
         header = bytearray(data[position:position + BLOCK])
         if header == bytearray(BLOCK):
-            out += data[position:]
-            return bytes(out), members
+            break
         size, mode, name = parse(header)
         pad = -size % BLOCK
         body = data[position + BLOCK:position + BLOCK + size]
@@ -133,7 +140,18 @@ def walk(data, transform=None):
         out += header + body + padding
         position += BLOCK + size + pad
         members += 1
-    raise SystemExit('normalize-bundle-tar: archive has no end-of-archive marker')
+
+    tail = data[position:]
+    if len(tail) < 2 * BLOCK:
+        raise SystemExit('normalize-bundle-tar: missing end-of-archive marker after %d '
+                         'member(s) (%d trailing byte(s))' % (members, len(tail)))
+    excess = tail.strip(b'\0')
+    if excess:
+        raise SystemExit('normalize-bundle-tar: nonzero data after the final member '
+                         '(%d byte(s); only zero padding may follow the last member)'
+                         % len(excess))
+    out += b'\0' * (2 * BLOCK)
+    return bytes(out), members
 
 
 def main(argv):

@@ -58,6 +58,7 @@ jobs:
           find src -type f -name '*.py' -print0 |
             xargs -0 -n1 python3 -m py_compile
           python3 -m py_compile release/normalize-bundle-tar.py
+          python3 -m py_compile release/bundle-gzip.py
 
       - name: Validate opt-in port discovery
         run: python3 tests/test_port_discovery.py
@@ -238,6 +239,13 @@ jobs:
       # only gzip's status.
       - name: Validate the bundle build fails safely
         run: python3 tests/test_bundle_build_safety.py
+
+      # Decision 68: the identity must not depend on the platform's tar termination or
+      # compressor. Run #41627234610 produced a different archive on the runner for both
+      # reasons; this suite pins canonical termination, a fixed gzip header and a stored-block
+      # deflate stream, so FreeBSD and Linux produce identical bytes.
+      - name: Validate bundle reproducibility (tar termination and gzip)
+        run: python3 tests/test_bundle_reproducibility.py
 
       # The published digest is an artifact identity, so it has to survive a fresh clone:
       # two independent checkouts of the tested commit, with deliberately different file

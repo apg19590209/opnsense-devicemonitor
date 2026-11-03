@@ -181,6 +181,14 @@ across two checkouts, three timezones and a GNU-style header re-encoding; the su
 value is recorded in `release/bundle-digest.txt`. The 451a03f4 value above is kept as the
 record of what was believed at `bbc58e6`, not as a current claim.
 
+**Second correction (3 November 2026, Decision 68):** `ce92a09a…` was still not portable — GNU
+tar on the runner padded the archive to its 10 KiB record boundary and GNU gzip compressed the
+result differently (run #41627234610 built `b29e1166…` / 349 052 bytes). The canonical
+identity is now `7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2`
+(1 656 468 bytes): the canonicaliser terminates with exactly two zero blocks and the bundle is
+compressed by `release/bundle-gzip.py` with a fixed header and stored deflate blocks, so no host
+compressor is involved. Both earlier identities remain recorded as superseded.
+
 | Suite | Result | Covers |
 |---|---|---|
 | `test_prune_plan.py` | `PRUNE_PLAN=PASS cases=12` | M1, U1 (bare-path requires evidence; modified retained) |

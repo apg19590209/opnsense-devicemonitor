@@ -101,11 +101,9 @@ def test_pax_archive_is_refused():
 def test_gzip_failure_is_fatal():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
-        fakedir = tmp / 'bin'
-        fakedir.mkdir()
-        (fakedir / 'gzip').write_text('#!/bin/sh\necho "fake gzip: out of space" >&2\nexit 1\n')
-        (fakedir / 'gzip').chmod(0o755)
-        done, out = run_build(tmp, {'PATH': '%s:%s' % (fakedir, os.environ.get('PATH', ''))})
+        failing = fake(tmp, 'failing-gzip',
+                       'echo "deterministic compressor exploded" >&2\nexit 1\n')
+        done, out = run_build(tmp, {'DM_BUNDLE_GZIP': failing})
         assert_failed(done, out, 'GZIP_FAILED')
     print('  gzip failure         rejected, no archive written')
 

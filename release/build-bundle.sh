@@ -88,7 +88,9 @@ rm -f "$OUT"
 #   * the member-order source, which is the sorted allow-list, never a directory scan;
 #   * the archive format, pinned to ustar so no pax extended header can leak in;
 #   * the *header encoding*, which differs between bsdtar and GNU tar (Decision 67).
-# gzip -n removes the timestamp gzip would otherwise write into its header. File modes are
+# gzip is no longer the host tool: release/bundle-gzip.py writes a fixed header (mtime 0,
+# OS 255) and a stored-block deflate stream, so the compressed bytes do not depend on whether
+# BSD gzip or GNU gzip is installed (Decision 68). File modes are
 # NOT normalised: the executable bits recorded in git must survive.
 find "$BUILD" -exec touch -h -t 202601010000.00 {} +
 
@@ -176,11 +178,15 @@ if [ "$members" != "$expected" ]; then
     rm -f "$TARBALL" "$CANONICAL"
     exit 1
 fi
-if ! gzip -n -c "$CANONICAL" > "$OUT"; then
-    echo "GZIP_FAILED=$CANONICAL" >&2
+# Unquoted on purpose: DM_BUNDLE_GZIP exists so a test can substitute a failing compressor and
+# prove the build stops. The default is our own deterministic writer.
+GZIPPER=${DM_BUNDLE_GZIP:-python3 $SCRIPT_DIR/bundle-gzip.py}
+if ! gzip_out=$($GZIPPER "$CANONICAL" "$OUT"); then
+    echo "GZIP_FAILED=$CANONICAL (deterministic compressor refused)" >&2
     rm -f "$OUT" "$TARBALL" "$CANONICAL"
     exit 1
 fi
+echo "$gzip_out"
 rm -f "$TARBALL" "$CANONICAL"
 if [ ! -s "$OUT" ]; then
     echo "BUNDLE_EMPTY=$OUT (0 bytes)" >&2

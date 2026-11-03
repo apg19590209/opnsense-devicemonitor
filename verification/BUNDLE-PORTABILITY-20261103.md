@@ -203,3 +203,78 @@ exercised for real by the runner on the next authorised push.
    and are not in `release/release-inputs.sha256` (which pins only files the installer executes).
    If build-time tools must be pinned too, that is a separate change.
 
+## 9. Third CI run (#41627234610) — tar termination and gzip reproducibility
+
+The GNU flag fix was pushed as `ee3cccc`; run `#41627234610`
+(`https://github.com/apg19590209/opnsense-devicemonitor/actions/runs/41627234610`) **failed at step
+32** with a *different* symptom — the build worked, the identity did not:
+
+```
+tar implementation: gnu (tar - tar (GNU tar) 1.35)
+TAR_FORMAT=canonical-ustar members=1
+TAR_CANONICALISED members=58 bytes=1658880
+archive bytes     : 349052
+bundle sha256: b29e1166a75a823fda1a8a2997aac4131d14681e9acb0e7cd38ead79e5615550
+BUNDLE_DIGEST_MISMATCH=recorded:ce92a09a… built:b29e1166…
+```
+
+Measured differences, member payload identical (58 members, same sizes, same modes, same ownership):
+
+| Fact | FreeBSD (bsdtar + BSD gzip) | Runner (GNU tar 1.35 + GNU gzip) |
+|---|---|---|
+| data end offset | 1 655 296 | 1 655 296 |
+| trailing bytes after the last member | **1 024** (two POSIX blocks) | **3 584** (two blocks + padding to a 10 240-byte record) |
+| canonical tar length | 1 656 320 | 1 658 880 |
+| bytes for the *same* 1 658 880-byte tar through `gzip -n` | 348 939 | 349 052 |
+
+So two platform facts had leaked into the identity: how the local tar terminates an archive, and
+which gzip implementation compresses it.
+
+### Repair (Decision 68)
+
+`release/normalize-bundle-tar.py` now parses every member, records the end of the final member,
+requires **all** remaining bytes to be zero (rejecting nonzero trailing data), discards the
+producer's padding and appends exactly two 512-byte zero blocks. Canonical length for this payload
+is 1 656 320 bytes, as required.
+
+`release/bundle-gzip.py` (new) writes the .tar.gz itself — fixed header
+`1f 8b 08 00 / FLG 0 / MTIME 0 / XFL 0 / OS 255`, stored deflate blocks, `binascii` CRC-32, ISIZE,
+and an inflate-and-compare guard before the file is written. `build-bundle.sh` calls it instead of
+the host `gzip`, keeps the fail-safe stage checks (`GZIP_FAILED` non-zero, no partial bundle) and
+gains a `DM_BUNDLE_GZIP` seam so the tests can substitute a failing compressor.
+
+Accepted cost: **1 656 468 bytes** instead of ~349 KB. Determinism and a version-free
+implementation outrank payload size; `tar -xzf` reads stored blocks unchanged.
+
+### Identity reissued (once, documented)
+
+| | bytes | sha256 |
+|---|---|---|
+| retired by Decision 67 | 348 920 | `ce92a09a2d0ffd79bea33ca3087137264c5ef1ff992bb983b3d7e4dbf738befd` |
+| runner variant, never published | 349 052 | `b29e1166a75a823fda1a8a2997aac4131d14681e9acb0e7cd38ead79e5615550` |
+| **canonical now** | **1 656 468** | **`7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2`** |
+
+Updated with it: `release/bundle-digest.txt` (both predecessors recorded as superseded),
+`PROJECT_STATE.md` (identity and 44 suites / 61 steps), `verification/DEPLOY-2.13.3-23-PLAN.md`,
+the `REVIEW-R2` second correction, the integration assessment, Decision 66's payload note and the
+new Decision 68.
+
+### Local verification
+
+| Check | Result |
+|---|---|
+| `tests/test_bundle_reproducibility.py` (new, 9 cases) | `BUNDLE_REPRODUCIBILITY=PASS cases=9` — 1 024 / 3 584 / 10 240 byte tails normalise identically; idempotent; nonzero, missing and short tails rejected; compression deterministic across runs; header fixed (`mtime 0`, `OS 255`, no filename); zlib, `gzip -dc` and `tar -tzf` all agree on 58 members; size and sha match `release/bundle-digest.txt`; a failing compressor leaves no bundle; payload metadata unchanged |
+| `tests/test_bundle_build_safety.py` | `BUNDLE_BUILD_SAFETY=PASS cases=7` |
+| `tests/test_bundle_determinism.py` | run after the commit (it clones HEAD) |
+| pinned inputs / manifest | `VERIFY_OK=4`; 40/40 rows |
+| `v2.13.2` | tag `011100a0…` → `74e1f6f` and its manifest unchanged |
+
+### Rollback
+
+Backup set `/root/dm-reprogzip-backup-20261103/`: `branch-ee3cccc.bundle` (verified complete),
+`HEAD.txt`, pre-change `release/build-bundle.sh`, `release/normalize-bundle-tar.py`,
+`release/bundle-digest.txt`, `tests/test_bundle_determinism.py`,
+`tests/test_bundle_build_safety.py`, `.github/workflows/ci.yml`, and `SHA256SUMS`.
+`git reset --soft HEAD~1`; `git reset --hard ee3cccc` for the tree; individual files restored from
+the backup after checking `SHA256SUMS`; whole branch from the bundle.
+

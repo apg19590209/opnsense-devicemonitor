@@ -2955,8 +2955,8 @@ push to the branch — and the fast-forward to the release line — each run the
 **Payload scope remains the owner's choice.** Both `43307b1` (product changes only) and `3bdbb20`
 (product changes plus the workspace tooling and records of Decisions 65–66) are fast-forwards. Only
 `src/` and `release/` affect the bundle, and `3bdbb20` touches neither, so the bundle identity is
-unchanged either way (`ce92a09a…` / 348 920 bytes after Decision 67 reissued it; `451a03f4…` /
-348 932 bytes before that, now superseded).
+unchanged either way (currently `7f389248…` / 1 656 468 bytes after Decision 68; the earlier
+`ce92a09a…` / 348 920, `b29e1166…` / 349 052 and `451a03f4…` / 348 932 identities are superseded).
 
 **`main` is untouched by this decision.** `origin/main` is 14 behind / 41 ahead with merge base
 `40cced8` and 18 conflicting paths; DM-BL-009 stays **OPEN** and is resolved as its own reviewed
@@ -3059,4 +3059,53 @@ flag strings (refuses `--uname/--gname/--uid/--gid` in the GNU arm) and a full b
 a shim that models GNU tar's option grammar — plus a local run through a real GNU-format producer
 (`bsdtar --format=gnutar`). All three produce `ce92a09a…` / 348 920 bytes.
 `verification/BUNDLE-PORTABILITY-20261103.md` §8 records the run, the error and the results.
+
+
+## 68. The archive terminates canonically and the bundle is compressed by our own code
+
+### Decision
+
+**Canonical termination.** `release/normalize-bundle-tar.py` now determines the end of the final
+member, requires every remaining byte to be zero, rejects nonzero data after it, discards
+producer-dependent excess padding and appends exactly two 512-byte zero blocks. A bsdtar tail
+(1 024 bytes) and a GNU tar tail (3 584 bytes, padded to its 10 KiB record boundary) now
+canonicalise to the same bytes; the 58-member payload is 1 656 320 bytes uncompressed either way.
+
+**Own compressor.** `release/bundle-gzip.py` writes the .tar.gz itself: fixed header
+(`1f 8b 08 00`, FLG 0, MTIME 0, XFL 0, **OS 255**), stored deflate blocks (BTYPE 00), CRC-32 from
+`binascii`, ISIZE from the input length, and a full inflate-and-compare before the file is
+written. Nothing about the output depends on whether BSD gzip, GNU gzip or a particular zlib
+version is installed, and there is no timestamp, filename or OS byte to drift.
+
+**Cost accepted deliberately.** The archive is no longer compressed: 1 656 468 bytes instead of
+~349 KB. Determinism and a version-free implementation outrank payload size; the installer only
+needs `tar -xzf`, which reads stored blocks. `tests/test_bundle_reproducibility.py` proves the
+round trip through zlib, `gzip -dc` and `tar -tzf`.
+
+**Identity reissued once, honestly.** `7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2`
+/ 1 656 468 bytes replaces `ce92a09a…` / 348 920 (Decision 67) and its runner variant
+`b29e1166…` / 349 052 (run #41627234610); `451a03f4…` / 348 932 remains recorded as the older
+superseded identity. Nothing published refers to 2.13.3, so no released artefact is invalidated.
+
+**Verification is executable.** `tests/test_bundle_reproducibility.py` (9 cases) covers both tar
+padding variants, idempotency, malformed and nonzero tails, compression determinism, gzip header
+stability, decompression equivalence, independent size/digest checks, fail-closed compression and
+the unchanged 58-member metadata. It is wired into `ci.yml` (44 suites / 61 steps), and
+`release/bundle-digest.txt`, `PROJECT_STATE.md`, the deploy plan, the review record and the
+integration assessment are updated together.
+
+### Reason
+
+Run #41627234610 showed the identity still carried two platform facts: how the local tar
+terminates an archive, and which gzip implementation compresses it. Neither is a property of the
+Device Monitor payload, so both had to move inside our own code. Pinning zlib parameters would
+only have moved the second problem to the zlib version; a stored-block stream has no version to
+disagree about, and the gzip container fields are fixed by RFC 1952 rather than by the host.
+
+### Evidence
+
+`verification/BUNDLE-PORTABILITY-20261103.md` §9 records the run, the measured differences (1 024
+vs 3 584 trailing bytes; 348 939 vs 349 052 compressed bytes for the same input), the new
+implementation, the local results (`BUNDLE_REPRODUCIBILITY=PASS cases=9`,
+`BUNDLE_BUILD_SAFETY=PASS cases=7`, `BUNDLE_DETERMINISM=PASS cases=4`) and the rollback paths.
 
