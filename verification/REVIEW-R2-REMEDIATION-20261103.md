@@ -162,6 +162,46 @@ without touching the node.
 | `test_legacy_evidence.py` | `LEGACY_EVIDENCE=PASS cases=5` |
 | `test_release_manifest.py` | `V2133_RELEASE_MANIFEST=PASS` |
 
+### Phase 2 evidence (M1–M6, L1–L10, U1–U8)
+
+Closed at commit `bbc58e6`; bundle identity reissued as
+`fc53aaa1fed1c42fe0a8aee8fe294aeb3ed81f8659a24f9dd0f79e709c3836ba` (348 774 bytes),
+reproduced from two clean checkouts.
+
+| Suite | Result | Covers |
+|---|---|---|
+| `test_prune_plan.py` | `PRUNE_PLAN=PASS cases=12` | M1, U1 (bare-path requires evidence; modified retained) |
+| `test_prune_apply.py` | `PRUNE_APPLY=PASS cases=8` | M2, L6, L7, U6 |
+| `test_repair_permissions.py` | `REPAIR_PERMISSIONS=PASS cases=4` | M6 |
+| `test_plan_sqlite_backup.py` | `PLAN_SQLITE_BACKUP=PASS cases=3` | M3 (synthetic + live read-only) |
+| `test_catalogue_determinism.py` | `CATALOGUE_DETERMINISM=PASS cases=2` | U5 (determinism half) |
+| `test_rollback_isolated.py` | `ROLLBACK_ISOLATED=PASS cases=3` | M4, U6 (helper level) |
+| `test_release_inputs.py` | `RELEASE_INPUTS=PASS cases=6` | L8, pins |
+| `test_legacy_evidence.py` | `LEGACY_EVIDENCE=PASS cases=6` | L9 |
+| `test_upgrade_prediction.py` | `UPGRADE_PREDICTION=PASS files=61 unchanged=60 replaced=1` | U4 (host only) |
+| `test_bundle_determinism.py` | `BUNDLE_DETERMINISM=PASS cases=2` | H3b, H3c |
+| `test_ci_config.py` | `CI_CONFIG=PASS cases=5` | H1a, test selection |
+| `test_installer_status.py` | `INSTALLER_STATUS=PASS cases=6` | status contract, `repaired=` |
+| `test_release_manifest.py` | `V2133_RELEASE_MANIFEST=PASS` | 2.13.2 immutability |
+
+Live read-only check from the committed tree on `.23` (still 2.13.2):
+
+    VERIFY_OK=4
+    NOTICE: merged the plugin keys into 10 core catalogue(s); uninstall.sh restores the pristine files
+    CHECK_OK version=2.13.3 predecessor=2.13.2 files=61 core_locales=10 prunable=0 daemon_running=1 host=OPNsense.internal legacy_prunable=0 retained=0
+
+No new `/var/backups/devicemonitor/install-v213.*`, record mtime unchanged, no staged temp
+directory.
+
+### Still open after Phase 2
+
+| Item | Reason |
+|---|---|
+| M5, U2, U3, U7 | The installer process is never executed by a test. Closing this needs a sandbox mode inside `install-unattended.sh` (`prune-plan.sh` already supports `--root`); the alternative, running it against `.23`, is forbidden by the brief. Design recorded in Decision 64 (Residual risk) |
+| L5 | Fixed in `cleanup` (`rm -f "$INSTALLED_LIST.new"`) but only provable by executing the installer, i.e. with M5 |
+| U5 (arithmetic half) | `unchanged=61` for a same-version repair needs a second real install; the determinism premise is proven |
+
+
 ### Pre-work fact-finding (recorded before any change)
 
 * Actions is enabled on `apg19590209/opnsense-devicemonitor` (`"enabled":true,
