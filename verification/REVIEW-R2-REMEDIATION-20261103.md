@@ -109,6 +109,18 @@ Filled in as each item closes; entries quote the command and its output.
 
 ### Local suite state after Phase 1
 
+Phase 1 closes at commit `e33ac1e` (branch clean, not pushed).
+
+Live integration check from that tree, on `.23` (running 2.13.2), `--check` only:
+
+    VERIFY_OK=4
+    NOTICE: merged the plugin keys into 10 core catalogue(s); uninstall.sh restores the pristine files
+    CHECK_OK version=2.13.3 predecessor=2.13.2 files=61 core_locales=10 prunable=0 daemon_running=1 host=OPNsense.internal legacy_prunable=0 retained=0
+
+`--check` stayed non-mutating (no new `install-v213.*`, record mtime unchanged at 01:33:16, no
+staged temp directory), so the new pins and the extended `prune-plan.sh` work end to end
+without touching the node.
+
 | Suite | Result |
 |---|---|
 | `test_ci_config.py` (new) | `CI_CONFIG=PASS cases=5` |
