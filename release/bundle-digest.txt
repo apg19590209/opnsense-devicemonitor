@@ -1,0 +1,13 @@
+# Canonical bundle identity for the Device Monitor payload (Decision 63).
+#
+# Regenerate with: sh release/build-bundle.sh  — then update this file. The CI step
+# "Verify the bundle is deterministic across checkouts" recomputes the archive from a clean
+# checkout and fails when these values do not match, so this file cannot drift silently.
+#
+# Superseded identities:
+#   3131b8b481a5a6723d1733b214c118921def77e003863fcf4816e0b278caf9cb  346013 bytes
+#       (built before archival metadata was normalised; reproducible only inside the
+#        original working copy, because member mtimes came from that checkout)
+version 2.13.3
+bytes 346870
+sha256 859c2638663260686630ed05408ab9055877988af56a84b81a2caa34688d6e48

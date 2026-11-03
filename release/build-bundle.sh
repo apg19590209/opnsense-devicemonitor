@@ -29,9 +29,9 @@ digest() {
     fi
 }
 
-BUILD=/tmp/dm-bundle-stage
-OUT=/tmp/dm-v${VERSION}-runtime.tar.gz
-LIST=/tmp/dm-bundle-list.txt
+BUILD=${DM_BUNDLE_STAGE:-/tmp/dm-bundle-stage}
+OUT=${DM_BUNDLE_OUT:-/tmp/dm-v${VERSION}-runtime.tar.gz}
+LIST=${DM_BUNDLE_LIST:-/tmp/dm-bundle-list.txt}
 
 cd "$REPO"
 
@@ -74,8 +74,19 @@ echo "staged .pyc       : $(find "$BUILD" -name '*.pyc' | wc -l | tr -d ' ') (mu
 echo "staged __pycache__: $(find "$BUILD" -type d -name '__pycache__' | wc -l | tr -d ' ') (must be 0)"
 
 rm -f "$OUT"
-# gzip -n keeps the archive byte-identical across builds: gzip otherwise writes the current
-# time into its header, which would make the published digest unreproducible.
-( cd "$BUILD" && tar -cf - -T "$LIST" | gzip -n > "$OUT" )
+# Determinism (Decision 63): the published digest is an artifact identity, so identical
+# inputs must give identical bytes from any checkout. Four things are normalised —
+#   * member mtimes, which `cp -p` would otherwise inherit from the working copy (and a
+#     fresh clone has different ones);
+#   * uid/gid and their symbolic names, which depend on who built the archive;
+#   * the member-order source, which is the sorted allow-list, never a directory scan;
+#   * the archive format, pinned to ustar so no pax extended header (with sub-second
+#     mtimes or path hints) can leak in.
+# gzip -n removes the timestamp gzip would otherwise write into its header. File modes are
+# NOT normalised: the executable bits recorded in git must survive.
+find "$BUILD" -exec touch -h -t 202601010000.00 {} +
+( cd "$BUILD" && tar --format ustar -cf - \
+        --uid 0 --gid 0 --uname root --gname wheel \
+        -T "$LIST" | gzip -n > "$OUT" )
 echo "archive bytes     : $(wc -c < "$OUT" | tr -d ' ')"
-digest "$OUT"
+printf 'bundle sha256: %s\n' "$(digest "$OUT")"

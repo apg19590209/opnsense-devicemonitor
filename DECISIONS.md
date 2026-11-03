@@ -2754,3 +2754,61 @@ v2.8 shipped a zip before the manifest format existed, so a v2.8-origin file is 
 when the record covers it. The evidence is a fixed list: adding a release without
 regenerating it narrows bootstrap coverage, which `tests/test_legacy_evidence.py` catches
 because the file must equal a fresh generation.
+
+## 63. The bundle identity is reproducible, and a rollback restores the install record
+
+### Decision
+
+`release/build-bundle.sh` produces a byte-identical archive from any clean checkout of the
+same commit. Four things are normalised before the archive is written: member mtimes (a
+fixed stamp, because `cp -p` would otherwise carry each checkout's timestamps), uid/gid and
+their symbolic names (`0`, `root`/`wheel`), the member order (the sorted allow-list, never a
+directory scan), and the archive format (`ustar`, so no pax extended header can leak in).
+`gzip -n` removes gzip's own timestamp. File modes are **not** normalised: the executable
+bits recorded in git must survive.
+
+The canonical digest lives in `release/bundle-digest.txt` together with the payload version
+and byte count. `tests/test_bundle_determinism.py` builds the bundle in two independent
+checkouts of the tested commit, gives each checkout deliberately different file timestamps,
+requires identical bytes, and then compares the result with that file — so a change to any
+bundled file fails CI until the digest is reissued.
+
+The install record (`/var/db/devicemonitor/installed-manifest.txt`) is part of the
+pre-install state: `prune-plan.sh backup-record` copies it into the rollback directory with
+a digest, and `prune-plan.sh restore-record` puts it back (or removes it when the run being
+rolled back created it). Both the automatic rollback and the documented manual rollback use
+them, so a rolled-back node keeps the target set it actually has.
+
+CI gains a `workflow_dispatch` trigger and the remediation branch in `push.branches`. The
+predecessor step now asserts the exact summary line `passed=8 skipped=0`, in addition to the
+suite failing on any skip.
+
+### Reason
+
+The 2.13.3 review proved the published digest was a single-checkout artefact: two clean
+clones of `15be258` produced different archives (`345 827` vs `346 013` bytes), and the CI
+guard could not see it because it built twice in one checkout. An artifact identity that
+cannot be reproduced cannot be the thing a deployment gate verifies.
+
+The same review showed the documented rollback was unusable twice over: it recommended
+reinstalling the published 2.13.2 bundle, whose installer accepts only `2.8 … 2.13.1` and
+therefore aborts on 2.13.3 (and on 2.13.2 itself), and it left the install record describing
+the rolled-back target set.
+
+### Evidence
+
+`tests/test_bundle_determinism.py` — two checkouts, two stamps, identical bytes; canonical
+digest `859c2638663260686630ed05408ab9055877988af56a84b81a2caa34688d6e48` (346 870 bytes).
+`tests/test_rollback_isolated.py` — a full install (replaced target, unchanged target, pruned
+legacy file, previous record) rolled back with exactly the documented commands; the replaced
+file, the pruned file, their modes and the record all return to their pre-install bytes, and
+a damaged record backup fails loudly without writing anything.
+`tests/test_upgrade_predecessors.py` — asserts eight passes and zero skips unless
+`DM_ALLOW_SKIPPED_PREDECESSORS=1` is set for a deliberate local run.
+
+### Residual risk
+
+Reproducibility depends on the toolchain writing the same bytes: `tar` with `--format ustar`
+and `gzip -n` must accept the options (bsdtar and GNU tar do; both the test and CI exercise
+it). A member path longer than the 100-byte ustar limit fails the build loudly rather than
+silently switching to a pax header.

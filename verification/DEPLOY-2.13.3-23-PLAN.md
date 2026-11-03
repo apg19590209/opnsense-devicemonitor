@@ -5,18 +5,23 @@ run. Scope is `192.168.20.23` only. `.253` (CARP master) and `.252` (CARP standb
 explicitly out of scope for this phase and must not be touched.
 
 Branch under test: `fix/pruning-remediation-20261103`.
-Bundle: `dm-v2.13.3-runtime.tar.gz`, 346 013 bytes,
-sha256 `3131b8b481a5a6723d1733b214c118921def77e003863fcf4816e0b278caf9cb`
-(build it from the branch with `release/build-bundle.sh`; the 2.13.2 bundle is untouched).
+Bundle: `dm-v2.13.3-runtime.tar.gz`, 346 870 bytes,
+sha256 `859c2638663260686630ed05408ab9055877988af56a84b81a2caa34688d6e48`
+(the bundle identity is reproducible — `release/bundle-digest.txt` records it and
+`tests/test_bundle_determinism.py` rebuilds it from two clean checkouts; the 2.13.2 bundle is
+untouched).
 
 ## 0. Authorisation gate
 
-* CI on the branch is green, including `test_upgrade_predecessors.py` with `skipped=0`.
-* The reviewer has signed off on `verification/PRUNING_REMEDIATION_20261103.md`.
+* CI on the branch is green, including `test_upgrade_predecessors.py` with
+  `passed=8 skipped=0`; the branch is listed in `push.branches`, so a push triggers the full
+  workflow (`workflow_dispatch` is also available).
+* The reviewer has signed off on `verification/PRUNING_REMEDIATION_20261103.md` and
+  `verification/REVIEW-R2-REMEDIATION-20261103.md`.
 * The operator has confirmed the window: no other change is in flight on `.23`, and the
   CARP pair is not being upgraded in the same window.
-* The 2.13.3 tarball digest above matches what was reviewed. If the tarball is rebuilt, the
-  digest changes and this plan must be reissued.
+* The 2.13.3 tarball digest above matches what was reviewed. Rebuilding from the same commit
+  now reproduces that digest; a mismatch means a different tree, not a different clock.
 
 ## 1. Preflight (read-only)
 
@@ -24,7 +29,7 @@ sha256 `3131b8b481a5a6723d1733b214c118921def77e003863fcf4816e0b278caf9cb`
 cd /root/src/opnsense-devicemonitor-upstream            # authoritative checkout
 git rev-parse --abbrev-ref HEAD                        # fix/pruning-remediation-20261103
 git status --porcelain                                 # empty
-sha256 -q /tmp/dm-v2.13.3-runtime.tar.gz               # 3131b8b4...
+sha256 -q /tmp/dm-v2.13.3-runtime.tar.gz               # 859c2638...
 
 /bin/hostname                                          # OPNsense.internal
 /usr/local/sbin/opnsense-version                       # OPNsense 26.7.7 (>= 26.1.5)
@@ -58,18 +63,32 @@ directory, and `/var/db/devicemonitor/installed-manifest.txt` mtime unchanged.
 
 ## 2. Backup verification (before the install)
 
+`devices.db` is a live SQLite database: a plain `tar` of it is not a consistent snapshot, so
+it is copied with `sqlite3 .backup` (the same primitive the installer uses for its own
+rollback asset) and only then archived together with the configuration and the record.
+
 ```sh
 mkdir -p /root/dm-pre-2133
-tar -czf /root/dm-pre-2133/runtime-data.tgz /var/db/devicemonitor
-sha256 -q /root/dm-pre-2133/runtime-data.tgz             # record the digest
-tar -tzf /root/dm-pre-2133/runtime-data.tgz | head      # devices.db, config.json, installed-manifest.txt
+cp -p /var/db/devicemonitor/config.json /root/dm-pre-2133/config.json
 cp -p /var/db/devicemonitor/installed-manifest.txt /root/dm-pre-2133/installed-manifest.txt
-sha256 -q /var/db/devicemonitor/devices.db              # must be identical after the install
+python3 - <<'PY'
+import sqlite3
+src = sqlite3.connect('file:/var/db/devicemonitor/devices.db?mode=ro', uri=True)
+dst = sqlite3.connect('/root/dm-pre-2133/devices.db')
+src.backup(dst)
+assert dst.execute('PRAGMA quick_check').fetchone()[0] == 'ok'
+dst.close(); src.close()
+PY
+tar -czf /root/dm-pre-2133/runtime-data.tgz -C /root/dm-pre-2133 \
+    devices.db config.json installed-manifest.txt
+sha256 -q /root/dm-pre-2133/runtime-data.tgz             # record the digest
+tar -tzf /root/dm-pre-2133/runtime-data.tgz              # devices.db, config.json, installed-manifest.txt
+sha256 -q /var/db/devicemonitor/devices.db               # must be identical after the install
 ```
 
 The installer's own rollback directory (`/var/backups/devicemonitor/install-v213.<id>/`,
-`files/` + `plan` + optional `prune`) is created by the run and must be kept until a clean
-scan cycle has been observed.
+`files/` + `plan` + optional `prune` + `installed-manifest.txt` and its `.sha256`) is created
+by the run and must be kept until a clean scan cycle has been observed.
 
 ## 3. Install
 
@@ -127,27 +146,38 @@ Acceptance: version 2.13.3, no manifest mismatch, record has 61 digest rows incl
 
 ## 5. Rollback
 
-The installer rolls itself back on any abort (replaced targets first, then pruned files,
-every restore digest-verified) and prints `ROLLBACK_ATTEMPTED=<backup>`. If a rollback is
-needed after the fact:
+The installer rolls itself back on any abort — replaced targets, then pruned files, then the
+install record — with every restore digest-verified, and prints
+`ROLLBACK_ATTEMPTED=<backup>`. If a rollback is needed after a *successful* install, use the
+installer's own preserved assets. This is the only supported procedure: the published 2.13.2
+bundle cannot be used, because its installer accepts only `2.8 … 2.13.1` and aborts with
+`unsupported predecessor 2.13.3`.
 
 ```sh
 BK=/var/backups/devicemonitor/install-v213.<id>          # from the INSTALL_OK line
-service devicemonitor stop
 sh /tmp/dm-v2.13.3/release/prune-plan.sh restore-targets --plan "$BK/plan" --backup "$BK"
 [ ! -f "$BK/prune" ] || sh /tmp/dm-v2.13.3/release/prune-plan.sh restore --plan "$BK/prune" --backup "$BK"
-service devicemonitor start
+sh /tmp/dm-v2.13.3/release/prune-plan.sh restore-record \
+    --record /var/db/devicemonitor/installed-manifest.txt --backup "$BK"
+service devicemonitor restart
 python3 -c 'import json;print(json.load(open("/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])'
                                                        # 2.13.2
 ```
 
-`installed-manifest.txt` needs no restore: it is written only after a fully successful run,
-so a failed or rolled-back install leaves the previous record in place. Verify it still has
-40 lines and no digests after a rollback.
+Each step prints `ROLLBACK_RESTORED=<path>`, `RECORD_RESTORED=<record>` or a
+`ROLLBACK_FAILED=`/`ROLLBACK_CONFLICT=` line; any `ROLLBACK_FAILED` means the node is not
+back at its pre-install state and the runtime-data backup is the next step. The record
+restore matters: without it the node keeps a 2.13.3 record describing files it no longer
+has, which the next run would treat as unverifiable (`RETAINED modified`) rather than
+replacing the target set.
 
-Hard fallback: reinstall the published 2.13.2 bundle (`dm-v2.13.2-runtime.tar.gz`, sha256
-`8fd6a7a3…`; 2.13.3 accepts it as a predecessor) and restore
-`/root/dm-pre-2133/runtime-data.tgz` only if `devices.db` is found damaged.
+`prune-plan.sh backup-record` already put the previous record into `$BK` before the first
+mutation, so this works for a manual rollback. A *fresh* install has no previous record:
+`restore-record` then removes the one the run created (`RECORD_REMOVED=`).
+
+Rebuild the data only from `/root/dm-pre-2133/runtime-data.tgz` if `devices.db` is found
+damaged (that archive must be taken with the daemon stopped or via `sqlite3 .backup` — a
+plain `tar` of a live database is not a consistent snapshot).
 
 ## 6. Stop conditions
 

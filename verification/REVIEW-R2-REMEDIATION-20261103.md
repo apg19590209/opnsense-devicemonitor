@@ -12,15 +12,15 @@ the brief and is recorded here as *awaiting scope* so nothing is silently droppe
 
 | # | Reviewer finding | Required outcome | Status |
 |---|---|---|---|
-| H1a | CI cannot run on this branch (`ci.yml:4-29` lists neither the branch nor `release/2.13` for PRs) | A supported mechanism that starts the complete workflow on the remediation branch | open |
-| H1b | "Verify that the workflow actually starts and completes, rather than checking YAML syntax" | A real GitHub Actions run id, conclusion and per-step evidence captured in this file | open |
-| H1c | Predecessor coverage | All eight predecessor cases pass with `skipped=0`, asserted by the suite and visible in the run log | open |
-| H2a | `PLAN:148-150` recommends reinstalling the published 2.13.2 bundle; that installer accepts only 2.8…2.13.1 and aborts on 2.13.3 | Recommendation removed; rollback documented through the installer's own rollback assets | open |
-| H2b | Record restoration | A manual rollback after a *successful* install also restores the previous `installed-manifest.txt` (the installer must keep a copy in the rollback directory) | open |
-| H2c | Verification | Rollback procedure executed and verified in an isolated environment, with the transcript recorded | open |
-| H3a | `release/build-bundle.sh` is not byte-reproducible across checkouts (member mtimes) | Deterministic archive: normalised mtime, owner/group, member order, ustar headers, `gzip -n`, executable bits preserved | open |
-| H3b | CI guard only compared two builds in one checkout | CI test that builds from two separate clean checkouts and compares SHA-256 | open |
-| H3c | `3131b8b4…` presented as the artifact identity | New canonical digest issued and every reference updated; `3131b8b4…` recorded as superseded unless reproduced by the corrected process | open |
+| H1a | CI cannot run on this branch (`ci.yml:4-29` lists neither the branch nor `release/2.13` for PRs) | A supported mechanism that starts the complete workflow on the remediation branch | **done** — `workflow_dispatch:` added and `fix/pruning-remediation-20261103` added to `push.branches`; every pre-existing branch entry preserved |
+| H1b | "Verify that the workflow actually starts and completes, rather than checking YAML syntax" | A real GitHub Actions run id, conclusion and per-step evidence | **NOT EXECUTED — blocked**: this phase forbids pushing, and a remote run cannot start without one. Verified instead: YAML parses, all 38 referenced suites exist, the trigger list is asserted, and the full python suite set runs green locally (evidence below). A push is the only remaining step |
+| H1c | Predecessor coverage | All eight predecessor cases pass with `skipped=0`, asserted by the suite and visible in the run log | **done** — the suite now asserts `passed == len(PREDECESSORS)` and `skipped == 0`, and the CI step greps `^UPGRADE_PREDECESSORS=PASS passed=8 skipped=0$` |
+| H2a | `PLAN:148-150` recommends reinstalling the published 2.13.2 bundle; that installer accepts only 2.8…2.13.1 and aborts on 2.13.3 | Recommendation removed; rollback documented through the installer's own rollback assets | **done** — the plan now states why the published installer cannot be used and gives the asset-based procedure |
+| H2b | Record restoration | A manual rollback after a *successful* install also restores the previous `installed-manifest.txt` | **done** — `prune-plan.sh backup-record` / `restore-record` (digest-verified, with a digest sidecar so a damaged backup cannot be accepted); the installer calls both, in the backup phase and in `cleanup` |
+| H2c | Verification | Rollback procedure executed and verified in an isolated environment, with the transcript recorded | **done** — `tests/test_rollback_isolated.py`, 3 cases (full manual rollback, fresh-install record removal, damaged-backup refusal) |
+| H3a | `release/build-bundle.sh` is not byte-reproducible across checkouts (member mtimes) | Deterministic archive: normalised mtime, owner/group, member order, ustar headers, `gzip -n`, executable bits preserved | **done** |
+| H3b | CI guard only compared two builds in one checkout | CI test that builds from two separate clean checkouts and compares SHA-256 | **done** — `tests/test_bundle_determinism.py` clones the tested commit twice, stamps each checkout with a different timestamp, and requires identical bytes |
+| H3c | `3131b8b4…` presented as the artifact identity | New canonical digest issued and every reference updated; `3131b8b4…` recorded as superseded | **done** — canonical identity `859c2638…` / 346 870 bytes in `release/bundle-digest.txt`; `3131b8b4…` recorded there as superseded with the reason |
 
 ## Phase 2 — pruning (brief truncated; scope to be supplied)
 
@@ -59,6 +59,68 @@ the brief and is recorded here as *awaiting scope* so nothing is silently droppe
 ## Phase 1 evidence log
 
 Filled in as each item closes; entries quote the command and its output.
+
+### H1 — CI execution
+
+* `.github/workflows/ci.yml`: `workflow_dispatch:` added; `fix/pruning-remediation-20261103`
+  added to `push.branches`; `release/2.13`, `v2.5…v2.10-development` and
+  `feature/async-db-v2.11` all preserved; `pull_request.branches` deliberately unchanged
+  (it filters on the PR base branch, not the head).
+* Workflow shape after the change: 55 steps, 24 `run: python3 tests/…` steps, **38 distinct
+  suites**, all of them present on disk (`tests/test_ci_config.py`).
+* YAML parse check: `python3 -c 'import yaml; yaml.safe_load(open(".github/workflows/ci.yml"))'`
+  → valid.
+* Predecessors, locally: `UPGRADE_PREDECESSORS=PASS passed=8 skipped=0`, then
+  `UPGRADE_PREDECESSORS_CASES=PASS cases=2`.
+* **Actual GitHub Actions execution: not performed.** This phase forbids pushing the branch
+  and triggering a remote workflow, and `workflow_dispatch` on GitHub only becomes usable
+  once the workflow exists on the default branch. The run is the first action of the next
+  phase: `git push origin fix/pruning-remediation-20261103`, then
+  `gh run watch` / `gh run list --branch fix/pruning-remediation-20261103`. Until that run
+  exists, H1b stays open and no CI-green claim is made anywhere in the docs.
+
+### H2 — Rollback through the preserved assets
+
+* `release/prune-plan.sh`: `backup-record` and `restore-record` added. The backup writes
+  `installed-manifest.txt` **and** `installed-manifest.sha256`; the restore verifies the
+  backup against that recorded digest before writing, so a damaged backup is refused
+  instead of restored.
+* `install-unattended.sh:246-247` backs the record up before the first mutation;
+  `install-unattended.sh:98-101` restores (or removes) it during `cleanup`.
+* `verification/DEPLOY-2.13.3-23-PLAN.md` §5 rewritten: the invalid 2.13.2 reinstall is gone,
+  replaced by `restore-targets` → `restore` → `restore-record`. §2 now snapshots
+  `devices.db` with `sqlite3 .backup` instead of tarring a live database.
+* Isolated rehearsal: `tests/test_rollback_isolated.py` →
+  `ROLLBACK_ISOLATED=PASS cases=3` (replaced target, pruned target, modes and record all
+  return to their pre-install bytes; fresh-install record removal; damaged backup refused).
+
+### H3 — Deterministic bundles
+
+* `release/build-bundle.sh`: fixed mtime (`touch -h -t 202601010000.00`), `ustar` format,
+  `--uid 0 --gid 0 --uname root --gname wheel`, sorted allow-list, `gzip -n`; modes
+  untouched so executable bits survive. `DM_BUNDLE_STAGE` / `DM_BUNDLE_OUT` /
+  `DM_BUNDLE_LIST` overrides let the test build two checkouts without colliding.
+* Canonical identity: `release/bundle-digest.txt` → `version 2.13.3`, `bytes 346870`,
+  `sha256 859c2638663260686630ed05408ab9055877988af56a84b81a2caa34688d6e48`.
+  `3131b8b4…` (346 013 bytes) is recorded there as superseded, with the reason.
+* `tests/test_bundle_determinism.py` → `BUNDLE_DETERMINISM=PASS cases=2` (two clean
+  checkouts with different timestamps build identical bytes; the result equals the recorded
+  digest).
+
+### Local suite state after Phase 1
+
+| Suite | Result |
+|---|---|
+| `test_ci_config.py` (new) | `CI_CONFIG=PASS cases=5` |
+| `test_bundle_determinism.py` (new) | `BUNDLE_DETERMINISM=PASS cases=2` |
+| `test_rollback_isolated.py` (new) | `ROLLBACK_ISOLATED=PASS cases=3` |
+| `test_upgrade_predecessors.py` | `passed=8 skipped=0` |
+| `test_prune_plan.py` | `PRUNE_PLAN=PASS cases=10` |
+| `test_prune_apply.py` | `PRUNE_APPLY=PASS cases=4` |
+| `test_release_inputs.py` | `RELEASE_INPUTS=PASS cases=5` |
+| `test_installer_status.py` | `INSTALLER_STATUS=PASS cases=6` |
+| `test_legacy_evidence.py` | `LEGACY_EVIDENCE=PASS cases=5` |
+| `test_release_manifest.py` | `V2133_RELEASE_MANIFEST=PASS` |
 
 ### Pre-work fact-finding (recorded before any change)
 

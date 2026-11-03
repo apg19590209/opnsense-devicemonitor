@@ -24,6 +24,12 @@
 #          per target: "<id> <old> <new> <mode> <source> <target>"), using the same
 #          vocabulary and the same digest verification. A target that nothing changed is
 #          left alone; a target that a third party changed is a reported conflict.
+# backup-record  copies the previous install record into the rollback directory, so a
+#          rollback can also restore the target set that record describes. Prints
+#          RECORD_BACKED_UP=<record> (or RECORD_BACKED_UP=absent when there was none).
+# restore-record puts the backed-up record back (digest-verified), or removes the record
+#          when the run that is being rolled back created it. Prints RECORD_RESTORED=<record>
+#          or RECORD_REMOVED=<record>.
 #
 # The approved namespaces are the only paths this plugin may ever own. A candidate outside
 # them is not a candidate at all, so a corrupted record or a hand-edited evidence file
@@ -41,6 +47,8 @@ usage() {
     echo "       $PROG delete  --plan FILE [--root DIR]" >&2
     echo "       $PROG restore --plan FILE --backup DIR [--root DIR]" >&2
     echo "       $PROG restore-targets --plan FILE --backup DIR [--root DIR]" >&2
+    echo "       $PROG backup-record --record FILE --backup DIR [--root DIR]" >&2
+    echo "       $PROG restore-record --record FILE --backup DIR [--root DIR]" >&2
     exit 2
 }
 
@@ -357,11 +365,68 @@ restore_targets() {
     return "$rc"
 }
 
+backup_record() {
+    [ -n "$record" ] || die 'backup-record needs --record'
+    [ -n "$backup" ] || die 'backup-record needs --backup'
+    mkdir -p "$backup" || die "cannot create $backup"
+    full=$root$record
+    if [ ! -e "$full" ]; then
+        printf 'RECORD_BACKED_UP=absent\n'
+        return 0
+    fi
+    [ -f "$full" ] && [ ! -L "$full" ] || die "record is not a regular file: $record"
+    cp -p "$full" "$backup/installed-manifest.txt" || die "cannot back up $record"
+    expected=$(digest "$full")
+    if [ "$(digest "$backup/installed-manifest.txt")" != "$expected" ]; then
+        die "record backup digest mismatch: $record"
+    fi
+    printf '%s %s\n' "$expected" "$record" > "$backup/installed-manifest.sha256"
+    printf 'RECORD_BACKED_UP=%s\n' "$record"
+}
+
+restore_record() {
+    [ -n "$backup" ] || die 'restore-record needs --backup'
+    [ -n "$record" ] || die 'restore-record needs --record'
+    full=$root$record
+    if [ -f "$backup/installed-manifest.txt" ]; then
+        # The recorded digest is the trusted value: verifying the copy against the copy
+        # would accept a damaged backup.
+        if [ ! -f "$backup/installed-manifest.sha256" ]; then
+            echo "ROLLBACK_FAILED=$record (record digest missing)" >&2
+            return 1
+        fi
+        expected=$(awk 'NR == 1 { print $1 }' "$backup/installed-manifest.sha256")
+        if [ "$(digest "$backup/installed-manifest.txt")" != "$expected" ]; then
+            echo "ROLLBACK_FAILED=$record (backup digest)" >&2
+            return 1
+        fi
+        mkdir -p "$(dirname -- "$full")" || { echo "ROLLBACK_FAILED=$record (record mkdir)" >&2; return 1; }
+        if ! cp -p "$backup/installed-manifest.txt" "$full"; then
+            echo "ROLLBACK_FAILED=$record (record copy)" >&2
+            return 1
+        fi
+        if [ "$(digest "$full")" != "$expected" ]; then
+            echo "ROLLBACK_FAILED=$record (record digest)" >&2
+            return 1
+        fi
+        printf 'RECORD_RESTORED=%s\n' "$record"
+        return 0
+    fi
+    # There was no record before this run: remove the one the run created.
+    if [ -e "$full" ]; then
+        rm -f "$full" || { echo "ROLLBACK_FAILED=$record (record remove)" >&2; return 1; }
+        printf 'RECORD_REMOVED=%s\n' "$record"
+    fi
+    return 0
+}
+
 case "$cmd" in
     compute) compute ;;
     backup) backup_plan ;;
     delete) delete_plan ;;
     restore) restore_plan ;;
     restore-targets) restore_targets ;;
+    backup-record) backup_record ;;
+    restore-record) restore_record ;;
     *) usage ;;
 esac

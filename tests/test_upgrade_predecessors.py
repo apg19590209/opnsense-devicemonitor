@@ -183,17 +183,24 @@ def test_every_predecessor_upgrades():
         results.append(outcome)
 
     skipped = results.count('SKIPPED')
+    passed = results.count('PASS')
+    allowed = os.environ.get('DM_ALLOW_SKIPPED_PREDECESSORS') == '1'
     if skipped:
         message = ('%d of %d predecessors were not validated: the tags are missing '
                    '(fetch-depth: 0). Set DM_ALLOW_SKIPPED_PREDECESSORS=1 only for a '
                    'deliberate local run.' % (skipped, len(results)))
-        if os.environ.get('DM_ALLOW_SKIPPED_PREDECESSORS') != '1':
+        if not allowed:
             raise AssertionError(message)
         print('  WARNING: %s' % message)
 
-    assert results.count('PASS') > 0, results
-    print('UPGRADE_PREDECESSORS=PASS passed=%d skipped=%d'
-          % (results.count('PASS'), skipped))
+    if allowed:
+        assert passed > 0, results
+    else:
+        # Eight accepted predecessors, eight passes, no skips: the deployment plan and the
+        # CI step both rely on this exact number.
+        assert passed == len(PREDECESSORS), (passed, len(PREDECESSORS), results)
+        assert skipped == 0, results
+    print('UPGRADE_PREDECESSORS=PASS passed=%d skipped=%d' % (passed, skipped))
 
 
 CASES = [test_accepted_list_matches_installer, test_every_predecessor_upgrades]

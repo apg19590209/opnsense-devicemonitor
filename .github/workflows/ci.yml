@@ -1,6 +1,10 @@
 name: Device Monitor CI
 
 on:
+  # Manual dispatch so any branch can be validated without inventing a push rule. This
+  # trigger only becomes usable once the workflow exists on the default branch; the
+  # explicit branch entries below are what make a remediation branch testable immediately.
+  workflow_dispatch:
   push:
     branches:
       - v2.5-development
@@ -19,6 +23,11 @@ on:
       # feature and the restored O4 ageing. Listed so pushes to the released branch are
       # validated remotely instead of resting on a local run.
       - release/2.13
+      # 2.13.3 pruning remediation (3 November 2026). `push` is evaluated against the
+      # workflow in the pushed commit, so listing the branch here is enough to get a real
+      # run without touching the default branch or the release line. Remove this entry when
+      # the branch is merged.
+      - fix/pruning-remediation-20261103
   pull_request:
     branches:
       - v2.5-development
@@ -115,10 +124,18 @@ jobs:
       # Supported-predecessor claim: a database built by the predecessor's own code must
       # reach the current schema in one init_db() with its rows intact (2.8-2.13.2 are all
       # accepted predecessors, so those lines install directly, and 2.13.2 is the repair
-      # case). Reads the tags, which the checkout above fetches with fetch-depth: 0. A
-      # missing tag fails the step; DM_ALLOW_SKIPPED_PREDECESSORS=1 is for local runs only.
+      # case). Reads the tags, which the checkout above fetches with fetch-depth: 0.
+      # Eight passes and zero skips are required: the suite fails on any skip, and the
+      # summary line is asserted here too so a shrunken table cannot pass silently.
       - name: Validate every accepted predecessor upgrade
-        run: python3 tests/test_upgrade_predecessors.py
+        run: |
+          set -eu
+          python3 tests/test_upgrade_predecessors.py > /tmp/upgrade-predecessors.log 2>&1 || {
+            cat /tmp/upgrade-predecessors.log
+            exit 1
+          }
+          cat /tmp/upgrade-predecessors.log
+          grep -q '^UPGRADE_PREDECESSORS=PASS passed=8 skipped=0$' /tmp/upgrade-predecessors.log
 
       # Ownership evidence for pruning (Decision 62): regenerated from the release
       # manifests at the tags and compared with release/legacy-targets.txt.
@@ -136,6 +153,16 @@ jobs:
 
       - name: Validate the installer status contract
         run: python3 tests/test_installer_status.py
+
+      # The documented manual rollback, rehearsed in a staging tree: replaced target, pruned
+      # target, modes and the install record must all return to their pre-install bytes.
+      - name: Validate the rollback procedure in isolation
+        run: python3 tests/test_rollback_isolated.py
+
+      # Triggers, preserved branch entries and the selection itself: every tests/*.py named
+      # below must exist, and the predecessor step must require passed=8 skipped=0.
+      - name: Validate the CI configuration
+        run: python3 tests/test_ci_config.py
 
       - name: Lint PHP sources
         run: |
@@ -158,9 +185,8 @@ jobs:
           sh -n release/build-bundle.sh
           sh -n release/merge-opnsense-catalog.sh
 
-      # The bundle is what a firewall actually installs: build it, verify the pinned inputs
-      # from inside the staged tree exactly as install-unattended.sh does, and build it a
-      # second time to prove the published digest is reproducible.
+      # The bundle is what a firewall actually installs: build it and verify the pinned
+      # inputs from inside the staged tree exactly as install-unattended.sh does.
       - name: Verify the release bundle inputs
         run: |
           set -eu
@@ -170,11 +196,13 @@ jobs:
           test -f "$stage/release/legacy-targets.txt"
           test -f "$stage/release/prune-plan.sh"
           test -f "$stage/release/release-inputs.sha256"
-          first=$(sha256sum /tmp/dm-v*-runtime.tar.gz | awk '{print $1}')
-          sh release/build-bundle.sh
-          second=$(sha256sum /tmp/dm-v*-runtime.tar.gz | awk '{print $1}')
-          test "$first" = "$second" || { echo "bundle is not reproducible"; exit 1; }
-          echo "bundle sha256: $second"
+
+      # The published digest is an artifact identity, so it has to survive a fresh clone:
+      # two independent checkouts of the tested commit, with deliberately different file
+      # timestamps, must produce the same bytes — and that result must equal the digest
+      # recorded in release/bundle-digest.txt.
+      - name: Verify the bundle is deterministic across checkouts
+        run: python3 tests/test_bundle_determinism.py
 
       - name: Compile gettext catalogues
         run: |

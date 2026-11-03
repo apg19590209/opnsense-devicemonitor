@@ -44,7 +44,7 @@ VERIFIER=release/verify-release-inputs.sh
 # ownership evidence and the catalogue merge helper. A tampered helper can therefore never
 # decide which files get removed.
 MANIFEST_SHA=0c5df65eda8a28e0a3884c0710caeb31555a59eb5479656a56ccfbf4b0dc809b
-RELEASE_INPUTS_SHA=7e96f80a6055a7c9608fc09eb0c0abb252753f6d1345e61c044a9e6927f844a5
+RELEASE_INPUTS_SHA=c4a35cece9fb312db437ea01467659f801b568c7675dca452b54b52fdacf5628
 VERIFIER_SHA=68b93f2a08f0808b67b6bd2ca76dca33a6cc5c159de4b61353b721eaefbb583d
 [ -f "$MANIFEST" ] && [ ! -L "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = "$MANIFEST_SHA" ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 40 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
@@ -95,6 +95,10 @@ cleanup() {
             /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" restore --plan "$BACKUP/prune" --backup "$BACKUP" ||
                 echo "ROLLBACK_PRUNE_INCOMPLETE=$BACKUP" >&2
         fi
+        # The record this run might have written describes the new target set; put the
+        # previous one back, or remove it when this was a fresh install.
+        /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" restore-record --record "$INSTALLED_LIST" --backup "$BACKUP" ||
+            echo "ROLLBACK_RECORD_INCOMPLETE=$BACKUP" >&2
         if [ "$RC_LINK_CREATED" = 1 ]; then rm -f /etc/rc.d/devicemonitor; fi
         if [ "$CONFIGD_CHANGED" = 1 ]; then service configd restart || echo 'ROLLBACK_CONFIGD_RESTART_FAILED' >&2; fi
         if [ "$WAS_RUNNING" = 1 ]; then service devicemonitor restart || echo 'ROLLBACK_DAEMON_RESTART_FAILED' >&2; fi
@@ -239,6 +243,12 @@ dst.close();src.close()
 PY
 fi
 [ ! -f /var/db/devicemonitor/config.json ] || cp -p /var/db/devicemonitor/config.json "$BACKUP/config.json"
+# The install record is part of the pre-install state. A rollback (automatic, or the manual
+# one in verification/DEPLOY-2.13.3-23-PLAN.md) has to restore the target set the previous
+# install declared; otherwise the next run would compare against a record describing files
+# that this run had replaced.
+/bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" backup-record --record "$INSTALLED_LIST" --backup "$BACKUP" ||
+    { echo 'ABORT: record backup' >&2; exit 1; }
 printf 'BACKUP_READY=%s\n' "$BACKUP"
 # Pruned targets are backed up into the same rollback directory as the planned replacements,
 # so one rollback step restores both. prune-plan.sh only records a target it has copied and

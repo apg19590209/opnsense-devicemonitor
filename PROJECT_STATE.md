@@ -30,7 +30,7 @@ Decision 60) → `2.13.3` (pruning remediation, Decision 62).
 |---|---|
 | Branch | `fix/pruning-remediation-20261103`, 8 commits on top of `6bd122e` (untagged) |
 | Payload | `release/v2.13.3-runtime.manifest`, 40 rows, staged targets 61 (62 fresh) |
-| Bundle | `dm-v2.13.3-runtime.tar.gz`, 346 013 bytes, sha256 `3131b8b481a5a6723d1733b214c118921def77e003863fcf4816e0b278caf9cb` — built at `/tmp`, **not published** |
+| Bundle | `dm-v2.13.3-runtime.tar.gz`, 346 870 bytes, sha256 `859c2638663260686630ed05408ab9055877988af56a84b81a2caa34688d6e48` — built at `/tmp`, **not published**; reproducible from any clean checkout (Decision 63, `release/bundle-digest.txt`) |
 | Deployed | nowhere. Deployment to `.23` is a separate gated phase; `.253` / `.252` are out of scope |
 | Gates | 22 python suites wired into `.github/workflows/ci.yml` (52 steps), 8 new or rewritten for this change; all green locally on `.23` |
 | New behaviour | Pruning requires proof of ownership, the record covers generated targets, every executed input is pinned, a repair install is idempotent, rollback is digest-verified (Decision 62) |
