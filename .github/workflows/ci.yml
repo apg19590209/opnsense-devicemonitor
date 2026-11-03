@@ -112,15 +112,30 @@ jobs:
       - name: Validate device lifecycle return path
         run: python3 tests/test_device_lifecycle_return.py
 
-      # Supported-predecessor claim: a database built by the v2.10 code must reach the
-      # current schema in one init_db() with its rows intact (2.8-2.13.1 are all
-      # accepted predecessors, so the 2.10/2.11 lines install directly). Reads the
-      # v2.10 tag, which the checkout above fetches with fetch-depth: 0.
+      # Supported-predecessor claim: a database built by the predecessor's own code must
+      # reach the current schema in one init_db() with its rows intact (2.8-2.13.2 are all
+      # accepted predecessors, so those lines install directly, and 2.13.2 is the repair
+      # case). Reads the tags, which the checkout above fetches with fetch-depth: 0. A
+      # missing tag fails the step; DM_ALLOW_SKIPPED_PREDECESSORS=1 is for local runs only.
       - name: Validate every accepted predecessor upgrade
         run: python3 tests/test_upgrade_predecessors.py
 
+      # Ownership evidence for pruning (Decision 62): regenerated from the release
+      # manifests at the tags and compared with release/legacy-targets.txt.
+      - name: Validate the legacy ownership evidence
+        run: python3 tests/test_legacy_evidence.py
+
       - name: Validate the prune plan
         run: python3 tests/test_prune_plan.py
+
+      - name: Validate prune backup, delete and rollback
+        run: python3 tests/test_prune_apply.py
+
+      - name: Validate the pinned install inputs
+        run: python3 tests/test_release_inputs.py
+
+      - name: Validate the installer status contract
+        run: python3 tests/test_installer_status.py
 
       - name: Lint PHP sources
         run: |
@@ -136,6 +151,24 @@ jobs:
           python3 tests/test_release_manifest.py
           sh -n uninstall.sh
           sh -n src/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
+          sh -n release/prune-plan.sh
+          sh -n release/verify-release-inputs.sh
+          sh -n release/build-release-inputs.sh
+          sh -n release/build-legacy-evidence.sh
+          sh -n release/build-bundle.sh
+          sh -n release/merge-opnsense-catalog.sh
+
+      # The bundle is what a firewall actually installs: build it and verify the pinned
+      # inputs from inside the staged tree, exactly as install-unattended.sh does.
+      - name: Verify the release bundle inputs
+        run: |
+          set -eu
+          sh release/build-bundle.sh
+          stage=/tmp/dm-bundle-stage
+          sh "$stage/release/verify-release-inputs.sh" "$stage"
+          test -f "$stage/release/legacy-targets.txt"
+          test -f "$stage/release/prune-plan.sh"
+          test -f "$stage/release/release-inputs.sha256"
 
       - name: Compile gettext catalogues
         run: |

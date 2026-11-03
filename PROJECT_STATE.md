@@ -4,25 +4,52 @@
 
 Last updated: 3 November 2026
 
-Branch: `release/2.13` (HEAD `74e1f6f`) — the released line. `baseline/2.12` (`d04739a`)
-holds the recovered pre-HA 2.12 tree; `feature/async-db-v2.11` (`0ad95b0`) is the
-historical v2.11 development branch.
+Branches: `release/2.13` (HEAD `6bd122e`, the released line) and
+`fix/pruning-remediation-20261103` (the 2.13.3 remediation of the pruning review, branched
+from `6bd122e`). `baseline/2.12` (`d04739a`) holds the recovered pre-HA 2.12 tree;
+`feature/async-db-v2.11` (`0ad95b0`) is the historical v2.11 development branch.
 
-### Current release: 2.13.2
+### Release 2.13.2 — the one running in the field
 
 | Item | Value |
 |---|---|
-| Commit | `74e1f6f` on `release/2.13`, tag `v2.13.2` |
+| Commit | `74e1f6f` on `release/2.13`, tag `v2.13.2` (unchanged by the remediation) |
 | Payload | `release/v2.13.2-runtime.manifest`, 40 rows, staged targets 61 |
-| Bundle | `dm-v2.13.2-runtime.tar.gz`, 336 261 bytes, sha256 `8fd6a7a703a63b4fa23f694d6dbd9d0aa50947f60ce23f37ffbd2c67a6b16f5a` |
+| Bundle | `dm-v2.13.2-runtime.tar.gz`, 336 261 bytes, sha256 `8fd6a7a703a63b4fa23f694d6dbd9d0aa50947f60ce23f37ffbd2c67a6b16f5a` (published; never rebuilt) |
 | Deployed | `192.168.20.23` (testbed), `.253` (CARP master), `.252` (CARP standby) — 40/40 manifest parity on each |
 | Rollback | `/var/backups/devicemonitor/install-v213.{6KTQFY,.HuGjkL,.ivbMZd}` |
-| Gates | 16 of 16 green, including `test_service_ageing`, `test_carp_role_gate`, `test_language_acceptance` |
 | New behaviour | A standby ages its own inventory: `[SERVICES] Stale-state ageing (standby)` (Decision 60) |
 
 Lineage: `2.13` (`59d6d08`, no O4 ageing, never tagged) → `2.13.1` (`19f8d4d`, tag
 `v2.13.1`, O4 restored, Decision 59) → `2.13.2` (`74e1f6f`, tag `v2.13.2`, standby ageing,
-Decision 60).
+Decision 60) → `2.13.3` (pruning remediation, Decision 62).
+
+### 2.13.3 — prepared, not deployed
+
+| Item | Value |
+|---|---|
+| Branch | `fix/pruning-remediation-20261103`, 8 commits on top of `6bd122e` (untagged) |
+| Payload | `release/v2.13.3-runtime.manifest`, 40 rows, staged targets 61 (62 fresh) |
+| Bundle | `dm-v2.13.3-runtime.tar.gz`, 346 001 bytes, sha256 `7c55fc610deb767cd3213215d58b950941f984fbad3ac1785f3b297c0be5d1bc` — built at `/tmp`, **not published** |
+| Deployed | nowhere. Deployment to `.23` is a separate gated phase; `.253` / `.252` are out of scope |
+| Gates | 22 python suites wired into `.github/workflows/ci.yml` (52 steps), 8 new or rewritten for this change; all green locally on `.23` |
+| New behaviour | Pruning requires proof of ownership, the record covers generated targets, every executed input is pinned, a repair install is idempotent, rollback is digest-verified (Decision 62) |
+
+Pre-deployment evidence from `.23` (running 2.13.2), taken from this branch with
+`install-unattended.sh --host $(/bin/hostname) --check`:
+
+    VERIFY_OK=4
+    NOTICE: merged the plugin keys into 10 core catalogue(s); uninstall.sh restores the pristine files
+    CHECK_OK version=2.13.3 predecessor=2.13.2 files=61 core_locales=10 prunable=0 daemon_running=1 host=OPNsense.internal legacy_prunable=0 retained=0
+
+`--check` stayed non-mutating: no new `/var/backups/devicemonitor/install-v213.*`
+directory, `/var/db/devicemonitor/installed-manifest.txt` unchanged (mtime 01:33:16), no
+staged temp directory left behind.
+
+Known carry-over: the record currently on `.23` was written by the 2.13.2 installer and
+carries bare paths without digests. `prune-plan.sh` reads that shape as ownership evidence
+(content unverifiable), and the first 2.13.3 install replaces it with the digest-bearing
+form.
 
 ## O4 divergence closed: ageing restored in 2.13.1 (3 November 2026)
 

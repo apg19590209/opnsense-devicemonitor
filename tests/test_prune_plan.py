@@ -1,96 +1,267 @@
-"""The prune plan is exactly the previously-installed files the new manifest drops.
+"""The prune plan deletes only files the plugin can prove it owns.
 
-`release/compute-prune.sh` is what makes "the installer never prunes" a thing of the
-past. It diffs the target list a previous install recorded
-(`/var/db/devicemonitor/installed-manifest.txt`) against the new manifest and prints the
-stale targets, so the installer can back them up and delete them instead of leaving a
-dead file behind forever.
+`release/prune-plan.sh compute` is the single decider behind pruning. It is given the full
+target set of the run that is about to install (`--current`), the previous install's own
+record (`--record`) and the published digests of historical releases (`--legacy`). It prints
+`<SOURCE> <path>` for every target it will delete and `RETAINED <reason> <path>` on stderr
+for everything it refuses to touch.
 
-Two properties matter and are pinned here:
-
-  * a target that the new manifest still ships is never reported, or an upgrade would
-    delete the very file it just installed;
-  * a recorded path outside the namespaces the manifest is allowed to own is never
-    reported, so a corrupted or hand-edited record cannot make the installer delete
-    something that was not its own.
-
-Nothing is deleted by the helper, so this runs without root.
+Every case below runs root-free against a staging tree (`--root`), so the plan and its
+guards are exercised without a firewall.
 """
+import hashlib
 import subprocess
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-HELPER = ROOT / 'release/compute-prune.sh'
+HELPER = ROOT / 'release/prune-plan.sh'
 
-MANIFEST = (
-    'aaaaaaaa 644 src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py '
-    '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py\n'
-    'bbbbbbbb 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt '
-    '/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt\n'
-    'cccccccc 755 src/etc/rc.d/devicemonitor /usr/local/etc/rc.d/devicemonitor\n'
-)
-
-RECORDED = '\n'.join([
-    '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py',
-    '/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt',
-    '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_failover_v1.php',
-    '/usr/local/etc/rc.d/devicemonitor',
-    '/usr/local/etc/inc/devicemonitor_locale.inc',
-    '/etc/rc.conf',
-    '/usr/local/www/rewrite_my_webserver.php',
-]) + '\n'
+SCAN = '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py'
+MO = '/usr/local/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES/devicemonitor.mo'
+DROPPED_MO = '/usr/local/opnsense/mvc/app/languages/zh_CN/LC_MESSAGES/devicemonitor.mo'
+STALE = '/usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po'
+NOTIFY = '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_failover_v1.php'
+RC = '/etc/rc.conf.d/devicemonitor'
+SHARE_MO = '/usr/local/share/locale/de_DE/LC_MESSAGES/OPNsense.mo'
 
 
-def run(installed, manifest):
-    return subprocess.run(
-        ['sh', str(HELPER), str(installed), str(manifest)],
-        capture_output=True, text=True, check=True, timeout=30,
-    ).stdout.split()
+class Tree:
+    """A staging root with the files each scenario needs."""
+
+    def __init__(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+        self.root = self.tmp / 'root'
+        self.root.mkdir()
+        self.current = self.tmp / 'current'
+        self.record = self.tmp / 'record'
+        self.legacy = self.tmp / 'legacy'
+        self.current.write_text('')
+        self.record.write_text('')
+        self.legacy.write_text('')
+
+    def close(self):
+        self._tmp.cleanup()
+
+    def file(self, path, body):
+        target = self.on_disk(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(body)
+        return target
+
+    def on_disk(self, path):
+        return self.root / path.lstrip('/')
+
+    def run(self, current=None, record=None, legacy=None):
+        args = ['sh', str(HELPER), 'compute',
+                '--current', str(current or self.current),
+                '--root', str(self.root)]
+        if record is not False:
+            args += ['--record', str(record or self.record)]
+        if legacy is not False:
+            args += ['--legacy', str(legacy or self.legacy)]
+        done = subprocess.run(args, capture_output=True, text=True, timeout=60)
+        assert done.returncode == 0, (done.returncode, done.stdout, done.stderr)
+        plan = [line.split(' ', 1) for line in done.stdout.splitlines() if line.strip()]
+        retained = [line.split(' ', 2) for line in done.stderr.splitlines() if line.strip()]
+        return plan, retained
 
 
-def test_prune_plan():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp = Path(tmpdir)
-        manifest = tmp / 'manifest'
-        manifest.write_text(MANIFEST)
-        installed = tmp / 'installed-manifest.txt'
-        installed.write_text(RECORDED)
+def digest(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
-        pruned = run(installed, manifest)
 
-        expected = [
-            '/usr/local/etc/inc/devicemonitor_locale.inc',
-            '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_failover_v1.php',
-        ]
-        assert sorted(pruned) == expected, pruned
+def write_current(tree, *paths):
+    tree.current.write_text(''.join(p + '\n' for p in paths))
 
-        # A target the manifest still ships must never appear.
-        for still_shipped in (
-            '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py',
-            '/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt',
-            '/usr/local/etc/rc.d/devicemonitor',
-        ):
-            assert still_shipped not in pruned, (still_shipped, pruned)
 
-        # Paths the plugin does not own are filtered out even if the record claims them.
-        for foreign in ('/etc/rc.conf', '/usr/local/www/rewrite_my_webserver.php'):
-            assert foreign not in pruned, (foreign, pruned)
+def write_record(tree, mapping=None, bare=()):
+    lines = ['%s %s\n' % (value, path) for path, value in (mapping or {}).items()]
+    lines += ['%s\n' % path for path in bare]
+    tree.record.write_text(''.join(lines))
 
-        # No record yet (first install) means nothing to prune.
-        assert run(tmp / 'missing', manifest) == []
 
-        # A record identical to the manifest prunes nothing.
-        current_only = tmp / 'current-only'
-        current_only.write_text(
-            '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py\n'
-            '/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt\n'
-            '/usr/local/etc/rc.d/devicemonitor\n'
-        )
-        assert run(current_only, manifest) == []
+def write_legacy(tree, mapping):
+    tree.legacy.write_text(''.join('%s %s\n' % (value, path) for path, value in mapping.items()))
 
-    print('PRUNE_PLAN=PASS')
+
+def test_current_targets_never_pruned():
+    """A path this run installs is never a candidate, whatever the record says."""
+    tree = Tree()
+    try:
+        tree.file(SCAN, 'current body\n')
+        tree.file(MO, 'generated body\n')
+        write_current(tree, SCAN, MO)
+        write_record(tree, bare=[SCAN, MO])
+        plan, retained = tree.run()
+        assert plan == [], plan
+        assert retained == [], retained
+    finally:
+        tree.close()
+
+
+def test_current_generated_retained():
+    """The .mo files built by this run stay, even though no manifest row lists them.
+
+    This is the trap the 2.13.2 review found: with the manifest alone as the current side,
+    the eleven freshly compiled catalogues look stale and are deleted right after install.
+    """
+    tree = Tree()
+    try:
+        generated = ['/usr/local/opnsense/mvc/app/languages/%s/LC_MESSAGES/devicemonitor.mo'
+                     % lang for lang in ('cs_CZ', 'de_DE', 'zh_CN')]
+        for path in generated:
+            tree.file(path, 'catalogue for ' + path)
+        write_current(tree, SCAN, *generated)
+        # The record carries an older release's digests for the same catalogue paths.
+        write_record(tree, {path: 'f' * 64 for path in generated})
+        plan, retained = tree.run()
+        assert plan == [], plan
+        assert retained == [], retained
+    finally:
+        tree.close()
+
+
+def test_namespace_guard():
+    """A recorded or evidenced path outside the approved namespaces is never a candidate."""
+    tree = Tree()
+    try:
+        tree.file(RC, 'devicemonitor_enable="YES"\n')
+        tree.file(SHARE_MO, 'core catalogue\n')
+        write_current(tree, SCAN)
+        write_record(tree, bare=[RC, SHARE_MO])
+        write_legacy(tree, {RC: 'a' * 64})
+        plan, retained = tree.run()
+        assert plan == [], plan
+        # Not even reported as retained: it was never a candidate.
+        assert retained == [], retained
+    finally:
+        tree.close()
+
+
+def test_legacy_requires_evidence():
+    """Without trusted evidence a leftover file is never pruned."""
+    tree = Tree()
+    try:
+        tree.file(STALE, 'legacy catalogue\n')
+        write_current(tree, SCAN)
+        plan, retained = tree.run(legacy=False)
+        assert plan == [], plan
+        assert retained == [], retained
+        tree.legacy.write_text('# no rows\n')
+        plan, retained = tree.run()
+        assert plan == [], plan
+        assert retained == [], retained
+    finally:
+        tree.close()
+
+
+def test_legacy_prunes_verified_file():
+    """An unchanged historical file that a published manifest shipped is pruned."""
+    tree = Tree()
+    try:
+        stale = tree.file(STALE, 'legacy catalogue\n')
+        write_current(tree, SCAN)
+        write_legacy(tree, {STALE: digest(stale)})
+        plan, retained = tree.run()
+        assert plan == [['LEGACY', STALE]], plan
+        assert retained == [], retained
+    finally:
+        tree.close()
+
+def test_modified_legacy_retained():
+    """A historical file whose content changed is retained and reported, never deleted."""
+    tree = Tree()
+    try:
+        tree.file(STALE, 'legacy catalogue, edited by an operator\n')
+        write_current(tree, SCAN)
+        write_legacy(tree, {STALE: 'b' * 64})
+        plan, retained = tree.run()
+        assert plan == [], plan
+        assert retained == [['RETAINED', 'modified', STALE]], retained
+    finally:
+        tree.close()
+
+
+def test_modified_recorded_retained():
+    """Same for a path the previous install recorded with a digest."""
+    tree = Tree()
+    try:
+        tree.file(NOTIFY, 'edited after install\n')
+        write_current(tree, SCAN)
+        write_record(tree, {NOTIFY: 'c' * 64})
+        plan, retained = tree.run()
+        assert plan == [], plan
+        assert retained == [['RETAINED', 'modified', NOTIFY]], retained
+    finally:
+        tree.close()
+
+
+def test_dropped_generated_identified():
+    """A generated catalogue the new release no longer produces is identified safely."""
+    tree = Tree()
+    try:
+        dropped = tree.file(DROPPED_MO, 'catalogue of a dropped language\n')
+        write_current(tree, SCAN, MO)
+        write_record(tree, {DROPPED_MO: digest(dropped)})
+        plan, retained = tree.run()
+        assert plan == [['RECORD', DROPPED_MO]], plan
+        assert retained == [], retained
+    finally:
+        tree.close()
+
+
+def test_empty_and_identical():
+    """An empty record and a record identical to the current set both plan nothing."""
+    tree = Tree()
+    try:
+        tree.file(SCAN, 'current body\n')
+        write_current(tree, SCAN)
+        plan, retained = tree.run()
+        assert plan == [] and retained == [], (plan, retained)
+        write_record(tree, {SCAN: digest(tree.on_disk(SCAN))})
+        plan, retained = tree.run()
+        assert plan == [] and retained == [], (plan, retained)
+    finally:
+        tree.close()
+
+
+def test_unsafe_paths_ignored():
+    """Traversal and whitespace are corruption, not targets."""
+    tree = Tree()
+    try:
+        tree.file(SCAN, 'current body\n')
+        write_current(tree, SCAN, '/usr/local/opnsense/../etc/passwd')
+        tree.record.write_text('/usr/local/opnsense/../../etc/passwd\n'
+                               '/usr/local/opnsense/scripts with space/x.py\n')
+        tree.legacy.write_text('%s /usr/local/opnsense/../etc/passwd\n' % ('d' * 64))
+        plan, retained = tree.run()
+        assert plan == [] and retained == [], (plan, retained)
+    finally:
+        tree.close()
+
+
+CASES = [
+    test_current_targets_never_pruned,
+    test_current_generated_retained,
+    test_namespace_guard,
+    test_legacy_requires_evidence,
+    test_legacy_prunes_verified_file,
+    test_modified_legacy_retained,
+    test_modified_recorded_retained,
+    test_dropped_generated_identified,
+    test_empty_and_identical,
+    test_unsafe_paths_ignored,
+]
+
+
+def main():
+    for case in CASES:
+        case()
+        print('  %-34s PASS' % case.__name__)
+    print('PRUNE_PLAN=PASS cases=%d' % len(CASES))
 
 
 if __name__ == '__main__':
-    test_prune_plan()
+    main()

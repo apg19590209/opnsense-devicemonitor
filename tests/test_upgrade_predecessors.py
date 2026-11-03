@@ -14,9 +14,14 @@ fixture:
     upgraded database changes nothing.
 
 Each predecessor is read from its tag (the workflow checks out with `fetch-depth: 0`).
-A tag that is unavailable is reported as SKIPPED, so a shallow clone stays honest.
+A tag that is unavailable is a **failure**, not a quiet pass: this suite is the evidence for
+"every accepted predecessor upgrades directly", so a shallow clone has to shout about it.
+`DM_ALLOW_SKIPPED_PREDECESSORS=1` downgrades that to a visible warning for a deliberate
+local run, and the skip is printed either way.
 """
 import importlib.util
+import os
+import re
 import sqlite3
 import subprocess
 import tempfile
@@ -36,6 +41,7 @@ PREDECESSORS = [
     ('2.12', 'v2.12-baseline'),
     ('2.13', 'v2.13'),
     ('2.13.1', 'v2.13.1'),
+    ('2.13.2', 'v2.13.2'),
 ]
 
 
@@ -97,8 +103,9 @@ def upgrade_one(version, tag):
 
         with sqlite3.connect(db) as conn:
             before = columns(conn, 'device_services')
-            # Only 2.13.1 carries the column already: 2.13 shipped without the ageing work.
-            if version == '2.13.1':
+            # 2.13.1 restored the ageing work, so it and 2.13.2 carry the column already;
+            # 2.13 and everything before it ship without it.
+            if version in ('2.13.1', '2.13.2'):
                 assert 'last_checked' in before, (version, before)
             else:
                 assert 'last_checked' not in before, (version, before)
@@ -155,6 +162,19 @@ def upgrade_one(version, tag):
     return 'PASS'
 
 
+def test_accepted_list_matches_installer():
+    """The table and the installer's accepted predecessors cannot drift apart."""
+    script = (ROOT / 'install-unattended.sh').read_text()
+    match = re.search(r'case "\$installed" in ([^)]+)\)', script)
+    assert match, 'installer has no predecessor case'
+    accepted = [value.strip('"') for value in match.group(1).split('|')]
+    current = re.search(r'^VERSION=([0-9.]+)$', script, re.M).group(1)
+    assert accepted[-1] == '$VERSION', accepted
+    assert accepted[:-1] == [version for version, _ in PREDECESSORS], accepted
+    # The version the installer ships is the repair case, so it needs a row too once tagged.
+    assert current not in accepted[:-1], current
+
+
 def test_every_predecessor_upgrades():
     results = []
     for version, tag in PREDECESSORS:
@@ -162,10 +182,28 @@ def test_every_predecessor_upgrades():
         print('  %-7s %-14s %s' % (version, tag, outcome))
         results.append(outcome)
 
-    assert 'PASS' in results, results
+    skipped = results.count('SKIPPED')
+    if skipped:
+        message = ('%d of %d predecessors were not validated: the tags are missing '
+                   '(fetch-depth: 0). Set DM_ALLOW_SKIPPED_PREDECESSORS=1 only for a '
+                   'deliberate local run.' % (skipped, len(results)))
+        if os.environ.get('DM_ALLOW_SKIPPED_PREDECESSORS') != '1':
+            raise AssertionError(message)
+        print('  WARNING: %s' % message)
+
+    assert results.count('PASS') > 0, results
     print('UPGRADE_PREDECESSORS=PASS passed=%d skipped=%d'
-          % (results.count('PASS'), results.count('SKIPPED')))
+          % (results.count('PASS'), skipped))
+
+
+CASES = [test_accepted_list_matches_installer, test_every_predecessor_upgrades]
+
+
+def main():
+    for case in CASES:
+        case()
+    print('UPGRADE_PREDECESSORS_CASES=PASS cases=%d' % len(CASES))
 
 
 if __name__ == '__main__':
-    test_every_predecessor_upgrades()
+    main()

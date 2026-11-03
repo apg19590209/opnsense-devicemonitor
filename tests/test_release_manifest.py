@@ -1,12 +1,21 @@
-"""Validate the v2.13 install payload against the working tree."""
-from pathlib import Path
+"""Validate the v2.13.3 install payload against the working tree.
+
+Also proves that the published 2.13.2 payload was not rewritten: the tag still carries the
+manifest it shipped, byte for byte, so `dm-v2.13.2-runtime.tar.gz` keeps its identity.
+"""
 import hashlib
 import json
+import os
+import re
+import subprocess
+from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
-manifest = root / 'release/v2.13.2-runtime.manifest'
+installer = (root / 'install-unattended.sh').read_text()
+version = re.search(r'^VERSION=([0-9.]+)$', installer, re.M).group(1)
+manifest = root / ('release/v%s-runtime.manifest' % version)
 rows = [line.split() for line in manifest.read_text().splitlines()]
-assert len(rows) == 40
+assert len(rows) == 40, len(rows)
 assert all(len(row) == 4 for row in rows)
 sources = [row[2] for row in rows]
 targets = [row[3] for row in rows]
@@ -31,5 +40,24 @@ for digest, mode, source, target in rows:
 defaults = json.loads(
     (root / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json').read_text()
 )
-assert defaults['version'] == '2.13.2'
-print('V2132_RELEASE_MANIFEST=PASS')
+assert defaults['version'] == version, (defaults['version'], version)
+
+
+def published_manifest_is_intact():
+    """The v2.13.2 tag still ships the manifest that was released under that tag."""
+    tag = 'v2.13.2'
+    path = 'release/v2.13.2-runtime.manifest'
+    try:
+        published = subprocess.run(['git', '-C', str(root), 'show', '%s:%s' % (tag, path)],
+                                   capture_output=True, text=True, check=True, timeout=30).stdout
+    except (subprocess.SubprocessError, OSError):
+        if os.environ.get('DM_ALLOW_MISSING_HISTORY') == '1':
+            print('  SKIPPED v2.13.2 identity: tag not fetched')
+            return
+        raise AssertionError('tag %s is missing: fetch the history (fetch-depth: 0) or set '
+                             'DM_ALLOW_MISSING_HISTORY=1 for a deliberate local run' % tag)
+    assert published == (root / path).read_text(), 'release/%s was modified in place' % path
+
+
+published_manifest_is_intact()
+print('V%s_RELEASE_MANIFEST=PASS' % version.replace('.', ''))

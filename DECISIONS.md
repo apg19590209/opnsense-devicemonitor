@@ -2681,3 +2681,76 @@ record identical to the manifest both prune nothing.
 The first install after this change has no record yet, so it prunes nothing; the record
 starts with that install. Deleting the record disables pruning rather than causing a
 scan, by design: the installer only touches files it can prove it wrote.
+
+## 62. Pruning requires proof, the record is the whole target set, and every input is pinned
+
+### Decision
+
+The prune decider is one shipped helper, `release/prune-plan.sh` (`compute`, `backup`,
+`delete`, `restore`, `restore-targets`), and it removes a path only when all of the
+following hold:
+
+* the path is inside the four namespaces this plugin may own;
+* the path is **not** part of the target set the current run installs;
+* either the previous install's record carries a digest for that path and the file still
+  matches it, or a published historical release manifest shipped that exact digest
+  (`release/legacy-targets.txt`, generated from the manifests at the v2.9 … v2.13.2 tags).
+
+Anything else is retained and reported (`RETAINED modified <path>`). Both sides of the diff
+are recorded *target sets*: the current side is the running install's own plan (manifest
+rows plus the catalogues it compiles), never the manifest alone. The record written at the
+end is that same plan with the digest installed (`<sha256> <path>`), so generated outputs
+are covered too.
+
+Every input the installer executes or trusts — manifest, prune helper, legacy evidence,
+catalogue merge helper — is listed with its digest in `release/release-inputs.sha256`,
+which is itself pinned by a constant in `install-unattended.sh` and enforced by
+`release/verify-release-inputs.sh` before anything else runs. A mismatch aborts before any
+mutation.
+
+An unchanged target (`old == new`) is left alone: content, mode, owner and mtime are
+preserved and the run reports `unchanged=<n>`. Rollback is the helper too
+(`restore-targets` then `restore`), every restore is digest-verified, and a damaged backup
+is a reported `ROLLBACK_FAILED` rather than a silently wrong file.
+
+Status output stays append-only: `CHECK_OK` appends `legacy_prunable=` and `retained=`,
+`INSTALL_OK` appends `unchanged=`, and the 2.13.2 keys keep their positions.
+
+### Reason
+
+The 2.13.2 review of `6bd122e` found five defects that made pruning either useless or
+unsafe: no bootstrap (the record only starts with the release that adds it, so the legacy
+files Decision 61 exists to remove could never be removed); a record that omitted the 11
+generated `.mo` files and the merged catalogues; the prune helper executed without the
+verification every other input gets; a repair install documented as leaving unchanged files
+alone while rewriting all 61 targets; and `pruned=<n>` counting `rm -f` calls rather than
+removals. The same review found the predecessor suite could pass with every row SKIPPED, the
+prune rollback never verifying what it restored, and locale-dependent `comm` in a security
+decision.
+
+### Evidence
+
+`tests/test_prune_plan.py` (10 cases) pins current-target immunity, the namespace guard,
+"legacy requires evidence", modified-file retention, retention of the current generated
+catalogues, identification of a dropped generated catalogue, empty/identical records and
+unsafe paths. `tests/test_prune_apply.py` (4 cases) drives backup → delete → restore,
+including a failed install restoring both a replaced and a pruned file with digests and
+modes, a conflict, and a corrupted backup that must fail loudly. `tests/test_release_inputs.py`
+proves a tampered, missing or symlinked helper is refused and that verification precedes the
+first helper call. `tests/test_installer_status.py` pins the append-only key order against
+the README, that `--check` exits before any mutation, that unchanged targets are skipped, and
+that the inventory comes from the plan. `tests/test_legacy_evidence.py` regenerates the
+evidence from the tags and compares it byte for byte. `tests/test_upgrade_predecessors.py`
+now fails on any skipped predecessor and covers `2.13.2 → 2.13.3` as the repair case.
+
+Measured on the `.23` testbed before any deployment: `install-unattended.sh --check` against
+the 2.13.2 install reports `prunable=0 legacy_prunable=0 retained=0`, i.e. the 40 recorded
+paths are recognised as current and nothing legitimate is a candidate.
+
+### Residual risk
+
+The legacy evidence covers only releases that published a runtime manifest (v2.9 … v2.13.2);
+v2.8 shipped a zip before the manifest format existed, so a v2.8-origin file is pruned only
+when the record covers it. The evidence is a fixed list: adding a release without
+regenerating it narrows bootstrap coverage, which `tests/test_legacy_evidence.py` catches
+because the file must equal a fresh generation.

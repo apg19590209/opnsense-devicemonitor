@@ -32,10 +32,27 @@ NMAP_MISSING=0
 command -v nmap >/dev/null 2>&1 || NMAP_MISSING=1
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 cd "$SCRIPT_DIR"
-MANIFEST=release/v2.13.2-runtime.manifest
-[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = b0a8fb661f4ea3341a46267d572f1bdc3def7454574aed252eff258d3858b485 ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
+VERSION=2.13.3
+MANIFEST=release/v${VERSION}-runtime.manifest
+PRUNE_HELPER=release/prune-plan.sh
+LEGACY_EVIDENCE=release/legacy-targets.txt
+RELEASE_INPUTS=release/release-inputs.sha256
+VERIFIER=release/verify-release-inputs.sh
+# Root of trust: the digest of the release tarball published with the release. From there
+# down everything this installer executes or trusts is pinned - the manifest and the inputs
+# file inline here, and the inputs file pins the manifest, the prune helper, the legacy
+# ownership evidence and the catalogue merge helper. A tampered helper can therefore never
+# decide which files get removed.
+MANIFEST_SHA=0c5df65eda8a28e0a3884c0710caeb31555a59eb5479656a56ccfbf4b0dc809b
+RELEASE_INPUTS_SHA=7e96f80a6055a7c9608fc09eb0c0abb252753f6d1345e61c044a9e6927f844a5
+VERIFIER_SHA=68b93f2a08f0808b67b6bd2ca76dca33a6cc5c159de4b61353b721eaefbb583d
+[ -f "$MANIFEST" ] && [ ! -L "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = "$MANIFEST_SHA" ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 40 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
-[ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = 2.13.2 ] || { echo 'ABORT: source version' >&2; exit 1; }
+[ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = "$VERSION" ] || { echo 'ABORT: source version' >&2; exit 1; }
+[ -f "$VERIFIER" ] && [ ! -L "$VERIFIER" ] && [ "$(sha256 -q "$VERIFIER")" = "$VERIFIER_SHA" ] || { echo 'ABORT: verifier digest' >&2; exit 1; }
+[ -f "$RELEASE_INPUTS" ] && [ ! -L "$RELEASE_INPUTS" ] && [ "$(sha256 -q "$RELEASE_INPUTS")" = "$RELEASE_INPUTS_SHA" ] || { echo 'ABORT: release inputs digest' >&2; exit 1; }
+/bin/sh "$VERIFIER" "$SCRIPT_DIR" || { echo 'ABORT: release inputs' >&2; exit 1; }
+
 LIVE_DEFAULTS=/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
 if [ -f "$LIVE_DEFAULTS" ]; then
     installed=$(python3 - "$LIVE_DEFAULTS" <<'PY'
@@ -43,9 +60,12 @@ import json,sys
 print(json.load(open(sys.argv[1]))['version'])
 PY
 ) || { echo 'ABORT: installed defaults invalid' >&2; exit 1; }
-    # 2.13.2 is accepted so the same payload can be re-installed as a repair: every target
-    # is hash-verified, unchanged files are left alone and the prune plan still runs.
-    case "$installed" in 2.8|2.9|2.10|2.11|2.12|2.13|2.13.1|2.13.2) :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
+    # The current version is accepted as a predecessor so the same payload can be
+    # re-installed as a repair. A repair is not a no-op: every target is compared against
+    # the digest observed before the run, an unchanged target (old == new) is left exactly
+    # as it is - content, mode, owner and mtime - and only the rest is rewritten. The prune
+    # plan still runs, so a repair also re-asserts the target set this install owns.
+    case "$installed" in 2.8|2.9|2.10|2.11|2.12|2.13|2.13.1|2.13.2|"$VERSION") :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
 elif [ -d /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor ]; then
     echo 'ABORT: partial existing installation' >&2; exit 1
 else
@@ -67,29 +87,13 @@ cleanup() {
     if [ "$rc" -ne 0 ] && [ "$MUTATING" = 1 ]; then
         echo "ROLLBACK_START=$BACKUP" >&2
         if [ "$WAS_RUNNING" = 1 ] || [ "$FRESH" = 1 ]; then service devicemonitor stop || :; fi
-        while read -r id old new mode src dest; do
-            if [ "$old" = absent ]; then
-                if [ -f "$dest" ] && [ "$(sha256 -q "$dest")" = "$new" ]; then
-                    rm -f "$dest" || echo "ROLLBACK_FAILED=$dest" >&2
-                elif [ -e "$dest" ]; then
-                    echo "ROLLBACK_CONFLICT=$dest" >&2
-                fi
-            else
-                if [ -f "$dest" ] && [ "$(sha256 -q "$dest")" = "$new" ]; then
-                    cp -p "$BACKUP/files/$id" "$dest" || echo "ROLLBACK_FAILED=$dest" >&2
-                elif [ "$(sha256 -q "$dest" 2>/dev/null || :)" != "$old" ]; then
-                    echo "ROLLBACK_CONFLICT=$dest" >&2
-                fi
-            fi
-        done < "$BACKUP/plan"
+        # Both halves of the rollback are the tested helper: replaced targets first, then the
+        # pruned ones from the same backup directory. Every restore is verified by digest.
+        /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" restore-targets --plan "$BACKUP/plan" --backup "$BACKUP" ||
+            echo "ROLLBACK_TARGETS_INCOMPLETE=$BACKUP" >&2
         if [ -f "$BACKUP/prune" ]; then
-            while read -r prune_id old_hash target; do
-                if [ ! -e "$target" ]; then
-                    cp -p "$BACKUP/files/$prune_id" "$target" || echo "ROLLBACK_FAILED=$target" >&2
-                else
-                    echo "ROLLBACK_CONFLICT=$target" >&2
-                fi
-            done < "$BACKUP/prune"
+            /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" restore --plan "$BACKUP/prune" --backup "$BACKUP" ||
+                echo "ROLLBACK_PRUNE_INCOMPLETE=$BACKUP" >&2
         fi
         if [ "$RC_LINK_CREATED" = 1 ]; then rm -f /etc/rc.d/devicemonitor; fi
         if [ "$CONFIGD_CHANGED" = 1 ]; then service configd restart || echo 'ROLLBACK_CONFIGD_RESTART_FAILED' >&2; fi
@@ -185,14 +189,35 @@ expected=61
 [ "$FRESH" = 0 ] || expected=62
 [ "$count" = "$expected" ] || { echo 'ABORT: target count' >&2; exit 1; }
 [ "$NMAP_MISSING" = 0 ] || printf 'NOTICE: nmap is not installed; a real installation runs pkg install -y nmap\n'
-# Files a previous install recorded that this manifest no longer ships. Computed before any
-# mutation so --check can report them, and so a failed prune plan aborts the whole run.
+# The target set this run installs: the manifest rows plus every generated catalogue and, on
+# a fresh install, the rc.conf stub. Both sides of the prune diff use a recorded target set,
+# so the .mo files this run builds can never be classified as stale (a naive
+# manifest-versus-record diff would delete exactly the catalogues it had just installed).
+awk '{print $6}' "$STAGE/plan" > "$STAGE/current-targets"
+# Ownership evidence for the prune plan, computed before any mutation so --check can report
+# it and so a bad plan aborts the whole run: the previous install's own record (with
+# digests) plus the published digests of historical releases for paths no record covers.
+# Anything without trustworthy evidence is retained, never pruned.
+: > "$STAGE/no-record"
+RECORD_ARG=$INSTALLED_LIST
+[ -f "$INSTALLED_LIST" ] || RECORD_ARG=$STAGE/no-record
 : > "$STAGE/prune-targets"
-if [ -f "$INSTALLED_LIST" ]; then
-    /bin/sh "$SCRIPT_DIR/release/compute-prune.sh" "$INSTALLED_LIST" "$MANIFEST" > "$STAGE/prune-targets" || { echo 'ABORT: prune plan' >&2; exit 1; }
-fi
+: > "$STAGE/prune-retained"
+/bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" compute \
+    --current "$STAGE/current-targets" \
+    --record "$RECORD_ARG" \
+    --legacy "$SCRIPT_DIR/$LEGACY_EVIDENCE" \
+    > "$STAGE/prune-targets" 2> "$STAGE/prune-retained" || { echo 'ABORT: prune plan' >&2; exit 1; }
 PRUNABLE=$(wc -l < "$STAGE/prune-targets" | tr -d ' ')
-printf 'CHECK_OK version=2.13.2 predecessor=%s files=%s core_locales=%s prunable=%s daemon_running=%s host=%s\n' "$installed" "$count" "$CORE_LOCALES" "$PRUNABLE" "$WAS_RUNNING" "$EXPECTED_HOST"
+PRUNABLE_LEGACY=$(grep -c '^LEGACY ' "$STAGE/prune-targets" || :)
+RETAINED=$(wc -l < "$STAGE/prune-retained" | tr -d ' ')
+while read -r source path; do
+    printf 'PRUNE_PLAN=%s %s\n' "$source" "$path"
+done < "$STAGE/prune-targets"
+while read -r line; do
+    printf 'PRUNE_%s\n' "$line" >&2
+done < "$STAGE/prune-retained"
+printf 'CHECK_OK version=%s predecessor=%s files=%s core_locales=%s prunable=%s daemon_running=%s host=%s legacy_prunable=%s retained=%s\n' "$VERSION" "$installed" "$count" "$CORE_LOCALES" "$PRUNABLE" "$WAS_RUNNING" "$EXPECTED_HOST" "$PRUNABLE_LEGACY" "$RETAINED"
 [ "$CHECK_ONLY" = 0 ] || exit 0
 mkdir -p /var/backups/devicemonitor
 BACKUP=$(mktemp -d /var/backups/devicemonitor/install-v213.XXXXXX)
@@ -215,20 +240,12 @@ PY
 fi
 [ ! -f /var/db/devicemonitor/config.json ] || cp -p /var/db/devicemonitor/config.json "$BACKUP/config.json"
 printf 'BACKUP_READY=%s\n' "$BACKUP"
-# Pruned targets are backed up in the same directory as the plan, so one rollback step
-# restores both the replaced files and the ones this install removes.
+# Pruned targets are backed up into the same rollback directory as the planned replacements,
+# so one rollback step restores both. prune-plan.sh only records a target it has copied and
+# re-hashed, so nothing is ever deleted that could not be put back.
 if [ "$PRUNABLE" -gt 0 ]; then
-    : > "$BACKUP/prune"
-    prune_id=0
-    while read -r target; do
-        [ -f "$target" ] || continue
-        prune_id=$((prune_id + 1))
-        old_hash=$(sha256 -q "$target")
-        cp -p "$target" "$BACKUP/files/prune-$prune_id"
-        [ "$(sha256 -q "$BACKUP/files/prune-$prune_id")" = "$old_hash" ] || { echo "ABORT: prune backup $target" >&2; exit 1; }
-        printf '%s %s %s\n' "prune-$prune_id" "$old_hash" "$target" >> "$BACKUP/prune"
-    done < "$STAGE/prune-targets"
-    printf 'PRUNE_PLANNED=%s\n' "$(wc -l < "$BACKUP/prune" | tr -d ' ')"
+    /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" backup --plan "$STAGE/prune-targets" --backup "$BACKUP" ||
+        { echo 'ABORT: prune backup' >&2; exit 1; }
 fi
 # DM-BL-008c: preserve the pristine core catalogues once, before the first merge, so that
 # uninstall.sh can restore them exactly (or delete a file this installer created itself). The
@@ -282,7 +299,16 @@ if [ "$NMAP_MISSING" = 1 ]; then
     command -v nmap >/dev/null 2>&1 || { echo 'ABORT: missing dependency nmap; pkg install did not provide nmap' >&2; exit 1; }
 fi
 MUTATING=1
+UNCHANGED=0
 while read -r id old new mode source target; do
+    if [ "$old" = "$new" ]; then
+        # Repair install: the target is already byte-identical, so it is not rewritten and
+        # its mode, owner and mtime are preserved. The digest is re-read first, so a file
+        # that changed after the plan was frozen still aborts the run.
+        [ "$(sha256 -q "$target")" = "$new" ] || { echo "ABORT: poststate $target" >&2; exit 1; }
+        UNCHANGED=$((UNCHANGED + 1))
+        continue
+    fi
     mkdir -p "$(dirname "$target")"
     if [ "$old" = absent ]; then owner=root; group=wheel
     else
@@ -293,13 +319,15 @@ while read -r id old new mode source target; do
     install -m "$mode" -o "$owner" -g "$group" "$source" "$target"
     [ "$(sha256 -q "$target")" = "$new" ] || { echo "ABORT: poststate $target" >&2; exit 1; }
 done < "$BACKUP/plan"
+printf 'UNCHANGED=%s\n' "$UNCHANGED"
+# Accounting comes from the helper and counts only targets that were actually removed, so
+# pruned=<n> never claims a file that had already gone.
 PRUNED=0
 if [ -f "$BACKUP/prune" ]; then
-    while read -r prune_id old_hash target; do
-        rm -f "$target" || { echo "ABORT: prune $target" >&2; exit 1; }
-        [ ! -e "$target" ] || { echo "ABORT: prune left $target" >&2; exit 1; }
-        PRUNED=$((PRUNED + 1))
-    done < "$BACKUP/prune"
+    /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" delete --plan "$BACKUP/prune" > "$STAGE/pruned" ||
+        { echo 'ABORT: prune' >&2; exit 1; }
+    PRUNED=$(sed -n 's/^PRUNED=//p' "$STAGE/pruned")
+    [ -n "$PRUNED" ] || { echo 'ABORT: prune accounting' >&2; exit 1; }
     printf 'PRUNED=%s\n' "$PRUNED"
 fi
 if [ ! -e /etc/rc.d/devicemonitor ]; then
@@ -353,10 +381,18 @@ assert c.execute('PRAGMA quick_check').fetchone()[0]=='ok'
 c.close()
 PY
 fi
-# Record the exact target set this install owns. A later install diffs its manifest against
-# this file to prune files the plugin no longer ships; nothing else is ever scanned.
+# Record the exact target set this install owns, together with the digest it installed: the
+# manifest rows plus every generated catalogue (and the rc.conf stub on a fresh install). A
+# later run prunes a path only when this record proves ownership and the file still matches
+# it, and never scans a directory. The record is written beside the old one and renamed, so a
+# crash cannot leave a half-written record behind.
 mkdir -p /var/db/devicemonitor
-awk '{print $4}' "$MANIFEST" | sort -u > "$INSTALLED_LIST"
-chmod 644 "$INSTALLED_LIST"
+{
+    printf '# Device Monitor %s install record (Decision 62).\n' "$VERSION"
+    printf '# Format: <sha256> <absolute installed target>\n'
+    awk '{print $3, $6}' "$BACKUP/plan" | sort -u -k2
+} > "$INSTALLED_LIST.new"
+chmod 644 "$INSTALLED_LIST.new"
+mv "$INSTALLED_LIST.new" "$INSTALLED_LIST"
 MUTATING=0
-printf 'INSTALL_OK version=2.13.2 files=%s core_locales=%s pruned=%s backup=%s daemon_restarted=%s\n' "$count" "$CORE_LOCALES" "$PRUNED" "$BACKUP" "$WAS_RUNNING"
+printf 'INSTALL_OK version=%s files=%s core_locales=%s pruned=%s backup=%s daemon_restarted=%s unchanged=%s\n' "$VERSION" "$count" "$CORE_LOCALES" "$PRUNED" "$BACKUP" "$WAS_RUNNING" "$UNCHANGED"
