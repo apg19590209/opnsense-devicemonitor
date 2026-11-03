@@ -180,7 +180,7 @@ def test_restore_reports_conflict_and_failure():
         pruned.write_text('recreated by something else\n')
         code, stdout, stderr = run('restore', '--plan', str(box.backup / 'prune'),
                                    '--backup', str(box.backup), '--root', str(box.root))
-        assert code == 0, stderr
+        assert code != 0, (code, stdout, stderr)
         assert 'ROLLBACK_CONFLICT=%s' % PRUNED in stderr, stderr
         assert pruned.read_text() == 'recreated by something else\n'
 
@@ -197,11 +197,109 @@ def test_restore_reports_conflict_and_failure():
         box.close()
 
 
+def test_conflicts_are_failures():
+    """An unresolved conflict must make the helper exit non-zero (M2)."""
+    box = Sandbox()
+    try:
+        box.file(REPLACED, 'old scanner\n')
+        pruned = box.file(PRUNED, 'legacy catalogue\n')
+        box.file(KEPT, 'generated catalogue\n')
+        plan = box.plan()
+        run('backup', '--plan', str(plan), '--backup', str(box.backup), '--root', str(box.root))
+        run('delete', '--plan', str(box.backup / 'prune'), '--root', str(box.root))
+        pruned.write_text('third party content\n')
+        code, stdout, stderr = run('restore', '--plan', str(box.backup / 'prune'),
+                                   '--backup', str(box.backup), '--root', str(box.root))
+        assert code != 0, (code, stdout, stderr)
+        assert 'ROLLBACK_CONFLICT=%s' % PRUNED in stderr, stderr
+        assert 'ROLLBACK_SUMMARY=restored=0 skipped=0 conflicts=1 failed=0' in stdout, stdout
+    finally:
+        box.close()
+
+
+def test_restore_summary_counts_each_outcome():
+    """The summary reports restored, skipped, conflicts and failures separately (M2)."""
+    box = Sandbox()
+    try:
+        box.file(REPLACED, 'old scanner\n')
+        pruned = box.file(PRUNED, 'legacy catalogue\n')
+        box.file(KEPT, 'generated catalogue\n')
+        untouched = box.file(
+            '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_failover_v1.php',
+            'legacy script\n')
+        # Two planned targets: one will be deleted, one stays because the install failed
+        # before the prune step; the surviving one must not be counted as a conflict (L7).
+        second = '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_failover_v1.php'
+        box.legacy.write_text('%s %s\n%s %s\n' % (digest(pruned), PRUNED,
+                                                  digest(untouched), second))
+        box.current.write_text('%s\n%s\n' % (REPLACED, KEPT))
+        code, stdout, stderr = run('compute', '--current', str(box.current),
+                                   '--legacy', str(box.legacy), '--root', str(box.root))
+        assert code == 0, stderr
+        plan = box.tmp / 'plan2'
+        plan.write_text(stdout)
+        assert len(stdout.splitlines()) == 2, stdout
+        run('backup', '--plan', str(plan), '--backup', str(box.backup), '--root', str(box.root))
+        # Delete only the first target by hand, leaving the second untouched.
+        pruned.unlink()
+        code, stdout, stderr = run('restore', '--plan', str(box.backup / 'prune'),
+                                   '--backup', str(box.backup), '--root', str(box.root))
+        assert code == 0, (code, stdout, stderr)
+        assert 'ROLLBACK_CONFLICT' not in stderr, stderr
+        assert 'ROLLBACK_SUMMARY=restored=1 skipped=1 conflicts=0 failed=0' in stdout, stdout
+    finally:
+        box.close()
+
+
+def test_untouched_prune_target_is_not_a_conflict():
+    """A planned prune target that was never deleted is skipped, not reported (L7)."""
+    box = Sandbox()
+    try:
+        box.file(REPLACED, 'old scanner\n')
+        pruned = box.file(PRUNED, 'legacy catalogue\n')
+        box.file(KEPT, 'generated catalogue\n')
+        plan = box.plan()
+        run('backup', '--plan', str(plan), '--backup', str(box.backup), '--root', str(box.root))
+        # No delete step: the install failed before pruning.
+        code, stdout, stderr = run('restore', '--plan', str(box.backup / 'prune'),
+                                   '--backup', str(box.backup), '--root', str(box.root))
+        assert code == 0, (code, stdout, stderr)
+        assert 'ROLLBACK_CONFLICT' not in stderr, stderr
+        assert 'ROLLBACK_SUMMARY=restored=0 skipped=1 conflicts=0 failed=0' in stdout, stdout
+        assert pruned.is_file()
+    finally:
+        box.close()
+
+
+def test_changed_target_is_not_deleted():
+    """A prune target modified after the plan is refused, not deleted (L6)."""
+    box = Sandbox()
+    try:
+        box.file(REPLACED, 'old scanner\n')
+        pruned = box.file(PRUNED, 'legacy catalogue\n')
+        box.file(KEPT, 'generated catalogue\n')
+        plan = box.plan()
+        run('backup', '--plan', str(plan), '--backup', str(box.backup), '--root', str(box.root))
+        pruned.write_text('changed after the plan was computed\n')
+        code, stdout, stderr = run('delete', '--plan', str(box.backup / 'prune'),
+                                   '--root', str(box.root))
+        assert code != 0, (code, stdout, stderr)
+        assert 'target changed before pruning' in stderr, stderr
+        assert pruned.is_file(), 'the modified file must survive'
+        assert pruned.read_text() == 'changed after the plan was computed\n'
+    finally:
+        box.close()
+
+
 CASES = [
     test_backup_records_verified_copy,
     test_delete_counts_only_removed_files,
     test_rollback_restores_pruned_and_replaced,
     test_restore_reports_conflict_and_failure,
+    test_conflicts_are_failures,
+    test_restore_summary_counts_each_outcome,
+    test_untouched_prune_target_is_not_a_conflict,
+    test_changed_target_is_not_deleted,
 ]
 
 

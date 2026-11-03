@@ -2755,6 +2755,9 @@ when the record covers it. The evidence is a fixed list: adding a release withou
 regenerating it narrows bootstrap coverage, which `tests/test_legacy_evidence.py` catches
 because the file must equal a fresh generation.
 
+> Naming note: the helper this decision introduced as `release/compute-prune.sh` was
+> replaced by `release/prune-plan.sh` in Decision 62; the file no longer exists.
+
 ## 63. The bundle identity is reproducible, and a rollback restores the install record
 
 ### Decision
@@ -2806,9 +2809,78 @@ a damaged record backup fails loudly without writing anything.
 `tests/test_upgrade_predecessors.py` — asserts eight passes and zero skips unless
 `DM_ALLOW_SKIPPED_PREDECESSORS=1` is set for a deliberate local run.
 
+### Trust boundary
+
+The tarball digest is the root of trust. It binds `install-unattended.sh` (the entry point), `install.sh`, `uninstall.sh` and everything the pinned-inputs file covers; it does not bind anything an operator runs from outside the bundle. Within the run, `install-unattended.sh` pins `release/release-inputs.sha256` and `release/verify-release-inputs.sh` inline, and that file pins the manifest, the prune helper, the legacy evidence and the catalogue merge helper - so a tampered helper aborts the run before any mutation. `install.sh` and `uninstall.sh` are deliberately not self-verified: they are thin wrappers the operator invokes, and verifying them from inside the run they start would be circular. A bundle whose digest is unknown should be rejected rather than inspected.
+
 ### Residual risk
 
 Reproducibility depends on the toolchain writing the same bytes: `tar` with `--format ustar`
 and `gzip -n` must accept the options (bsdtar and GNU tar do; both the test and CI exercise
 it). A member path longer than the 100-byte ustar limit fails the build loudly rather than
 silently switching to a pax header.
+
+## 64. Verified ownership, explicit rollback status, and a defined repair contract
+
+### Decision
+
+**Pruning** (M1): a record entry without a digest - the format the 2.13.2 installer wrote -
+no longer authorises a deletion on its own. Naming a path proves we once installed it, not
+what is on disk now, so such a path is only pruned when `release/legacy-targets.txt` carries
+a published digest that matches the file. Otherwise it is retained and reported as
+`RETAINED unverified <path>`. A record entry *with* a digest still needs that digest to
+match, or it is retained as `RETAINED modified`.
+
+**Rollback status** (M2, L7): every unresolved `ROLLBACK_CONFLICT` now makes the helper exit
+non-zero, and both restore commands print
+`ROLLBACK_SUMMARY=restored=<n> skipped=<n> conflicts=<n> failed=<n>`. The installer
+propagates that into an explicit `ROLLBACK_STATUS=COMPLETE|INCOMPLETE` line, alongside the
+existing `ROLLBACK_TARGETS_INCOMPLETE` / `ROLLBACK_PRUNE_INCOMPLETE` /
+`ROLLBACK_RECORD_INCOMPLETE` flags. A planned prune target that is still present and still
+matches its recorded digest was never deleted (the install failed before the prune step), so
+it is counted as `skipped`, not as a conflict.
+
+**Deletion re-verification** (L6): `delete` re-hashes each target against the digest recorded
+when it was backed up and aborts the run if the file changed in between, so the window
+between planning and deletion cannot be used to delete a modified file.
+
+**Repair contract** (M6): a byte-identical target is still not rewritten - its mtime is
+preserved - but its mode and ownership are enforced against the manifest mode and
+`root:wheel` by `prune-plan.sh enforce-target`. Unsafe drift (a world-writable plugin file, a
+foreign owner) never survives a repair; an already correct target is not touched at all. The
+run reports `repaired=<n>` in `INSTALL_OK` (appended, so the existing keys keep their
+positions).
+
+**Release tooling** (L8, L9): `build-release-inputs.sh` validates every input before writing
+and replaces the checksum file atomically, so an interrupted run cannot leave a partial
+file. The legacy evidence header names each manifest once, with every tag whose tree carries
+it, instead of implying that a row was published by the tag it was read from.
+
+### Reason
+
+The round-2 review proved that a bare-path record could delete a file whose content had
+changed after the 2.13.2 install (M1), that a rollback with conflicts still reported success
+(M2), that a plan could tar a live database (M3), that a post-success manual rollback left a
+record describing files the node no longer had (M4), that the installer itself had no
+executable coverage (M5), and that a repair preserved permission drift (M6). The low items
+were accounting and provenance defects in the same area.
+
+### Evidence
+
+`tests/test_prune_plan.py` (12 cases, incl. `test_bare_record_requires_evidence`,
+`test_bare_record_modified_retained`); `tests/test_prune_apply.py` (8 cases, incl.
+`test_conflicts_are_failures`, `test_restore_summary_counts_each_outcome`,
+`test_untouched_prune_target_is_not_a_conflict`, `test_changed_target_is_not_deleted`);
+`tests/test_repair_permissions.py` (4 cases); `tests/test_plan_sqlite_backup.py` (3 cases);
+`tests/test_catalogue_determinism.py` (2 cases); `tests/test_upgrade_prediction.py`
+(host-only: files=61 unchanged=60 replaced=1); `tests/test_rollback_isolated.py` (3 cases);
+`tests/test_release_inputs.py` (6 cases, incl. `test_generator_is_atomic`);
+`tests/test_legacy_evidence.py` (6 cases, incl. `test_provenance_names_each_manifest_once`).
+
+### Residual risk
+
+The installer's own process is still not executed by a test (M5, U2, U3, U7 remain open):
+doing so needs a sandbox mode inside the production script, and the alternative - running it
+against `.23` - is forbidden. `release/prune-plan.sh` already accepts `--root`, so the
+sandbox design exists; it is not landed here because it changes the installer's structure and
+needs its own review.

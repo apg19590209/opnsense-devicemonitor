@@ -47,7 +47,7 @@ def test_check_ok_is_append_only():
 def test_install_ok_is_append_only():
     current = keys('INSTALL_OK')
     assert current[:len(INSTALL_OK_2132)] == INSTALL_OK_2132, current
-    assert current[len(INSTALL_OK_2132):] == ['unchanged'], current
+    assert current[len(INSTALL_OK_2132):] == ['unchanged', 'repaired'], current
     assert readme_keys('INSTALL_OK') == current, readme_keys('INSTALL_OK')
 
 

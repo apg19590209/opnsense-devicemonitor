@@ -54,34 +54,34 @@ sha256 `38be5b8e0b176a1f23308cd89ec07a1f195c7d88ea4f2fdd67c41d924b5486a3`; `HASH
 
 | # | Reviewer finding | Status |
 |---|---|---|
-| M1 | Bare-path record entries prune without content verification (`prune-plan.sh:191-194`); branch untested | awaiting scope |
-| M2 | Rollback conflicts do not fail the rollback or raise a summary flag (`prune-plan.sh:278,327,336`) | awaiting scope |
-| M3 | Plan §2 tars a live SQLite database | awaiting scope |
-| M4 | Plan §5 claims the record never needs restoring (false for a post-success manual rollback) | awaiting scope |
-| M5 | No test executes `install-unattended.sh`; wiring asserted textually only | awaiting scope |
-| M6 | Repair preserves mode/owner but cannot correct drift | awaiting scope |
-| L1 | `PROJECT_STATE.md:31` says 8 commits; there are 2 | awaiting scope |
-| L2 | `PROJECT_STATE.md:35` "22 python suites … 8 new or rewritten" (34 suites referenced; 7 test files changed) | awaiting scope |
-| L3 | Checklist `:39` names `test_rollback_restores_everything`; actual `test_rollback_restores_pruned_and_replaced` | awaiting scope |
-| L4 | `DECISIONS.md:2658` still names the removed `release/compute-prune.sh` | awaiting scope |
-| L5 | `$INSTALLED_LIST.new` litter after a failed run (`install-unattended.sh:394-396`) | awaiting scope |
-| L6 | TOCTOU between prune plan (`:206`) and delete (`:327`) | awaiting scope |
-| L7 | `ROLLBACK_CONFLICT` for planned prune targets that were never deleted (`prune-plan.sh:277-280`) | awaiting scope |
-| L8 | `build-release-inputs.sh` leaves a partial `release-inputs.sha256` on failure | awaiting scope |
-| L9 | `legacy-targets.txt` source header attributes manifests to the wrong tags | awaiting scope |
-| L10 | `install.sh` / `uninstall.sh` shipped unpinned (root of trust = tarball digest) | awaiting scope |
+| M1 | Bare-path record entries prune without content verification (`prune-plan.sh:191-194`); branch untested | **closed** - a bare-path entry now needs a published digest match, else `RETAINED unverified` (`test_prune_plan.py::test_bare_record_requires_evidence`, `::test_bare_record_modified_retained`) |
+| M2 | Rollback conflicts do not fail the rollback or raise a summary flag | **closed** - conflicts set a non-zero status, `ROLLBACK_SUMMARY=` is printed and the installer reports `ROLLBACK_STATUS=COMPLETE|INCOMPLETE` (`test_prune_apply.py::test_conflicts_are_failures`, `::test_restore_summary_counts_each_outcome`) |
+| M3 | Plan §2 tars a live SQLite database | **closed** - SQLite snapshot + `quick_check`, verified on a synthetic database and read-only on the live one (`test_plan_sqlite_backup.py`, 3 cases) |
+| M4 | Plan §5 claims the record never needs restoring | **closed** - `backup-record`/`restore-record` with a digest sidecar; existing-install and fresh-install cases (`test_rollback_isolated.py::test_manual_rollback_restores_the_pre_install_state`, `::test_fresh_install_rollback_removes_the_new_record`, `::test_restore_record_reports_a_damaged_backup`) |
+| M5 | No test executes `install-unattended.sh`; wiring asserted textually only | **open (partial)** - helper-level end-to-end covers replacement, pruning, injected failure, rollback and record consistency (`test_prune_apply.py`, `test_rollback_isolated.py`), but the installer process itself is still never executed. A sandbox mode inside the production script is required; see Decision 64 residual risk |
+| M6 | Repair preserves mode/owner but cannot correct drift | **closed** - `enforce-target` corrects mode and ownership, leaves a correct file untouched, and fails loudly when ownership cannot be set (`test_repair_permissions.py`, 4 cases; `repaired=` in `INSTALL_OK`) |
+| L1 | `PROJECT_STATE.md:31` says 8 commits | **closed** - the false count is gone |
+| L2 | `PROJECT_STATE.md:35` suite/step counts | **closed** - states 42 suites / 59 steps, measured from the workflow |
+| L3 | Checklist names a non-existent test | **closed** - corrected in `PRUNING_REMEDIATION_20261103.md:39` |
+| L4 | `DECISIONS.md` names the removed `release/compute-prune.sh` | **closed** - naming note added to Decision 61 |
+| L5 | `$INSTALLED_LIST.new` litter after a failed run | **closed by code, unverified executably** - `cleanup` removes it; proving it needs the installer to run, i.e. M5 |
+| L6 | TOCTOU between prune plan and delete | **closed** - `delete` re-hashes against the backed-up digest and aborts (`test_prune_apply.py::test_changed_target_is_not_deleted`) |
+| L7 | `ROLLBACK_CONFLICT` for targets that were never deleted | **closed** - such a target is counted `skipped` (`test_prune_apply.py::test_untouched_prune_target_is_not_a_conflict`) |
+| L8 | `build-release-inputs.sh` leaves a partial file on failure | **closed** - validates first, writes to `.new`, renames (`test_release_inputs.py::test_generator_is_atomic`) |
+| L9 | Evidence header attributes manifests to the wrong tags | **closed** - one line per manifest with every tag that carries it (`test_legacy_evidence.py::test_provenance_names_each_manifest_once`) |
+| L10 | Wrappers shipped unpinned | **closed as documentation** - Decision 63 gains an explicit trust boundary |
 
 ## Unproven assertions (all eight, per the review)
 
 | # | Assertion | Status |
 |---|---|---|
-| U1 | Pruning from a legacy bare-path record | awaiting scope |
-| U2 | The installer's prune/backup/delete/rollback calls under test | awaiting scope |
-| U3 | `--check` non-mutation proven automatically (not just statically + manually) | awaiting scope |
-| U4 | `unchanged=60` for the 2.13.2 → 2.13.3 upgrade | awaiting scope |
-| U5 | Same-version repair `unchanged=61` and merged-catalogue determinism | awaiting scope |
-| U6 | Rollback conflict behaviour end-to-end | awaiting scope |
-| U7 | Plan abort conditions other than the zero-candidate case | awaiting scope |
+| U1 | Pruning from a legacy bare-path record | **closed** - `test_prune_plan.py::test_bare_record_requires_evidence`, `::test_bare_record_modified_retained` |
+| U2 | The installer's prune/backup/delete/rollback calls under test | **open** with M5 |
+| U3 | `--check` non-mutation proven automatically | **open** with M5; observed twice by hand on `.23` (no backup directory, record mtime unchanged) |
+| U4 | `unchanged=60` for the 2.13.2 → 2.13.3 upgrade | **closed on the host** - `test_upgrade_prediction.py` reports `files=61 unchanged=60 replaced=1` on `.23` (read-only); it prints an explicit SKIP where no install exists |
+| U5 | Same-version repair `unchanged=61` and merged-catalogue determinism | **partly closed** - determinism proven (`test_catalogue_determinism.py`: msgfmt twice and both merge branches identical); the `unchanged=61` arithmetic needs a second real install, i.e. M5 |
+| U6 | Rollback conflict behaviour end-to-end | **closed at helper level** - `test_prune_apply.py::test_conflicts_are_failures`, `::test_restore_summary_counts_each_outcome`, `::test_untouched_prune_target_is_not_a_conflict`; installer-level propagation open with M5 |
+| U7 | Plan abort conditions other than the zero-candidate case | **open** with M5 |
 | U8 | The published 2.13.2 fallback (proven impossible) | addressed by H2a |
 
 ## Phase 1 evidence log

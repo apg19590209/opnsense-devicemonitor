@@ -36,7 +36,7 @@ Acceptance tests (all root-free, all in CI):
 | Dropped generated outputs can be identified safely | `test_prune_plan.py::test_dropped_generated_identified` |
 | Empty and identical records produce empty prune plans | `test_prune_plan.py::test_empty_and_identical` |
 | Unverified pruning scripts cannot execute | `test_release_inputs.py::test_corrupted_helper_is_refused` |
-| Failed installs restore replaced and pruned files | `test_prune_apply.py::test_rollback_restores_everything` |
+| Failed installs restore replaced and pruned files | `test_prune_apply.py::test_rollback_restores_pruned_and_replaced` |
 | Same-version repair behaves as documented | `test_upgrade_predecessors.py` (2.13.2 row) + `test_installer_status.py` |
 | No unexpected skipped predecessors in full CI | `test_upgrade_predecessors.py::test_every_predecessor_upgrades` |
 | No installer mutation during `--check` | `test_installer_status.py::test_check_is_non_mutating` |

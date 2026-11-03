@@ -4,20 +4,14 @@
 # Format: <sha256> <absolute installed target>. One row per (digest, target) pair
 # published by a historical Device Monitor release manifest.
 #
-# Sources:
-#   v2.9@release/v2.9-runtime.manifest
-#   v2.10@release/v2.10-runtime.manifest
-#   v2.11-patch1@release/v2.10-runtime.manifest
-#   v2.11-patch1@release/v2.11-runtime.manifest
-#   v2.13@release/v2.10-runtime.manifest
-#   v2.13@release/v2.11-runtime.manifest
-#   v2.13@release/v2.13-runtime.manifest
-#   v2.13.1@release/v2.10-runtime.manifest
-#   v2.13.1@release/v2.11-runtime.manifest
-#   v2.13.1@release/v2.13-runtime.manifest
-#   v2.13.2@release/v2.10-runtime.manifest
-#   v2.13.2@release/v2.11-runtime.manifest
-#   v2.13.2@release/v2.13.2-runtime.manifest
+# Provenance (L9): one line per manifest, naming every tag whose tree carries it.
+# A tag keeps the manifests of older releases, so a row below may have been published
+# by any of the tags listed for its manifest - all of them are real releases.
+#   release/v2.9-runtime.manifest carried by v2.9
+#   release/v2.10-runtime.manifest carried by v2.10, v2.11-patch1, v2.13, v2.13.1, v2.13.2
+#   release/v2.11-runtime.manifest carried by v2.11-patch1, v2.13, v2.13.1, v2.13.2
+#   release/v2.13-runtime.manifest carried by v2.13, v2.13.1
+#   release/v2.13.2-runtime.manifest carried by v2.13.2
 02d1e26504ceb144269247d88f0d5c3c8326f8c56a6ab4aa3af82de75267ca45 /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py
 0398f09f01a8926ab113b9121d9be629e9d0edfc91424ece6316b9af3a59c3ca /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
 06ff77409eb899644e21cce5d5b0544a679c53abf660d933d4e7372f27171ad8 /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/DevicesController.php

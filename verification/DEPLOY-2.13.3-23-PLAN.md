@@ -5,8 +5,8 @@ run. Scope is `192.168.20.23` only. `.253` (CARP master) and `.252` (CARP standb
 explicitly out of scope for this phase and must not be touched.
 
 Branch under test: `fix/pruning-remediation-20261103`.
-Bundle: `dm-v2.13.3-runtime.tar.gz`, 346 870 bytes,
-sha256 `859c2638663260686630ed05408ab9055877988af56a84b81a2caa34688d6e48`
+Bundle: `dm-v2.13.3-runtime.tar.gz`, 348 774 bytes,
+sha256 `fc53aaa1fed1c42fe0a8aee8fe294aeb3ed81f8659a24f9dd0f79e709c3836ba`
 (the bundle identity is reproducible — `release/bundle-digest.txt` records it and
 `tests/test_bundle_determinism.py` rebuilds it from two clean checkouts; the 2.13.2 bundle is
 untouched).
@@ -29,7 +29,7 @@ untouched).
 cd /root/src/opnsense-devicemonitor-upstream            # authoritative checkout
 git rev-parse --abbrev-ref HEAD                        # fix/pruning-remediation-20261103
 git status --porcelain                                 # empty
-sha256 -q /tmp/dm-v2.13.3-runtime.tar.gz               # 859c2638...
+sha256 -q /tmp/dm-v2.13.3-runtime.tar.gz               # fc53aaa1...
 
 /bin/hostname                                          # OPNsense.internal
 /usr/local/sbin/opnsense-version                       # OPNsense 26.7.7 (>= 26.1.5)
@@ -105,10 +105,11 @@ NOTICE: merged the plugin keys into 10 core catalogue(s); uninstall.sh restores 
 BACKUP_READY=/var/backups/devicemonitor/install-v213.<id>
 CORE_LOCALE_STATE=/var/backups/devicemonitor/core-locale
 UNCHANGED=60
-INSTALL_OK version=2.13.3 files=61 core_locales=10 pruned=0 backup=/var/backups/devicemonitor/install-v213.<id> daemon_restarted=1 unchanged=60
+INSTALL_OK version=2.13.3 files=61 core_locales=10 pruned=0 backup=/var/backups/devicemonitor/install-v213.<id> daemon_restarted=1 unchanged=60 repaired=0
 ```
 
-`files=61` and `pruned=0` are mandatory. `unchanged=60` is expected because only
+`files=61` and `pruned=0` are mandatory; `repaired=0` is expected (a non-zero value means
+mode or ownership drift was corrected — see Decision 64 — and is not a failure). `unchanged=60` is expected because only
 `defaults.json` changes between 2.13.2 and 2.13.3; a lower count is acceptable (a generated
 catalogue differed) but `files=61 pruned=0` is not negotiable. No `PRUNE_PLAN=` line is
 expected. Any `ABORT:` line means the installer rolled back and printed
@@ -164,8 +165,10 @@ python3 -c 'import json;print(json.load(open("/usr/local/opnsense/mvc/app/models
                                                        # 2.13.2
 ```
 
-Each step prints `ROLLBACK_RESTORED=<path>`, `RECORD_RESTORED=<record>` or a
-`ROLLBACK_FAILED=`/`ROLLBACK_CONFLICT=` line; any `ROLLBACK_FAILED` means the node is not
+Each step prints `ROLLBACK_RESTORED=<path>`, `RECORD_RESTORED=<record>`, a
+`ROLLBACK_SUMMARY=restored=<n> skipped=<n> conflicts=<n> failed=<n>` line, or a
+`ROLLBACK_FAILED=`/`ROLLBACK_CONFLICT=` line; the installer reports
+`ROLLBACK_STATUS=COMPLETE|INCOMPLETE` for the automatic path; any `ROLLBACK_FAILED` means the node is not
 back at its pre-install state and the runtime-data backup is the next step. The record
 restore matters: without it the node keeps a 2.13.3 record describing files it no longer
 has, which the next run would treat as unverifiable (`RETAINED modified`) rather than

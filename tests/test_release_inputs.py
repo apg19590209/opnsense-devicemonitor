@@ -148,12 +148,40 @@ def test_verification_precedes_execution():
     assert 'ABORT: release inputs' in text
 
 
+def test_generator_is_atomic():
+    """A failed regeneration must not leave a partial or altered checksum file (L8)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tree = Path(tmpdir) / 'tree'
+        tree.mkdir()
+        archive = subprocess.run(['git', '-C', str(ROOT), 'archive', '--format=tar', 'HEAD'],
+                                 capture_output=True, check=True, timeout=180)
+        subprocess.run(['tar', '-x', '-C', str(tree)], input=archive.stdout,
+                       check=True, timeout=180)
+
+        generator = tree / 'release/build-release-inputs.sh'
+        target = tree / 'release/release-inputs.sha256'
+        done = subprocess.run(['sh', str(generator)], capture_output=True, text=True,
+                              timeout=180)
+        assert done.returncode == 0, (done.stdout, done.stderr)
+        assert not (tree / 'release/release-inputs.sha256.new').exists()
+        before = target.read_text()
+
+        (tree / 'release/legacy-targets.txt').unlink()
+        done = subprocess.run(['sh', str(generator)], capture_output=True, text=True,
+                              timeout=180)
+        assert done.returncode != 0, (done.stdout, done.stderr)
+        assert 'missing release/legacy-targets.txt' in done.stderr, done.stderr
+        assert target.read_text() == before, 'a failed run must not touch the checksum file'
+        assert not (tree / 'release/release-inputs.sha256.new').exists()
+
+
 CASES = [
     test_pins_are_consistent,
     test_version_is_single_sourced,
     test_verifier_accepts_the_checkout,
     test_corrupted_helper_is_refused,
     test_verification_precedes_execution,
+    test_generator_is_atomic,
 ]
 
 

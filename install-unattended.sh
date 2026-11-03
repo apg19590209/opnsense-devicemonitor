@@ -44,7 +44,7 @@ VERIFIER=release/verify-release-inputs.sh
 # ownership evidence and the catalogue merge helper. A tampered helper can therefore never
 # decide which files get removed.
 MANIFEST_SHA=0c5df65eda8a28e0a3884c0710caeb31555a59eb5479656a56ccfbf4b0dc809b
-RELEASE_INPUTS_SHA=c4a35cece9fb312db437ea01467659f801b568c7675dca452b54b52fdacf5628
+RELEASE_INPUTS_SHA=f9613621c0b846e3aa7b280ba221734d08fe3a38455be5b70e4546a143a1fa1a
 VERIFIER_SHA=68b93f2a08f0808b67b6bd2ca76dca33a6cc5c159de4b61353b721eaefbb583d
 [ -f "$MANIFEST" ] && [ ! -L "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = "$MANIFEST_SHA" ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 40 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
@@ -88,17 +88,38 @@ cleanup() {
         echo "ROLLBACK_START=$BACKUP" >&2
         if [ "$WAS_RUNNING" = 1 ] || [ "$FRESH" = 1 ]; then service devicemonitor stop || :; fi
         # Both halves of the rollback are the tested helper: replaced targets first, then the
-        # pruned ones from the same backup directory. Every restore is verified by digest.
-        /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" restore-targets --plan "$BACKUP/plan" --backup "$BACKUP" ||
+        # pruned ones from the same backup directory. Every restore is verified by digest and
+        # every unresolved conflict makes the helper exit non-zero, so the status below is not
+        # a guess: a rollback with any conflict or failure reports INCOMPLETE.
+        rollback_rc=0
+        if /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" restore-targets --plan "$BACKUP/plan" --backup "$BACKUP"; then
+            :
+        else
+            rollback_rc=1
             echo "ROLLBACK_TARGETS_INCOMPLETE=$BACKUP" >&2
+        fi
         if [ -f "$BACKUP/prune" ]; then
-            /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" restore --plan "$BACKUP/prune" --backup "$BACKUP" ||
+            if /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" restore --plan "$BACKUP/prune" --backup "$BACKUP"; then
+                :
+            else
+                rollback_rc=1
                 echo "ROLLBACK_PRUNE_INCOMPLETE=$BACKUP" >&2
+            fi
         fi
         # The record this run might have written describes the new target set; put the
         # previous one back, or remove it when this was a fresh install.
-        /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" restore-record --record "$INSTALLED_LIST" --backup "$BACKUP" ||
+        if /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" restore-record --record "$INSTALLED_LIST" --backup "$BACKUP"; then
+            :
+        else
+            rollback_rc=1
             echo "ROLLBACK_RECORD_INCOMPLETE=$BACKUP" >&2
+        fi
+        rm -f "$INSTALLED_LIST.new" 2>/dev/null || :
+        if [ "$rollback_rc" = 0 ]; then
+            echo 'ROLLBACK_STATUS=COMPLETE' >&2
+        else
+            echo 'ROLLBACK_STATUS=INCOMPLETE' >&2
+        fi
         if [ "$RC_LINK_CREATED" = 1 ]; then rm -f /etc/rc.d/devicemonitor; fi
         if [ "$CONFIGD_CHANGED" = 1 ]; then service configd restart || echo 'ROLLBACK_CONFIGD_RESTART_FAILED' >&2; fi
         if [ "$WAS_RUNNING" = 1 ]; then service devicemonitor restart || echo 'ROLLBACK_DAEMON_RESTART_FAILED' >&2; fi
@@ -310,12 +331,24 @@ if [ "$NMAP_MISSING" = 1 ]; then
 fi
 MUTATING=1
 UNCHANGED=0
+REPAIRED=0
 while read -r id old new mode source target; do
     if [ "$old" = "$new" ]; then
-        # Repair install: the target is already byte-identical, so it is not rewritten and
-        # its mode, owner and mtime are preserved. The digest is re-read first, so a file
-        # that changed after the plan was frozen still aborts the run.
+        # Repair install: the content is already byte-identical, so it is not rewritten and
+        # the mtime is preserved. Mode and ownership are still enforced (Decision 64): a
+        # world-writable plugin file or a foreign owner never survives a repair, while an
+        # already correct target is not touched at all.
         [ "$(sha256 -q "$target")" = "$new" ] || { echo "ABORT: poststate $target" >&2; exit 1; }
+        if ! /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" enforce-target --target "$target" \
+                --mode "$mode" --owner root --group wheel > "$STAGE/enforced" 2>&1; then
+            sed -n 's/^/ENFORCE: /p' "$STAGE/enforced" >&2
+            echo "ABORT: permissions $target" >&2
+            exit 1
+        fi
+        if grep -q '^REPAIRED=' "$STAGE/enforced"; then
+            grep '^REPAIRED=' "$STAGE/enforced"
+            REPAIRED=$((REPAIRED + 1))
+        fi
         UNCHANGED=$((UNCHANGED + 1))
         continue
     fi
@@ -405,4 +438,4 @@ mkdir -p /var/db/devicemonitor
 chmod 644 "$INSTALLED_LIST.new"
 mv "$INSTALLED_LIST.new" "$INSTALLED_LIST"
 MUTATING=0
-printf 'INSTALL_OK version=%s files=%s core_locales=%s pruned=%s backup=%s daemon_restarted=%s unchanged=%s\n' "$VERSION" "$count" "$CORE_LOCALES" "$PRUNED" "$BACKUP" "$WAS_RUNNING" "$UNCHANGED"
+printf 'INSTALL_OK version=%s files=%s core_locales=%s pruned=%s backup=%s daemon_restarted=%s unchanged=%s repaired=%s\n' "$VERSION" "$count" "$CORE_LOCALES" "$PRUNED" "$BACKUP" "$WAS_RUNNING" "$UNCHANGED" "$REPAIRED"

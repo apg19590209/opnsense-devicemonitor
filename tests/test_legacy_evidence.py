@@ -77,10 +77,27 @@ def test_evidence_rows_are_shaped_and_owned():
         assert NAMESPACE.match(path), path
         assert (digest, path) not in seen, (digest, path)
         seen.add((digest, path))
-    # The headers must name every manifest the rows came from.
+    # The headers must name every manifest the rows came from, once, with its tags (L9).
     text = SHIPPED.read_text()
-    for tag in TAGS:
-        assert ('#   %s@release/' % tag) in text, tag
+    for manifest in ('release/v2.9-runtime.manifest', 'release/v2.10-runtime.manifest',
+                     'release/v2.11-runtime.manifest', 'release/v2.13-runtime.manifest',
+                     'release/v2.13.2-runtime.manifest'):
+        assert text.count('#   %s carried by ' % manifest) == 1, manifest
+    assert 'carried by v2.9\n' in text
+    assert 'release/v2.13.2-runtime.manifest carried by v2.13.2\n' in text
+
+
+def test_provenance_names_each_manifest_once():
+    """No manifest is listed twice, and every listed manifest names at least one tag."""
+    lines = [line for line in SHIPPED.read_text().splitlines()
+             if line.startswith('#   release/')]
+    assert lines, 'no provenance lines'
+    assert len(lines) == len(set(lines)), lines
+    for line in lines:
+        manifest, _, tags = line[len('#   '):].partition(' carried by ')
+        assert manifest.startswith('release/v'), line
+        assert tags.strip(), 'no tag listed for %s' % manifest
+    print('  provenance            %d manifests, each named once' % len(lines))
 
 
 def test_evidence_covers_the_known_legacy_leftovers():
@@ -105,6 +122,7 @@ CASES = [
     test_evidence_rows_are_shaped_and_owned,
     test_evidence_covers_the_known_legacy_leftovers,
     test_evidence_does_not_claim_foreign_paths,
+    test_provenance_names_each_manifest_once,
 ]
 
 

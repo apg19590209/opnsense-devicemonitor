@@ -159,6 +159,25 @@ jobs:
       - name: Validate the rollback procedure in isolation
         run: python3 tests/test_rollback_isolated.py
 
+      # Decision 64: a byte-identical target is not rewritten, but unsafe mode/ownership
+      # drift is corrected. This drives `prune-plan.sh enforce-target` directly.
+      - name: Validate repair permissions and ownership
+        run: python3 tests/test_repair_permissions.py
+
+      # The deployment plan must take a SQLite-consistent snapshot of devices.db (M3).
+      - name: Validate the deployment backup procedure
+        run: python3 tests/test_plan_sqlite_backup.py
+
+      # Catalogue compilation and merging must be deterministic, otherwise a repair install
+      # can never report `unchanged=` (U5).
+      - name: Validate catalogue determinism
+        run: python3 tests/test_catalogue_determinism.py
+
+      # Host-only evidence (U4): on a node with the plugin installed this reproduces the
+      # plan's unchanged/replaced arithmetic; elsewhere it prints an explicit SKIP.
+      - name: Report the upgrade prediction
+        run: python3 tests/test_upgrade_prediction.py
+
       # Triggers, preserved branch entries and the selection itself: every tests/*.py named
       # below must exist, and the predecessor step must require passed=8 skipped=0.
       - name: Validate the CI configuration

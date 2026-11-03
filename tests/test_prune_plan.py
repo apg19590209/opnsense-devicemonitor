@@ -242,6 +242,44 @@ def test_unsafe_paths_ignored():
         tree.close()
 
 
+def test_bare_record_requires_evidence():
+    """A bare-path record entry prunes only with a published digest match (M1, U1).
+
+    The 2.13.2 installer wrote paths without digests. Naming a path proves we once installed
+    it, not what is there now, so the record alone can never authorise a deletion.
+    """
+    tree = Tree()
+    try:
+        stale = tree.file(STALE, 'legacy catalogue\n')
+        write_current(tree, SCAN)
+        write_record(tree, bare=[STALE])
+        plan, retained = tree.run(legacy=False)
+        assert plan == [], plan
+        assert retained == [['RETAINED', 'unverified', STALE]], retained
+
+        write_legacy(tree, {STALE: digest(stale)})
+        plan, retained = tree.run()
+        assert plan == [['LEGACY', STALE]], plan
+        assert retained == [], retained
+    finally:
+        tree.close()
+
+
+def test_bare_record_modified_retained():
+    """A bare-path recorded file that no published digest matches is retained (M1, U1)."""
+    tree = Tree()
+    try:
+        tree.file(STALE, 'edited after install\n')
+        write_current(tree, SCAN)
+        write_record(tree, bare=[STALE])
+        write_legacy(tree, {STALE: 'b' * 64})
+        plan, retained = tree.run()
+        assert plan == [], plan
+        assert retained == [['RETAINED', 'unverified', STALE]], retained
+    finally:
+        tree.close()
+
+
 CASES = [
     test_current_targets_never_pruned,
     test_current_generated_retained,
@@ -253,6 +291,8 @@ CASES = [
     test_dropped_generated_identified,
     test_empty_and_identical,
     test_unsafe_paths_ignored,
+    test_bare_record_requires_evidence,
+    test_bare_record_modified_retained,
 ]
 
 

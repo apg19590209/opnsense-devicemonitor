@@ -408,7 +408,7 @@ everything and prints a report without writing:
 
 ```text
 CHECK_OK version=2.13.3 predecessor=2.13.2 files=61 core_locales=10 prunable=0 daemon_running=1 host=... legacy_prunable=0 retained=0
-INSTALL_OK version=2.13.3 files=61 core_locales=10 pruned=0 backup=/var/backups/devicemonitor/install-v213.XXXXXX daemon_restarted=1 unchanged=0
+INSTALL_OK version=2.13.3 files=61 core_locales=10 pruned=0 backup=/var/backups/devicemonitor/install-v213.XXXXXX daemon_restarted=1 unchanged=0 repaired=0
 ```
 
 Both lines are a contract, not prose: keys are only ever **appended**, so the 2.13.2 order

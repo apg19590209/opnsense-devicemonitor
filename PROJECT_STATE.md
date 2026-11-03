@@ -28,12 +28,12 @@ Decision 60) → `2.13.3` (pruning remediation, Decision 62).
 
 | Item | Value |
 |---|---|
-| Branch | `fix/pruning-remediation-20261103`, 8 commits on top of `6bd122e` (untagged) |
+| Branch | `fix/pruning-remediation-20261103` (untagged), built on `15be258`; see `git log` for the current tip |
 | Payload | `release/v2.13.3-runtime.manifest`, 40 rows, staged targets 61 (62 fresh) |
-| Bundle | `dm-v2.13.3-runtime.tar.gz`, 346 870 bytes, sha256 `859c2638663260686630ed05408ab9055877988af56a84b81a2caa34688d6e48` — built at `/tmp`, **not published**; reproducible from any clean checkout (Decision 63, `release/bundle-digest.txt`) |
+| Bundle | `dm-v2.13.3-runtime.tar.gz`, 348 774 bytes, sha256 `fc53aaa1fed1c42fe0a8aee8fe294aeb3ed81f8659a24f9dd0f79e709c3836ba` — built at `/tmp`, **not published**; reproducible from any clean checkout (Decision 63, `release/bundle-digest.txt`) |
 | Deployed | nowhere. Deployment to `.23` is a separate gated phase; `.253` / `.252` are out of scope |
-| Gates | 22 python suites wired into `.github/workflows/ci.yml` (52 steps), 8 new or rewritten for this change; all green locally on `.23` |
-| New behaviour | Pruning requires proof of ownership, the record covers generated targets, every executed input is pinned, a repair install is idempotent, rollback is digest-verified (Decision 62) |
+| Gates | 42 suites referenced by `.github/workflows/ci.yml` (59 steps); the 9 new or rewritten suites pass locally on `.23`. No remote run has started yet (the branch has not been pushed) |
+| New behaviour | Pruning requires proof of ownership (including for bare-path records), the record covers generated targets, every executed input is pinned, a repair install is idempotent and enforces mode/ownership, rollback reports COMPLETE/INCOMPLETE and restores the record (Decisions 62-64) |
 
 Pre-deployment evidence from `.23` (running 2.13.2), taken from this branch with
 `install-unattended.sh --host $(/bin/hostname) --check`:

@@ -65,6 +65,9 @@ for tag in $TAGS; do
     done
 done
 
+# Distinct manifest paths, in first-seen order, for the provenance header (L9).
+MANIFESTS=$(cut -d'@' -f2- "$work/sources" | awk '!seen[$0]++')
+
 {
     echo '# Legacy ownership evidence for release/prune-plan.sh (Decision 62).'
     echo '#'
@@ -72,10 +75,23 @@ done
     echo '# Format: <sha256> <absolute installed target>. One row per (digest, target) pair'
     echo '# published by a historical Device Monitor release manifest.'
     echo '#'
-    echo '# Sources:'
-    while read -r source; do
-        echo "#   $source"
-    done < "$work/sources"
+    echo '# Provenance (L9): one line per manifest, naming every tag whose tree carries it.'
+    echo '# A tag keeps the manifests of older releases, so a row below may have been published'
+    echo '# by any of the tags listed for its manifest - all of them are real releases.'
+    for manifest in $MANIFESTS; do
+        first=1
+        printf '#   %s carried by' "$manifest"
+        while IFS='@' read -r tag path; do
+            [ "$path" = "$manifest" ] || continue
+            if [ "$first" = 1 ]; then
+                printf ' %s' "$tag"
+                first=0
+            else
+                printf ', %s' "$tag"
+            fi
+        done < "$work/sources"
+        printf '\n'
+    done
     sort -u "$work/rows"
 } > "$OUT"
 

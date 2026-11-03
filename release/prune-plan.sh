@@ -49,6 +49,7 @@ usage() {
     echo "       $PROG restore-targets --plan FILE --backup DIR [--root DIR]" >&2
     echo "       $PROG backup-record --record FILE --backup DIR [--root DIR]" >&2
     echo "       $PROG restore-record --record FILE --backup DIR [--root DIR]" >&2
+    echo "       $PROG enforce-target --target PATH --mode MODE [--owner U --group G] [--root DIR]" >&2
     exit 2
 }
 
@@ -69,6 +70,18 @@ digest() {
     else
         die 'no sha256 implementation available'
     fi
+}
+
+# FreeBSD stat(1) spells its format flags differently from GNU coreutils; both the tests
+# (Linux) and the firewall (FreeBSD) use these.
+file_mode() {
+    if stat -f %Lp / >/dev/null 2>&1; then stat -f %Lp "$1"; else stat -c %a "$1"; fi
+}
+file_owner() {
+    if stat -f %Su / >/dev/null 2>&1; then stat -f %Su "$1"; else stat -c %U "$1"; fi
+}
+file_group() {
+    if stat -f %Sg / >/dev/null 2>&1; then stat -f %Sg "$1"; else stat -c %G "$1"; fi
 }
 
 in_namespace() {
@@ -104,6 +117,10 @@ legacy=
 plan=
 backup=
 root=
+target=
+mode=
+owner=
+group=
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -112,6 +129,10 @@ while [ "$#" -gt 0 ]; do
         --legacy) [ "$#" -ge 2 ] || usage; legacy=$2; shift 2 ;;
         --plan) [ "$#" -ge 2 ] || usage; plan=$2; shift 2 ;;
         --backup) [ "$#" -ge 2 ] || usage; backup=$2; shift 2 ;;
+        --target) [ "$#" -ge 2 ] || usage; target=$2; shift 2 ;;
+        --mode) [ "$#" -ge 2 ] || usage; mode=$2; shift 2 ;;
+        --owner) [ "$#" -ge 2 ] || usage; owner=$2; shift 2 ;;
+        --group) [ "$#" -ge 2 ] || usage; group=$2; shift 2 ;;
         --root) [ "$#" -ge 2 ] || usage; root=$2; shift 2 ;;
         *) echo "$PROG: unknown argument $1" >&2; usage ;;
     esac
@@ -184,6 +205,7 @@ compute() {
         in_namespace "$path" || continue
         if grep -Fx -q -- "$path" "$work/current"; then continue; fi
         full=$root$path
+        unverified=0
         rec=missing
         while IFS="$TAB" read -r rpath rhash; do
             [ "$rpath" = "$path" ] || continue
@@ -196,19 +218,21 @@ compute() {
                 echo "RETAINED irregular $path" >&2
                 continue
             fi
-            if [ "$rec" = - ]; then
-                # A 2.13.2 record carries no digest: the record itself proves ownership, the
-                # content cannot be proven, so it is only removed while it still exists.
-                printf 'RECORD %s\n' "$path"
-            elif [ "$(digest "$full")" = "$rec" ]; then
-                printf 'RECORD %s\n' "$path"
-            else
-                echo "RETAINED modified $path" >&2
+            if [ "$rec" != - ]; then
+                if [ "$(digest "$full")" = "$rec" ]; then
+                    printf 'RECORD %s\n' "$path"
+                else
+                    echo "RETAINED modified $path" >&2
+                fi
+                continue
             fi
-            continue
+            # A bare-path record (written by 2.13.2) names the path but carries no digest.
+            # Naming a path proves we once installed it, not what is there now, so it falls
+            # through to the published-digest check and is retained when that finds nothing.
+            unverified=1
         fi
-        # LEGACY: no record for this path, so a published digest is the only evidence there
-        # is. An unchanged historical file is provably ours; anything else is retained.
+        # LEGACY: a published digest is the only evidence that the content is ours. An
+        # unchanged historical file is provably ours; anything else is retained.
         [ -e "$full" ] || continue
         if [ ! -f "$full" ] || [ -L "$full" ]; then
             echo "RETAINED irregular $path" >&2
@@ -224,6 +248,8 @@ compute() {
         done < "$work/legacy"
         if [ "$owned" = 1 ]; then
             printf 'LEGACY %s\n' "$path"
+        elif [ "$unverified" = 1 ]; then
+            echo "RETAINED unverified $path" >&2
         else
             echo "RETAINED modified $path" >&2
         fi
@@ -262,6 +288,12 @@ delete_plan() {
         safe_path "$path" || die "refusing unsafe path in plan: $path"
         full=$root$path
         [ -e "$full" ] || continue
+        # The plan was verified when it was computed; re-verify against the digest recorded
+        # in the backup bookkeeping, so a target that changed in between is never deleted.
+        [ -f "$full" ] && [ ! -L "$full" ] || die "target changed before pruning: $path"
+        if [ "$(digest "$full")" != "$hash" ]; then
+            die "target changed before pruning: $path"
+        fi
         rm -f "$full" || die "cannot prune $path"
         [ ! -e "$full" ] || die "prune left $path"
         removed=$((removed + 1))
@@ -274,42 +306,58 @@ restore_plan() {
     [ -n "$backup" ] || die 'restore needs --backup'
     [ -f "$plan" ] || die "plan missing: $plan"
     rc=0
+    restored=0
+    skipped=0
+    conflicts=0
+    failed=0
     while read -r id hash path; do
         [ -n "$path" ] || continue
         if ! safe_path "$path"; then
             echo "ROLLBACK_FAILED=$path (unsafe path)" >&2
-            rc=1
+            failed=$((failed + 1)); rc=1
             continue
         fi
         full=$root$path
         if [ -e "$full" ]; then
+            # A planned prune target that is still there was never deleted (an install can
+            # fail before the prune step). Restoring it would be a no-op, so it is not a
+            # conflict — only a file that changed identity is.
+            if [ -f "$full" ] && [ "$(digest "$full")" = "$hash" ]; then
+                skipped=$((skipped + 1))
+                continue
+            fi
             echo "ROLLBACK_CONFLICT=$path" >&2
+            conflicts=$((conflicts + 1))
+            rc=1
             continue
         fi
         if [ ! -f "$backup/files/$id" ]; then
             echo "ROLLBACK_FAILED=$path (no backup copy)" >&2
-            rc=1
+            failed=$((failed + 1)); rc=1
             continue
         fi
         # Verify the copy before writing it, so a damaged backup never replaces the target
         # with content that cannot be proven to be the predecessor.
         if [ "$(digest "$backup/files/$id")" != "$hash" ]; then
             echo "ROLLBACK_FAILED=$path (backup digest)" >&2
-            rc=1
+            failed=$((failed + 1)); rc=1
             continue
         fi
         if ! cp -p "$backup/files/$id" "$full"; then
             echo "ROLLBACK_FAILED=$path (copy)" >&2
-            rc=1
+            failed=$((failed + 1)); rc=1
             continue
         fi
         if [ "$(digest "$full")" = "$hash" ]; then
             echo "ROLLBACK_RESTORED=$path"
+            restored=$((restored + 1))
         else
             echo "ROLLBACK_FAILED=$path (digest)" >&2
-            rc=1
+            failed=$((failed + 1)); rc=1
         fi
     done < "$plan"
+    printf 'ROLLBACK_SUMMARY=restored=%s skipped=%s conflicts=%s failed=%s\n' \
+        "$restored" "$skipped" "$conflicts" "$failed"
     return "$rc"
 }
 
@@ -318,50 +366,65 @@ restore_targets() {
     [ -n "$backup" ] || die 'restore-targets needs --backup'
     [ -f "$plan" ] || die "plan missing: $plan"
     rc=0
+    restored=0
+    skipped=0
+    conflicts=0
+    failed=0
     while read -r id old new mode source target; do
         [ -n "$target" ] || continue
         if ! safe_path "$target"; then
             echo "ROLLBACK_FAILED=$target (unsafe path)" >&2
-            rc=1
+            failed=$((failed + 1)); rc=1
             continue
         fi
         full=$root$target
         if [ "$old" = absent ]; then
             # Nothing existed before this run: remove what the run created, if it is ours.
-            [ -e "$full" ] || continue
+            [ -e "$full" ] || { skipped=$((skipped + 1)); continue; }
             if [ "$(digest "$full")" = "$new" ]; then
-                rm -f "$full" || { echo "ROLLBACK_FAILED=$target (remove)" >&2; rc=1; }
+                if rm -f "$full"; then
+                    restored=$((restored + 1))
+                else
+                    echo "ROLLBACK_FAILED=$target (remove)" >&2
+                    failed=$((failed + 1)); rc=1
+                fi
             else
                 echo "ROLLBACK_CONFLICT=$target" >&2
+                conflicts=$((conflicts + 1)); rc=1
             fi
             continue
         fi
         if [ -e "$full" ]; then
             if [ "$(digest "$full")" = "$old" ]; then
+                skipped=$((skipped + 1))
                 continue
             fi
             if [ "$(digest "$full")" != "$new" ]; then
                 echo "ROLLBACK_CONFLICT=$target" >&2
+                conflicts=$((conflicts + 1)); rc=1
                 continue
             fi
         fi
         if [ ! -f "$backup/files/$id" ]; then
             echo "ROLLBACK_FAILED=$target (no backup copy)" >&2
-            rc=1
+            failed=$((failed + 1)); rc=1
             continue
         fi
         if [ "$(digest "$backup/files/$id")" != "$old" ]; then
             echo "ROLLBACK_FAILED=$target (backup digest)" >&2
-            rc=1
+            failed=$((failed + 1)); rc=1
             continue
         fi
         if cp -p "$backup/files/$id" "$full" && [ "$(digest "$full")" = "$old" ]; then
             echo "ROLLBACK_RESTORED=$target"
+            restored=$((restored + 1))
         else
             echo "ROLLBACK_FAILED=$target (restore)" >&2
-            rc=1
+            failed=$((failed + 1)); rc=1
         fi
     done < "$plan"
+    printf 'ROLLBACK_SUMMARY=restored=%s skipped=%s conflicts=%s failed=%s\n' \
+        "$restored" "$skipped" "$conflicts" "$failed"
     return "$rc"
 }
 
@@ -420,6 +483,35 @@ restore_record() {
     return 0
 }
 
+enforce_target() {
+    [ -n "$target" ] || die 'enforce-target needs --target'
+    [ -n "$mode" ] || die 'enforce-target needs --mode'
+    full=$root$target
+    if [ ! -f "$full" ] || [ -L "$full" ]; then
+        die "enforce-target: not a regular file: $target"
+    fi
+    changed=0
+    have=$(file_mode "$full")
+    if [ "$have" != "$mode" ]; then
+        chmod "$mode" "$full" || die "enforce-target: cannot set mode $mode on $target"
+        changed=1
+    fi
+    if [ -n "$owner" ] && [ -n "$group" ]; then
+        have_owner=$(file_owner "$full")
+        have_group=$(file_group "$full")
+        if [ "$have_owner" != "$owner" ] || [ "$have_group" != "$group" ]; then
+            chown "$owner:$group" "$full" ||
+                die "enforce-target: cannot set $owner:$group on $target"
+            changed=1
+        fi
+    fi
+    if [ "$changed" = 1 ]; then
+        printf 'REPAIRED=%s %s %s:%s\n' "$target" "$mode" "${owner:--}" "${group:--}"
+    else
+        printf 'ENFORCED=%s\n' "$target"
+    fi
+}
+
 case "$cmd" in
     compute) compute ;;
     backup) backup_plan ;;
@@ -428,5 +520,6 @@ case "$cmd" in
     restore-targets) restore_targets ;;
     backup-record) backup_record ;;
     restore-record) restore_record ;;
+    enforce-target) enforce_target ;;
     *) usage ;;
 esac

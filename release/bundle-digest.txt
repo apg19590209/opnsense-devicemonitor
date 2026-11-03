@@ -5,9 +5,11 @@
 # checkout and fails when these values do not match, so this file cannot drift silently.
 #
 # Superseded identities:
+#   859c2638663260686630ed05408ab9055877988af56a84b81a2caa34688d6e48  346870 bytes
+#       (Phase 1: deterministic packaging, before the Phase 2 pruning and repair changes)
 #   3131b8b481a5a6723d1733b214c118921def77e003863fcf4816e0b278caf9cb  346013 bytes
-#       (built before archival metadata was normalised; reproducible only inside the
-#        original working copy, because member mtimes came from that checkout)
+#       (before archival metadata was normalised; reproducible only inside the original
+#        working copy, because member mtimes came from that checkout)
 version 2.13.3
-bytes 346870
-sha256 859c2638663260686630ed05408ab9055877988af56a84b81a2caa34688d6e48
+bytes 348774
+sha256 fc53aaa1fed1c42fe0a8aee8fe294aeb3ed81f8659a24f9dd0f79e709c3836ba
