@@ -18,6 +18,17 @@ REPO=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 VERSION=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
     "$REPO/src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json")
 MANIFEST=release/v${VERSION}-runtime.manifest
+
+digest() {
+    if [ -n "${DM_SHA256:-}" ]; then
+        $DM_SHA256 "$1"
+    elif command -v sha256 >/dev/null 2>&1; then
+        sha256 -q "$1"
+    else
+        sha256sum "$1" | awk '{print $1}'
+    fi
+}
+
 BUILD=/tmp/dm-bundle-stage
 OUT=/tmp/dm-v${VERSION}-runtime.tar.gz
 LIST=/tmp/dm-bundle-list.txt
@@ -63,6 +74,8 @@ echo "staged .pyc       : $(find "$BUILD" -name '*.pyc' | wc -l | tr -d ' ') (mu
 echo "staged __pycache__: $(find "$BUILD" -type d -name '__pycache__' | wc -l | tr -d ' ') (must be 0)"
 
 rm -f "$OUT"
-( cd "$BUILD" && tar -czf "$OUT" -T "$LIST" )
+# gzip -n keeps the archive byte-identical across builds: gzip otherwise writes the current
+# time into its header, which would make the published digest unreproducible.
+( cd "$BUILD" && tar -cf - -T "$LIST" | gzip -n > "$OUT" )
 echo "archive bytes     : $(wc -c < "$OUT" | tr -d ' ')"
-sha256 "$OUT"
+digest "$OUT"

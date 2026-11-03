@@ -158,8 +158,9 @@ jobs:
           sh -n release/build-bundle.sh
           sh -n release/merge-opnsense-catalog.sh
 
-      # The bundle is what a firewall actually installs: build it and verify the pinned
-      # inputs from inside the staged tree, exactly as install-unattended.sh does.
+      # The bundle is what a firewall actually installs: build it, verify the pinned inputs
+      # from inside the staged tree exactly as install-unattended.sh does, and build it a
+      # second time to prove the published digest is reproducible.
       - name: Verify the release bundle inputs
         run: |
           set -eu
@@ -169,6 +170,11 @@ jobs:
           test -f "$stage/release/legacy-targets.txt"
           test -f "$stage/release/prune-plan.sh"
           test -f "$stage/release/release-inputs.sha256"
+          first=$(sha256sum /tmp/dm-v*-runtime.tar.gz | awk '{print $1}')
+          sh release/build-bundle.sh
+          second=$(sha256sum /tmp/dm-v*-runtime.tar.gz | awk '{print $1}')
+          test "$first" = "$second" || { echo "bundle is not reproducible"; exit 1; }
+          echo "bundle sha256: $second"
 
       - name: Compile gettext catalogues
         run: |
