@@ -2884,3 +2884,52 @@ doing so needs a sandbox mode inside the production script, and the alternative 
 against `.23` - is forbidden. `release/prune-plan.sh` already accepts `--root`, so the
 sandbox design exists; it is not landed here because it changes the installer's structure and
 needs its own review.
+
+## 65. One canonical Device Monitor workspace, enforced by a launcher and a guard rather than by convention
+
+### Decision
+
+**One workspace.** `/root/src/opnsense-devicemonitor-upstream` is the only Device Monitor development
+workspace. Sessions are started with `/usr/local/bin/cline-dm`, which changes into that directory,
+verifies that `git rev-parse --show-toplevel` is exactly that path, verifies that `origin` identifies
+`apg19590209/opnsense-devicemonitor`, prints `workspace`/`remote`/`branch`/`head`/`dirty`, and only
+then `exec`s the Cline executable (`/usr/local/cline-freebsd/bin/cline`) with `--cwd` pinned to that
+path. It refuses `-c/--cwd`, `--worktree` and `--update`, and it never clones, initialises, switches,
+checks out or resets a repository: an unavailable or foreign repository is a failure, not a repair.
+
+**Preservation.** `/usr/local/cline-freebsd/src/cline` is a second clone of this repository that
+carries an untracked Cline installation behind `.git/info/exclude`. It is preserved unchanged — not
+repointed, not removed, not merged into the Device Monitor tree — and so are the linked worktrees
+`/root/o3-branch` and `/root/tb-branch`, which sit on published commits (`a59d627`, `d70aff4`) with
+no unique work.
+
+**Safeguards are technical, and the instructions are versioned.** Three layers, in increasing
+strictness: `.clinerules/20-workspace-authority.md` (persistent instructions, committed);
+`.clinerules/hooks/PreToolUse` (blocks `git init`/`git clone`/`gh repo create`/`git worktree add`,
+git mutations against a protected checkout, and writes into one); and `.githooks/pre-commit`,
+activated with `core.hooksPath=.githooks`, which refuses a commit whose top-level is not the
+canonical path and refuses any staged Cline-installation path.
+
+**Divergence stays open.** `origin/main...HEAD` is 14 / 40 with merge base `40cced8`. Nothing in this
+decision merges, rebases, resets or publishes `main`, `release/2.13` or
+`fix/pruning-remediation-20261103`; the choice is recorded as DM-BL-009.
+
+### Reason
+
+Instructions alone had already failed: a CI verification task was executed inside the *Cline* clone,
+where `fix/pruning-remediation-20261103` and `43307b1` do not exist, and it reported the branch and
+commit as missing when both existed in the canonical clone all along. A workspace that can be chosen
+by accident needs a pin, a refusal and a commit-time guard, not another paragraph of prose. The
+launcher also removes a real trap: `/usr/local/bin/cline` (the npm wrapper) cannot resolve a FreeBSD
+binary, so the working executable is the port wrapper, and which one you get should not depend on
+which `cline` the shell happens to find.
+
+### Evidence
+
+`verification/WORKSPACE-PROTECTION-20261103.md` records the launcher, the argument refusals, the
+`procstat -f` capture showing the launched CLI holding
+`/root/src/opnsense-devicemonitor-upstream/.clinerules` open (workspace and rule loading), the hook
+test matrix, both pre-commit refusals, four launches with no new repository or worktree, the
+re-verified backup checksums and the rollback paths. `verification/REPO-CONSOLIDATION-20261103.md`
+carries the inventory and backup record this builds on.
+

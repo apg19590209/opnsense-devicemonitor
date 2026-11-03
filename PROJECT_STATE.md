@@ -35,6 +35,19 @@ Decision 60) → `2.13.3` (pruning remediation, Decision 62).
 | Gates | 42 suites referenced by `.github/workflows/ci.yml` (59 steps); the 9 new or rewritten suites pass locally on `.23`. No remote run has started yet (the branch has not been pushed) |
 | New behaviour | Pruning requires proof of ownership (including for bare-path records), the record covers generated targets, every executed input is pinned, a repair install is idempotent and enforces mode/ownership, rollback reports COMPLETE/INCOMPLETE and restores the record (Decisions 62-64) |
 
+### Workspace and repository protection (3 November 2026, Decision 65)
+
+| Item | Value |
+|---|---|
+| Canonical workspace | `/root/src/opnsense-devicemonitor-upstream` (`origin` = `apg19590209/opnsense-devicemonitor`) |
+| Launcher | `/usr/local/bin/cline-dm` — verifies top-level and origin, prints branch/HEAD, pins `--cwd`, refuses `-c/--cwd`, `--worktree`, `--update` |
+| Instructions | `.clinerules/20-workspace-authority.md` |
+| Tool guard | `.clinerules/hooks/PreToolUse` — blocks repository creation/cloning, worktree creation and writes into protected checkouts |
+| Commit guard | `.githooks/pre-commit` via `core.hooksPath=.githooks` — refuses commits outside the canonical top-level and any Cline-installation path |
+| Preserved | `/usr/local/cline-freebsd/src/cline` (second clone carrying the untracked Cline installation) and the worktrees `/root/o3-branch`, `/root/tb-branch` — unchanged |
+| Open decision | `main` vs this branch: 14 / 40 divergence, merge base `40cced8` — DM-BL-009 |
+| Evidence | `verification/WORKSPACE-PROTECTION-20261103.md`, `verification/REPO-CONSOLIDATION-20261103.md` |
+
 Pre-deployment evidence from `.23` (running 2.13.2), taken from this branch with
 `install-unattended.sh --host $(/bin/hostname) --check`:
 

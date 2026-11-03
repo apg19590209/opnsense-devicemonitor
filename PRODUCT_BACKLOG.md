@@ -622,3 +622,33 @@ open, because the copy run proves the code and only the live cycle proves the de
 **Not caused by this item, recorded because it was observed during the deployment:** both nodes log
 chronic `database is locked` scan failures (14,760 on `.252` since 06-10-2026, 16,130 on `.253`
 since 09-09-2026) and `/usr/local/sbin/sendmail: not found` from the targeted-Nmap email path.
+
+### DM-BL-009 — `main` and `fix/pruning-remediation-20261103` have diverged: **`OPEN`**
+
+**Description:** after the canonical clone was refetched on 3 November 2026, the remediation branch
+is neither ahead of nor behind `origin/main` but **diverged** from it:
+
+    git rev-list --left-right --count origin/main...HEAD   ->   14   40
+    merge base                                             ->   40cced8
+
+`origin/main` (`d5d73ed`) carries work the branch does not contain — `8ea1203 release: v2.12`,
+`c494485 merge: bring v2.12 (and the About-version fix) onto main`, `c9373b8 fix(ha)`,
+`a12ede8 feat(identity)`, `d268680 fix(devicemonitor)` and `d5d73ed test: pin fail-open non-HA
+behaviour` — while the branch carries the 40 commits of the 2.13.3 remediation.
+
+**Decision required:** pick one path deliberately — merge `main` into the remediation branch, rebase
+the branch onto `main`, or open a pull request against `release/2.13` and land the 2.13.x line first.
+Not chosen yet: the branch is unpublished, `release/2.13` is the released line, and a wrong rewrite
+here would move history that the field release depends on.
+
+**Deliberately not done:** no merge, rebase, reset or force-push was performed while consolidating
+the repositories (Decision 65, `verification/REPO-CONSOLIDATION-20261103.md` §6). The unpublished
+branch and its backups (`/root/dm-consolidation-backup-20261103/`) are untouched.
+
+**Closes when:** the chosen path is executed with the branch published and its CI green, or the
+branch is explicitly abandoned in favour of `main`/`release/2.13` with the remediation re-applied.
+
+**Related, also open:** `/usr/local/cline-freebsd/src/cline` still sets `origin` to this repository
+while carrying an untracked Cline installation (Decision 65 §Preservation). Repointing it needs the
+intended Cline remote and explicit authorisation; it is preserved unchanged until then.
+
