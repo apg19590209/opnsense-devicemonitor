@@ -13,7 +13,7 @@ the brief and is recorded here as *awaiting scope* so nothing is silently droppe
 | # | Reviewer finding | Required outcome | Status |
 |---|---|---|---|
 | H1a | CI cannot run on this branch (`ci.yml:4-29` lists neither the branch nor `release/2.13` for PRs) | A supported mechanism that starts the complete workflow on the remediation branch | **done** — `workflow_dispatch:` added and `fix/pruning-remediation-20261103` added to `push.branches`; every pre-existing branch entry preserved |
-| H1b | "Verify that the workflow actually starts and completes, rather than checking YAML syntax" | A real GitHub Actions run id, conclusion and per-step evidence | **NOT EXECUTED — blocked**: this phase forbids pushing, and a remote run cannot start without one. Verified instead: YAML parses, all 38 referenced suites exist, the trigger list is asserted, and the full python suite set runs green locally (evidence below). A push is the only remaining step |
+| H1b | "Verify that the workflow actually starts and completes, rather than checking YAML syntax" | A real GitHub Actions run id, conclusion and per-step evidence | **NOT EXECUTED — blocked**: this phase forbids pushing, and a remote run cannot start without one. Verified instead: YAML parses, all 42 referenced suites exist, the trigger list is asserted, and the full python suite set runs green locally (evidence below). A push is the only remaining step |
 | H1c | Predecessor coverage | All eight predecessor cases pass with `skipped=0`, asserted by the suite and visible in the run log | **done** — the suite now asserts `passed == len(PREDECESSORS)` and `skipped == 0`, and the CI step greps `^UPGRADE_PREDECESSORS=PASS passed=8 skipped=0$` |
 | H2a | `PLAN:148-150` recommends reinstalling the published 2.13.2 bundle; that installer accepts only 2.8…2.13.1 and aborts on 2.13.3 | Recommendation removed; rollback documented through the installer's own rollback assets | **done** — the plan now states why the published installer cannot be used and gives the asset-based procedure |
 | H2b | Record restoration | A manual rollback after a *successful* install also restores the previous `installed-manifest.txt` | **done** — `prune-plan.sh backup-record` / `restore-record` (digest-verified, with a digest sidecar so a damaged backup cannot be accepted); the installer calls both, in the backup phase and in `cleanup` |
@@ -94,8 +94,12 @@ Filled in as each item closes; entries quote the command and its output.
   added to `push.branches`; `release/2.13`, `v2.5…v2.10-development` and
   `feature/async-db-v2.11` all preserved; `pull_request.branches` deliberately unchanged
   (it filters on the PR base branch, not the head).
-* Workflow shape after the change: 55 steps, 24 `run: python3 tests/…` steps, **38 distinct
-  suites**, all of them present on disk (`tests/test_ci_config.py`).
+* Workflow shape after the change: 55 steps, 24 `run: python3 tests/…` steps, 38 distinct suites —
+  as measured at `e33ac1e`. **Corrected 3 November 2026** after the Phase 2 commits
+  (`bbc58e6`, `43307b1`): the workflow now has **59 steps**, 28 `run: python3 tests/…` steps and
+  **42 distinct suites**, all present on disk (`tests/test_ci_config.py`). Measured in
+  `verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md` §6; the superseded counts are kept here
+  rather than rewritten, and `PROJECT_STATE.md` already states 42 suites / 59 steps.
 * YAML parse check: `python3 -c 'import yaml; yaml.safe_load(open(".github/workflows/ci.yml"))'`
   → valid.
 * Predecessors, locally: `UPGRADE_PREDECESSORS=PASS passed=8 skipped=0`, then

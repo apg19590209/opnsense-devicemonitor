@@ -2933,3 +2933,53 @@ test matrix, both pre-commit refusals, four launches with no new repository or w
 re-verified backup checksums and the rollback paths. `verification/REPO-CONSOLIDATION-20261103.md`
 carries the inventory and backup record this builds on.
 
+
+## 66. 2.13.3 integrates into `release/2.13` by fast-forward only; `main` stays a separate, open question
+
+### Decision
+
+**The release path is a fast-forward.** `origin/release/2.13` (`6bd122e`) is an ancestor of
+`fix/pruning-remediation-20261103`, so the remediation lands on the release line as a fast-forward:
+0 behind, 10 ahead at assessment time, zero conflicted paths
+(`git merge-tree --write-tree release/2.13 <branch>` exits 0 and produces the branch's own tree
+`f9599bce…`). **No merge and no rebase is necessary, and neither is authorised.** A merge commit
+(`--no-ff`) would produce the same tree with no review value; a rebase would rewrite the ten commits
+and invalidate every SHA cited in the review evidence.
+
+**A pull request into `release/2.13` is not a CI mechanism here.** `ci.yml` `pull_request.branches`
+lists only `v2.5-development … v2.10-development`, so a PR whose base is `release/2.13` starts no
+workflow, and GitHub's squash/rebase buttons rewrite the commits. Verification comes from the push
+trigger: the branch is in `push.branches`, and `release/2.13` is in `push.branches`, so an authorised
+push to the branch — and the fast-forward to the release line — each run the full gate.
+
+**Payload scope remains the owner's choice.** Both `43307b1` (product changes only) and `3bdbb20`
+(product changes plus the workspace tooling and records of Decisions 65–66) are fast-forwards. Only
+`src/` and `release/` affect the bundle, and `3bdbb20` touches neither, so the published identity
+`451a03f4…` / 348 932 bytes is unchanged either way.
+
+**`main` is untouched by this decision.** `origin/main` is 14 behind / 41 ahead with merge base
+`40cced8` and 18 conflicting paths; DM-BL-009 stays **OPEN** and is resolved as its own reviewed
+change, preferably by reconciling `release/2.13 → main` after 2.13.3 lands.
+
+**No release act is implied.** This decision records an integration path; it does not authorise a
+push, tag, release publication or deployment. H1b (a real CI run) remains *NOT EXECUTED* until an
+explicitly authorised CI-only push happens.
+
+### Reason
+
+The branch was cut from the release head, so the only correct integration is the one Git performs
+without inventing history. Choosing merge, rebase or PR mechanics by habit would either add a commit
+nobody reviewed or rewrite the commit identities that Decisions 62-64 and the review record cite. The
+18 conflicts against `main` are entirely the v2.12 line the release branch never carried, which is
+evidence that `main` reconciliation is a different task, not a prerequisite.
+
+### Evidence
+
+`verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md` records the measured merge bases and
+counts, the branch-only and `main`-only commit lists, the `v2.13.2 → HEAD` payload delta (one `src/`
+file: the version string), the conflict dry-runs, the bundle identity agreement across four
+documents, `VERIFY_OK=4` for the pinned inputs, the 40/40 manifest re-hash, the measured workflow
+shape (59 steps, 28 `run: python3` steps, 42 suites), and the acceptance checks and rollback for this
+documentation commit. The suite-count correction it drove is applied in
+`verification/REVIEW-R2-REMEDIATION-20261103.md`.
+

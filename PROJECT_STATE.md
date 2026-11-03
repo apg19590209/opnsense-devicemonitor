@@ -45,7 +45,9 @@ Decision 60) → `2.13.3` (pruning remediation, Decision 62).
 | Tool guard | `.clinerules/hooks/PreToolUse` — blocks repository creation/cloning, worktree creation and writes into protected checkouts |
 | Commit guard | `.githooks/pre-commit` via `core.hooksPath=.githooks` — refuses commits outside the canonical top-level and any Cline-installation path |
 | Preserved | `/usr/local/cline-freebsd/src/cline` (second clone carrying the untracked Cline installation) and the worktrees `/root/o3-branch`, `/root/tb-branch` — unchanged |
-| Open decision | `main` vs this branch: 14 / 40 divergence, merge base `40cced8` — DM-BL-009 |
+| Open decision | `main` vs this branch: **14 behind / 41 ahead**, merge base `40cced8` — DM-BL-009, still **OPEN** |
+| Integration path | `release/2.13` (`6bd122e`) is an **ancestor** of this branch, so integration into the release line is a plain **fast-forward with zero conflicts** — no merge and no rebase is necessary (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md`) |
+| CI readiness | documentation and guards committed; the branch is **unpublished**, so no remote run exists for it yet (H1b still open). A single explicitly authorised CI-only push is the remaining step |
 | Evidence | `verification/WORKSPACE-PROTECTION-20261103.md`, `verification/REPO-CONSOLIDATION-20261103.md` |
 
 Pre-deployment evidence from `.23` (running 2.13.2), taken from this branch with

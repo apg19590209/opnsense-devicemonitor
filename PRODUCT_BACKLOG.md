@@ -628,24 +628,37 @@ since 09-09-2026) and `/usr/local/sbin/sendmail: not found` from the targeted-Nm
 **Description:** after the canonical clone was refetched on 3 November 2026, the remediation branch
 is neither ahead of nor behind `origin/main` but **diverged** from it:
 
-    git rev-list --left-right --count origin/main...HEAD   ->   14   40
+    git rev-list --left-right --count origin/main...HEAD   ->   14   41
     merge base                                             ->   40cced8
+
+(Re-measured on 3 November 2026 with `3bdbb20` as the branch tip; the counts were 14 / 40 before the
+workspace-protection commit.)
 
 `origin/main` (`d5d73ed`) carries work the branch does not contain — `8ea1203 release: v2.12`,
 `c494485 merge: bring v2.12 (and the About-version fix) onto main`, `c9373b8 fix(ha)`,
 `a12ede8 feat(identity)`, `d268680 fix(devicemonitor)` and `d5d73ed test: pin fail-open non-HA
-behaviour` — while the branch carries the 40 commits of the 2.13.3 remediation.
+behaviour` — while the branch carries the 41 commits of the 2.13.3 remediation and its records.
 
-**Decision required:** pick one path deliberately — merge `main` into the remediation branch, rebase
-the branch onto `main`, or open a pull request against `release/2.13` and land the 2.13.x line first.
-Not chosen yet: the branch is unpublished, `release/2.13` is the released line, and a wrong rewrite
-here would move history that the field release depends on.
+**This does not block the 2.13.3 release.** `origin/release/2.13` (`6bd122e`) is an **ancestor** of
+the branch, so integrating there is a **fast-forward with zero conflicts** — no merge and no rebase is
+necessary (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md` §2 and §4).
 
-**Deliberately not done:** no merge, rebase, reset or force-push was performed while consolidating
-the repositories (Decision 65, `verification/REPO-CONSOLIDATION-20261103.md` §6). The unpublished
-branch and its backups (`/root/dm-consolidation-backup-20261103/`) are untouched.
+**Decision required (for `main` only):** pick one path deliberately — merge `main` into the
+remediation branch, rebase the branch onto `main`, or land `release/2.13` first and reconcile
+`release/2.13 → main` as its own reviewed change. Not chosen yet: a wrong rewrite here would move
+history that the field release depends on. The release path itself is **not** blocked (see above).
 
-**Closes when:** the chosen path is executed with the branch published and its CI green, or the
+**Deliberately not done:** no merge, rebase, reset or force-push was performed while consolidating the
+repositories (Decision 65, `verification/REPO-CONSOLIDATION-20261103.md` §6) or while assessing the
+release integration (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md`). The
+unpublished branch and its backups (`/root/dm-consolidation-backup-20261103/`,
+`/root/dm-docs-backup-20261103/`) are untouched.
+
+**Also open here: no remote CI run exists for this branch.** `REVIEW-R2` item H1b stays
+*NOT EXECUTED* until an explicitly authorised CI-only push happens; nothing in this repository claims
+a green run.
+
+**Closes when:** the chosen `main` path is executed with the branch published and its CI green, or the
 branch is explicitly abandoned in favour of `main`/`release/2.13` with the remediation re-applied.
 
 **Related, also open:** `/usr/local/cline-freebsd/src/cline` still sets `origin` to this repository
