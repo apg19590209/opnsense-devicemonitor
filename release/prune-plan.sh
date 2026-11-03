@@ -72,16 +72,22 @@ digest() {
     fi
 }
 
-# FreeBSD stat(1) spells its format flags differently from GNU coreutils; both the tests
-# (Linux) and the firewall (FreeBSD) use these.
+# FreeBSD spells stat(1) format flags differently from GNU coreutils. The OS is the
+# discriminator, not a trial run: on GNU, `stat -f` means "filesystem status" and succeeds,
+# so probing with it silently selects the wrong branch and returns nonsense for the mode.
+case "$(uname -s)" in
+    FreeBSD|Darwin|NetBSD|OpenBSD) STAT_STYLE=bsd ;;
+    *) STAT_STYLE=gnu ;;
+esac
+
 file_mode() {
-    if stat -f %Lp / >/dev/null 2>&1; then stat -f %Lp "$1"; else stat -c %a "$1"; fi
+    if [ "$STAT_STYLE" = bsd ]; then stat -f %Lp "$1"; else stat -c %a "$1"; fi
 }
 file_owner() {
-    if stat -f %Su / >/dev/null 2>&1; then stat -f %Su "$1"; else stat -c %U "$1"; fi
+    if [ "$STAT_STYLE" = bsd ]; then stat -f %Su "$1"; else stat -c %U "$1"; fi
 }
 file_group() {
-    if stat -f %Sg / >/dev/null 2>&1; then stat -f %Sg "$1"; else stat -c %G "$1"; fi
+    if [ "$STAT_STYLE" = bsd ]; then stat -f %Sg "$1"; else stat -c %G "$1"; fi
 }
 
 in_namespace() {

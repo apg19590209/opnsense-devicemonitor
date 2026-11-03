@@ -5,8 +5,8 @@ run. Scope is `192.168.20.23` only. `.253` (CARP master) and `.252` (CARP standb
 explicitly out of scope for this phase and must not be touched.
 
 Branch under test: `fix/pruning-remediation-20261103`.
-Bundle: `dm-v2.13.3-runtime.tar.gz`, 348 774 bytes,
-sha256 `fc53aaa1fed1c42fe0a8aee8fe294aeb3ed81f8659a24f9dd0f79e709c3836ba`
+Bundle: `dm-v2.13.3-runtime.tar.gz`, 348 932 bytes,
+sha256 `451a03f4bc04542ea36c36ce7df42faaf5c3e044e574ea991e74d4f5a4570ae8`
 (the bundle identity is reproducible — `release/bundle-digest.txt` records it and
 `tests/test_bundle_determinism.py` rebuilds it from two clean checkouts; the 2.13.2 bundle is
 untouched).
@@ -29,7 +29,7 @@ untouched).
 cd /root/src/opnsense-devicemonitor-upstream            # authoritative checkout
 git rev-parse --abbrev-ref HEAD                        # fix/pruning-remediation-20261103
 git status --porcelain                                 # empty
-sha256 -q /tmp/dm-v2.13.3-runtime.tar.gz               # fc53aaa1...
+sha256 -q /tmp/dm-v2.13.3-runtime.tar.gz               # 451a03f4...
 
 /bin/hostname                                          # OPNsense.internal
 /usr/local/sbin/opnsense-version                       # OPNsense 26.7.7 (>= 26.1.5)

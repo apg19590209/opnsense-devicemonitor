@@ -30,7 +30,7 @@ Decision 60) → `2.13.3` (pruning remediation, Decision 62).
 |---|---|
 | Branch | `fix/pruning-remediation-20261103` (untagged), built on `15be258`; see `git log` for the current tip |
 | Payload | `release/v2.13.3-runtime.manifest`, 40 rows, staged targets 61 (62 fresh) |
-| Bundle | `dm-v2.13.3-runtime.tar.gz`, 348 774 bytes, sha256 `fc53aaa1fed1c42fe0a8aee8fe294aeb3ed81f8659a24f9dd0f79e709c3836ba` — built at `/tmp`, **not published**; reproducible from any clean checkout (Decision 63, `release/bundle-digest.txt`) |
+| Bundle | `dm-v2.13.3-runtime.tar.gz`, 348 932 bytes, sha256 `451a03f4bc04542ea36c36ce7df42faaf5c3e044e574ea991e74d4f5a4570ae8` — built at `/tmp`, **not published**; reproducible from any clean checkout (Decision 63, `release/bundle-digest.txt`) |
 | Deployed | nowhere. Deployment to `.23` is a separate gated phase; `.253` / `.252` are out of scope |
 | Gates | 42 suites referenced by `.github/workflows/ci.yml` (59 steps); the 9 new or rewritten suites pass locally on `.23`. No remote run has started yet (the branch has not been pushed) |
 | New behaviour | Pruning requires proof of ownership (including for bare-path records), the record covers generated targets, every executed input is pinned, a repair install is idempotent and enforces mode/ownership, rollback reports COMPLETE/INCOMPLETE and restores the record (Decisions 62-64) |

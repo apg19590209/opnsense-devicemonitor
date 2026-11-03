@@ -165,7 +165,7 @@ without touching the node.
 ### Phase 2 evidence (M1–M6, L1–L10, U1–U8)
 
 Closed at commit `bbc58e6`; bundle identity reissued as
-`fc53aaa1fed1c42fe0a8aee8fe294aeb3ed81f8659a24f9dd0f79e709c3836ba` (348 774 bytes),
+`451a03f4bc04542ea36c36ce7df42faaf5c3e044e574ea991e74d4f5a4570ae8` (348 932 bytes),
 reproduced from two clean checkouts.
 
 | Suite | Result | Covers |

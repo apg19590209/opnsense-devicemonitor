@@ -5,11 +5,13 @@
 # checkout and fails when these values do not match, so this file cannot drift silently.
 #
 # Superseded identities:
+#   fc53aaa1fed1c42fe0a8aee8fe294aeb3ed81f8659a24f9dd0f79e709c3836ba  348774 bytes
+#       (Phase 2 before the stat(1) portability fix: the repair path only worked on FreeBSD)
 #   859c2638663260686630ed05408ab9055877988af56a84b81a2caa34688d6e48  346870 bytes
 #       (Phase 1: deterministic packaging, before the Phase 2 pruning and repair changes)
 #   3131b8b481a5a6723d1733b214c118921def77e003863fcf4816e0b278caf9cb  346013 bytes
 #       (before archival metadata was normalised; reproducible only inside the original
 #        working copy, because member mtimes came from that checkout)
 version 2.13.3
-bytes 348774
-sha256 fc53aaa1fed1c42fe0a8aee8fe294aeb3ed81f8659a24f9dd0f79e709c3836ba
+bytes 348932
+sha256 451a03f4bc04542ea36c36ce7df42faaf5c3e044e574ea991e74d4f5a4570ae8
