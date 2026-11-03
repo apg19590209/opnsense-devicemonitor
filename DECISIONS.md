@@ -3109,3 +3109,37 @@ vs 3 584 trailing bytes; 348 939 vs 349 052 compressed bytes for the same input)
 implementation, the local results (`BUNDLE_REPRODUCIBILITY=PASS cases=9`,
 `BUNDLE_BUILD_SAFETY=PASS cases=7`, `BUNDLE_DETERMINISM=PASS cases=4`) and the rollback paths.
 
+
+## 69. Test fixtures implement the tar interface; they never forward flags to the host tar
+
+### Decision
+
+The build-safety suite generates one platform-neutral fake tar from an embedded Python script. It
+implements only what `release/build-bundle.sh` uses — `--version`, `-cf OUT`, `-T LIST`, positional
+members and both ownership spellings — writes a real ustar archive itself (magic `ustar`+`00`,
+checksums, modes read from disk) and never shells out. Behaviour is selected by three parameters:
+the flavour string it announces, a reject list of options it treats as "unrecognized", and a mode
+(`normal`, `fail-archive`, `empty-archive`, `fail-any`) that decides *where* the failure happens.
+
+A new case, `test_probe_failure_is_reported`, keeps probe failures distinct from archive-stage
+failures, and `test_tar_failure_is_fatal` now asserts the probe passed (`TAR_FORMAT=canonical-ustar
+members=1`) so it cannot silently regress into failing early again. `release/build-bundle.sh` was
+not changed for this: the production path was already correct, and run #41629115055 proved it.
+
+### Reason
+
+Run #41629115055 failed at step 33 because a fake tar announced "bsdtar", refused `-T`, and
+otherwise forwarded its arguments to whatever `tar` the host had. On FreeBSD that is bsdtar and the
+flags work; on the runner it is GNU tar, which rejects `--uid`, so the fake failed at the functional
+probe and the case never reached the stage it was written to test. A fixture that models the
+interface is portable by construction; a fixture that delegates inherits the host's semantics and
+therefore its bugs — and can report the wrong stage, or (worse) a false pass.
+
+### Evidence
+
+`verification/BUNDLE-PORTABILITY-20261103.md` §10 records the run, the exact assertion, the root
+cause, the fixture design and the results: `BUNDLE_BUILD_SAFETY=PASS cases=8`,
+`BUNDLE_REPRODUCIBILITY=PASS cases=9`, `BUNDLE_DETERMINISM=PASS cases=4`, unchanged identity
+`7f389248…` / 1 656 468 bytes and no change under `release/`. Real GNU-tar execution remains a
+remote-CI requirement: this appliance has no GNU tar and no Linux environment.
+

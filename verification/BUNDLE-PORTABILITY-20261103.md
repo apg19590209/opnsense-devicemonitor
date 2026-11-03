@@ -278,3 +278,85 @@ Backup set `/root/dm-reprogzip-backup-20261103/`: `branch-ee3cccc.bundle` (verif
 `git reset --soft HEAD~1`; `git reset --hard ee3cccc` for the tree; individual files restored from
 the backup after checking `SHA256SUMS`; whole branch from the bundle.
 
+## 10. Fourth CI run (#41629115055) — production identity verified, test fixture at fault
+
+Commit `d62d9ae` was pushed; run `#41629115055`
+(`https://github.com/apg19590209/opnsense-devicemonitor/actions/runs/41629115055`) **failed at step
+33**, one step *after* the identity check:
+
+```
+step 32  success  Verify the release bundle inputs
+   tar implementation: gnu (tar - tar (GNU tar) 1.35)
+   TAR_FORMAT=canonical-ustar members=1
+   TAR_CANONICALISED members=58 bytes=1656320
+   archive bytes     : 1656468
+   bundle sha256: 7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2
+   VERIFY_OK=4
+   bundle identity: 7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2 (1656468 bytes)
+
+step 33  failure  Validate the bundle build fails safely
+AssertionError: ('TAR_FAILED',
+  '... tar implementation: bsdtar (/tmp/tmpol_y35ay/tar - bsdtar 3.8.7 (fake)) ...',
+  "tar: unrecognized option '--uid'\n
+   TAR_PROBE_FAILED=/tmp/tmpol_y35ay/tar (flags rejected: --format ustar --uid 0 --gid 0 --uname root --gname wheel)\n")
+```
+
+**What that proves:** the canonical tar (**1 656 320** bytes), the 58 members and the deterministic
+gzip (**1 656 468** bytes, `7f389248…`) are correct on GNU tar 1.35 + Linux. The portability work is
+done; nothing in `release/` needed changing.
+
+**Root cause of the failure:** the safety suite's fake tars advertised themselves as bsdtar, refused
+the `-T` list, and otherwise did `exec <host tar> "$@"`. On FreeBSD the host tar *is* bsdtar, so the
+forwarded `--uid/--gid/--uname/--gname` worked; on the runner the host tar is GNU tar, which rejects
+`--uid`, so the fake died during the **functional probe** and the build correctly stopped with
+`TAR_PROBE_FAILED` before the intended `TAR_FAILED` stage. A test-harness defect, not a production
+one.
+
+### Fixture correction (Decision 69, test-only)
+
+`tests/test_bundle_build_safety.py` now uses one platform-neutral fixture, generated from an
+embedded Python script, that **implements the interface** `release/build-bundle.sh` uses instead of
+forwarding to the host:
+
+- `--version` prints the announced flavour (`bsdtar 3.8.7 (fake)` or `tar (GNU tar) 1.35`);
+- it parses `-cf OUT`, `-T LIST`, positional members and both ownership spellings (`--uid 0 …` and
+  `--owner=root:0 --group=wheel:0`), rejecting a configurable option list as `unrecognized option`;
+- it writes a real ustar archive itself (magic `ustar\0`+`00`, checksums, file modes read from
+  disk), so no host tar is involved and the archive content is identical on both platforms;
+- modes: `normal`, `fail-archive` (fails only at the `-T` archive stage), `empty-archive`,
+  `fail-any` (fails at the probe).
+
+Case-by-case outcome, all on FreeBSD:
+
+| Case | Behaviour now proven |
+|---|---|
+| `test_tar_failure_is_fatal` | probe passes (`TAR_FORMAT=canonical-ustar members=1`), archive stage fails → `TAR_FAILED`, no bundle |
+| `test_probe_failure_is_reported` **(new)** | probe failure reported as `TAR_PROBE_FAILED`, and *not* as a later stage |
+| `test_empty_tar_is_fatal` | probe passes, empty archive → `TAR_EMPTY` |
+| `test_gnu_option_grammar_accepts_the_build` | GNU-flavour fixture rejects `--uname/--gname/--uid/--gid`, accepts `--owner=root:0 --group=wheel:0`, build completes and the identity equals `7f389248…` |
+| `test_unknown_tar_implementation_is_refused` | `UNSUPPORTED_TAR` (probe never reached) |
+| `test_pax_archive_is_refused` | pax member refused by the canonicaliser |
+| `test_gzip_failure_is_fatal` | `GZIP_FAILED`, no bundle |
+| `test_gnu_flag_string_is_valid_for_gnu_tar` | static assertion on both flag sets |
+
+### Verification
+
+`BUNDLE_BUILD_SAFETY=PASS cases=8` · `BUNDLE_REPRODUCIBILITY=PASS cases=9` ·
+`BUNDLE_DETERMINISM=PASS cases=4` (run against the committed tree) · `CI_CONFIG=PASS cases=5` ·
+`VERIFY_OK=4` · manifest 40/40 · `v2.13.2` `011100a0…`→`74e1f6f` unchanged.
+Identity unchanged and unreissued: 58 members, 1 656 320-byte canonical tar, 1 656 468-byte bundle,
+`7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2`. **No file under `release/` was
+touched** — the diff is the test suite and this record only.
+
+**Remaining requirement:** this host has no GNU tar (OPNsense appliance, no `gtar` package, no Linux
+compat layer, no container runtime), so the real GNU execution remains a **remote-CI verification
+requirement**. The fixture models the interface; the runner is the only place the real binary runs.
+
+### Rollback
+
+Backup set `/root/dm-fixture-fix-backup-20261103/`: `branch-d62d9ae.bundle` (verified complete),
+`HEAD.txt`, pre-change `tests/test_bundle_build_safety.py` and this document, plus `SHA256SUMS`.
+`git reset --soft HEAD~1`; `git reset --hard d62d9ae`; single-file restore after checking
+`SHA256SUMS`; whole branch from the bundle.
+
+
