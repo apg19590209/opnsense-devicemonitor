@@ -2954,8 +2954,9 @@ push to the branch — and the fast-forward to the release line — each run the
 
 **Payload scope remains the owner's choice.** Both `43307b1` (product changes only) and `3bdbb20`
 (product changes plus the workspace tooling and records of Decisions 65–66) are fast-forwards. Only
-`src/` and `release/` affect the bundle, and `3bdbb20` touches neither, so the published identity
-`451a03f4…` / 348 932 bytes is unchanged either way.
+`src/` and `release/` affect the bundle, and `3bdbb20` touches neither, so the bundle identity is
+unchanged either way (`ce92a09a…` / 348 920 bytes after Decision 67 reissued it; `451a03f4…` /
+348 932 bytes before that, now superseded).
 
 **`main` is untouched by this decision.** `origin/main` is 14 behind / 41 ahead with merge base
 `40cced8` and 18 conflicting paths; DM-BL-009 stays **OPEN** and is resolved as its own reviewed
@@ -2982,4 +2983,64 @@ documents, `VERIFY_OK=4` for the pinned inputs, the 40/40 manifest re-hash, the 
 shape (59 steps, 28 `run: python3` steps, 42 suites), and the acceptance checks and rollback for this
 documentation commit. The suite-count correction it drove is applied in
 `verification/REVIEW-R2-REMEDIATION-20261103.md`.
+
+## 67. The bundle is built portably and fails closed, and its identity is reissued
+
+### Decision
+
+**Portable archive construction.** `release/build-bundle.sh` now probes the *tar implementation*
+from the binary itself (`tar --version`, matched against `bsdtar` and `GNU tar`), not the
+operating system, and picks flags per implementation: `--uid/--gid/--uname/--gname` for bsdtar,
+`--owner=--group=--uname=--gname=` for GNU tar. An implementation it cannot identify is refused
+(`UNSUPPORTED_TAR`), and a functional probe — a one-file archive built with the chosen flags and
+parsed by `release/normalize-bundle-tar.py --check` — rejects any producer that writes pax or GNU
+extended headers instead of canonical ustar.
+
+**Header canonicalisation.** `release/normalize-bundle-tar.py` rewrites every producer-specific
+header field into one canonical encoding (6-octal-digit + space + NUL for mode/uid/gid/devmajor/
+devminor, 11 digits + space for size/mtime, 6 digits + NUL + space for the checksum, `ustar`+`00`
+magic, uid/gid 0, `root`/`wheel`, mtime `1767225600`, empty prefix) and recomputes the checksum.
+Member names, order, sizes, contents and modes are preserved. Because the canonicaliser is the
+last writer, a bsdtar archive and a GNU-tar archive of the same tree produce identical bytes —
+proved locally by re-encoding our own archive the way GNU tar encodes it and canonicalising it
+back to the same sha256.
+
+**Timezone independence.** The build exports `TZ=UTC0` before the `touch -t` normalisation. The
+previous script did not, so the same commit produced `451a03f4…` under AEDT and `e6596665…` under
+UTC — a genuine defect, not a test artefact.
+
+**Fail-closed construction.** The `tar | gzip > OUT` pipeline is gone. Each stage writes an
+explicit file and its status is checked: `TAR_FAILED`, `TAR_EMPTY`, `TAR_CANONICALISE_FAILED`,
+`MEMBER_COUNT_MISMATCH`, `GZIP_FAILED`, `BUNDLE_EMPTY` all exit non-zero and leave no archive.
+No `set -o pipefail` is used or required, so the script stays POSIX `sh` on FreeBSD.
+
+**CI detects the failure at the right step.** "Verify the release bundle inputs" now compares the
+built sha256 *and* the byte count with `release/bundle-digest.txt`, and a new step runs
+`tests/test_bundle_build_safety.py`, which fakes a failing tar, an empty tar, a failing gzip, an
+unknown tar and a pax producer and requires a non-zero build with no output each time.
+
+**Identity reissued, not bent.** Portable construction genuinely changes the canonical bytes, so
+the identity is reissued rather than adjusting the test: `ce92a09a2d0ffd79bea33ca3087137264c5ef1ff992bb983b3d7e4dbf738befd`
+/ 348 920 bytes, replacing `451a03f4…` / 348 932 bytes (recorded as superseded in
+`release/bundle-digest.txt`, together with the `e6596665…` UTC variant). No tag, release or
+deployment refers to 2.13.3 yet, so nothing published is invalidated.
+
+### Reason
+
+The first GitHub run (#41609297193) failed for two reasons that no local test could have shown:
+Ubuntu's GNU tar rejects `--uid`, and the pipeline reported only gzip's exit status, so a 20-byte
+archive was staged and fingerprinted as if it were the bundle. Fixing only the flag would have
+left a second latent defect — the digest was timezone-dependent — and fixing only the pipeline
+would have left the build unable to run on GNU tar at all. Treating the archive header encoding as
+a property of *our* build rather than of the installed tar is what makes "byte-identical on Linux
+and FreeBSD" a testable claim instead of an intention.
+
+### Evidence
+
+`verification/BUNDLE-PORTABILITY-20261103.md` records the failed run, the failing command, the
+header-level difference between producers, the timezone experiment, the new identity, the five
+fail-safe cases and the local acceptance results. Tests: `tests/test_bundle_determinism.py`
+(two checkouts, canonical metadata, GNU-style encoding collapse, recorded digest) and
+`tests/test_bundle_build_safety.py`.
+
 

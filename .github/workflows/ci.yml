@@ -57,6 +57,7 @@ jobs:
           set -eu
           find src -type f -name '*.py' -print0 |
             xargs -0 -n1 python3 -m py_compile
+          python3 -m py_compile release/normalize-bundle-tar.py
 
       - name: Validate opt-in port discovery
         run: python3 tests/test_port_discovery.py
@@ -205,7 +206,9 @@ jobs:
           sh -n release/merge-opnsense-catalog.sh
 
       # The bundle is what a firewall actually installs: build it and verify the pinned
-      # inputs from inside the staged tree exactly as install-unattended.sh does.
+      # inputs from inside the staged tree exactly as install-unattended.sh does. The digest
+      # is asserted here too (Decision 67): run #41609297193 passed this step with a 20-byte
+      # archive because it only checked staged files, and the identity check came later.
       - name: Verify the release bundle inputs
         run: |
           set -eu
@@ -215,6 +218,26 @@ jobs:
           test -f "$stage/release/legacy-targets.txt"
           test -f "$stage/release/prune-plan.sh"
           test -f "$stage/release/release-inputs.sha256"
+          version=$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')
+          actual=$(sha256sum "/tmp/dm-v${version}-runtime.tar.gz" | awk '{print $1}')
+          recorded=$(sed -n 's/^sha256 \([0-9a-f]\{64\}\)$/\1/p' release/bundle-digest.txt)
+          bytes=$(wc -c < "/tmp/dm-v${version}-runtime.tar.gz" | tr -d ' ')
+          expected_bytes=$(sed -n 's/^bytes \([0-9][0-9]*\)$/\1/p' release/bundle-digest.txt)
+          echo "bundle identity: $actual ($bytes bytes)"
+          test "$actual" = "$recorded" || {
+            echo "BUNDLE_DIGEST_MISMATCH=recorded:$recorded built:$actual" >&2
+            exit 1
+          }
+          test "$bytes" = "$expected_bytes" || {
+            echo "BUNDLE_SIZE_MISMATCH=recorded:$expected_bytes built:$bytes" >&2
+            exit 1
+          }
+
+      # Decision 67: a failed tar, staging, canonicalisation or compression stage must stop
+      # the build. Run #41609297193 published a 20-byte gzip because `tar | gzip` reported
+      # only gzip's status.
+      - name: Validate the bundle build fails safely
+        run: python3 tests/test_bundle_build_safety.py
 
       # The published digest is an artifact identity, so it has to survive a fresh clone:
       # two independent checkouts of the tested commit, with deliberately different file

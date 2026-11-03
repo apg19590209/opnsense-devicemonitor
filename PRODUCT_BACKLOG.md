@@ -654,9 +654,10 @@ release integration (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-2
 unpublished branch and its backups (`/root/dm-consolidation-backup-20261103/`,
 `/root/dm-docs-backup-20261103/`) are untouched.
 
-**Also open here: no remote CI run exists for this branch.** `REVIEW-R2` item H1b stays
-*NOT EXECUTED* until an explicitly authorised CI-only push happens; nothing in this repository claims
-a green run.
+**Also open here: CI went red on the first run.** The branch is published at `cedd411` and run
+#41609297193 failed at "Verify the bundle is deterministic across checkouts"; Decision 67 fixes
+the two causes and reissues the bundle identity, but `REVIEW-R2` item H1b stays *NOT EXECUTED
+green* until a run passes. Nothing in this repository claims a green run.
 
 **Closes when:** the chosen `main` path is executed with the branch published and its CI green, or the
 branch is explicitly abandoned in favour of `main`/`release/2.13` with the remediation re-applied.

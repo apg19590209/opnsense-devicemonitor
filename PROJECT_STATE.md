@@ -30,9 +30,9 @@ Decision 60) → `2.13.3` (pruning remediation, Decision 62).
 |---|---|
 | Branch | `fix/pruning-remediation-20261103` (untagged), built on `15be258`; see `git log` for the current tip |
 | Payload | `release/v2.13.3-runtime.manifest`, 40 rows, staged targets 61 (62 fresh) |
-| Bundle | `dm-v2.13.3-runtime.tar.gz`, 348 932 bytes, sha256 `451a03f4bc04542ea36c36ce7df42faaf5c3e044e574ea991e74d4f5a4570ae8` — built at `/tmp`, **not published**; reproducible from any clean checkout (Decision 63, `release/bundle-digest.txt`) |
+| Bundle | `dm-v2.13.3-runtime.tar.gz`, 348 920 bytes, sha256 `ce92a09a2d0ffd79bea33ca3087137264c5ef1ff992bb983b3d7e4dbf738befd` — built at `/tmp`, **not published**; reproducible from any clean checkout, any timezone and either tar implementation (Decision 63, Decision 67, `release/bundle-digest.txt`). The previous identity `451a03f4…` / 348 932 bytes is retired: it was timezone-dependent and unbuildable on GNU tar) |
 | Deployed | nowhere. Deployment to `.23` is a separate gated phase; `.253` / `.252` are out of scope |
-| Gates | 42 suites referenced by `.github/workflows/ci.yml` (59 steps); the 9 new or rewritten suites pass locally on `.23`. No remote run has started yet (the branch has not been pushed) |
+| Gates | 43 suites referenced by `.github/workflows/ci.yml` (60 steps); the 10 new or rewritten suites pass locally. Run #41609297193 (first remote run, commit `cedd411`) **failed** at "Verify the bundle is deterministic across checkouts"; Decision 67 fixed both causes (portable archive construction, fail-safe build) |
 | New behaviour | Pruning requires proof of ownership (including for bare-path records), the record covers generated targets, every executed input is pinned, a repair install is idempotent and enforces mode/ownership, rollback reports COMPLETE/INCOMPLETE and restores the record (Decisions 62-64) |
 
 ### Workspace and repository protection (3 November 2026, Decision 65)
@@ -47,7 +47,7 @@ Decision 60) → `2.13.3` (pruning remediation, Decision 62).
 | Preserved | `/usr/local/cline-freebsd/src/cline` (second clone carrying the untracked Cline installation) and the worktrees `/root/o3-branch`, `/root/tb-branch` — unchanged |
 | Open decision | `main` vs this branch: **14 behind / 41 ahead**, merge base `40cced8` — DM-BL-009, still **OPEN** |
 | Integration path | `release/2.13` (`6bd122e`) is an **ancestor** of this branch, so integration into the release line is a plain **fast-forward with zero conflicts** — no merge and no rebase is necessary (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md`) |
-| CI readiness | documentation and guards committed; the branch is **unpublished**, so no remote run exists for it yet (H1b still open). A single explicitly authorised CI-only push is the remaining step |
+| CI readiness | the branch is published (`cedd411`), and its first run (#41609297193) failed on the bundle step; the fixes are committed on top and await the next authorised push. H1b stays open until a run is green |
 | Evidence | `verification/WORKSPACE-PROTECTION-20261103.md`, `verification/REPO-CONSOLIDATION-20261103.md` |
 
 Pre-deployment evidence from `.23` (running 2.13.2), taken from this branch with

@@ -172,6 +172,15 @@ Closed at commit `bbc58e6`; bundle identity reissued as
 `451a03f4bc04542ea36c36ce7df42faaf5c3e044e574ea991e74d4f5a4570ae8` (348 932 bytes),
 reproduced from two clean checkouts.
 
+**Correction (3 November 2026, Decision 67):** that identity turned out to be timezone- and
+bsdtar-dependent — it only reproduced where `touch -t` ran under AEDT and where `tar` accepted
+`--uid/--gid`. The first GitHub run (#41609297193) built a 20-byte archive and failed the
+digest assertion. The canonical identity is now
+`ce92a09a2d0ffd79bea33ca3087137264c5ef1ff992bb983b3d7e4dbf738befd` (348 920 bytes), verified
+across two checkouts, three timezones and a GNU-style header re-encoding; the superseded
+value is recorded in `release/bundle-digest.txt`. The 451a03f4 value above is kept as the
+record of what was believed at `bbc58e6`, not as a current claim.
+
 | Suite | Result | Covers |
 |---|---|---|
 | `test_prune_plan.py` | `PRUNE_PLAN=PASS cases=12` | M1, U1 (bare-path requires evidence; modified retained) |

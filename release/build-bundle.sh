@@ -10,6 +10,11 @@
 set -eu
 LC_ALL=C
 export LC_ALL
+# mtime normalisation below uses `touch -t`, which reads the *local* timezone. Without this
+# the same commit produced 451a03f4… on an AEDT host and e6596665… under TZ=UTC0 — the
+# published identity must not depend on where it was built (Decision 67).
+TZ=UTC0
+export TZ
 
 # Repo root is the parent of this script's own directory (release/), so the bundler is
 # location-independent instead of hardcoding one developer's absolute checkout path.
@@ -75,18 +80,109 @@ echo "staged __pycache__: $(find "$BUILD" -type d -name '__pycache__' | wc -l | 
 
 rm -f "$OUT"
 # Determinism (Decision 63): the published digest is an artifact identity, so identical
-# inputs must give identical bytes from any checkout. Four things are normalised —
-#   * member mtimes, which `cp -p` would otherwise inherit from the working copy (and a
-#     fresh clone has different ones);
+# inputs must give identical bytes from any checkout. Normalised here or by the
+# canonicaliser that follows —
+#   * member mtimes (`cp -p` would otherwise inherit each checkout's timestamps, and
+#     `touch -t` would otherwise read the local timezone);
 #   * uid/gid and their symbolic names, which depend on who built the archive;
 #   * the member-order source, which is the sorted allow-list, never a directory scan;
-#   * the archive format, pinned to ustar so no pax extended header (with sub-second
-#     mtimes or path hints) can leak in.
+#   * the archive format, pinned to ustar so no pax extended header can leak in;
+#   * the *header encoding*, which differs between bsdtar and GNU tar (Decision 67).
 # gzip -n removes the timestamp gzip would otherwise write into its header. File modes are
 # NOT normalised: the executable bits recorded in git must survive.
 find "$BUILD" -exec touch -h -t 202601010000.00 {} +
-( cd "$BUILD" && tar --format ustar -cf - \
-        --uid 0 --gid 0 --uname root --gname wheel \
-        -T "$LIST" | gzip -n > "$OUT" )
+
+# ---------------------------------------------------------------------------
+# Tar implementation detection (Decision 67). The first GitHub run failed here: the script
+# passed bsdtar-only --uid/--gid to GNU tar, the failure was swallowed by the `tar | gzip`
+# pipeline, and a 20-byte gzip was published as the bundle. The implementation is probed
+# from the binary itself (an OS check would be wrong: FreeBSD can run GNU tar and a Linux
+# runner can carry bsdtar). Unknown implementations are refused, not guessed at.
+TAR=${DM_TAR:-tar}
+tar_version=$("$TAR" --version 2>&1 | head -n 1 || true)
+case $tar_version in
+    *bsdtar*) TAR_FLAVOUR=bsdtar ;;
+    *"GNU tar"*) TAR_FLAVOUR=gnu ;;
+    *) TAR_FLAVOUR=unknown ;;
+esac
+echo "tar implementation: $TAR_FLAVOUR ($TAR - ${tar_version:-no --version output})"
+
+# Unquoted expansion on purpose: these are flag lists with no embedded spaces.
+case $TAR_FLAVOUR in
+    bsdtar)
+        TAR_OPTS="--format ustar --uid 0 --gid 0 --uname root --gname wheel"
+        ;;
+    gnu)
+        # GNU tar spells ownership as --owner/--group; --uid/--gid are bsdtar-only.
+        TAR_OPTS="--format=ustar --owner=0 --group=0 --uname=root --gname=wheel"
+        ;;
+    *)
+        printf '%s\n' \
+            "UNSUPPORTED_TAR=$TAR" \
+            "  '$TAR --version' identified neither GNU tar nor bsdtar." \
+            "  Refusing to build: a different implementation can produce a different" \
+            "  archive identity. Point DM_TAR at a supported tar." >&2
+        exit 1
+        ;;
+esac
+
+# Functional probe: accept the flags and the format, not just the version string. A tar
+# that claims to be ustar but writes GNU/pax headers is rejected here instead of shipping a
+# different bundle later.
+PROBE=$(mktemp -d "${TMPDIR:-/tmp}/dm-tar-probe.XXXXXX")
+mkdir -p "$PROBE/tree"
+: > "$PROBE/tree/probe"
+if ! ( cd "$PROBE/tree" && "$TAR" $TAR_OPTS -cf "$PROBE/probe.tar" probe ); then
+    rm -rf "$PROBE"
+    echo "TAR_PROBE_FAILED=$TAR (flags rejected: $TAR_OPTS)" >&2
+    exit 1
+fi
+if ! python3 "$SCRIPT_DIR/normalize-bundle-tar.py" --check "$PROBE/probe.tar"; then
+    rm -rf "$PROBE"
+    echo "TAR_PROBE_UNSUPPORTED=$TAR (archive is not canonical ustar)" >&2
+    exit 1
+fi
+rm -rf "$PROBE"
+
+# ---------------------------------------------------------------------------
+# Fail-safe construction (Decision 67): every stage writes an explicit file and its status
+# is checked, so no pipeline can mask a failure and no partial archive is ever published.
+TARBALL=$OUT.tar
+CANONICAL=$OUT.tar.canonical
+rm -f "$OUT" "$TARBALL" "$CANONICAL"
+( cd "$BUILD" && "$TAR" $TAR_OPTS -cf "$TARBALL" -T "$LIST" ) || {
+    echo "TAR_FAILED=$TAR (no archive produced)" >&2
+    rm -f "$TARBALL"
+    exit 1
+}
+if [ ! -s "$TARBALL" ]; then
+    echo "TAR_EMPTY=$TARBALL (0 bytes)" >&2
+    rm -f "$TARBALL"
+    exit 1
+fi
+if ! canonical_out=$(python3 "$SCRIPT_DIR/normalize-bundle-tar.py" "$TARBALL" "$CANONICAL"); then
+    echo "TAR_CANONICALISE_FAILED=$TARBALL" >&2
+    rm -f "$TARBALL" "$CANONICAL"
+    exit 1
+fi
+echo "$canonical_out"
+members=$(printf '%s\n' "$canonical_out" | sed -n 's/.*members=\([0-9][0-9]*\).*/\1/p')
+expected=$(wc -l < "$LIST" | tr -d ' ')
+if [ "$members" != "$expected" ]; then
+    echo "MEMBER_COUNT_MISMATCH=archived:$members expected:$expected" >&2
+    rm -f "$TARBALL" "$CANONICAL"
+    exit 1
+fi
+if ! gzip -n -c "$CANONICAL" > "$OUT"; then
+    echo "GZIP_FAILED=$CANONICAL" >&2
+    rm -f "$OUT" "$TARBALL" "$CANONICAL"
+    exit 1
+fi
+rm -f "$TARBALL" "$CANONICAL"
+if [ ! -s "$OUT" ]; then
+    echo "BUNDLE_EMPTY=$OUT (0 bytes)" >&2
+    exit 1
+fi
 echo "archive bytes     : $(wc -c < "$OUT" | tr -d ' ')"
 printf 'bundle sha256: %s\n' "$(digest "$OUT")"
+
