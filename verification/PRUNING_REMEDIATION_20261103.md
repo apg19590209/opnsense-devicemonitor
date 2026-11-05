@@ -40,3 +40,24 @@ Acceptance tests (all root-free, all in CI):
 | Same-version repair behaves as documented | `test_upgrade_predecessors.py` (2.13.2 row) + `test_installer_status.py` |
 | No unexpected skipped predecessors in full CI | `test_upgrade_predecessors.py::test_every_predecessor_upgrades` |
 | No installer mutation during `--check` | `test_installer_status.py::test_check_is_non_mutating` |
+
+## Executable installer coverage (M5, 5 November 2026)
+
+The table above is helper-level: every suite runs `release/prune-plan.sh` in a staging tree and
+none of them executes `install-unattended.sh`. That gap is closed by
+`verification/installer-sandbox/run-installer-sandbox.sh`, which runs the unmodified installer
+from the published bundle inside a disposable FreeBSD jail and verifies the installed result and
+the restoration after failure:
+
+| Acceptance criterion | Harness scenario | Result |
+|---|---|---|
+| The installer performs the upgrade install | `install` | `INSTALL_OK version=2.13.3 files=61 core_locales=10 pruned=2 … unchanged=60 repaired=0`, all 61 targets re-hashed against the bundle with manifest mode and `root:wheel` |
+| The installer prunes only what it can prove it owns | `install` (`LEGACY`), `repair` (`RECORD`) | `PRUNED=2` / `PRUNED=1`; every pruned file digest-verified in `files/prune-*` |
+| The install record describes the installed set | `install`, `repair` | 61 digest rows, each matching the file on disk; `REPAIR` rebuilds it after the prune |
+| `--check` does not mutate | `check` | byte-identical snapshot before/after; no `install-v213.*` |
+| A failed install restores the node | `rollback` | `ROLLBACK_STATUS=COMPLETE`; replaced target, both pruned files and the record restored; pre-install state byte-identical |
+| A tampered helper cannot execute | `failclosed` | `ABORT: release inputs` before any mutation |
+
+Design, boundaries and the full transcripts: `verification/REVIEW-R2-REMEDIATION-20261103.md`
+§Phase 3 and `verification/installer-sandbox/`. The harness is root/host-only and is not a CI
+suite; CI keeps the root-free suites listed above.

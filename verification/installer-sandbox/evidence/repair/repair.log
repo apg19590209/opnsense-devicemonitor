@@ -1,0 +1,11 @@
+VERIFY_OK=4
+NOTICE: merged the plugin keys into 10 core catalogue(s); uninstall.sh restores the pristine files
+PRUNE_PLAN=RECORD /usr/local/opnsense/mvc/app/languages/xx_XX/LC_MESSAGES/devicemonitor.mo
+CHECK_OK version=2.13.3 predecessor=2.13.3 files=61 core_locales=10 prunable=1 daemon_running=0 host=dm-m5-sandbox.internal legacy_prunable=0 retained=0
+RECORD_BACKED_UP=/var/db/devicemonitor/installed-manifest.txt
+BACKUP_READY=/var/backups/devicemonitor/install-v213.kzKM6o
+PRUNE_PLANNED=1
+CORE_LOCALE_STATE=/var/backups/devicemonitor/core-locale
+UNCHANGED=61
+PRUNED=1
+INSTALL_OK version=2.13.3 files=61 core_locales=10 pruned=1 backup=/var/backups/devicemonitor/install-v213.kzKM6o daemon_restarted=0 unchanged=61 repaired=0

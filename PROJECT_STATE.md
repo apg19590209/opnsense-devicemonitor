@@ -2,7 +2,7 @@
 
 ## Current state
 
-Last updated: 3 November 2026
+Last updated: 5 November 2026
 
 Branches: `release/2.13` (HEAD `6bd122e`, the released line) and
 `fix/pruning-remediation-20261103` (the 2.13.3 remediation of the pruning review, branched
@@ -28,11 +28,12 @@ Decision 60) → `2.13.3` (pruning remediation, Decision 62).
 
 | Item | Value |
 |---|---|
-| Branch | `fix/pruning-remediation-20261103` (untagged), built on `15be258`; see `git log` for the current tip |
+| Branch | `fix/pruning-remediation-20261103` (untagged), tip `7c9d498`; see `git log` for later work |
 | Payload | `release/v2.13.3-runtime.manifest`, 40 rows, staged targets 61 (62 fresh) |
 | Bundle | `dm-v2.13.3-runtime.tar.gz`, 1 656 468 bytes, sha256 `7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2` — built at `/tmp`, **not published**; byte-identical on FreeBSD and Linux, any timezone, either tar implementation (Decision 63, 67, 68; `release/bundle-digest.txt`). The archive is deliberately uncompressed (stored deflate blocks) so the identity cannot depend on the host compressor; earlier identities `ce92a09a…` / 348 920, `b29e1166…` / 349 052 and `451a03f4…` / 348 932 are retired and recorded as superseded |
 | Deployed | nowhere. Deployment to `.23` is a separate gated phase; `.253` / `.252` are out of scope |
-| Gates | 44 suites referenced by `.github/workflows/ci.yml` (61 steps); the 11 new or rewritten suites pass locally. Runs #41609297193, #41611564118 and #41627234610 all failed at the bundle step; Decisions 67-68 fixed the tar flags, the archive termination and the compressor |
+| Gates | 44 suites referenced by `.github/workflows/ci.yml` (61 steps); CI on `7c9d498` is **green** — run `41631353930`, 64/64 steps, zero skips (H1b closed). Earlier runs #41609297193, #41611564118 and #41627234610 failed at the bundle step; Decisions 67-68 fixed the tar flags, the archive termination and the compressor |
+| Installer coverage (M5) | `verification/installer-sandbox/run-installer-sandbox.sh` executes the unmodified installer from the published bundle inside a disposable FreeBSD jail: `check`, `install`, `repair`, `rollback`, `failclosed` — all PASS (`verification/REVIEW-R2-REMEDIATION-20261103.md` §Phase 3, evidence in `verification/installer-sandbox/evidence/`). Root/host-only; GitHub runners cannot create a FreeBSD jail, so it is not a CI suite |
 | New behaviour | Pruning requires proof of ownership (including for bare-path records), the record covers generated targets, every executed input is pinned, a repair install is idempotent and enforces mode/ownership, rollback reports COMPLETE/INCOMPLETE and restores the record (Decisions 62-64) |
 
 ### Workspace and repository protection (3 November 2026, Decision 65)
@@ -47,7 +48,7 @@ Decision 60) → `2.13.3` (pruning remediation, Decision 62).
 | Preserved | `/usr/local/cline-freebsd/src/cline` (second clone carrying the untracked Cline installation) and the worktrees `/root/o3-branch`, `/root/tb-branch` — unchanged |
 | Open decision | `main` vs this branch: **14 behind / 41 ahead**, merge base `40cced8` — DM-BL-009, still **OPEN** |
 | Integration path | `release/2.13` (`6bd122e`) is an **ancestor** of this branch, so integration into the release line is a plain **fast-forward with zero conflicts** — no merge and no rebase is necessary (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md`) |
-| CI readiness | the branch is published (`cedd411`), and its first run (#41609297193) failed on the bundle step; the fixes are committed on top and await the next authorised push. H1b stays open until a run is green |
+| CI readiness | the branch is published (`cedd411`) and CI on the tip is green (run `41631353930`, 64/64, zero skips); H1b is closed |
 | Evidence | `verification/WORKSPACE-PROTECTION-20261103.md`, `verification/REPO-CONSOLIDATION-20261103.md` |
 
 Pre-deployment evidence from `.23` (running 2.13.2), taken from this branch with
@@ -61,10 +62,12 @@ Pre-deployment evidence from `.23` (running 2.13.2), taken from this branch with
 directory, `/var/db/devicemonitor/installed-manifest.txt` unchanged (mtime 01:33:16), no
 staged temp directory left behind.
 
-Known carry-over: the record currently on `.23` was written by the 2.13.2 installer and
-carries bare paths without digests. `prune-plan.sh` reads that shape as ownership evidence
-(content unverifiable), and the first 2.13.3 install replaces it with the digest-bearing
-form.
+Known carry-over: the record currently on `.23` has 40 bare paths and no digests.
+`prune-plan.sh` reads that shape as ownership evidence (content unverifiable), and the first
+2.13.3 install replaces it with the digest-bearing form. Its provenance is **not** known: the
+v2.13.2 tree contains no code that writes `installed-manifest.txt`
+(`git grep installed-manifest v2.13.2` → nothing), so it was produced by a step outside the
+installer. Only the shape matters to pruning, and the M5 sandbox reproduces it exactly.
 
 ## O4 divergence closed: ageing restored in 2.13.1 (3 November 2026)
 
@@ -93,3 +96,22 @@ suppressing observation.
 Post-deployment reconciliation: all 40 manifest rows hash-match on each node; `.253` logs
 `Stale-state ageing: aged 1 row(s) to unknown, retired 0 row(s)`; standby dry-run `0/0`;
 testbed backlog `38/42` (monitoring disabled there, left in place).
+
+## M5 installer verification (5 November 2026)
+
+The 2.13.3 installer now has executable end-to-end coverage that does not touch the node:
+
+* `verification/installer-sandbox/run-installer-sandbox.sh all` — root-only, FreeBSD-only,
+  disposable jail; five scenarios (`check`, `install`, `repair`, `rollback`, `failclosed`),
+  `SANDBOX_RESULT=PASS`.
+* Transcripts in `verification/installer-sandbox/evidence/<scenario>/`; design, results and
+  the stated boundaries in `verification/REVIEW-R2-REMEDIATION-20261103.md` §Phase 3.
+* Not covered, by design: the daemon stop/wait/start branch, a fresh install (`FRESH=1`,
+  needs `rc.configure_plugins` and configd) and the real `service configd restart` (stubbed,
+  and used as the failure-injection point).
+* `.23` was not installed, restarted or otherwise touched; `.253`/`.252` were not touched. The
+  node still runs 2.13.2 with its 40-row record, and no `install-v213.*` directory was added.
+
+**Next step:** the gated 2.13.3 deployment to `.23` (`verification/DEPLOY-2.13.3-23-PLAN.md`,
+still NOT EXECUTED) — and separately the DM-BL-009 decision on how `main` is reconciled, which
+this phase deliberately leaves open.
