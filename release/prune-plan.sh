@@ -6,6 +6,8 @@
 #   prune-plan.sh delete  --plan FILE [--root DIR]
 #   prune-plan.sh restore --plan FILE --backup DIR [--root DIR]
 #   prune-plan.sh restore-targets --plan FILE --backup DIR [--root DIR]
+#   prune-plan.sh backup-core-locale-state --state DIR --backup DIR [--root DIR]
+#   prune-plan.sh restore-core-locale-state --state DIR --backup DIR [--root DIR]
 #
 # compute  never changes the filesystem. It prints the plan on stdout, one line per target,
 #          "<SOURCE> <path>" with SOURCE = RECORD (this plugin installed the path on a
@@ -30,6 +32,10 @@
 # restore-record puts the backed-up record back (digest-verified), or removes the record
 #          when the run that is being rolled back created it. Prints RECORD_RESTORED=<record>
 #          or RECORD_REMOVED=<record>.
+# backup-core-locale-state snapshots the core-locale state directory, including pristine
+#          catalogue copies, with digest and metadata verification.
+# restore-core-locale-state restores that snapshot exactly. Files and directories created by
+#          the failed run are removed when they did not exist before it.
 #
 # The approved namespaces are the only paths this plugin may ever own. A candidate outside
 # them is not a candidate at all, so a corrupted record or a hand-edited evidence file
@@ -49,6 +55,8 @@ usage() {
     echo "       $PROG restore-targets --plan FILE --backup DIR [--root DIR]" >&2
     echo "       $PROG backup-record --record FILE --backup DIR [--root DIR]" >&2
     echo "       $PROG restore-record --record FILE --backup DIR [--root DIR]" >&2
+    echo "       $PROG backup-core-locale-state --state DIR --backup DIR [--root DIR]" >&2
+    echo "       $PROG restore-core-locale-state --state DIR --backup DIR [--root DIR]" >&2
     echo "       $PROG enforce-target --target PATH --mode MODE [--owner U --group G] [--root DIR]" >&2
     exit 2
 }
@@ -122,6 +130,7 @@ record=
 legacy=
 plan=
 backup=
+state=
 root=
 target=
 mode=
@@ -135,6 +144,7 @@ while [ "$#" -gt 0 ]; do
         --legacy) [ "$#" -ge 2 ] || usage; legacy=$2; shift 2 ;;
         --plan) [ "$#" -ge 2 ] || usage; plan=$2; shift 2 ;;
         --backup) [ "$#" -ge 2 ] || usage; backup=$2; shift 2 ;;
+        --state) [ "$#" -ge 2 ] || usage; state=$2; shift 2 ;;
         --target) [ "$#" -ge 2 ] || usage; target=$2; shift 2 ;;
         --mode) [ "$#" -ge 2 ] || usage; mode=$2; shift 2 ;;
         --owner) [ "$#" -ge 2 ] || usage; owner=$2; shift 2 ;;
@@ -489,6 +499,207 @@ restore_record() {
     return 0
 }
 
+backup_core_locale_state() {
+    [ -n "$state" ] || die 'backup-core-locale-state needs --state'
+    [ -n "$backup" ] || die 'backup-core-locale-state needs --backup'
+    safe_path "$state" || die "unsafe state path: $state"
+    full=$root$state
+    dest=$backup/core-locale-state
+    [ ! -e "$dest" ] || die "state backup already exists: $dest"
+    mkdir -p "$dest/files" || die "cannot create $dest"
+    : > "$dest/files.sha256"
+    if [ ! -e "$full" ]; then
+        printf 'absent\n' > "$dest/directory"
+        printf 'CORE_LOCALE_STATE_BACKED_UP=absent files=0\n'
+        return 0
+    fi
+    [ -d "$full" ] && [ ! -L "$full" ] || die "state path is not a directory: $state"
+    printf 'present %s %s %s\n' "$(file_mode "$full")" "$(file_owner "$full")" \
+        "$(file_group "$full")" > "$dest/directory"
+    n=0
+    for file in "$full"/*.state "$full"/*.OPNsense.mo; do
+        [ -e "$file" ] || continue
+        [ -f "$file" ] && [ ! -L "$file" ] || die "irregular state file: $file"
+        name=${file##*/}
+        case "$name" in
+            *' '*|*"$TAB"*|*/*|..*) die "unsupported state filename: $name" ;;
+        esac
+        hash=$(digest "$file")
+        cp -p "$file" "$dest/files/$name" || die "cannot back up state file: $file"
+        [ "$(digest "$dest/files/$name")" = "$hash" ] || die "state backup digest mismatch: $file"
+        printf '%s %s %s %s %s\n' "$hash" "$name" "$(file_mode "$file")" \
+            "$(file_owner "$file")" "$(file_group "$file")" >> "$dest/files.sha256"
+        n=$((n + 1))
+    done
+    printf 'CORE_LOCALE_STATE_BACKED_UP=present files=%s\n' "$n"
+}
+
+restore_core_locale_state() {
+    [ -n "$state" ] || die 'restore-core-locale-state needs --state'
+    [ -n "$backup" ] || die 'restore-core-locale-state needs --backup'
+    safe_path "$state" || die "unsafe state path: $state"
+    full=$root$state
+    dest=$backup/core-locale-state
+    metadata=$dest/directory
+    manifest=$dest/files.sha256
+    if [ ! -f "$metadata" ] || [ ! -f "$manifest" ] || [ ! -d "$dest/files" ]; then
+        echo "ROLLBACK_FAILED=$state (state backup missing)" >&2
+        return 1
+    fi
+    read -r dir_state dir_mode dir_owner dir_group < "$metadata" || dir_state=
+    case "$dir_state" in
+        absent)
+            [ ! -s "$manifest" ] || {
+                echo "ROLLBACK_FAILED=$state (absent-state backup has files)" >&2
+                return 1
+            }
+            ;;
+        present)
+            [ -n "$dir_mode" ] && [ -n "$dir_owner" ] && [ -n "$dir_group" ] || {
+                echo "ROLLBACK_FAILED=$state (state directory metadata)" >&2
+                return 1
+            }
+            preflight=0
+            while read -r hash name mode owner group; do
+                [ -n "$name" ] || continue
+                case "$name" in
+                    *' '*|*"$TAB"*|*/*|..*) preflight=1; continue ;;
+                esac
+                src=$dest/files/$name
+                if [ ! -f "$src" ] || [ -L "$src" ] ||
+                        [ "$(digest "$src")" != "$hash" ] || [ -z "$mode" ] ||
+                        [ -z "$owner" ] || [ -z "$group" ]; then
+                    echo "ROLLBACK_FAILED=$state/$name (backup digest)" >&2
+                    preflight=1
+                fi
+            done < "$manifest"
+            if [ "$preflight" != 0 ]; then
+                printf 'CORE_LOCALE_ROLLBACK_SUMMARY=restored=0 removed=0 conflicts=0 failed=1\n'
+                return 1
+            fi
+            ;;
+        *)
+            echo "ROLLBACK_FAILED=$state (state backup metadata)" >&2
+            return 1
+            ;;
+    esac
+
+    rc=0
+    restored=0
+    removed=0
+    conflicts=0
+    failed=0
+    if [ -e "$full" ] && { [ ! -d "$full" ] || [ -L "$full" ]; }; then
+        echo "ROLLBACK_CONFLICT=$state" >&2
+        conflicts=$((conflicts + 1))
+        rc=1
+    elif [ "$dir_state" = absent ]; then
+        if [ -d "$full" ]; then
+            for file in "$full"/*.state "$full"/*.OPNsense.mo; do
+                [ -e "$file" ] || continue
+                if [ ! -f "$file" ] || [ -L "$file" ]; then
+                    echo "ROLLBACK_CONFLICT=$file" >&2
+                    conflicts=$((conflicts + 1))
+                    rc=1
+                    continue
+                fi
+                if rm -f "$file"; then
+                    removed=$((removed + 1))
+                else
+                    echo "ROLLBACK_FAILED=$file (remove)" >&2
+                    failed=$((failed + 1))
+                    rc=1
+                fi
+            done
+            if ! rmdir "$full" 2>/dev/null; then
+                echo "ROLLBACK_FAILED=$state (directory not empty)" >&2
+                failed=$((failed + 1))
+                rc=1
+            fi
+        fi
+    else
+        mkdir -p "$full" || {
+            echo "ROLLBACK_FAILED=$state (directory create)" >&2
+            failed=$((failed + 1))
+            rc=1
+        }
+        if [ "$rc" = 0 ]; then
+            for file in "$full"/*.state "$full"/*.OPNsense.mo; do
+                [ -e "$file" ] || continue
+                name=${file##*/}
+                if awk -v name="$name" '$2 == name { found = 1 } END { exit !found }' "$manifest"; then
+                    continue
+                fi
+                if [ ! -f "$file" ] || [ -L "$file" ]; then
+                    echo "ROLLBACK_CONFLICT=$file" >&2
+                    conflicts=$((conflicts + 1))
+                    rc=1
+                    continue
+                fi
+                if rm -f "$file"; then
+                    removed=$((removed + 1))
+                else
+                    echo "ROLLBACK_FAILED=$file (remove)" >&2
+                    failed=$((failed + 1))
+                    rc=1
+                fi
+            done
+            while read -r hash name mode owner group; do
+                [ -n "$name" ] || continue
+                src=$dest/files/$name
+                target=$full/$name
+                if ! cp -p "$src" "$target"; then
+                    echo "ROLLBACK_FAILED=$target (restore)" >&2
+                    failed=$((failed + 1))
+                    rc=1
+                    continue
+                fi
+                if [ "$(file_mode "$target")" != "$mode" ]; then
+                    chmod "$mode" "$target" || {
+                        echo "ROLLBACK_FAILED=$target (mode)" >&2
+                        failed=$((failed + 1))
+                        rc=1
+                        continue
+                    }
+                fi
+                if [ "$(file_owner "$target")" != "$owner" ] || [ "$(file_group "$target")" != "$group" ]; then
+                    chown "$owner:$group" "$target" || {
+                        echo "ROLLBACK_FAILED=$target (owner)" >&2
+                        failed=$((failed + 1))
+                        rc=1
+                        continue
+                    }
+                fi
+                if [ "$(digest "$target")" = "$hash" ] &&
+                        [ "$(file_mode "$target")" = "$mode" ] &&
+                        [ "$(file_owner "$target")" = "$owner" ] &&
+                        [ "$(file_group "$target")" = "$group" ]; then
+                    restored=$((restored + 1))
+                else
+                    echo "ROLLBACK_FAILED=$target (digest or metadata)" >&2
+                    failed=$((failed + 1))
+                    rc=1
+                fi
+            done < "$manifest"
+            if [ "$rc" = 0 ]; then
+                if [ "$(file_mode "$full")" != "$dir_mode" ]; then
+                    chmod "$dir_mode" "$full" || rc=1
+                fi
+                if [ "$(file_owner "$full")" != "$dir_owner" ] || [ "$(file_group "$full")" != "$dir_group" ]; then
+                    chown "$dir_owner:$dir_group" "$full" || rc=1
+                fi
+                if [ "$rc" != 0 ]; then
+                    echo "ROLLBACK_FAILED=$state (directory metadata)" >&2
+                    failed=$((failed + 1))
+                fi
+            fi
+        fi
+    fi
+    printf 'CORE_LOCALE_ROLLBACK_SUMMARY=restored=%s removed=%s conflicts=%s failed=%s\n' \
+        "$restored" "$removed" "$conflicts" "$failed"
+    return "$rc"
+}
+
 enforce_target() {
     [ -n "$target" ] || die 'enforce-target needs --target'
     [ -n "$mode" ] || die 'enforce-target needs --mode'
@@ -526,6 +737,8 @@ case "$cmd" in
     restore-targets) restore_targets ;;
     backup-record) backup_record ;;
     restore-record) restore_record ;;
+    backup-core-locale-state) backup_core_locale_state ;;
+    restore-core-locale-state) restore_core_locale_state ;;
     enforce-target) enforce_target ;;
     *) usage ;;
 esac

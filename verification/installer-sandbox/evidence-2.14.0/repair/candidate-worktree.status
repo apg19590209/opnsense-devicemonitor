@@ -1,0 +1,12 @@
+ M PRODUCT_BACKLOG.md
+ M PROJECT_STATE.md
+ M install-unattended.sh
+ M release/bundle-digest.txt
+ M release/prune-plan.sh
+ M release/release-inputs.sha256
+ M tests/test_rollback_isolated.py
+ M verification/installer-sandbox/README.md
+ M verification/installer-sandbox/run-installer-sandbox.sh
+?? verification/INSTALLER-JAIL-2.14.0-20261106.md
+?? verification/installer-sandbox/evidence-2.14.0-pre-rollback-fix-eac1160/
+?? verification/installer-sandbox/evidence-2.14.0/

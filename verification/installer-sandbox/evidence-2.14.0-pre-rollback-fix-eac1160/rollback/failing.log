@@ -1,0 +1,51 @@
+VERIFY_OK=4
+NOTICE: merged the plugin keys into 10 core catalogue(s); uninstall.sh restores the pristine files
+pgrep: Invalid jail ID or name `dm-installer-sandbox'
+PRUNE_PLAN=LEGACY /usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po
+PRUNE_RETAINED modified /usr/local/opnsense/mvc/app/languages/en_US_devicemonitor.po
+CHECK_OK version=2.14.0 predecessor=2.13.3 files=63 core_locales=10 prunable=1 daemon_running=0 host=dm-installer-sandbox.internal legacy_prunable=1 retained=1
+RECORD_BACKED_UP=/var/db/devicemonitor/installed-manifest.txt
+BACKUP_READY=/var/backups/devicemonitor/install-v214.UXJZkc
+PRUNE_PLANNED=1
+CORE_LOCALE_STATE=/var/backups/devicemonitor/core-locale
+UNCHANGED=32
+PRUNED=1
+SANDBOX: injected failure in service configd restart
+ROLLBACK_START=/var/backups/devicemonitor/install-v214.UXJZkc
+ROLLBACK_RESTORED=/usr/local/etc/inc/devicemonitor_locale.inc
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ConfigController.php
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES/devicemonitor.po
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/en_US/LC_MESSAGES/devicemonitor.po
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/infrastructureservices.volt
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt
+ROLLBACK_RESTORED=/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/en_US/LC_MESSAGES/devicemonitor.mo
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES/devicemonitor.mo
+ROLLBACK_RESTORED=/usr/local/share/locale/cs_CZ/LC_MESSAGES/OPNsense.mo
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/de_DE/LC_MESSAGES/devicemonitor.mo
+ROLLBACK_RESTORED=/usr/local/share/locale/de_DE/LC_MESSAGES/OPNsense.mo
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/fr_FR/LC_MESSAGES/devicemonitor.mo
+ROLLBACK_RESTORED=/usr/local/share/locale/fr_FR/LC_MESSAGES/OPNsense.mo
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/es_ES/LC_MESSAGES/devicemonitor.mo
+ROLLBACK_RESTORED=/usr/local/share/locale/es_ES/LC_MESSAGES/OPNsense.mo
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/it_IT/LC_MESSAGES/devicemonitor.mo
+ROLLBACK_RESTORED=/usr/local/share/locale/it_IT/LC_MESSAGES/OPNsense.mo
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/pt_BR/LC_MESSAGES/devicemonitor.mo
+ROLLBACK_RESTORED=/usr/local/share/locale/pt_BR/LC_MESSAGES/OPNsense.mo
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/nl_NL/LC_MESSAGES/devicemonitor.mo
+ROLLBACK_RESTORED=/usr/local/share/locale/nl_NL/LC_MESSAGES/OPNsense.mo
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/ru_RU/LC_MESSAGES/devicemonitor.mo
+ROLLBACK_RESTORED=/usr/local/share/locale/ru_RU/LC_MESSAGES/OPNsense.mo
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/ja_JP/LC_MESSAGES/devicemonitor.mo
+ROLLBACK_RESTORED=/usr/local/share/locale/ja_JP/LC_MESSAGES/OPNsense.mo
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/zh_CN/LC_MESSAGES/devicemonitor.mo
+ROLLBACK_RESTORED=/usr/local/share/locale/zh_CN/LC_MESSAGES/OPNsense.mo
+ROLLBACK_SUMMARY=restored=31 skipped=32 conflicts=0 failed=0
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po
+ROLLBACK_SUMMARY=restored=1 skipped=0 conflicts=0 failed=0
+RECORD_RESTORED=/var/db/devicemonitor/installed-manifest.txt
+ROLLBACK_STATUS=COMPLETE
+SANDBOX: injected failure in service configd restart
+ROLLBACK_CONFIGD_RESTART_FAILED
+ROLLBACK_ATTEMPTED=/var/backups/devicemonitor/install-v214.UXJZkc

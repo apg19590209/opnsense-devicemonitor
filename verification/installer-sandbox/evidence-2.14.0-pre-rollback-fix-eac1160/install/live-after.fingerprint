@@ -1,0 +1,182 @@
+HOST OPNsense.internal
+DEFAULTS b8005f6a7428f649bdd7fae4015e8c65b67d1eaef06629e2ce81185df0a6c749
+SETTINGS 60ba1caff349581f13f760ef9401a33eedaa2405d2a7a3099448e8b5677addb1
+RECORD 0afb4e4e68edd331f22c88ef559dd1163af0baaaba0cd77a76b3ed672c17dea7
+DB c17874a717cebe2c2e1dbaf537fd13a65b4ded47e10dfcce1849f2088136144e
+CONFIG 027594eb735cf35e4b617163106031971567d0ba74027783e42cae46d37fd47d
+RCLINK /usr/local/etc/rc.d/devicemonitor
+TARGET /usr/local/etc/inc/devicemonitor_locale.inc b9c2a2e44e426040ce00182cc81f2f2a783eb888212eb4e8bd52b9d691fdf368 644 root:wheel 1793629983
+TARGET /usr/local/etc/inc/plugins.inc.d/devicemonitor.inc cecdb6386624ca26de9cd5cdc5cd1454e88140b206464fa4d2f6ba9bf87b0cfd 644 root:wheel 1793629983
+TARGET /usr/local/etc/rc.d/devicemonitor 710f07212a5de5d0df98ab435073827801fef1d696b40587570d0069afc665df 755 root:wheel 1793629983
+TARGET /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ConfigController.php 493b78b512c9b26eef159ff8bb0cb66dc9cb655ac4432a6b4d9683590a7c7109 644 root:wheel 1793629983
+TARGET /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/DevicesController.php 06ff77409eb899644e21cce5d5b0544a679c53abf660d933d4e7372f27171ad8 644 root:wheel 1793629983
+TARGET /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ServiceController.php 93787dd9d1809bac2492d1ec731fa50110708d032098f638e3a587739be101c3 644 root:wheel 1793629983
+TARGET /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/IndexController.php cb2d32001afb46af40158c9d4dd3456c050964e154c575da8a24e5510a630eaa 644 root:wheel 1793629983
+TARGET /usr/local/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES/devicemonitor.mo ec35ccd14fd2d33f394cee5455a96a56a55323258dc1bba7dbceb4829dfdc0c8 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES/devicemonitor.po b586d9c87ded0ebb367343a203c0cb3f197e47f7970059354b7e47be5743ecca 644 root:wheel 1793629983
+TARGET /usr/local/opnsense/mvc/app/languages/de_DE/LC_MESSAGES/devicemonitor.mo 80efb1aac9e64b9e6a010325d8022eacbe1b9d5a923408c9617f07ababd0b263 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/languages/en_US/LC_MESSAGES/devicemonitor.mo 378ea9da706e1995762f51a3f109298647b6997f313aaf580cf7bf360af752ff 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/languages/en_US/LC_MESSAGES/devicemonitor.po 711eb273e85d23d1cca1f0646d1ad28080876e3e5710221a40dee20a9e05aac7 644 root:wheel 1793629983
+TARGET /usr/local/opnsense/mvc/app/languages/es_ES/LC_MESSAGES/devicemonitor.mo 4daa9c38e75656d1fc56257e005094841e0e3a25bb28dc925edd933e4bc11d5f 644 root:wheel 1793629985
+TARGET /usr/local/opnsense/mvc/app/languages/fr_FR/LC_MESSAGES/devicemonitor.mo 208444e7964f6e3304b1e77ecad846d909ce6c0d1f46836fd77772e5e075dea5 644 root:wheel 1793629985
+TARGET /usr/local/opnsense/mvc/app/languages/it_IT/LC_MESSAGES/devicemonitor.mo 2a5766f3317e9ad5bace08f4fca3a8f214eac1bee1f3f1a18377b963a70a6ee8 644 root:wheel 1793629985
+TARGET /usr/local/opnsense/mvc/app/languages/ja_JP/LC_MESSAGES/devicemonitor.mo 58c2336ecc54a7fd4ad27995c4e295b1379d5bf866b510c4a7394d4eb3ccd6d0 644 root:wheel 1793629985
+TARGET /usr/local/opnsense/mvc/app/languages/nl_NL/LC_MESSAGES/devicemonitor.mo ac8988be3cc6271a3c4d927a1c60794223f892c2ff1dcaa31c271c7412e91906 644 root:wheel 1793629985
+TARGET /usr/local/opnsense/mvc/app/languages/pt_BR/LC_MESSAGES/devicemonitor.mo 7c89b6a117bb062cc23eeeb315103af80dd5170eda3db19d7618f6a98a5a9bdf 644 root:wheel 1793629985
+TARGET /usr/local/opnsense/mvc/app/languages/ru_RU/LC_MESSAGES/devicemonitor.mo fc888a7e37616ee8a00a06f10eaf969d2ef3ba4d21857924daee0b6f548bccd0 644 root:wheel 1793629985
+TARGET /usr/local/opnsense/mvc/app/languages/zh_CN/LC_MESSAGES/devicemonitor.mo 1b62d7b2970383fd04d7b77c70cd71694fc10ac10fe3ab90b9bea6776aa3887e 644 root:wheel 1793629985
+TARGET /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/ACL/ACL.xml 0763dc76982278abf22bfb4b712ddf0e31ec56d9157fef0fb65bac673d314150 644 root:wheel 1793629983
+TARGET /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php f8e689d1187292d6c306df31bfe68e6ea14401a4daf372d110ccd580919f7abb 644 root:wheel 1793629983
+TARGET /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.xml 728186ed56e466629ec2ec78733c8780e3a2f7e608f3ab8e9fde086c9bacb630 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/Menu/Menu.xml 97d7c7e3a79576aea444673108cbad79db2aa81b092db98b9338b6d13107d777 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/Metadata/service.xml 5b92cc16208b1f6b421876b13897d1e7f70abf1cce586f70e009577f22988f3b 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json b8005f6a7428f649bdd7fae4015e8c65b67d1eaef06629e2ce81185df0a6c749 644 root:wheel 1793863923
+TARGET /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/activitytimeline.volt b07ff56f9881e3443abfd36097a7f6fd83081ad2c71882f340f210f3d884c0a4 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/changesummary.volt b7aa5631344ea410326d18f6fc07a52e0a43ddf0a1e160c6c91f2f5326003d0c 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devicehistory.volt 30aef2f481e9c9e76987eff00eb6f83ba2b98d1a740971aab90f0138d8431b60 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt b73490b7d2a6c9e3dd73f1e04753b56a39a6b76e56dfcd7e2802716be881712b 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/identityevents.volt 71a656bbc73a04ae7844365a8868b94e1bff183fe968257d51e20b7f4f5d66ce 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/infrastructureservices.volt 487031c4ef301d690d630ac8cc0d4d17d697ea2ac6c5dd70c7d63f9e564498db 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/physicaldevices.volt 997bdad955f390a060bb05c26dd4e4e8268d59e8df252b1b59fce8fe19f49861 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/scanhistory.volt 5fd95a8c91e8a6155ea4e5e4ebf67acf89be8b9dbf25b77110bc65af072f6856 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/service_widget.volt 35f50befb3e57d8e2c3e382ea4851af3259b88f6dc474de19cc56b8b53efa3ed 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt 60ba1caff349581f13f760ef9401a33eedaa2405d2a7a3099448e8b5677addb1 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php 28e2d252e9bf22605fc9186fecba83acbd4417bc90739bf4129b6f5e370426b3 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh 312ee0e8c1d1449f569052147eaa1fbfeefefae9315b220a8d1746fdd125fd2d 755 root:wheel 1793629984
+TARGET /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py 4efd2dbd94808790479d21e07787fdde41204c1b785e50abe6f99680ae4dbc63 755 root:wheel 1793629984
+TARGET /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_email.php 16c190852db6a502c7f4f658a844c9b827a7ccfc4500cfc1190ecaa74eb93937 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_failover.php e7a5055e13e8433ef9e017f4770f4b44d610ef7a7e20463d9bb3376fcab4cd2d 755 root:wheel 1793629984
+TARGET /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_email.php 151c9cd4f3ceaf8dbb9109e49b62b4a65152a7cad548e1dd7c3c2d7f9d282391 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_scan_email.php 7351341bab3d1726d0ff035ac581fa461e15a806aa0dd4734fc8c130f6238cc0 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_service_email.php 488939b0588d75718193f424eb7939292c35aa35f7665c576a2e08bc334aeaf2 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_webhook.php d9181a7be03d010ee1c8ddff082ff81dd2cd308957d3b7ad2cdd3ac351c24e21 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py 80a02fead2b27dc0583caec24c5ba54ab501c5fa742eba68ff423a18e6f3021e 755 root:wheel 1793629984
+TARGET /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/smtp_send.py 8ae36c20dd54fead22c510ea59f7221b3bfff2eeb8ef0f58f818148de41a0624 755 root:wheel 1793629984
+TARGET /usr/local/opnsense/service/conf/actions.d/actions_devicemonitor.conf 5757224cd36490af35db646edbda7ceb1321ec2dc1562a73e72b396c69d8891a 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf 48e7f6537ffe9a4f16041dd9dc0c85987ef8d9f7305218bcbea6c139ac5a6646 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/www/js/widgets/DeviceMonitor.js 282f943830ddfc0d0df8adc220c8c8ac5f7383363bff362f67ad6fae6177c858 644 root:wheel 1793629984
+TARGET /usr/local/opnsense/www/js/widgets/Metadata/DeviceMonitor.xml 8bf809e2fad16e3a2b5b48b177e47733603cb4080e121df03611fee1114bc239 644 root:wheel 1793629984
+TARGET /usr/local/share/locale/cs_CZ/LC_MESSAGES/OPNsense.mo d154375347923c1ef6e334fab83931d114fd85bf06514b775e84297b5aab9eef 644 root:wheel 1793629984
+TARGET /usr/local/share/locale/de_DE/LC_MESSAGES/OPNsense.mo 43fb30422e8de9722f956766a51b48ac9b0a6393813a359a240ba00bc98dba8b 644 root:wheel 1793629985
+TARGET /usr/local/share/locale/es_ES/LC_MESSAGES/OPNsense.mo b7721c3c1999aafad8cce7f3696e6561e9c1488a2c98949bd8ede67e08e3ead3 644 root:wheel 1793629985
+TARGET /usr/local/share/locale/fr_FR/LC_MESSAGES/OPNsense.mo b6999257f6f41bbd862568163856d2b5c93675759e2a827d4439f07b6536def5 644 root:wheel 1793629985
+TARGET /usr/local/share/locale/it_IT/LC_MESSAGES/OPNsense.mo 5af299832f401e12616feba958faa508d81485e02ec3a55f79560cd2de805703 644 root:wheel 1793629985
+TARGET /usr/local/share/locale/ja_JP/LC_MESSAGES/OPNsense.mo 4deb63376f09d59df027c69e1fa628136bfa3d8c718ad139115410082a77c848 644 root:wheel 1793629985
+TARGET /usr/local/share/locale/nl_NL/LC_MESSAGES/OPNsense.mo 5b8697863c75123c8245541fde18ec105d97a99ef391e0dd819595d2b3ac35d7 644 root:wheel 1793629985
+TARGET /usr/local/share/locale/pt_BR/LC_MESSAGES/OPNsense.mo 68e3e40045cdbdf71914b9776e699fb73d30431aa29ec0b281f90977f386cddb 644 root:wheel 1793629985
+TARGET /usr/local/share/locale/ru_RU/LC_MESSAGES/OPNsense.mo 9e57221e966872006c744d77ac5b642a4a1850f7d5e84fbe5884f80ab6082cc4 644 root:wheel 1793629985
+TARGET /usr/local/share/locale/zh_CN/LC_MESSAGES/OPNsense.mo 5e7ff6e84ddd7ea82d2c2e9c1d82f477d3fd14a8230cef4cd637d5e7dfc88d8f 644 root:wheel 1793629985
+BACKUP alert-alignment.2UEeX7
+BACKUP alert-confirmation.lVvDmG
+BACKUP alert-toast.T9wQR9
+BACKUP change-1280.j4HQB4
+BACKUP change-narrow.XPabSn
+BACKUP config.json.pre-monitor-scan-20260923-070801
+BACKUP core-locale
+BACKUP devices.db.pre-monitor-scan-20260923-070801
+BACKUP dm-sticky2e-20260922-235424
+BACKUP dm-sticky2f-20260923-001356
+BACKUP dm-sticky2f-fractional-20260923-033037
+BACKUP dm-sticky2f-overlap-20260923-031354
+BACKUP dm-sticky2f-reset-20260923-004130
+BACKUP email-navigation.kUILvJ
+BACKUP email-reason.FYB9Eq
+BACKUP email-status.bZ5Ok9
+BACKUP f1-changesummary-20260929-141035
+BACKUP focus-refresh.o19uIM
+BACKUP full-discovery-20260923-081803
+BACKUP identity-webhook-20260929-202526
+BACKUP identity-webhook-20260929-212206
+BACKUP identity-webhook-20260929-212213
+BACKUP identity-webhook-disable-20260929-213718
+BACKUP info-placement.CcvZsh
+BACKUP info.00McgS
+BACKUP infra-table.9s2ou2
+BACKUP install-v210.0OkhzE
+BACKUP install-v210.0smjpJ
+BACKUP install-v210.5n26Js
+BACKUP install-v210.7c4DXa
+BACKUP install-v210.8nPeKq
+BACKUP install-v210.8zBybn
+BACKUP install-v210.I7kIss
+BACKUP install-v210.IC0Ru2
+BACKUP install-v210.LAYLNP
+BACKUP install-v210.Mw0v5W
+BACKUP install-v210.O1Tggb
+BACKUP install-v210.RCfBNn
+BACKUP install-v210.UmZ7ze
+BACKUP install-v210.VUXKxY
+BACKUP install-v210.Vs1Gmv
+BACKUP install-v210.YHi3be
+BACKUP install-v210.a889Nj
+BACKUP install-v210.c18NcX
+BACKUP install-v210.c6EzNx
+BACKUP install-v210.cCpfPu
+BACKUP install-v210.cmqOid
+BACKUP install-v210.eApK8y
+BACKUP install-v210.ed0eyk
+BACKUP install-v210.gqYxdO
+BACKUP install-v210.hOtMfM
+BACKUP install-v210.i3cbVB
+BACKUP install-v210.lit1aY
+BACKUP install-v210.lzijED
+BACKUP install-v210.pn0C91
+BACKUP install-v210.rdQhGA
+BACKUP install-v210.rlVIgj
+BACKUP install-v210.sSgelp
+BACKUP install-v210.vVNqNB
+BACKUP install-v210.x0WAyY
+BACKUP install-v211.2aLlS8
+BACKUP install-v211.5WKg0k
+BACKUP install-v211.L081JN
+BACKUP install-v211.navdmC
+BACKUP install-v213.6KTQFY
+BACKUP install-v213.97t9Ns
+BACKUP install-v213.xKjyg1
+BACKUP install-v29.HF3Ool
+BACKUP install-v29.L5lema
+BACKUP lan20-cleanup.6spc8i38
+BACKUP legacy-vm-cleanup.p1_lab5t
+BACKUP port-align.rrcCue
+BACKUP port-discovery.k2accT
+BACKUP port-filters.PqJZn7
+BACKUP port-page.kfP8Iv
+BACKUP port-scope-fix.5UfiZm
+BACKUP port-submenu.aHVnQb
+BACKUP port-table.OlT0Jm
+BACKUP port-tabs.FIKzdW
+BACKUP port-ui.fHe4o7
+BACKUP repair-20260929-093444
+BACKUP responsive.FpDXst
+BACKUP scan-activation-20260929
+BACKUP settings-help.Wd1aWf
+BACKUP tab-icons.0xW7Wt
+BACKUP terminology.tlUWxQ
+BACKUP tls-20260926-235240
+BACKUP tls-20260926-235345
+BACKUP v210-service.zT2N7Y
+BACKUP webhook-url-20260929
+CORELOCALEFILE cs_CZ.OPNsense.mo 5876dfb110d26f42324e94035cfa5551bcb943df2dd004a08bba3079c650ee1f 644 root:wheel
+CORELOCALEFILE cs_CZ.state 8f3c76abec3735546218183906f1b41cee5e1590996f24da2fa8fed018d97770 644 root:wheel
+CORELOCALEFILE de_DE.OPNsense.mo 75c269909d705d91b995578bb3f8f667422d00e6b15eb775fad77a3477494974 644 root:wheel
+CORELOCALEFILE de_DE.state 53260df8770177e8029a24353cda86d17460d174f658092b76394dc6f5f63efb 644 root:wheel
+CORELOCALEFILE es_ES.OPNsense.mo 1104496c52f19f9aa2bddba32732cd292316aee878dfce6b9bc337f6c12707bd 644 root:wheel
+CORELOCALEFILE es_ES.state 0ed28ae473a9392b22709130892929ae56b5d43eafc2a100dfdfde4f1b7592b6 644 root:wheel
+CORELOCALEFILE fr_FR.OPNsense.mo a5ade5cdf62ac010ce2fef94e3ba81bd25609a26f8a66deb9753955651d30a2f 644 root:wheel
+CORELOCALEFILE fr_FR.state 8a383ca7eb5eac95b57987db60439a4327918e6b652070478c4eb986f466319b 644 root:wheel
+CORELOCALEFILE it_IT.OPNsense.mo 7340219d5d216cbda507080465fb9769c1ace1919cf138bb34285384c0d211fd 644 root:wheel
+CORELOCALEFILE it_IT.state 5fb10ccd64f41fd697f5be862a2adcc90376b16ac4adc4bafe1cebab172db032 644 root:wheel
+CORELOCALEFILE ja_JP.OPNsense.mo ab8ad9a907d3d67cd9ec70d81663200a0524ffd06e73a64bba9ce1bc9ab64de3 644 root:wheel
+CORELOCALEFILE ja_JP.state f366d4d8c9c046021cc2f9def628f7e2ad8b971bea715a5aed75838d7addcd6d 644 root:wheel
+CORELOCALEFILE nl_NL.state 640277a3e95e73527abfa6499f977047ed6b5c414d2dc9506d3db0c95f4db778 644 root:wheel
+CORELOCALEFILE pt_BR.OPNsense.mo 42d0e726c69215bf4f15792a08ecd5ebe4b42d0a701cf9218ac08dbb96fa5de9 644 root:wheel
+CORELOCALEFILE pt_BR.state dec17b0b5d29d1badbb67eda9f80e8b402843f7d8641ab5214032fade7c2041a 644 root:wheel
+CORELOCALEFILE ru_RU.OPNsense.mo c06ebe69140b416f215f871a7f732f2ea96a80de6565a5f351dfca25eee6b40e 644 root:wheel
+CORELOCALEFILE ru_RU.state 24bbaf3130231249d84b01f7a0e7111f29acf5828e702dd6c157d1619c77e493 644 root:wheel
+CORELOCALEFILE zh_CN.OPNsense.mo 1670e6fae2e0466a45b58636541db0e57532cbfb633d90e7f2fe4c61bf0fb6fd 644 root:wheel
+CORELOCALEFILE zh_CN.state d08fce9c2f8b077f3db2a3f8c3a9855b22e29518ad108e302c703fa84b592898 644 root:wheel
+DAEMONPID 34058
+CONFIGDPID 639
+HOSTSTAGES 0
+SANDBOXJAILS 0
+SANDBOXMOUNTS 0

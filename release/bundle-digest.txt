@@ -14,6 +14,10 @@
 #       (earlier local 2.14.0 reconciliation builds, superseded after the final locale
 #        catalogue cleanup, manifest refresh and installer input pins; never published
 #        or deployed)
+#   530facc661e681b3461ba15100db6e8604228454814cb5125423fe4684d7f24d  1716377 bytes
+#       (2.14.0 candidate that restored installed targets and the record but not the
+#        core-locale .state files on rollback; superseded by the rollback correction and
+#        its new release-input pin)
 #   ce92a09a2d0ffd79bea33ca3087137264c5ef1ff992bb983b3d7e4dbf738befd  348920 bytes
 #       (Decision 67: bsdtar + BSD gzip on FreeBSD. Not cross-platform — GNU tar padded the
 #        archive to its 10 KiB record boundary and GNU gzip compressed it differently, so the
@@ -37,5 +41,5 @@
 #       (before archival metadata was normalised; reproducible only inside the original
 #        working copy, because member mtimes came from that checkout)
 version 2.14.0
-bytes 1716377
-sha256 530facc661e681b3461ba15100db6e8604228454814cb5125423fe4684d7f24d
+bytes 1725593
+sha256 5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f

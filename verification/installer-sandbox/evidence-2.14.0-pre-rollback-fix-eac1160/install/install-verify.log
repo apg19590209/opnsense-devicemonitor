@@ -1,0 +1,5 @@
+VERIFY_ABOUT_ENDPOINT=2.14.0
+VERIFY_ABOUT_BINDINGS=about-version,about-features-version
+VERIFY_FEATURES_STATIC_FALLBACK=v2.14
+VERIFY_ABOUT_MODE=source-endpoint-binding; authenticated-browser=not-performed
+VERIFY_TARGETS=63

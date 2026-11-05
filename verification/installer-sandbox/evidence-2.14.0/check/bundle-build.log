@@ -1,0 +1,2 @@
+SANDBOX_BUNDLE source=/root/dm-backups/dm-bl009-candidate-rollback-fix-20261106-083105/dm-v2.14.0-runtime.tar.gz
+SANDBOX_BUNDLE sha256=5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f bytes=1725593 version=2.14.0 commit=eac1160557352d45648c4a25310b8daeaad440f6 source=worktree

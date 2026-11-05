@@ -2,7 +2,7 @@
 
 ## Current state
 
-Last updated: 5 November 2026
+Last updated: 6 November 2026
 
 Branches: `release/2.13` (HEAD `6bd122e`, the released line),
 `fix/pruning-remediation-20261103` (HEAD `b2c74fc`, the 2.13.3 remediation) and `main`
@@ -11,18 +11,18 @@ Branches: `release/2.13` (HEAD `6bd122e`, the released line),
 (`d04739a`) holds the recovered pre-HA 2.12 tree; `feature/async-db-v2.11` (`0ad95b0`) is
 the historical v2.11 development branch.
 
-### 2.14.0 integration candidate — local only
+### 2.14.0 integration candidate — rollback correction, not deployed
 
 | Item | Value |
 |---|---|
 | Branch | `integration/dm-bl-009-reconcile-20261105`, created from `origin/main` `d5d73ed`; merging `fix/pruning-remediation-20261103` `b2c74fc` |
 | Payload | `release/v2.14.0-runtime.manifest`, 42 rows; 63 generated targets on an upgrade and 64 on a fresh install |
-| Bundle | `dm-v2.14.0-runtime.tar.gz`, 1 716 377 bytes, sha256 `530facc661e681b3461ba15100db6e8604228454814cb5125423fe4684d7f24d`; 60 bundle members |
+| Bundle | `dm-v2.14.0-runtime.tar.gz`, 1 725 593 bytes, sha256 `5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f`; 60 bundle members. The corrected artifact was first validated from a worktree based on `eac1160`, so its evidence records `CANDIDATE_SOURCE=worktree` |
 | Preserved from main | Scan-loop/state-change alert refactor, MAC-rotation policy, repeat reminders, identity email, configuration visibility, non-HA fail-open CARP behaviour and the deployment verifier |
 | Preserved from 2.13.x | HA/CARP role gating, O4 ageing and standby hygiene, installer pruning evidence, repair semantics, pinned inputs, deterministic bundling and rollback verification |
-| Local validation | The candidate builds reproducibly; focused reconciliation, installer/pruning, Python, PHP, JavaScript, catalogue and both language-engine suites passed locally. GitHub CI and the FreeBSD installer-jail scenarios have not yet run against this candidate |
-| Status | Local candidate only. Not published, deployed or accepted on a host. The deployed 2.13.3 digest, historical M5 jail evidence and live acceptance do not validate this changed tree |
-| Open item | DM-BL-009 remains **OPEN** until publication/CI and the deliberate `main` integration are completed; this local branch does not move `main` or `release/2.13` |
+| Local validation | The corrected candidate builds reproducibly; focused reconciliation, installer/pruning, Python, PHP, JavaScript, catalogue and both language-engine suites passed locally. All five FreeBSD installer-jail scenarios passed on 6 November: `check`, `install`, `repair`, `rollback` and `failclosed`. Rollback restored all 63 targets, the prune fixture, the record and 19 core-locale state/pristine files with zero conflicts or failures |
+| Status | The integration branch carries the corrected artifact, but it has not been deployed or accepted on a host. Publication and CI do not substitute for host acceptance. The deployed 2.13.3 digest, historical M5 jail evidence and live acceptance do not validate it |
+| Open item | DM-BL-009 remains **OPEN** until CI succeeds for the exact published integration commit and the deliberate `main` integration is completed. `FRESH=1`, live rollback and authenticated browser validation remain untested; the jail harness cannot close those gaps |
 
 ### Release 2.13.2 — the production/CARP field line
 
@@ -155,7 +155,32 @@ The 2.13.3 installer now has executable end-to-end coverage that does not touch 
 * The historical pre-deployment sandbox run did not touch `.23`, `.253` or `.252`; the later
   2.13.3 deployment touched `.23` only. `.253`/`.252` remain on 2.13.2.
 
-**Next step:** review the local 2.14.0 reconciliation branch, then authorise publication and CI.
-DM-BL-009 remains OPEN until that publication/CI and the deliberate integration into `main` are
-complete. The OPNsense 26.7.8_2 update on `.23` is complete and does not validate the changed
-integration candidate; `.23` remains on Device Monitor 2.13.3.
+**Next step:** verify publication CI against the exact integration commit, then decide the
+deliberate `main` integration path. DM-BL-009 remains OPEN until both are complete. The OPNsense
+26.7.8_2 update on `.23` is complete and does not validate the changed integration candidate;
+`.23` remains on Device Monitor 2.13.3.
+
+## 2.14.0 installer-jail validation (6 November 2026)
+
+Before publication, the disposable FreeBSD jail selected the corrected 2.14.0 worktree candidate:
+HEAD `eac1160557352d45648c4a25310b8daeaad440f6` plus the rollback correction, bundle
+`/root/dm-backups/dm-bl009-candidate-rollback-fix-20261106-083105/dm-v2.14.0-runtime.tar.gz`
+(1,725,593 bytes, sha256 `5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f`).
+Historical 2.13.3 evidence under `verification/installer-sandbox/evidence/` remains unchanged; the
+new transcripts are under `verification/installer-sandbox/evidence-2.14.0/`.
+
+All five scenarios passed. The upgrade verified 63 targets, pruned the one eligible legacy file,
+retained the deliberately modified fixture, preserved the database and configuration, and validated
+the About/Features endpoint binding. Rollback restored all targets, the prune fixture and the
+record, then restored 19 core-locale `.state` and pristine-catalogue files with
+`restored=19 removed=0 conflicts=0 failed=0`; only the expected installer backup directory
+remained. The fail-closed scenario refused a tampered helper before mutation.
+
+The earlier `530facc…` candidate and its failed rollback evidence are retained as superseded
+diagnostic records; they are not the current validation result. The artifact was validated before
+its publication commit, so the recorded source form is the worktree; CI status for the published
+commit is tracked in the milestone report. No deployment, service change, monitoring activation,
+production or `.252`/`.253` access occurred. `FRESH=1`, real configd/daemon lifecycle, live
+rollback and authenticated browser validation remain separate untested paths. Full evidence and
+the rollback correction are in `verification/INSTALLER-JAIL-2.14.0-20261106.md`. DM-BL-009 remains
+**OPEN**.

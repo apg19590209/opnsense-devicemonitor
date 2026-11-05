@@ -1,0 +1,13 @@
+VERIFY_OK=4
+NOTICE: merged the plugin keys into 10 core catalogue(s); uninstall.sh restores the pristine files
+pgrep: Invalid jail ID or name `dm-installer-sandbox'
+PRUNE_PLAN=LEGACY /usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po
+PRUNE_RETAINED modified /usr/local/opnsense/mvc/app/languages/en_US_devicemonitor.po
+CHECK_OK version=2.14.0 predecessor=2.13.3 files=63 core_locales=10 prunable=1 daemon_running=0 host=dm-installer-sandbox.internal legacy_prunable=1 retained=1
+RECORD_BACKED_UP=/var/db/devicemonitor/installed-manifest.txt
+BACKUP_READY=/var/backups/devicemonitor/install-v214.Kcp4W8
+PRUNE_PLANNED=1
+CORE_LOCALE_STATE=/var/backups/devicemonitor/core-locale
+UNCHANGED=32
+PRUNED=1
+INSTALL_OK version=2.14.0 files=63 core_locales=10 pruned=1 backup=/var/backups/devicemonitor/install-v214.Kcp4W8 daemon_restarted=0 unchanged=32 repaired=0

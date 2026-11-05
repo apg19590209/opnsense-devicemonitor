@@ -623,7 +623,7 @@ open, because the copy run proves the code and only the live cycle proves the de
 chronic `database is locked` scan failures (14,760 on `.252` since 06-10-2026, 16,130 on `.253`
 since 09-09-2026) and `/usr/local/sbin/sendmail: not found` from the targeted-Nmap email path.
 
-### DM-BL-009 — local `main` reconciliation exists; publication and `main` integration outstanding: **`OPEN`**
+### DM-BL-009 — local `main` reconciliation exists; corrected candidate publication and `main` integration outstanding: **`OPEN`**
 
 **Description:** after the canonical clone was refetched on 3 November 2026, the remediation branch
 was neither ahead of nor behind `origin/main` but **diverged** from it:
@@ -648,22 +648,41 @@ necessary (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md
 **Local reconciliation completed:** `integration/dm-bl-009-reconcile-20261105` was created from
 `origin/main` `d5d73ed` and merges `fix/pruning-remediation-20261103` `b2c74fc`. Both histories are
 preserved; the combined payload is a new candidate, `2.14.0`
-(`release/v2.14.0-runtime.manifest`, 42 rows; bundle sha256
-`530facc661e681b3461ba15100db6e8604228454814cb5125423fe4684d7f24d`, 1 716 377 bytes).
-It has not been published, deployed or accepted on a host. Local bundle, manifest, installer,
-pruning, reconciliation, Python, PHP, JavaScript and catalogue/language checks passed; GitHub CI and
-the FreeBSD installer-jail scenarios are still outstanding for this changed candidate. The 2.13.3
-live deployment and historical M5 jail results do not validate it.
+(`release/v2.14.0-runtime.manifest`, 42 rows). The integration history starts at `eac1160` and
+includes the rollback correction. Its immutable candidate is 1,725,593 bytes with sha256
+`5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f`; the validation evidence
+records `CANDIDATE_SOURCE=worktree` because it was collected before the publication commit. It has
+not been deployed or accepted on a host. Local bundle, manifest, installer, pruning,
+reconciliation, Python, PHP, JavaScript and catalogue/language checks passed. The 2.13.3 live
+deployment and historical M5 jail results do not validate it.
+
+**2.14.0 rollback correction:** the earlier `530facc…` candidate exposed a real rollback defect.
+After an injected post-prune `configd` failure it reported `ROLLBACK_STATUS=COMPLETE` and restored
+all 63 targets and the record, but all ten pre-existing
+`/var/backups/devicemonitor/core-locale/*.state` files retained the attempted 2.14.0 `installed=`
+digest. Those files are the ownership/restore record used by `uninstall.sh`, not disposable
+metadata. The corrected installer snapshots the whole state directory before mutation and restores
+its files, metadata and absence semantics during rollback; the tampered-backup path is refused
+before mutation. The release-input pin was regenerated through the established build script.
+
+On 6 November the full installer-jail set ran against the corrected candidate digest and all five
+scenarios passed. Rollback reported `ROLLBACK_STATUS=COMPLETE`, target restoration
+`restored=31 skipped=32 conflicts=0 failed=0`, prune restoration
+`restored=1 skipped=0 conflicts=0 failed=0`, and core-locale restoration
+`restored=19 removed=0 conflicts=0 failed=0`. The before/after snapshots differ only by the retained
+installer backup directory. The earlier candidate digest and failed transcripts remain preserved
+as superseded diagnostic evidence. `FRESH=1`, live rollback, real configd/daemon lifecycle and
+authenticated browser validation remain untested. DM-BL-009 remains **OPEN**.
 
 **Deployment status:** Device Monitor 2.13.3 remains installed on the `.23` testbed; that host was
 subsequently upgraded to OPNsense 26.7.8_2, and the post-update checker retained all 61 Device
 Monitor targets plus its database, configuration and record. The 2.13.3 live evidence does not
 validate the changed 2.14.0 tree, so DM-BL-009 remains **OPEN**.
 
-**Decision still required:** whether to publish the local integration branch and, after its CI is
-green, how to land it on `main`. No push, PR, merge to `main`, rebase, reset, release promotion or
-tag change was performed. The earlier repository-consolidation and release-integration evidence
-remains untouched.
+**Decision still required:** whether the published candidate and its exact-commit CI result are
+acceptable, then how to land the result on `main`. No PR, merge to `main`, rebase, reset, release
+promotion or tag change was performed in this task. The earlier repository-consolidation and
+release-integration evidence remains untouched.
 
 **Also open here: CI went red on the first run.** The validated M5 checkpoint is published at
 `a1f759e9b64a` and run #41609297193 failed at "Verify the bundle is deterministic across
@@ -672,8 +691,10 @@ compressor, and Decision 69 made the build-safety tar fixtures platform-neutral.
 validated M5 checkpoint `a1f759e9b64a` is green: run #41977736287, 64/64 steps, zero skips**,
 so review item H1b is closed.
 
-**Closes when:** the chosen `main` path is executed with the branch published and its CI green, or the
-branch is explicitly abandoned in favour of `main`/`release/2.13` with the remediation re-applied.
+**Closes when:** the corrected candidate is committed and published with CI green for that exact
+commit and the chosen `main` path is executed, or the branch is explicitly abandoned in favour of
+`main`/`release/2.13` with the remediation re-applied. The untested `FRESH=1` and live-rollback
+paths must remain open unless separately validated or explicitly accepted as residual risk.
 
 **Related, also open:** `/usr/local/cline-freebsd/src/cline` still sets `origin` to this repository
 while carrying an untracked Cline installation (Decision 65 §Preservation). Repointing it needs the

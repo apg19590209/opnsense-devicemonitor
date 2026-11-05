@@ -44,7 +44,7 @@ VERIFIER=release/verify-release-inputs.sh
 # ownership evidence and the catalogue merge helper. A tampered helper can therefore never
 # decide which files get removed.
 MANIFEST_SHA=c6f4efff490dc157721c825b5227c9fcfc479c55aaa07ea5ca1b6cc2354d4f38
-RELEASE_INPUTS_SHA=777dfc49a1cfa586df94d958c8d3b2b8e8cdc13b4a479f6218c57eb7c082254c
+RELEASE_INPUTS_SHA=e1df8693e1dcabf544fa5020c50aad358bd4c369eab286e969ed74e7b018c400
 VERIFIER_SHA=68b93f2a08f0808b67b6bd2ca76dca33a6cc5c159de4b61353b721eaefbb583d
 [ -f "$MANIFEST" ] && [ ! -L "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = "$MANIFEST_SHA" ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 42 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
@@ -105,6 +105,13 @@ cleanup() {
                 rollback_rc=1
                 echo "ROLLBACK_PRUNE_INCOMPLETE=$BACKUP" >&2
             fi
+        fi
+        if /bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" restore-core-locale-state \
+                --state "$CORE_LOCALE_STATE" --backup "$BACKUP"; then
+            :
+        else
+            rollback_rc=1
+            echo "ROLLBACK_CORE_LOCALE_STATE_INCOMPLETE=$BACKUP" >&2
         fi
         # The record this run might have written describes the new target set; put the
         # previous one back, or remove it when this was a fresh install.
@@ -283,6 +290,10 @@ fi
 # record is first-write-wins per locale: a later install must never treat its own merged output
 # as the pristine state. This runs only on a real install, never during --check.
 CORE_LOCALE_STATE=/var/backups/devicemonitor/core-locale
+/bin/sh "$SCRIPT_DIR/$PRUNE_HELPER" backup-core-locale-state \
+    --state "$CORE_LOCALE_STATE" --backup "$BACKUP" ||
+    { echo 'ABORT: core-locale state backup' >&2; exit 1; }
+MUTATING=1
 mkdir -p "$CORE_LOCALE_STATE"
 while read -r id old new mode source target; do
     case "$target" in
@@ -329,7 +340,6 @@ if [ "$NMAP_MISSING" = 1 ]; then
     pkg install -y nmap >&2 || { echo 'ABORT: missing dependency nmap; pkg install failed' >&2; exit 1; }
     command -v nmap >/dev/null 2>&1 || { echo 'ABORT: missing dependency nmap; pkg install did not provide nmap' >&2; exit 1; }
 fi
-MUTATING=1
 UNCHANGED=0
 REPAIRED=0
 while read -r id old new mode source target; do
