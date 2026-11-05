@@ -644,6 +644,12 @@ behaviour` — while the branch carries the 48 commits of the 2.13.3 remediation
 the branch, so integrating there is a **fast-forward with zero conflicts** — no merge and no rebase is
 necessary (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md` §2 and §4).
 
+**Deployment status:** Device Monitor 2.13.3 was installed successfully on the `.23` testbed on
+5 November 2026. The host was subsequently upgraded to OPNsense 26.7.8_2, and the post-update
+checker retained all 61 Device Monitor targets plus its database, configuration and record.
+This records the release/deployment state; it does not resolve the `main` divergence, so
+DM-BL-009 remains **OPEN**.
+
 **Decision required (for `main` only):** pick one path deliberately — merge `main` into the
 remediation branch, rebase the branch onto `main`, or land `release/2.13` first and reconcile
 `release/2.13 → main` as its own reviewed change. Not chosen yet: a wrong rewrite here would move
@@ -668,4 +674,48 @@ branch is explicitly abandoned in favour of `main`/`release/2.13` with the remed
 **Related, also open:** `/usr/local/cline-freebsd/src/cline` still sets `origin` to this repository
 while carrying an untracked Cline installation (Decision 65 §Preservation). Repointing it needs the
 intended Cline remote and explicit authorisation; it is preserved unchanged until then.
+
+## Deployment verification notes
+
+### 2.13.3 live upgrade lifecycle on `.23` — **`CLOSED`** (5 November 2026)
+
+**Description:** the M5 sandbox deliberately did not execute the daemon stop/wait/start branch or a
+real `service configd restart`. The gated 2.13.3 deployment on `.23` exercised both.
+
+**Evidence:** `INSTALL_OK version=2.13.3 files=61 core_locales=10 pruned=0
+backup=/var/backups/devicemonitor/install-v213.xKjyg1 daemon_restarted=1 unchanged=60
+repaired=6`. The old daemon PID 6557 exited; replacement PID 31483 started and remained running
+after 60 seconds. The log records `Daemon stopping`, `Daemon stopped`, `Daemon started` and
+`Monitoring DISABLED`. configd restarted from PID 71926 to 76711; `service configd status` and
+`configctl devicemonitor status` both passed.
+
+All 40 manifest rows and all 61 installed targets passed digest/mode/owner/group checks. The new
+record has 61 digest rows (21 `.mo` targets), while the database and configuration remained
+byte-identical and SQLite integrity passed. Six notification scripts were corrected to `0644
+root:wheel`; this was the installer's non-fatal `repaired=6` result, not a failure. Monitoring
+remained disabled.
+
+**Closed scope:** the live daemon stop/wait/start and real configd restart verification gaps.
+
+**Deliberately not established:** rollback was not invoked, so this deployment is not a live
+rollback test. `FRESH=1` remains untested. The installer backup
+`/var/backups/devicemonitor/install-v213.xKjyg1` and pre-install backup `/root/dm-pre-2133` remain
+in place. `.253` and `.252` were not touched and remain on 2.13.2; DM-BL-009 remains OPEN.
+
+### OPNsense 26.7.8_2 retained the 2.13.3 baseline on `.23` — **`CLOSED`** (5 November 2026)
+
+**Description:** the authorised testbed OS update completed through `configctl firmware update`
+and the required reboot. `POSTBOOT_RESULT=PASS` covered all 61 installed targets, the 61-digest
+record, unchanged Device Monitor database/configuration, SQLite integrity, configd, the daemon and
+`configctl devicemonitor status`; monitoring remained disabled. The post-update host is OPNsense
+`26.7.8_2` / FreeBSD `15.1-RELEASE-p6`.
+
+**Host tooling repair:** Codex initially could not load `libdbus-1.so.3` after the reboot.
+`dbus 1.16.2_4,1` was installed from the OPNsense repository; `codex-cli 0.165.0` then started
+normally. This did not change the Device Monitor payload or its configuration.
+
+**Retained warning:** the update log records one package-audit warning for `libgpg-error-1.61`.
+No Device Monitor or service check failed. Rollback was not invoked, `FRESH=1` remains untested,
+the OPNsense-generated configuration backup remains under `/conf/backup/`, and DM-BL-009 remains
+**OPEN**.
 

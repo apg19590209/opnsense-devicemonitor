@@ -55,7 +55,9 @@ host when beginning work.
 Current Device Monitor testbed/development host:
 
 - host `192.168.20.23`
-- OPNsense `26.7.4`
+- OPNsense `26.7.8_2` (FreeBSD 15.1-RELEASE-p6)
+- Device Monitor `2.13.3` (verified after the 5 November 2026 OS update; monitoring disabled)
+- host tooling: Codex CLI `0.165.0`; `dbus 1.16.2_4,1` supplies `libdbus-1.so.3` after the OS update
 - LAN interface `re0`, `192.168.20.23/24`
 - repository `/root/src/opnsense-devicemonitor-upstream`
 - production OPNsense remains `192.168.20.254`
