@@ -628,16 +628,17 @@ since 09-09-2026) and `/usr/local/sbin/sendmail: not found` from the targeted-Nm
 **Description:** after the canonical clone was refetched on 3 November 2026, the remediation branch
 is neither ahead of nor behind `origin/main` but **diverged** from it:
 
-    git rev-list --left-right --count origin/main...HEAD   ->   14   41
+    git rev-list --left-right --count origin/main...HEAD   ->   14   48
     merge base                                             ->   40cced8
 
-(Re-measured on 3 November 2026 with `3bdbb20` as the branch tip; the counts were 14 / 40 before the
-workspace-protection commit.)
+(Measured against the locally recorded `origin/main` at the validated M5 checkpoint
+`a1f759e9b64a1265a951260d45845df46435b1be`. This is a point-in-time evidence reference, not a
+claim that the branch tip remains at that commit; re-measure before any `main` reconciliation.)
 
 `origin/main` (`d5d73ed`) carries work the branch does not contain — `8ea1203 release: v2.12`,
 `c494485 merge: bring v2.12 (and the About-version fix) onto main`, `c9373b8 fix(ha)`,
 `a12ede8 feat(identity)`, `d268680 fix(devicemonitor)` and `d5d73ed test: pin fail-open non-HA
-behaviour` — while the branch carries the 41 commits of the 2.13.3 remediation and its records.
+behaviour` — while the branch carries the 48 commits of the 2.13.3 remediation and its records at that checkpoint.
 
 **This does not block the 2.13.3 release.** `origin/release/2.13` (`6bd122e`) is an **ancestor** of
 the branch, so integrating there is a **fast-forward with zero conflicts** — no merge and no rebase is
@@ -654,11 +655,12 @@ release integration (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-2
 unpublished branch and its backups (`/root/dm-consolidation-backup-20261103/`,
 `/root/dm-docs-backup-20261103/`) are untouched.
 
-**Also open here: CI went red on the first run.** The branch is published at `cedd411` and run
-#41609297193 failed at "Verify the bundle is deterministic across checkouts"; Decision 67 fixed
-the two causes, Decision 68 replaced the archive tail and compressor, and Decision 69 made the
-build-safety tar fixtures platform-neutral. **CI on `7c9d498` is green: run #41631353930,
-64/64 steps, zero skips**, so review item H1b is closed.
+**Also open here: CI went red on the first run.** The validated M5 checkpoint is published at
+`a1f759e9b64a` and run #41609297193 failed at "Verify the bundle is deterministic across
+checkouts"; Decision 67 fixed the two causes, Decision 68 replaced the archive tail and
+compressor, and Decision 69 made the build-safety tar fixtures platform-neutral. **CI at the
+validated M5 checkpoint `a1f759e9b64a` is green: run #41977736287, 64/64 steps, zero skips**,
+so review item H1b is closed.
 
 **Closes when:** the chosen `main` path is executed with the branch published and its CI green, or the
 branch is explicitly abandoned in favour of `main`/`release/2.13` with the remediation re-applied.

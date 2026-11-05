@@ -1,0 +1,30 @@
+{
+  "description": "Device Monitor workspace controls for Codex.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/local/bin/python3 \"$(/usr/local/bin/git rev-parse --show-toplevel)/.codex/hooks/session_start.py\"",
+            "timeout": 15,
+            "statusMessage": "Checking Device Monitor workspace"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/local/bin/python3 \"$(/usr/local/bin/git rev-parse --show-toplevel)/.codex/hooks/pre_tool_use_policy.py\"",
+            "timeout": 15,
+            "statusMessage": "Checking Device Monitor workspace policy"
+          }
+        ]
+      }
+    ]
+  }
+}

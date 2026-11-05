@@ -55,7 +55,7 @@ the restoration after failure:
 | The installer prunes only what it can prove it owns | `install` (`LEGACY`), `repair` (`RECORD`) | `PRUNED=2` / `PRUNED=1`; every pruned file digest-verified in `files/prune-*` |
 | The install record describes the installed set | `install`, `repair` | 61 digest rows, each matching the file on disk; `REPAIR` rebuilds it after the prune |
 | `--check` does not mutate | `check` | byte-identical snapshot before/after; no `install-v213.*` |
-| A failed install restores the node | `rollback` | `ROLLBACK_STATUS=COMPLETE`; replaced target, both pruned files and the record restored; pre-install state byte-identical |
+| A failed install restores the node | `rollback` | `ROLLBACK_STATUS=COMPLETE`; installed payload/state was restored identically (replaced target, both pruned files and the record). The expected rollback directory and pristine-catalogue archive remain. |
 | A tampered helper cannot execute | `failclosed` | `ABORT: release inputs` before any mutation |
 
 Design, boundaries and the full transcripts: `verification/REVIEW-R2-REMEDIATION-20261103.md`

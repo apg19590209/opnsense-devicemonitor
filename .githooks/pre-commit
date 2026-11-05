@@ -14,8 +14,11 @@ if [ -n "$toplevel" ] && [ "$toplevel" != "$EXPECTED_TOPLEVEL" ]; then
 	exit 1
 fi
 
+# `.codex/` is project-local Codex configuration in this checkout, not a
+# Cline-installation path. It is intentionally allowed; the remaining patterns
+# still block Cline installation artifacts.
 blocked=$(git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null | \
-	grep -E '^(apps|sdk|evals|node_modules|patches|\.cline|\.clinejournal|\.agents|\.changeset|\.claude|\.codex|\.greptile|\.husky|\.kanban)/|^(bun\.lock|biome\.json|tsconfig\.json|package\.json|package-lock\.json)$' || true)
+	grep -E '^(apps|sdk|evals|node_modules|patches|\.cline|\.clinejournal|\.agents|\.changeset|\.claude|\.greptile|\.husky|\.kanban)/|^(bun\.lock|biome\.json|tsconfig\.json|package\.json|package-lock\.json)$' || true)
 if [ -n "$blocked" ]; then
 	printf 'pre-commit: refusing to commit Cline-installation paths (Decision 65):\n%s\n' "$blocked" >&2
 	exit 1

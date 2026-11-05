@@ -28,11 +28,11 @@ Decision 60) → `2.13.3` (pruning remediation, Decision 62).
 
 | Item | Value |
 |---|---|
-| Branch | `fix/pruning-remediation-20261103` (untagged), tip `7c9d498`; see `git log` for later work |
+| Branch | `fix/pruning-remediation-20261103` (untagged); validated M5 checkpoint `a1f759e9b64a1265a951260d45845df46435b1be`. This is an evidence checkpoint, not a claim that this document tracks the current branch tip; see `git log` for later work |
 | Payload | `release/v2.13.3-runtime.manifest`, 40 rows, staged targets 61 (62 fresh) |
 | Bundle | `dm-v2.13.3-runtime.tar.gz`, 1 656 468 bytes, sha256 `7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2` — built at `/tmp`, **not published**; byte-identical on FreeBSD and Linux, any timezone, either tar implementation (Decision 63, 67, 68; `release/bundle-digest.txt`). The archive is deliberately uncompressed (stored deflate blocks) so the identity cannot depend on the host compressor; earlier identities `ce92a09a…` / 348 920, `b29e1166…` / 349 052 and `451a03f4…` / 348 932 are retired and recorded as superseded |
 | Deployed | nowhere. Deployment to `.23` is a separate gated phase; `.253` / `.252` are out of scope |
-| Gates | 44 suites referenced by `.github/workflows/ci.yml` (61 steps); CI on `7c9d498` is **green** — run `41631353930`, 64/64 steps, zero skips (H1b closed). Earlier runs #41609297193, #41611564118 and #41627234610 failed at the bundle step; Decisions 67-68 fixed the tar flags, the archive termination and the compressor |
+| Gates | 44 suites referenced by `.github/workflows/ci.yml` (61 steps); CI at the validated M5 checkpoint `a1f759e9b64a` is **green** — run `41977736287`, 64/64 steps, zero skips (H1b closed). Earlier failing runs #41609297193, #41611564118 and #41627234610 were fixed by Decisions 67-68 |
 | Installer coverage (M5) | `verification/installer-sandbox/run-installer-sandbox.sh` executes the unmodified installer from the published bundle inside a disposable FreeBSD jail: `check`, `install`, `repair`, `rollback`, `failclosed` — all PASS (`verification/REVIEW-R2-REMEDIATION-20261103.md` §Phase 3, evidence in `verification/installer-sandbox/evidence/`). Root/host-only; GitHub runners cannot create a FreeBSD jail, so it is not a CI suite |
 | New behaviour | Pruning requires proof of ownership (including for bare-path records), the record covers generated targets, every executed input is pinned, a repair install is idempotent and enforces mode/ownership, rollback reports COMPLETE/INCOMPLETE and restores the record (Decisions 62-64) |
 
@@ -46,9 +46,9 @@ Decision 60) → `2.13.3` (pruning remediation, Decision 62).
 | Tool guard | `.clinerules/hooks/PreToolUse` — blocks repository creation/cloning, worktree creation and writes into protected checkouts |
 | Commit guard | `.githooks/pre-commit` via `core.hooksPath=.githooks` — refuses commits outside the canonical top-level and any Cline-installation path |
 | Preserved | `/usr/local/cline-freebsd/src/cline` (second clone carrying the untracked Cline installation) and the worktrees `/root/o3-branch`, `/root/tb-branch` — unchanged |
-| Open decision | `main` vs this branch: **14 behind / 41 ahead**, merge base `40cced8` — DM-BL-009, still **OPEN** |
+| Open decision | `main` vs the validated M5 checkpoint: **14 behind / 48 ahead** against the locally recorded `origin/main`, merge base `40cced8` — DM-BL-009, still **OPEN**; re-measure before any reconciliation |
 | Integration path | `release/2.13` (`6bd122e`) is an **ancestor** of this branch, so integration into the release line is a plain **fast-forward with zero conflicts** — no merge and no rebase is necessary (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md`) |
-| CI readiness | the branch is published (`cedd411`) and CI on the tip is green (run `41631353930`, 64/64, zero skips); H1b is closed |
+| CI readiness | the validated M5 checkpoint `a1f759e9b64a` is published and green (run `41977736287`, 64/64, zero skips); H1b is closed |
 | Evidence | `verification/WORKSPACE-PROTECTION-20261103.md`, `verification/REPO-CONSOLIDATION-20261103.md` |
 
 Pre-deployment evidence from `.23` (running 2.13.2), taken from this branch with
