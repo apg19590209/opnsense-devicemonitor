@@ -133,15 +133,15 @@ SERVICE_PROBE_WORKERS = {
 # reported as a one-hour outage; a successful probe resets the count.
 SERVICE_MISS_THRESHOLD = 2
 
-# Stale-state ageing (O4). `unavailable` is a verdict about the run that
-# observed it, and nothing aged it, so an endpoint that was down once stayed
-# down forever. A row whose last successful verification is older than this is
-# no longer evidence of an outage and ages to `unknown`.
+# Stale-state ageing (O4, Decisions 52-56). `unavailable` is a verdict about the
+# run that observed it, so nothing aged it and an endpoint that was down once
+# stayed down forever. A row last observed longer ago than this is no longer
+# evidence of an outage and ages to `unknown`.
 SERVICE_UNKNOWN_AFTER_DAYS = 7
 
-# A host that has not been seen for this long has no service inventory worth
-# keeping, so its rows are retired. Keyed on `devices.last_seen`, never on
-# `devices.is_active`: a stopped hostwatch would otherwise empty the inventory.
+# A host not seen for this long has no service inventory worth keeping, so its
+# rows are retired. Keyed on `devices.last_seen`, never on `devices.is_active`:
+# a stopped hostwatch would otherwise empty the inventory.
 SERVICE_RETIRE_AFTER_DAYS = 30
 
 # RFC1918 space. A gateway interface inside these ranges is an internal segment
@@ -217,6 +217,9 @@ def load_config():
             'email_reminder_identity': int(DEFAULT_CONFIG.get('email_reminder_identity', 0) or 0),
             'email_reminder_new_device': int(DEFAULT_CONFIG.get('email_reminder_new_device', 0) or 0),
             'visibility_prime_interval': int(DEFAULT_CONFIG.get('visibility_prime_interval', 0) or 0),
+            'ha_carp_enabled': DEFAULT_CONFIG.get('ha_carp_enabled', '1') == '1',
+            'ha_role_override': DEFAULT_CONFIG.get('ha_role_override', 'auto'),
+            'ha_notify_failover': DEFAULT_CONFIG.get('ha_notify_failover', '0') == '1',
             'apiEmailUrl': PATHS.get('apiEmailUrl', ''),
             'apiWebhookUrl': PATHS.get('apiWebhookUrl', '')
         }
@@ -261,6 +264,9 @@ def load_config():
                 'email_reminder_identity': int(config.get('email_reminder_identity', DEFAULT_CONFIG.get('email_reminder_identity', 0)) or 0),
                 'email_reminder_new_device': int(config.get('email_reminder_new_device', DEFAULT_CONFIG.get('email_reminder_new_device', 0)) or 0),
                 'visibility_prime_interval': int(config.get('visibility_prime_interval', DEFAULT_CONFIG.get('visibility_prime_interval', 0)) or 0),
+                'ha_carp_enabled': config.get('ha_carp_enabled', DEFAULT_CONFIG.get('ha_carp_enabled', '1')) == '1',
+                'ha_role_override': config.get('ha_role_override', DEFAULT_CONFIG.get('ha_role_override', 'auto')),
+                'ha_notify_failover': config.get('ha_notify_failover', DEFAULT_CONFIG.get('ha_notify_failover', '0')) == '1',
                 'apiEmailUrl': PATHS.get('apiEmailUrl', ''),
                 'apiWebhookUrl': PATHS.get('apiWebhookUrl', '')
             }
@@ -297,6 +303,9 @@ def load_config():
             'nmap_host_timeout': 45,
             'nmap_version_detection': True,
             'nmap_max_per_cycle': 2,
+            'ha_carp_enabled': True,
+            'ha_role_override': 'auto',
+            'ha_notify_failover': False,
             'apiEmailUrl': PATHS.get('apiEmailUrl'),
             'apiWebhookUrl': PATHS.get('apiWebhookUrl')
         }
@@ -868,8 +877,8 @@ def _apply_db_schema():
         version TEXT,
         first_detected DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         last_verified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        miss_count INTEGER NOT NULL DEFAULT 0,
         last_checked DATETIME DEFAULT NULL,
+        miss_count INTEGER NOT NULL DEFAULT 0,
         UNIQUE(ip, service_type, port, protocol, detection_method, interface)
     )''')
 
@@ -885,10 +894,9 @@ def _apply_db_schema():
             'ADD COLUMN miss_count INTEGER NOT NULL DEFAULT 0'
         )
 
-    # Last observation of any kind (success or miss) for existing databases.
-    # Ageing used `last_verified` alone, which only moves on success, so a row
-    # that is still being probed and failing looked abandoned and was aged to
-    # `unknown` again on every pass (Decision 54).
+    # O4 decision 54: ageing keys on the last observation, not the last success,
+    # so a still-failing endpoint is never aged. Backfill keeps pre-existing rows
+    # ageable instead of giving them a fresh timestamp they never earned.
     if 'last_checked' not in service_columns:
         c.execute(
             'ALTER TABLE device_services '
@@ -3054,8 +3062,8 @@ def record_service_miss(
     ip,
     port=None,
     interface=None,
-    threshold=SERVICE_MISS_THRESHOLD,
-    checked_at=None
+    checked_at=None,
+    threshold=SERVICE_MISS_THRESHOLD
 ):
     """
     Record one failed observation of a service endpoint.
@@ -3125,6 +3133,27 @@ def record_service_miss(
         ''',
         [stamp, threshold] + params
     ).rowcount
+
+
+def age_stale_service_state_on_standby(observation_reason='CARP backup node'):
+    """Age this node's own service inventory while service observation is refused.
+
+    Decision 60. Discovery, alerts and failover notifications are all gated on
+    observation, because a standby does not carry the monitored traffic. Retirement
+    and ageing are not observation: they are hygiene of this node's own database.
+    Without them a long-lived standby accumulates `unavailable` verdicts that nobody
+    clears until a failover, which is exactly the state Decision 52 set out to remove.
+
+    Returns ``(aged, retired)``. The caller logs the counts; nothing is notified.
+    """
+    aged, retired = age_stale_service_state()
+
+    log(
+        '[SERVICES] Stale-state ageing (standby): '
+        f'aged {aged} row(s) to unknown, retired {retired} row(s)'
+    )
+
+    return aged, retired
 
 
 def age_stale_service_state(conn=None, now=None, dry_run=False):
@@ -3371,7 +3400,7 @@ def detect_carp_role(devices, ifconfig_text):
     return None
 
 
-def service_observation_allowed(networks, ifconfig_text=None):
+def service_observation_allowed(networks, ifconfig_text=None, config=None):
     """
     Return ``(allowed, role, reason)`` for service observation on this node.
 
@@ -3380,9 +3409,31 @@ def service_observation_allowed(networks, ifconfig_text=None):
     without the gate - invent them. Neither is a useful answer from a standby, so
     observation is refused. A node with no CARP is unaffected.
 
+    Two settings from the HA / CARP tab modify the verdict:
+
+    ``ha_role_override`` pins the role instead of reading it from ifconfig, which
+    is the only way to steer a node whose monitored interfaces carry no CARP
+    address of their own. ``ha_carp_enabled`` turns the deferral off entirely, so
+    every node observes; the role is still reported because it is logged and may
+    drive a failover notification.
+
     ``ifconfig_text`` is injectable so the decision can be tested without a CARP
     pair; when omitted the live output is read.
     """
+    settings = config or {}
+
+    override = str(settings.get('ha_role_override') or 'auto').strip().lower()
+
+    if override not in ('auto', 'master', 'backup'):
+        override = 'auto'
+
+    aware = settings.get('ha_carp_enabled', True)
+
+    if isinstance(aware, str):
+        aware = aware == '1'
+
+    forced = {'master': 'MASTER', 'backup': 'BACKUP'}.get(override)
+
     devices = [
         str(network.get('device') or '').strip()
         for network in (networks or [])
@@ -3390,7 +3441,9 @@ def service_observation_allowed(networks, ifconfig_text=None):
     devices = [device for device in devices if device]
 
     if not devices:
-        return True, None, ''
+        # Nothing monitored means nothing to observe; the override is still
+        # reported so the UI and the transition log agree.
+        return True, forced, ''
 
     if ifconfig_text is None:
         try:
@@ -3404,12 +3457,14 @@ def service_observation_allowed(networks, ifconfig_text=None):
             ifconfig_text = getattr(result, 'stdout', '') or ''
         except (OSError, subprocess.TimeoutExpired) as e:
             # An unreadable ifconfig must not silently disable observation.
-            return True, None, f'ifconfig unavailable: {e}'
+            if forced == 'BACKUP' and aware:
+                return False, forced, 'role override: backup'
+            return True, forced, f'ifconfig unavailable: {e}'
 
-    role = detect_carp_role(devices, ifconfig_text)
+    role = forced or detect_carp_role(devices, ifconfig_text)
 
-    if role == 'BACKUP':
-        return False, role, 'CARP backup node'
+    if role == 'BACKUP' and aware:
+        return False, role, ('role override: backup' if forced else 'CARP backup node')
 
     return True, role, ''
 
@@ -3443,6 +3498,65 @@ def record_carp_role(role):
 
     except sqlite3.Error:
         return True
+
+
+def read_carp_role():
+    """Return the persisted CARP role, or '' when nothing has been recorded."""
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            row = conn.execute(
+                'SELECT carp_role FROM service_discovery_state WHERE id = 1'
+            ).fetchone()
+
+            return str(row[0] or '') if row else ''
+
+    except sqlite3.Error:
+        return ''
+
+
+def send_failover_notification(role, previous, allowed, reason):
+    """
+    Report one CARP role transition through the configured channels.
+
+    Called only when ``record_carp_role`` reports a transition and the HA / CARP
+    tab has failover notification enabled, so a node that flaps does not produce
+    a message per scan. Delivery happens in the helper, which owns the channel
+    guards; a failure here is logged and never aborts the scan.
+    """
+    helper = (
+        '/usr/local/opnsense/scripts/OPNsense/'
+        'DeviceMonitor/notify_failover.php'
+    )
+
+    payload = {
+        'hostname': socket.gethostname(),
+        'role': str(role or 'none'),
+        'previous': str(previous or 'none'),
+        'observing': bool(allowed),
+        'reason': str(reason or ''),
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+    }
+
+    try:
+        result = subprocess.run(
+            ['/usr/local/bin/php', helper],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or '').strip()[:200]
+            log(f'[HA] failover notification failed: {detail}')
+            return False
+
+        return True
+
+    except (OSError, subprocess.SubprocessError) as e:
+        log(f'[HA] failover notification error: {e}')
+        return False
 
 
 def service_visibility_summary(conn, networks):
@@ -5591,6 +5705,8 @@ def discover_phase3_services(networks):
                 or now_text
             )
 
+            # Decision 56: evidence older than the ageing window is history, not
+            # inventory; re-inventorying it would be deleted again by retirement.
             if not nmap_evidence_is_current(evidence_time):
                 stale_nmap_evidence += 1
                 continue
@@ -6005,7 +6121,10 @@ def discover_infrastructure_services(networks):
     """Run all supported infrastructure-service discovery within ``networks``."""
     services = []
 
-    allowed, _role, reason = service_observation_allowed(networks)
+    allowed, _role, reason = service_observation_allowed(
+        networks,
+        config=load_config(),
+    )
 
     if not allowed:
         log(f'[SERVICES] {reason}; service discovery skipped on this node')
@@ -6118,8 +6237,8 @@ def run_scheduled_service_discovery(interval_seconds=3600, networks=None):
         services = discover_infrastructure_services(networks)
 
         # O4: age stale verdicts and retire the inventory of hosts that are no
-        # longer seen. Runs on the same hourly gate as discovery, so a row can
-        # never age without a discovery run having been attempted first.
+        # longer seen. On the same hourly gate as discovery, so a row can never
+        # age without a discovery run having been attempted first.
         aged, retired = age_stale_service_state()
 
         log(
@@ -8836,7 +8955,10 @@ def prime_selected_interface_visibility(networks, config=None):
     # A CARP BACKUP node does not carry the monitored traffic: the MASTER
     # already wakes the quiet devices on these segments. Sweeping from the
     # standby only doubles the ICMP probes the endpoints see.
-    allowed, carp_role, _ = service_observation_allowed(networks)
+    allowed, carp_role, _ = service_observation_allowed(
+        networks,
+        config=config,
+    )
     if not allowed:
         log(
             "[DISCOVERY] Visibility priming skipped: CARP "
@@ -9273,7 +9395,10 @@ def full_scan():
     # dispatches alerts. The standby keeps detecting and recording state, so a
     # failover is immediate, but it stays quiet so the operator is not told the
     # same thing twice.
-    allowed, carp_role, observation_reason = service_observation_allowed(networks)
+    allowed, carp_role, observation_reason = service_observation_allowed(
+        networks,
+        config=config,
+    )
 
     identity_alerts = new_high_identity_events + identity_reminders
     delivered = False
@@ -9305,11 +9430,25 @@ def full_scan():
     # A CARP BACKUP node does not carry the monitored traffic, so it must not
     # reach liveness verdicts or alert on them. The role is persisted so the
     # transition is logged once instead of on every scan.
+    # Read before the write: record_carp_role reports True both for a genuine
+    # transition and for the first observation after install, and only the former
+    # should reach the notification channels.
+    previous_carp_role = read_carp_role()
     if record_carp_role(carp_role):
         log(
             f'[SERVICES] CARP role: {carp_role or "none"} '
             f'({"observing" if allowed else observation_reason})'
         )
+
+        # One message per transition, never per scan: record_carp_role only
+        # returns True when the persisted role actually changed.
+        if config.get('ha_notify_failover') and previous_carp_role:
+            send_failover_notification(
+                carp_role,
+                previous_carp_role,
+                allowed,
+                observation_reason,
+            )
 
     if allowed:
         run_scheduled_service_discovery(networks=networks)
@@ -9318,6 +9457,9 @@ def full_scan():
         # failed delivery retries and cursor housekeeping should not wait an hour.
         process_service_alerts(config, networks)
     else:
+        # Decision 60: retirement is node-local hygiene, not observation, so a
+        # standby ages its own inventory even though it alerts on nothing.
+        age_stale_service_state_on_standby(observation_reason)
         log(
             f'[SERVICES] {observation_reason}; '
             'skipping service discovery and service alerts on this node'
@@ -9916,7 +10058,6 @@ Examples:
             'retired': retired
         }))
         return 0
-
     if args.discover_services:
         config = load_config()
         networks, error = resolve_monitored_networks(config)
@@ -9924,7 +10065,10 @@ Examples:
             print(f"ERROR: {error}", file=sys.stderr)
             return 2
 
-        allowed, role, reason = service_observation_allowed(networks)
+        allowed, role, reason = service_observation_allowed(
+            networks,
+            config=config,
+        )
 
         if not allowed:
             print(json.dumps({

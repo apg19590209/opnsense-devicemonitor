@@ -7,9 +7,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Device Monitor 2.10\n"
-"POT-Creation-Date: 2026-04-10 00:00+0000\n"
-"PO-Revision-Date: 2026-04-10 00:00+0000\n"
+"Project-Id-Version: Device Monitor 2.14.0\n"
+"POT-Creation-Date: 2026-11-02 03:16+0000\n"
+"PO-Revision-Date: 2026-11-02 03:15+0000\n"
 "Last-Translator: Device Monitor contributors\n"
 "Language-Team: English\n"
 "Language: en_US\n"
@@ -1585,6 +1585,174 @@ msgstr "Triggers a webhook payload dispatch immediately upon detection of an exi
 msgid "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."
 msgstr "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."
 
+# ============================================
+# [settings.volt] Settings subtab: HA / CARP and webhook identity alerts
+# ============================================
+
+#: settings.volt
+msgid "A CARP standby does not carry the monitored traffic, so hostwatch there under-reports and every liveness verdict would be wrong. With this enabled a standby node skips infrastructure-service discovery and service alerts instead of inventing outages."
+msgstr "A CARP standby does not carry the monitored traffic, so hostwatch there under-reports and every liveness verdict would be wrong. With this enabled a standby node skips infrastructure-service discovery and service alerts instead of inventing outages."
+
+#: settings.volt
+msgid "A backup override suppresses service discovery even when CARP awareness is enabled."
+msgstr "A backup override suppresses service discovery even when CARP awareness is enabled."
+
+#: settings.volt
+msgid "Always act as backup (never observe)"
+msgstr "Always act as backup (never observe)"
+
+#: settings.volt
+msgid "Always act as master"
+msgstr "Always act as master"
+
+#: settings.volt
+msgid "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
+msgstr "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
+
+#: settings.volt
+msgid "Automatic (from CARP state)"
+msgstr "Automatic (from CARP state)"
+
+#: settings.volt
+msgid "Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance."
+msgstr "Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance."
+
+#: settings.volt
+msgid "CARP awareness"
+msgstr "CARP awareness"
+
+#: settings.volt
+msgid "Defer service observation to the CARP master"
+msgstr "Defer service observation to the CARP master"
+
+#: settings.volt
+msgid "Delivery uses whichever channels are enabled on the Email and Webhook tabs; a disabled channel is skipped."
+msgstr "Delivery uses whichever channels are enabled on the Email and Webhook tabs; a disabled channel is skipped."
+
+#: settings.volt
+msgid "Detected role"
+msgstr "Detected role"
+
+#: settings.volt
+msgid "Effective mode"
+msgstr "Effective mode"
+
+#: settings.volt
+msgid "Enable sidecar catalogue translations"
+msgstr "Enable sidecar catalogue translations"
+
+#: settings.volt
+msgid "Failover notification"
+msgstr "Failover notification"
+
+#: settings.volt
+msgid "Forces the interface to use the dedicated translation file of this plugin. If disabled, labels may default to English."
+msgstr "Forces the interface to use the dedicated translation file of this plugin. If disabled, labels may default to English."
+
+#: settings.volt
+msgid "HA / CARP"
+msgstr "HA / CARP"
+
+#: settings.volt
+msgid "Live CARP status"
+msgstr "Live CARP status"
+
+#: settings.volt
+msgid "No CARP virtual IP defined on this firewall."
+msgstr "No CARP virtual IP defined on this firewall."
+
+#: settings.volt
+msgid "Notify when this node changes CARP role"
+msgstr "Notify when this node changes CARP role"
+
+#: settings.volt
+msgid "Plugin Options"
+msgstr "Plugin Options"
+
+#: settings.volt
+msgid "Read-only view of this node: the role ifconfig reports for the monitored interfaces, and the CARP virtual IPs defined on this firewall. Nothing here is saved."
+msgstr "Read-only view of this node: the role ifconfig reports for the monitored interfaces, and the CARP virtual IPs defined on this firewall. Nothing here is saved."
+
+#: settings.volt
+msgid "Reports a MASTER/BACKUP transition once, through the configured email and webhook channels. Without this the transition is only written to the Device Monitor log."
+msgstr "Reports a MASTER/BACKUP transition once, through the configured email and webhook channels. Without this the transition is only written to the Device Monitor log."
+
+#: settings.volt
+msgid "Role override"
+msgstr "Role override"
+
+#: settings.volt
+msgid "Send Test Webhook"
+msgstr "Send Test Webhook"
+
+#: settings.volt
+msgid "Service observation"
+msgstr "Service observation"
+
+#: settings.volt
+msgid "State"
+msgstr "State"
+
+#: settings.volt
+msgid "VHID"
+msgstr "VHID"
+
+#: settings.volt
+msgid "Virtual IP"
+msgstr "Virtual IP"
+
+# ============================================
+# [settings.volt] HA / CARP live status values
+# ============================================
+
+#: settings.volt
+msgid "observing"
+msgstr "observing"
+
+#: settings.volt
+msgid "suppressed"
+msgstr "suppressed"
+
+#: settings.volt
+msgid "unknown"
+msgstr "unknown"
+
 #: infrastructureservices.volt
 msgid "Unknown"
 msgstr "Unknown"
+
+#: settings.volt
+msgid "Also email identity conflict alerts"
+msgstr "Also email identity conflict alerts"
+
+#: settings.volt
+msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
+msgstr "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
+
+#: settings.volt
+msgid "Features and Enhancements"
+msgstr "Features and Enhancements"
+
+#: settings.volt
+msgid "Identity conflicts"
+msgstr "Identity conflicts"
+
+#: settings.volt
+msgid "MAC change announcements"
+msgstr "MAC change announcements"
+
+#: settings.volt
+msgid "Repeat unchanged alerts"
+msgstr "Repeat unchanged alerts"
+
+#: settings.volt
+msgid "Scan results"
+msgstr "Scan results"
+
+#: settings.volt
+msgid "Service outages"
+msgstr "Service outages"
+
+#: settings.volt
+msgid "minutes"
+msgstr "minutes"

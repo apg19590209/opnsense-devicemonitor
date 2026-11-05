@@ -282,10 +282,14 @@ def run_full_scan(ifconfig_text, device="vtnet0"):
 
         real_gate = module.service_observation_allowed
 
-        def gate(networks, network_text=None):
+        def gate(networks, network_text=None, config=None):
             # full_scan() calls the gate without ifconfig text; the synthetic
             # output is injected here so the real decision logic still runs.
-            verdict = real_gate(networks, ifconfig_text)
+            verdict = real_gate(
+                networks,
+                ifconfig_text,
+                config=config,
+            )
             calls["gate"].append(verdict)
             return verdict
 

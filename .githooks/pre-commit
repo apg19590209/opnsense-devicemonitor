@@ -1,6 +1,29 @@
 #!/bin/sh
 set -eu
 
+# Workspace guard (Decision 65, verification/WORKSPACE-PROTECTION-20261103.md).
+# Active in this clone through: git config core.hooksPath .githooks
+# It refuses to commit from any checkout other than the canonical workspace, and refuses
+# any commit carrying Cline-installation paths into the Device Monitor tree.
+EXPECTED_TOPLEVEL="/root/src/opnsense-devicemonitor-upstream"
+
+toplevel=$(git rev-parse --show-toplevel 2>/dev/null || true)
+if [ -n "$toplevel" ] && [ "$toplevel" != "$EXPECTED_TOPLEVEL" ]; then
+	printf 'pre-commit: refusing to commit from %s\n' "$toplevel" >&2
+	printf 'pre-commit: Device Monitor commits belong in %s (Decision 65)\n' "$EXPECTED_TOPLEVEL" >&2
+	exit 1
+fi
+
+# `.codex/` is project-local Codex configuration in this checkout, not a
+# Cline-installation path. It is intentionally allowed; the remaining patterns
+# still block Cline installation artifacts.
+blocked=$(git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null | \
+	grep -E '^(apps|sdk|evals|node_modules|patches|\.cline|\.clinejournal|\.agents|\.changeset|\.claude|\.greptile|\.husky|\.kanban)/|^(bun\.lock|biome\.json|tsconfig\.json|package\.json|package-lock\.json)$' || true)
+if [ -n "$blocked" ]; then
+	printf 'pre-commit: refusing to commit Cline-installation paths (Decision 65):\n%s\n' "$blocked" >&2
+	exit 1
+fi
+
 # Remove Python bytecode/cache files before every commit.
 find . -path './.git' -prune -o -type d -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
 find . -path './.git' -prune -o -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true

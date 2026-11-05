@@ -1,0 +1,23 @@
+VERIFY_OK=4
+NOTICE: merged the plugin keys into 10 core catalogue(s); uninstall.sh restores the pristine files
+PRUNE_PLAN=LEGACY /usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po
+PRUNE_PLAN=LEGACY /usr/local/opnsense/mvc/app/languages/en_US_devicemonitor.po
+CHECK_OK version=2.13.3 predecessor=2.13.2 files=61 core_locales=10 prunable=2 daemon_running=0 host=dm-m5-sandbox.internal legacy_prunable=2 retained=0
+RECORD_BACKED_UP=/var/db/devicemonitor/installed-manifest.txt
+BACKUP_READY=/var/backups/devicemonitor/install-v213.btu4ke
+PRUNE_PLANNED=2
+CORE_LOCALE_STATE=/var/backups/devicemonitor/core-locale
+UNCHANGED=60
+PRUNED=2
+SANDBOX: injected failure in service configd restart
+ROLLBACK_START=/var/backups/devicemonitor/install-v213.btu4ke
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
+ROLLBACK_SUMMARY=restored=1 skipped=60 conflicts=0 failed=0
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/cs_CZ_devicemonitor.po
+ROLLBACK_RESTORED=/usr/local/opnsense/mvc/app/languages/en_US_devicemonitor.po
+ROLLBACK_SUMMARY=restored=2 skipped=0 conflicts=0 failed=0
+RECORD_RESTORED=/var/db/devicemonitor/installed-manifest.txt
+ROLLBACK_STATUS=COMPLETE
+SANDBOX: injected failure in service configd restart
+ROLLBACK_CONFIGD_RESTART_FAILED
+ROLLBACK_ATTEMPTED=/var/backups/devicemonitor/install-v213.btu4ke

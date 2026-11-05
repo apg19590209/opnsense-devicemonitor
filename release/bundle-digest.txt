@@ -1,0 +1,41 @@
+# Canonical bundle identity for the Device Monitor payload (Decision 63).
+#
+# Regenerate with: sh release/build-bundle.sh  — then update this file. The CI step
+# "Verify the bundle is deterministic across checkouts" recomputes the archive from a clean
+# checkout and fails when these values do not match, so this file cannot drift silently.
+#
+# Superseded identities:
+#   7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2  1656468 bytes
+#       (the validated 2.13.3 payload; the combined 2.14.0 candidate adds the
+#        mainline identity-email and verification helpers to the same installer)
+#   5ae5673186a0fcf1447e85cab6340374c89b1f658bdd95828a85d68a29232d8a  1704601 bytes
+#   9791df7e71c78c3ae27107cef4ca1902e38241574957349181321615ffed0200  1716377 bytes
+#   4791c0410a22236afd677e37b63c0632053d60b46a010bfb77d5cdaf7bc348cd  1716377 bytes
+#       (earlier local 2.14.0 reconciliation builds, superseded after the final locale
+#        catalogue cleanup, manifest refresh and installer input pins; never published
+#        or deployed)
+#   ce92a09a2d0ffd79bea33ca3087137264c5ef1ff992bb983b3d7e4dbf738befd  348920 bytes
+#       (Decision 67: bsdtar + BSD gzip on FreeBSD. Not cross-platform — GNU tar padded the
+#        archive to its 10 KiB record boundary and GNU gzip compressed it differently, so the
+#        same commit produced the b29e1166... variant on the runner. Retired by Decision 68.)
+#   b29e1166a75a823fda1a8a2997aac4131d14681e9acb0e7cd38ead79e5615550  349052 bytes
+#       (run #41627234610: GNU tar 1.35 + GNU gzip on ubuntu-latest. Recorded as the measured
+#        proof of the two remaining dependencies; never published.)
+#   451a03f4bc04542ea36c36ce7df42faaf5c3e044e574ea991e74d4f5a4570ae8  348932 bytes
+#       (Phase 2 final, but timezone-dependent: the member mtime came from `touch -t`, which
+#        reads the local timezone, so an AEDT host produced this identity while TZ=UTC0 gave
+#        e6596665.... Retired by Decision 67 when the build was made timezone-independent and
+#        tar-implementation-independent.)
+#   e6596665293a4d15af207bec071f1b8dda616947ec8891b3b95df897f54728e0  348939 bytes
+#       (the UTC-host variant of the same tree; recorded because the first GitHub run is what
+#        exposed the dependence. Never published.)
+#   fc53aaa1fed1c42fe0a8aee8fe294aeb3ed81f8659a24f9dd0f79e709c3836ba  348774 bytes
+#       (Phase 2 before the stat(1) portability fix: the repair path only worked on FreeBSD)
+#   859c2638663260686630ed05408ab9055877988af56a84b81a2caa34688d6e48  346870 bytes
+#       (Phase 1: deterministic packaging, before the Phase 2 pruning and repair changes)
+#   3131b8b481a5a6723d1733b214c118921def77e003863fcf4816e0b278caf9cb  346013 bytes
+#       (before archival metadata was normalised; reproducible only inside the original
+#        working copy, because member mtimes came from that checkout)
+version 2.14.0
+bytes 1716377
+sha256 530facc661e681b3461ba15100db6e8604228454814cb5125423fe4684d7f24d

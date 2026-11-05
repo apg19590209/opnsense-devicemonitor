@@ -2199,3 +2199,946 @@ accepted, and an interface whose address changes after selection (DHCP) is refus
 existing static-IPv4 rule at save time. The PHP and Python rules duplicate the same logic by
 necessity (two runtimes); both are pinned by their own assets, and a drift would surface as a
 save-time acceptance followed by a daemon refusal in the log.
+
+## 52. A stale `unavailable` verdict ages to `unknown`, and an unseen host loses its inventory
+
+### Decision
+
+`age_stale_service_state()` applies two independent windows. It runs on every
+scheduled discovery pass (`run_scheduled_service_discovery()`, hourly gate) and on
+demand through `scan_network.py --age-services [--dry-run]`:
+
+- an `unavailable` row whose `last_verified` is older than
+  `SERVICE_UNKNOWN_AFTER_DAYS` (7) is rewritten to `unknown`, and its
+  `miss_count` is cleared. It is neither known up nor known down, which is what
+  the evidence supports;
+- rows whose address belongs to a `devices` row whose `last_seen` is older than
+  `SERVICE_RETIRE_AFTER_DAYS` (30) are deleted, together with any held alert in
+  `service_alert_pending`. A host that has not been seen for a month has no
+  inventory worth keeping.
+
+Retirement is keyed on `devices.last_seen`, never on `devices.is_active`, and the
+whole retirement pass is refused when no device at all is fresh inside the window.
+An address with no `devices` row (gateway, firewall, untracked server) is never
+retired.
+
+### Reason
+
+`record_service_miss()` flips a row to `unavailable` on the second consecutive
+miss and nothing moved it back, so the run recorded 24 service rows whose hosts
+had not been seen since 2026-09-21 still presenting as down. That is a permanent
+verdict manufactured from one bad hour. `unknown` states exactly what is known,
+and deleting the inventory of a host that no longer answers keeps the Devices view
+honest instead of accumulating phantom endpoints.
+
+`is_active` is deliberately not consulted for retirement: it is hostwatch's
+opinion, and a stopped hostwatch would mark every host inactive (Decision 48's
+residual risk). `last_seen` is a timestamp the daemon writes, so a dead hostwatch
+looks exactly like a quiet network — which is why the pass also refuses outright
+when no host is fresh.
+
+Clearing `miss_count` on ageing keeps Decision 49 intact: the aged streak
+describes the period that was just discarded, so an endpoint that is still down
+must accumulate two fresh misses again instead of re-flipping to `unavailable`
+(and possibly mailing an outage) on the first new failure.
+
+### Effects and guards
+
+- Deliberate behaviour change: a service that is genuinely down for more than
+  7 days stops being reported as down. That is the intent — an unobserved
+  endpoint is not an observed outage. The ageing UPDATE moves `status` through
+  `trg_device_services_status_activity`, so a MAC-bearing row records one
+  history-only `SERVICE_CHANGED` event, an event type
+  `select_service_alert_events()` never selects for email.
+- Retirement is a `DELETE`, which does not fire the `AFTER UPDATE OF status`
+  trigger, so it leaves no history row. Held alerts for the retired endpoints are
+  removed in the same transaction, so `collect_expired_service_alert_holds()`
+  cannot release an outage for an endpoint that no longer exists.
+- The Devices view gained `unknown`: filter option, `label-default` badge with the
+  literal `Unknown`, and a header counter, so available + unavailable + stale +
+  unknown still equals the total. The filter and counter need the `Unknown` msgid,
+  now present in all eleven plugin catalogues (translations taken from the core
+  catalogues where one exists).
+- Dry run is the default review path: `--age-services --dry-run` reports the same
+  counts without writing, and `--dry-run` without `--age-services` is a parser
+  error rather than a silent normal scan.
+- `tests/test_service_ageing.py` (12 cases) pins the window boundaries exactly
+  (a row at 7 days stays `unavailable`, one second more ages), other statuses
+  untouched, the counter reset, fresh-host rows kept, no-`devices`-row rows kept,
+  the refusal when no host is fresh, the dry-run round trip, held-alert removal,
+  the activity-event shape, the scheduler wiring and the CLI JSON.
+- Release identity: `scan_network.py` row 34 -> `843c15f7…`,
+  `infrastructureservices.volt` -> `6034d980…`, `en_US` catalogue -> `709fb328…`,
+  `cs_CZ` catalogue -> `aee43039…`, manifest SHA256 -> `0914e9c9…`,
+  `install-unattended.sh:36` re-pinned. Row count 39, target count 60/61
+  unchanged.
+
+### Verified
+
+`python3 tests/test_service_ageing.py` -> `SERVICE_AGEING=PASS` (12 cases);
+`python3 tests/test_service_miss_hysteresis.py` -> `SERVICE_MISS_HYSTERESIS=PASS`;
+`python3 tests/test_language_acceptance.py --engine interpolate --views
+src/opnsense/mvc/app/views/OPNsense/DeviceMonitor --installed-po
+/tmp/dm-accept-stage/plugin --locale-dir /tmp/dm-accept-stage/locale` ->
+`LANGUAGE_ACCEPTANCE=PASS failures=0` against a catalogue tree staged with the
+installer's own merge helper (`MERGED` for all ten non-`en_US` locales);
+`python3 tests/test_translated_javascript.py` -> `TRANSLATED_JAVASCRIPT=PASS` for
+all eleven locales; `node tests/test_infrastructure_stale.js` PASS;
+`V211_RELEASE_MANIFEST=PASS`; `msgfmt --check --check-format` clean on all eleven
+`.po` files; `sh -n install-unattended.sh` clean.
+
+### Residual risk
+
+Ageing is wall-clock based and has no notion of "this outage is still being
+observed": an endpoint that stays down for longer than a week becomes `unknown`,
+so a long outage is no longer distinguishable from a host that went away. The
+retirement window is the only protection against deleting an idle segment, and it
+is 30 days by default. A host that returns after retirement is rediscovered by the
+next discovery run, but its previous service history is gone. Nothing in this
+change has been run against the testbed yet: the drift the language acceptance
+reports on the installed `infrastructureservices.volt` and the deployed catalogues
+is exactly the pre-deployment lag, and it clears with the next
+`install-unattended.sh` run.
+
+## 53. A verified service advances its device's `last_seen`, so retirement cannot delete live inventory
+
+### Decision
+
+`upsert_device_service()` now calls `touch_device_last_seen()` after a successful
+verification: when the recorded status is `available` and the detection method is not
+`authoritative`, an **existing** `devices` row for that address has its `last_seen`
+advanced to the verification timestamp. The update is forward-only (`WHERE last_seen <
+stamp`), never inserts a device, and never runs for `authoritative` rows, because a
+configured service is not an answer from the host.
+
+### Reason
+
+The first scheduled cycle after Decision 52 went live produced
+
+```
+[SERVICES] Scheduled discovery completed: 71 verified service(s)
+[SERVICES] Stale-state ageing: aged 0 row(s) to unknown, retired 12 row(s)
+```
+
+while the inventory total stayed at 107 and no service row remained attached to a stale
+host: discovery inserted 12 rows for endpoints whose `devices.last_seen` was more than 30
+days old, and the retirement step deleted them in the same run. Those services never
+reached the Devices or Changes views even though they answer every hour, and the work
+repeats every cycle. The cause was the asymmetry Decision 52 encoded: `last_seen` is
+maintained by hostwatch alone, while service discovery independently proves the endpoint
+is present.
+
+### Effects and guards
+
+- The retirement window keeps its meaning: a host nobody has seen for 30 days still loses
+  its inventory. What changes is that a responding endpoint counts as having been seen.
+- `authoritative` rows (DNS/DHCP configuration, WireGuard peers) do not refresh `last_seen`;
+  they say a service is configured, not that its host answered.
+- The refresh cannot create a device row, so gateway, firewall and untracked endpoints keep
+  the existing "no device record means never retire" rule, and `last_seen` never moves
+  backwards when an older verification is replayed.
+- `tests/test_service_ageing.py` gained three cases: a verified service refreshes a stale
+  device and survives ageing (`AGE_VERIFIED_SERVICE_REFRESHES_DEVICE`), an `authoritative`
+  row does not (`AGE_AUTHORITATIVE_DOES_NOT_REFRESH`), and the refresh is forward-only and
+  never invents a device (`AGE_REFRESH_IS_FORWARD_ONLY`).
+
+### Residual risk
+
+`devices.last_seen` now has two writers, so a reader can no longer assume it means "hostwatch
+saw this host". Anything that treats `last_seen` as an online/offline signal (the Devices
+list, `devices_seen_last_24h` and the host-active gate) will count a host as seen while a
+service on it answers, which is the intent here but is a semantic widening worth remembering.
+A device that answers one probe and then disappears still looks present for the full
+retirement window, because the probe evidence is timestamped like any other sighting.
+
+## 54. Ageing keys on the last observation, not the last success
+
+### Decision
+
+`device_services` gains `last_checked DATETIME`. Both a successful verification
+(`upsert_device_service()`, which sets it to the verification time) and a failed
+observation (`record_service_miss()`, which sets it to the miss time) advance it, and
+`age_stale_service_state()` ages on `COALESCE(last_checked, last_verified)` instead of
+`last_verified`. Existing databases are migrated by `ALTER TABLE ... ADD COLUMN
+last_checked` followed by `UPDATE ... SET last_checked = last_verified WHERE last_checked
+IS NULL`.
+
+### Reason
+
+`last_verified` means last known-good and is never written by a miss, so a row that is
+being probed and failing keeps an old timestamp. After Decision 52 aged such a row to
+`unknown` (and cleared `miss_count`), two further failed probes flipped it back to
+`unavailable` with the same old timestamp, and the next hourly pass aged it again: an
+`unavailable`/`unknown` oscillation, each round writing a `SERVICE_UNAVAILABLE` activity
+event that the confirmation layer can email. Measured on the master before this change:
+40 `unknown` rows, 22 of them already back at `miss_count = 1` — one failed probe away
+from the first re-flip.
+
+Ageing asks "has anyone looked at this endpoint recently?". `last_verified` answers a
+different question ("when was it last known good?"), which the Devices view needs for its
+own `stale` rendering, so the two had to stop sharing one column.
+
+### Effects and guards
+
+- An endpoint that is still being probed never ages, however long its outage lasts; a row
+  only ages when discovery has genuinely stopped observing it (host gone, segment no
+  longer monitored).
+- `last_verified` keeps its meaning, so the view's `stale` calculation and the
+  "last known-good" column are unchanged.
+- The migration is additive and idempotent: `last_checked` is nullable, the backfill only
+  touches NULL rows, and both the fresh `CREATE TABLE` and the `ALTER TABLE` path leave the
+  same schema.
+- `tests/test_service_ageing.py` covers it with `AGE_RECENT_PROBE_NOT_AGED`,
+  `AGE_MISS_ADVANCES_LAST_CHECKED` (age, two misses, re-flip, then no further ageing) and
+  `AGE_LAST_CHECKED_MIGRATION` (legacy table without the column, migrated and backfilled).
+
+### Residual risk
+
+A row whose endpoint is still probed but which discovery no longer *reaches* (for example a
+service on a host that responds to ping but not to the probe port) keeps a fresh
+`last_checked` only while the probe runs; when discovery stops probing it, `last_checked`
+freezes and the row ages again, which is the intended meaning but means "unknown" can
+appear weeks after the last real observation. `last_checked` also has two writers, so it
+must not be read as a verification time.
+
+## 55. An address is abandoned only when none of its device rows is fresh, and hostwatch may not rewind `last_seen`
+
+### Decision
+
+Two changes to how retirement and device writes interact:
+
+- the retirement predicate requires that the address has at least one `devices` row **and** that
+  none of them is fresh:
+  `EXISTS (rows for the ip) AND NOT EXISTS (row for the ip with last_seen >= cutoff)`, instead of
+  `ip IN (SELECT ip FROM devices WHERE last_seen < cutoff)`;
+- the two hostwatch-driven `UPDATE devices … last_seen = ?` statements now write
+  `last_seen = MAX(COALESCE(last_seen, ''), ?)` (`scan_network.py`, the normal update and the
+  returning-device update), so a replayed hostwatch timestamp cannot move `last_seen` backwards.
+
+### Reason
+
+The 23:14:22 scheduled cycle still retired three freshly verified services on `192.168.20.254`.
+That address has two device rows — a legacy MAC at `2026-08-15` and the live VRRP/CARP MAC at
+`12:32:29` — and the old predicate retired an address as soon as **one** of its rows was stale.
+Decision 53's refresh had advanced both rows, but the scan's own hostwatch import immediately wrote
+`last_seen` back to hostwatch's stored value, rewinding the legacy row to `2026-08-15` before the
+retirement step ran. The two defects compounded: the refresh was undone, and a single stale row was
+enough to condemn every service on the address.
+
+### Effects and guards
+
+- "Someone has seen this host recently" now keeps its inventory, which is what the operator's
+  original rule meant; an address whose rows are all stale still retires.
+- A duplicated or legacy device row for a live address no longer makes its services unretireable
+  churn. Rows whose address has no `devices` record at all are still never retired.
+- `last_seen` becomes monotonic from every writer, so a hostwatch replay cannot erase probe evidence
+  (Decision 53) and no reader has to guess which writer ran last.
+- `tests/test_service_ageing.py` gains `RETIRE_KEEPS_ADDRESS_WITH_FRESH_ROW` (stale sibling row,
+  fresh row, service kept) and `RETIRE_DROPS_ADDRESS_WITH_ONLY_STALE_ROWS` (two stale rows, service
+  retired); 20 cases. The forward-only hostwatch write is verified in the field rather than by unit
+  test, because it lives inside the full-scan device sync: after deployment the legacy
+  `192.168.20.254` row must stop returning to `2026-08-15`.
+
+### Residual risk
+
+Monotonicity means a genuinely stale hostwatch timestamp can never correct a wrongly-newer
+`last_seen`, so a clock jump forward on one writer would suppress retirement for that host until the
+wall clock catches up. `devices.last_seen` remains a "someone saw this host at or after" marker, not
+a precise observation log, and the three writers (hostwatch import, service verification, and this
+guard) are recorded here so the meaning stays explicit.
+
+## 56. Nmap evidence older than the ageing window is history, not inventory
+
+### Decision
+
+Phase-3 discovery re-uses the structured evidence of previous targeted Nmap scans. Before writing
+inventory from that evidence, `nmap_evidence_is_current()` now rejects rows whose scan `finished_at`
+is older than `SERVICE_UNKNOWN_AFTER_DAYS`, and the pass logs one
+`[SERVICES] Skipped N Nmap evidence row(s) older than 7 days` line. An empty or unparseable
+timestamp is treated as current, because the caller then falls back to the observation time.
+
+### Reason
+
+The 01:23 cycle still retired three rows every hour. Running one real discovery pass against a copy
+of the live database named them: `192.168.20.116` RDP 3389 and SMB 139/445, `detection_method`
+`nmap_service`, `last_verified` **2026-09-21 09:07:55**, the `finished_at` of nmap history row 35.
+`_phase3_nmap_rows()` returns that historical `finished_at` and the Phase-3 loop used it as the write
+timestamp (`evidence_time = finished_at or now_text`), so each cycle recreated the rows with a
+six-week-old verification time. Decision 53's refresh then refused to move `devices.last_seen`
+backwards to that date, the address stayed stale by Decision 55's predicate, and retirement deleted
+the rows again — a closed loop that neither Decision 55 nor Decision 54 could break, because both
+were looking at the wrong side of it.
+
+### Effects and guards
+
+- Recent evidence keeps working exactly as before: a targeted scan from this cycle stamps its rows
+  with its own `finished_at`, refreshes the device, and the rows survive.
+- Old evidence no longer resurrects inventory, so retirement is final for a host nobody has seen.
+  The services remain discoverable again if the host is scanned afresh.
+- Nothing is deleted by this change; it only stops rows being written from stale evidence, and it
+  states how many it skipped so an operator can see the difference between "no evidence" and
+  "evidence too old to trust".
+- `tests/test_phase3_infrastructure.py::test_stale_nmap_evidence_is_not_inventoried` drives the real
+  Phase-3 pass with a six-week-old evidence row and asserts no `device_services` row is written;
+  `tests/test_service_ageing.py::test_nmap_evidence_age_bound` pins the boundary (one hour old and
+  exactly seven days are current, seven days plus a second is not, empty and unparseable are
+  current).
+
+### Residual risk
+
+A host that is scanned once and then never again now loses its Nmap-derived inventory after seven
+days rather than keeping it indefinitely, which is the intent but will look like data loss to anyone
+who expected the Scans tab's evidence to persist in the Services view. Probe-based discovery (DNS,
+DHCP, NTP, SSH, web, RDP, SMB, LDAP, VPN) is unaffected, because those rows carry a live observation
+time.
+
+## 57. HA / CARP is released on the recovered 2.12 baseline, and a standby must not observe services
+
+### Decision
+
+The HA / CARP work is released as v2.13 on top of `d04739a`, which recovers the
+uncommitted 2.12 tree as the new baseline. The feature is three things: a read-only
+`getcarpstatus` view for the Settings tab, three persisted settings
+(`ha_carp_enabled`, `ha_role_override`, `ha_notify_failover`), and a daemon gate that
+refuses service discovery and service alerts on a node whose monitored interfaces
+report `carp: BACKUP`. `ha_carp_enabled` defaults to `1`, so the gate is on by
+default and only a node with CARP state is affected.
+
+The four HA status words in the script body use `lang.query()`, not
+`devicemonitor_t()`, because the JS renderer accepts only the encoded `lang.query()`
+literal, and the installer's DM-BL-008c core-catalogue merge is what makes those
+plugin keys resolve there.
+
+### Reason
+
+A CARP backup does not carry the monitored traffic, so hostwatch there under-reports
+and every liveness verdict is wrong in one direction or the other. Deferring the
+judgement to the master is the only reading of a standby that does not invent outages.
+
+The release had to sit on the running tree rather than on v2.11: the 2.12 daemon
+refactor had never been committed, so a v2.11-based payload would have downgraded it
+on every node. Recovering the baseline and re-applying HA as its own commit keeps the
+review honest and makes the deployed files byte-identical to the repository.
+
+### Evidence
+
+`192.168.20.23` (testbed), `.253` (master) and `.252` (standby) all run
+`version 2.13`, `files=61`, with identical SHA256 for `settings.volt`
+(`60ba1caf...`), `scan_network.py` (`aa67dab0...`) and `ConfigController.php`
+(`493b78b5...`). The standby logs
+`[SERVICES] CARP backup node; skipping service discovery and service alerts on this node`
+while still inventorying devices (`New devices: 0, Online: 36/60`); the master logs
+`[SERVICES] CARP role: MASTER (observing)` and keeps `carp: MASTER vhid 1 advskew 0`.
+
+## 58. The running 2.12 line has no O4 ageing, and the test stays red
+
+> **Superseded by Decision 59** (3 November 2026). The gap described here was real in
+> the 2.13 payload, which was deployed for under an hour. O4 was restored in 2.13.1 and
+> is now running on the testbed and on both CARP nodes; `tests/test_service_ageing.py`
+> is green. This entry is retained as the record of how the divergence was found.
+
+### Decision
+
+The 2.12 tree that the testbed and the firewalls run contains no ageing
+implementation, so `tests/test_service_ageing.py` cannot pass against it. It is left
+failing, with the discrepancy recorded here and in `PROJECT_STATE.md`, instead of being
+deleted or rewritten to match the code.
+
+### Reason
+
+This document records O4 as deployed and pinned by that test. A red gate that says
+"the shipped code does not contain what the record claims" is the correct signal; a
+green gate achieved by editing the assertion would hide the divergence, and deleting
+the test would erase the only coverage of the behaviour.
+
+### Evidence
+
+`grep -rn 'UNKNOWN_AFTER|RETIRE_AFTER|age_stale' /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/`
+returns nothing on the testbed, on the master and on the standby, before and after the
+2.13 deployment. `git show 0ad95b0:src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py`
+carries nine references, introduced by `6258914`, `d266698` and `9a300cd`
+("v2.11 O4", Decisions 54 and 55).
+
+### Residual risk
+
+Until one of the two remedies is chosen - restore the O4 functions and their call sites
+on top of 2.13, or withdraw O4 and retire the test with that rationale - the suite has
+a permanent red gate and the ageing behaviour described in Decisions 53-56 is not
+running on any firewall.
+
+## 59. O4 ageing is restored in 2.13.1 and runs behind the hourly discovery gate
+
+### Decision
+
+The O4 work of Decisions 52-56 is restored on the 2.12-based line and shipped as
+2.13.1, which runs on the testbed `192.168.20.23`, the CARP master `192.168.20.253`
+and the CARP standby `192.168.20.252`. The version was advanced from 2.13 because all
+three nodes already reported 2.13 and a re-install of the same number would have been
+indistinguishable from the payload that had no ageing.
+
+Ageing stays exactly where v2.11 put it: inside `run_scheduled_service_discovery()`, so
+it runs on the hourly discovery gate. A node that refuses service observation - a CARP
+standby - therefore does not age either. That is deliberate continuity with the
+original implementation and is listed as an open question below, not as a defect.
+
+### Reason
+
+Decision 58 recorded that the running line carried no ageing at all while this document
+claimed O4 was deployed. Restoring it was the alternative to withdrawing O4 and retiring
+the test: the coverage already existed and the behaviour is wanted on a firewall whose
+service inventory otherwise keeps every `unavailable` verdict forever.
+
+### Evidence
+
+- `.253` (master): 49 `[SERVICES] Stale-state ageing:` cycles since the install, the
+  latest `aged 1 row(s) to unknown, retired 0 row(s)` at 00:30:26.
+- `scan_network.py --age-services --dry-run`: `.253` `aged 0, retired 0`; `.252`
+  `aged 0, retired 0`; `.23` `aged 38, retired 42` (the testbed backlog, left in place
+  because monitoring is disabled there).
+- `device_services.last_checked` is present on all three nodes; `PRAGMA table_info`
+  before the install had only `last_verified` and `miss_count`.
+- Payload parity: all 40 entries of `release/v2.13-runtime.manifest` hash-match on every
+  node, and `scan_network.py` is `65a132bc…` in the repository and on all three.
+- `tests/test_service_ageing.py` green, all eight checks.
+
+### Correction to Decision 57
+
+Decision 57 states that a standby begins suppressing service discovery and alerts when
+the HA payload lands. It was already suppressing: `.252` logs
+`[SERVICES] CARP role: BACKUP (CARP backup node)` from 31 October 19:14, 1065 lines at
+the 300-second interval, because the observation gate shipped with the 2.12 daemon. The
+2.13 work added the settings surface, the three `ha_*` knobs and the failover notifier;
+it did not change when the gate engages.
+
+### Open question
+
+Should ageing and retirement run on a standby outside the observation gate? Retirement
+is node-local inventory hygiene, not observation, and a long-lived standby currently
+accumulates stale verdicts (`.252` holds 8 `unavailable` rows) that only age after a
+failover. Moving the call above `if allowed:` would fix that and would touch only that
+node's own database, but it is a behaviour change and needs to be taken deliberately.
+
+## 60. A standby ages its own inventory, even though it observes nothing
+
+### Decision
+
+`age_stale_service_state_on_standby()` runs from the observation-refused branch of the
+scan cycle, so a CARP standby ages and retires rows in **its own** database while
+discovery, service alerts and failover notifications stay gated on observation.
+
+### Reason
+
+Decision 52 put ageing inside `run_scheduled_service_discovery()`, so it inherited the
+observation gate. A long-lived standby therefore accumulated stale verdicts that nobody
+cleared until a failover: `.252` held 8 `unavailable` rows with no ageing cycle in its
+log, against 49 cycles on `.253`. Retirement is node-local inventory hygiene, not an
+observation of the network, so gating it buys nothing and costs accuracy at failover:
+the promoted node would start from a stale inventory.
+
+### Evidence
+
+`tests/test_carp_role_gate.py::test_backup_still_ages_its_own_inventory` drives the
+helper against a temporary database built by the real `init_db()` and asserts that a
+30-day-old `unavailable` row ages to `unknown` while the surrounding gate still refuses
+discovery. The standby log line is `[SERVICES] Stale-state ageing (standby): aged N…`,
+so the two paths are distinguishable in the field.
+
+### Residual risk
+
+The standby now writes to `device_services` during what used to be a read-only path.
+Nothing is notified, discovery still does not run there, and the only rows it can delete
+are ones its own retirement rules would have deleted anyway.
+
+## 61. The installer prunes files it previously installed but no longer ships
+
+### Decision
+
+Every successful install records the target list it owns in
+`/var/db/devicemonitor/installed-manifest.txt`. The next install diffs that record against
+its own manifest with `release/compute-prune.sh`, backs each stale file up into the
+rollback directory and deletes it after the replacement loop. `--check` reports
+`prunable=<n>`; `INSTALL_OK` reports `pruned=<n>`; a rollback restores the pruned files
+together with the replaced ones.
+
+### Reason
+
+A manifest-driven installer only ever writes. Removing a runtime file in a later release
+would therefore leave the old copy on every node that upgraded from an older line, and
+nothing would ever notice. Until now that was documented as a maintenance rule, which
+means it depended on somebody remembering.
+
+### Evidence
+
+`tests/test_prune_plan.py` pins the two properties that make the deletion safe: a target
+the manifest still ships is never reported, and a recorded path outside the namespaces
+the manifest may own (`/usr/local/opnsense/`, `/usr/local/etc/rc.d/devicemonitor`,
+`/usr/local/etc/inc/plugins.inc.d/devicemonitor.inc`,
+`/usr/local/etc/inc/devicemonitor_locale.inc`) is never reported. A missing record and a
+record identical to the manifest both prune nothing.
+
+### Residual risk
+
+The first install after this change has no record yet, so it prunes nothing; the record
+starts with that install. Deleting the record disables pruning rather than causing a
+scan, by design: the installer only touches files it can prove it wrote.
+
+## 62. Pruning requires proof, the record is the whole target set, and every input is pinned
+
+### Decision
+
+The prune decider is one shipped helper, `release/prune-plan.sh` (`compute`, `backup`,
+`delete`, `restore`, `restore-targets`), and it removes a path only when all of the
+following hold:
+
+* the path is inside the four namespaces this plugin may own;
+* the path is **not** part of the target set the current run installs;
+* either the previous install's record carries a digest for that path and the file still
+  matches it, or a published historical release manifest shipped that exact digest
+  (`release/legacy-targets.txt`, generated from the manifests at the v2.9 … v2.13.2 tags).
+
+Anything else is retained and reported (`RETAINED modified <path>`). Both sides of the diff
+are recorded *target sets*: the current side is the running install's own plan (manifest
+rows plus the catalogues it compiles), never the manifest alone. The record written at the
+end is that same plan with the digest installed (`<sha256> <path>`), so generated outputs
+are covered too.
+
+Every input the installer executes or trusts — manifest, prune helper, legacy evidence,
+catalogue merge helper — is listed with its digest in `release/release-inputs.sha256`,
+which is itself pinned by a constant in `install-unattended.sh` and enforced by
+`release/verify-release-inputs.sh` before anything else runs. A mismatch aborts before any
+mutation.
+
+An unchanged target (`old == new`) is left alone: content, mode, owner and mtime are
+preserved and the run reports `unchanged=<n>`. Rollback is the helper too
+(`restore-targets` then `restore`), every restore is digest-verified, and a damaged backup
+is a reported `ROLLBACK_FAILED` rather than a silently wrong file.
+
+Status output stays append-only: `CHECK_OK` appends `legacy_prunable=` and `retained=`,
+`INSTALL_OK` appends `unchanged=`, and the 2.13.2 keys keep their positions.
+
+### Reason
+
+The 2.13.2 review of `6bd122e` found five defects that made pruning either useless or
+unsafe: no bootstrap (the record only starts with the release that adds it, so the legacy
+files Decision 61 exists to remove could never be removed); a record that omitted the 11
+generated `.mo` files and the merged catalogues; the prune helper executed without the
+verification every other input gets; a repair install documented as leaving unchanged files
+alone while rewriting all 61 targets; and `pruned=<n>` counting `rm -f` calls rather than
+removals. The same review found the predecessor suite could pass with every row SKIPPED, the
+prune rollback never verifying what it restored, and locale-dependent `comm` in a security
+decision.
+
+### Evidence
+
+`tests/test_prune_plan.py` (10 cases) pins current-target immunity, the namespace guard,
+"legacy requires evidence", modified-file retention, retention of the current generated
+catalogues, identification of a dropped generated catalogue, empty/identical records and
+unsafe paths. `tests/test_prune_apply.py` (4 cases) drives backup → delete → restore,
+including a failed install restoring both a replaced and a pruned file with digests and
+modes, a conflict, and a corrupted backup that must fail loudly. `tests/test_release_inputs.py`
+proves a tampered, missing or symlinked helper is refused and that verification precedes the
+first helper call. `tests/test_installer_status.py` pins the append-only key order against
+the README, that `--check` exits before any mutation, that unchanged targets are skipped, and
+that the inventory comes from the plan. `tests/test_legacy_evidence.py` regenerates the
+evidence from the tags and compares it byte for byte. `tests/test_upgrade_predecessors.py`
+now fails on any skipped predecessor and covers `2.13.2 → 2.13.3` as the repair case.
+
+Measured on the `.23` testbed before any deployment: `install-unattended.sh --check` against
+the 2.13.2 install reports `prunable=0 legacy_prunable=0 retained=0`, i.e. the 40 recorded
+paths are recognised as current and nothing legitimate is a candidate.
+
+### Residual risk
+
+The legacy evidence covers only releases that published a runtime manifest (v2.9 … v2.13.2);
+v2.8 shipped a zip before the manifest format existed, so a v2.8-origin file is pruned only
+when the record covers it. The evidence is a fixed list: adding a release without
+regenerating it narrows bootstrap coverage, which `tests/test_legacy_evidence.py` catches
+because the file must equal a fresh generation.
+
+> Naming note: the helper this decision introduced as `release/compute-prune.sh` was
+> replaced by `release/prune-plan.sh` in Decision 62; the file no longer exists.
+
+## 63. The bundle identity is reproducible, and a rollback restores the install record
+
+### Decision
+
+`release/build-bundle.sh` produces a byte-identical archive from any clean checkout of the
+same commit. Four things are normalised before the archive is written: member mtimes (a
+fixed stamp, because `cp -p` would otherwise carry each checkout's timestamps), uid/gid and
+their symbolic names (`0`, `root`/`wheel`), the member order (the sorted allow-list, never a
+directory scan), and the archive format (`ustar`, so no pax extended header can leak in).
+`gzip -n` removes gzip's own timestamp. File modes are **not** normalised: the executable
+bits recorded in git must survive.
+
+The canonical digest lives in `release/bundle-digest.txt` together with the payload version
+and byte count. `tests/test_bundle_determinism.py` builds the bundle in two independent
+checkouts of the tested commit, gives each checkout deliberately different file timestamps,
+requires identical bytes, and then compares the result with that file — so a change to any
+bundled file fails CI until the digest is reissued.
+
+The install record (`/var/db/devicemonitor/installed-manifest.txt`) is part of the
+pre-install state: `prune-plan.sh backup-record` copies it into the rollback directory with
+a digest, and `prune-plan.sh restore-record` puts it back (or removes it when the run being
+rolled back created it). Both the automatic rollback and the documented manual rollback use
+them, so a rolled-back node keeps the target set it actually has.
+
+CI gains a `workflow_dispatch` trigger and the remediation branch in `push.branches`. The
+predecessor step now asserts the exact summary line `passed=8 skipped=0`, in addition to the
+suite failing on any skip.
+
+### Reason
+
+The 2.13.3 review proved the published digest was a single-checkout artefact: two clean
+clones of `15be258` produced different archives (`345 827` vs `346 013` bytes), and the CI
+guard could not see it because it built twice in one checkout. An artifact identity that
+cannot be reproduced cannot be the thing a deployment gate verifies.
+
+The same review showed the documented rollback was unusable twice over: it recommended
+reinstalling the published 2.13.2 bundle, whose installer accepts only `2.8 … 2.13.1` and
+therefore aborts on 2.13.3 (and on 2.13.2 itself), and it left the install record describing
+the rolled-back target set.
+
+### Evidence
+
+`tests/test_bundle_determinism.py` — two checkouts, two stamps, identical bytes; canonical
+digest `859c2638663260686630ed05408ab9055877988af56a84b81a2caa34688d6e48` (346 870 bytes).
+`tests/test_rollback_isolated.py` — a full install (replaced target, unchanged target, pruned
+legacy file, previous record) rolled back with exactly the documented commands; the replaced
+file, the pruned file, their modes and the record all return to their pre-install bytes, and
+a damaged record backup fails loudly without writing anything.
+`tests/test_upgrade_predecessors.py` — asserts eight passes and zero skips unless
+`DM_ALLOW_SKIPPED_PREDECESSORS=1` is set for a deliberate local run.
+
+### Trust boundary
+
+The tarball digest is the root of trust. It binds `install-unattended.sh` (the entry point), `install.sh`, `uninstall.sh` and everything the pinned-inputs file covers; it does not bind anything an operator runs from outside the bundle. Within the run, `install-unattended.sh` pins `release/release-inputs.sha256` and `release/verify-release-inputs.sh` inline, and that file pins the manifest, the prune helper, the legacy evidence and the catalogue merge helper - so a tampered helper aborts the run before any mutation. `install.sh` and `uninstall.sh` are deliberately not self-verified: they are thin wrappers the operator invokes, and verifying them from inside the run they start would be circular. A bundle whose digest is unknown should be rejected rather than inspected.
+
+### Residual risk
+
+Reproducibility depends on the toolchain writing the same bytes: `tar` with `--format ustar`
+and `gzip -n` must accept the options (bsdtar and GNU tar do; both the test and CI exercise
+it). A member path longer than the 100-byte ustar limit fails the build loudly rather than
+silently switching to a pax header.
+
+## 64. Verified ownership, explicit rollback status, and a defined repair contract
+
+### Decision
+
+**Pruning** (M1): a record entry without a digest - the format the 2.13.2 installer wrote -
+no longer authorises a deletion on its own. Naming a path proves we once installed it, not
+what is on disk now, so such a path is only pruned when `release/legacy-targets.txt` carries
+a published digest that matches the file. Otherwise it is retained and reported as
+`RETAINED unverified <path>`. A record entry *with* a digest still needs that digest to
+match, or it is retained as `RETAINED modified`.
+
+**Rollback status** (M2, L7): every unresolved `ROLLBACK_CONFLICT` now makes the helper exit
+non-zero, and both restore commands print
+`ROLLBACK_SUMMARY=restored=<n> skipped=<n> conflicts=<n> failed=<n>`. The installer
+propagates that into an explicit `ROLLBACK_STATUS=COMPLETE|INCOMPLETE` line, alongside the
+existing `ROLLBACK_TARGETS_INCOMPLETE` / `ROLLBACK_PRUNE_INCOMPLETE` /
+`ROLLBACK_RECORD_INCOMPLETE` flags. A planned prune target that is still present and still
+matches its recorded digest was never deleted (the install failed before the prune step), so
+it is counted as `skipped`, not as a conflict.
+
+**Deletion re-verification** (L6): `delete` re-hashes each target against the digest recorded
+when it was backed up and aborts the run if the file changed in between, so the window
+between planning and deletion cannot be used to delete a modified file.
+
+**Repair contract** (M6): a byte-identical target is still not rewritten - its mtime is
+preserved - but its mode and ownership are enforced against the manifest mode and
+`root:wheel` by `prune-plan.sh enforce-target`. Unsafe drift (a world-writable plugin file, a
+foreign owner) never survives a repair; an already correct target is not touched at all. The
+run reports `repaired=<n>` in `INSTALL_OK` (appended, so the existing keys keep their
+positions).
+
+**Release tooling** (L8, L9): `build-release-inputs.sh` validates every input before writing
+and replaces the checksum file atomically, so an interrupted run cannot leave a partial
+file. The legacy evidence header names each manifest once, with every tag whose tree carries
+it, instead of implying that a row was published by the tag it was read from.
+
+### Reason
+
+The round-2 review proved that a bare-path record could delete a file whose content had
+changed after the 2.13.2 install (M1), that a rollback with conflicts still reported success
+(M2), that a plan could tar a live database (M3), that a post-success manual rollback left a
+record describing files the node no longer had (M4), that the installer itself had no
+executable coverage (M5), and that a repair preserved permission drift (M6). The low items
+were accounting and provenance defects in the same area.
+
+### Evidence
+
+`tests/test_prune_plan.py` (12 cases, incl. `test_bare_record_requires_evidence`,
+`test_bare_record_modified_retained`); `tests/test_prune_apply.py` (8 cases, incl.
+`test_conflicts_are_failures`, `test_restore_summary_counts_each_outcome`,
+`test_untouched_prune_target_is_not_a_conflict`, `test_changed_target_is_not_deleted`);
+`tests/test_repair_permissions.py` (4 cases); `tests/test_plan_sqlite_backup.py` (3 cases);
+`tests/test_catalogue_determinism.py` (2 cases); `tests/test_upgrade_prediction.py`
+(host-only: files=61 unchanged=60 replaced=1); `tests/test_rollback_isolated.py` (3 cases);
+`tests/test_release_inputs.py` (6 cases, incl. `test_generator_is_atomic`);
+`tests/test_legacy_evidence.py` (6 cases, incl. `test_provenance_names_each_manifest_once`).
+
+### Residual risk
+
+The installer's own process is still not executed by a test (M5, U2, U3, U7 remain open):
+doing so needs a sandbox mode inside the production script, and the alternative - running it
+against `.23` - is forbidden. `release/prune-plan.sh` already accepts `--root`, so the
+sandbox design exists; it is not landed here because it changes the installer's structure and
+needs its own review.
+
+## 65. One canonical Device Monitor workspace, enforced by a launcher and a guard rather than by convention
+
+### Decision
+
+**One workspace.** `/root/src/opnsense-devicemonitor-upstream` is the only Device Monitor development
+workspace. Sessions are started with `/usr/local/bin/cline-dm`, which changes into that directory,
+verifies that `git rev-parse --show-toplevel` is exactly that path, verifies that `origin` identifies
+`apg19590209/opnsense-devicemonitor`, prints `workspace`/`remote`/`branch`/`head`/`dirty`, and only
+then `exec`s the Cline executable (`/usr/local/cline-freebsd/bin/cline`) with `--cwd` pinned to that
+path. It refuses `-c/--cwd`, `--worktree` and `--update`, and it never clones, initialises, switches,
+checks out or resets a repository: an unavailable or foreign repository is a failure, not a repair.
+
+**Preservation.** `/usr/local/cline-freebsd/src/cline` is a second clone of this repository that
+carries an untracked Cline installation behind `.git/info/exclude`. It is preserved unchanged — not
+repointed, not removed, not merged into the Device Monitor tree — and so are the linked worktrees
+`/root/o3-branch` and `/root/tb-branch`, which sit on published commits (`a59d627`, `d70aff4`) with
+no unique work.
+
+**Safeguards are technical, and the instructions are versioned.** Three layers, in increasing
+strictness: `.clinerules/20-workspace-authority.md` (persistent instructions, committed);
+`.clinerules/hooks/PreToolUse` (blocks `git init`/`git clone`/`gh repo create`/`git worktree add`,
+git mutations against a protected checkout, and writes into one); and `.githooks/pre-commit`,
+activated with `core.hooksPath=.githooks`, which refuses a commit whose top-level is not the
+canonical path and refuses any staged Cline-installation path.
+
+**Divergence stays open.** `origin/main...HEAD` is 14 / 40 with merge base `40cced8`. Nothing in this
+decision merges, rebases, resets or publishes `main`, `release/2.13` or
+`fix/pruning-remediation-20261103`; the choice is recorded as DM-BL-009.
+
+### Reason
+
+Instructions alone had already failed: a CI verification task was executed inside the *Cline* clone,
+where `fix/pruning-remediation-20261103` and `43307b1` do not exist, and it reported the branch and
+commit as missing when both existed in the canonical clone all along. A workspace that can be chosen
+by accident needs a pin, a refusal and a commit-time guard, not another paragraph of prose. The
+launcher also removes a real trap: `/usr/local/bin/cline` (the npm wrapper) cannot resolve a FreeBSD
+binary, so the working executable is the port wrapper, and which one you get should not depend on
+which `cline` the shell happens to find.
+
+### Evidence
+
+`verification/WORKSPACE-PROTECTION-20261103.md` records the launcher, the argument refusals, the
+`procstat -f` capture showing the launched CLI holding
+`/root/src/opnsense-devicemonitor-upstream/.clinerules` open (workspace and rule loading), the hook
+test matrix, both pre-commit refusals, four launches with no new repository or worktree, the
+re-verified backup checksums and the rollback paths. `verification/REPO-CONSOLIDATION-20261103.md`
+carries the inventory and backup record this builds on.
+
+
+## 66. 2.13.3 integrates into `release/2.13` by fast-forward only; `main` stays a separate, open question
+
+### Decision
+
+**The release path is a fast-forward.** `origin/release/2.13` (`6bd122e`) is an ancestor of
+`fix/pruning-remediation-20261103`, so the remediation lands on the release line as a fast-forward:
+0 behind, 10 ahead at assessment time, zero conflicted paths
+(`git merge-tree --write-tree release/2.13 <branch>` exits 0 and produces the branch's own tree
+`f9599bce…`). **No merge and no rebase is necessary, and neither is authorised.** A merge commit
+(`--no-ff`) would produce the same tree with no review value; a rebase would rewrite the ten commits
+and invalidate every SHA cited in the review evidence.
+
+**A pull request into `release/2.13` is not a CI mechanism here.** `ci.yml` `pull_request.branches`
+lists only `v2.5-development … v2.10-development`, so a PR whose base is `release/2.13` starts no
+workflow, and GitHub's squash/rebase buttons rewrite the commits. Verification comes from the push
+trigger: the branch is in `push.branches`, and `release/2.13` is in `push.branches`, so an authorised
+push to the branch — and the fast-forward to the release line — each run the full gate.
+
+**Payload scope remains the owner's choice.** Both `43307b1` (product changes only) and `3bdbb20`
+(product changes plus the workspace tooling and records of Decisions 65–66) are fast-forwards. Only
+`src/` and `release/` affect the bundle, and `3bdbb20` touches neither, so the bundle identity is
+unchanged either way (currently `7f389248…` / 1 656 468 bytes after Decision 68; the earlier
+`ce92a09a…` / 348 920, `b29e1166…` / 349 052 and `451a03f4…` / 348 932 identities are superseded).
+
+**`main` is untouched by this decision.** `origin/main` is 14 behind / 41 ahead with merge base
+`40cced8` and 18 conflicting paths; DM-BL-009 stays **OPEN** and is resolved as its own reviewed
+change, preferably by reconciling `release/2.13 → main` after 2.13.3 lands.
+
+**No release act is implied.** This decision records an integration path; it does not authorise a
+push, tag, release publication or deployment. H1b (a real CI run) remains *NOT EXECUTED* until an
+explicitly authorised CI-only push happens.
+
+### Reason
+
+The branch was cut from the release head, so the only correct integration is the one Git performs
+without inventing history. Choosing merge, rebase or PR mechanics by habit would either add a commit
+nobody reviewed or rewrite the commit identities that Decisions 62-64 and the review record cite. The
+18 conflicts against `main` are entirely the v2.12 line the release branch never carried, which is
+evidence that `main` reconciliation is a different task, not a prerequisite.
+
+### Evidence
+
+`verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md` records the measured merge bases and
+counts, the branch-only and `main`-only commit lists, the `v2.13.2 → HEAD` payload delta (one `src/`
+file: the version string), the conflict dry-runs, the bundle identity agreement across four
+documents, `VERIFY_OK=4` for the pinned inputs, the 40/40 manifest re-hash, the measured workflow
+shape (59 steps, 28 `run: python3` steps, 42 suites), and the acceptance checks and rollback for this
+documentation commit. The suite-count correction it drove is applied in
+`verification/REVIEW-R2-REMEDIATION-20261103.md`.
+
+## 67. The bundle is built portably and fails closed, and its identity is reissued
+
+### Decision
+
+**Portable archive construction.** `release/build-bundle.sh` now probes the *tar implementation*
+from the binary itself (`tar --version`, matched against `bsdtar` and `GNU tar`), not the
+operating system, and picks flags per implementation: `--uid/--gid/--uname/--gname` for bsdtar,
+`--owner=root:0 --group=wheel:0` for GNU tar. An implementation it cannot identify is refused
+(`UNSUPPORTED_TAR`), and a functional probe — a one-file archive built with the chosen flags and
+parsed by `release/normalize-bundle-tar.py --check` — rejects any producer that writes pax or GNU
+extended headers instead of canonical ustar.
+
+**Header canonicalisation.** `release/normalize-bundle-tar.py` rewrites every producer-specific
+header field into one canonical encoding (6-octal-digit + space + NUL for mode/uid/gid/devmajor/
+devminor, 11 digits + space for size/mtime, 6 digits + NUL + space for the checksum, `ustar`+`00`
+magic, uid/gid 0, `root`/`wheel`, mtime `1767225600`, empty prefix) and recomputes the checksum.
+Member names, order, sizes, contents and modes are preserved. Because the canonicaliser is the
+last writer, a bsdtar archive and a GNU-tar archive of the same tree produce identical bytes —
+proved locally by re-encoding our own archive the way GNU tar encodes it and canonicalising it
+back to the same sha256.
+
+**Timezone independence.** The build exports `TZ=UTC0` before the `touch -t` normalisation. The
+previous script did not, so the same commit produced `451a03f4…` under AEDT and `e6596665…` under
+UTC — a genuine defect, not a test artefact.
+
+**Fail-closed construction.** The `tar | gzip > OUT` pipeline is gone. Each stage writes an
+explicit file and its status is checked: `TAR_FAILED`, `TAR_EMPTY`, `TAR_CANONICALISE_FAILED`,
+`MEMBER_COUNT_MISMATCH`, `GZIP_FAILED`, `BUNDLE_EMPTY` all exit non-zero and leave no archive.
+No `set -o pipefail` is used or required, so the script stays POSIX `sh` on FreeBSD.
+
+**CI detects the failure at the right step.** "Verify the release bundle inputs" now compares the
+built sha256 *and* the byte count with `release/bundle-digest.txt`, and a new step runs
+`tests/test_bundle_build_safety.py`, which fakes a failing tar, an empty tar, a failing gzip, an
+unknown tar and a pax producer and requires a non-zero build with no output each time.
+
+**Identity reissued, not bent.** Portable construction genuinely changes the canonical bytes, so
+the identity is reissued rather than adjusting the test: `ce92a09a2d0ffd79bea33ca3087137264c5ef1ff992bb983b3d7e4dbf738befd`
+/ 348 920 bytes, replacing `451a03f4…` / 348 932 bytes (recorded as superseded in
+`release/bundle-digest.txt`, together with the `e6596665…` UTC variant). No tag, release or
+deployment refers to 2.13.3 yet, so nothing published is invalidated.
+
+### Reason
+
+The first GitHub run (#41609297193) failed for two reasons that no local test could have shown:
+Ubuntu's GNU tar rejects `--uid`, and the pipeline reported only gzip's exit status, so a 20-byte
+archive was staged and fingerprinted as if it were the bundle. Fixing only the flag would have
+left a second latent defect — the digest was timezone-dependent — and fixing only the pipeline
+would have left the build unable to run on GNU tar at all. Treating the archive header encoding as
+a property of *our* build rather than of the installed tar is what makes "byte-identical on Linux
+and FreeBSD" a testable claim instead of an intention.
+
+### Evidence
+
+`verification/BUNDLE-PORTABILITY-20261103.md` records the failed run, the failing command, the
+header-level difference between producers, the timezone experiment, the new identity, the five
+fail-safe cases and the local acceptance results. Tests: `tests/test_bundle_determinism.py`
+(two checkouts, canonical metadata, GNU-style encoding collapse, recorded digest) and
+`tests/test_bundle_build_safety.py`.
+
+
+### Correction after the second CI run (#41611564118)
+
+The first version of the GNU flag list used `--owner=`/`--group=` **and** `--uname=`/`--gname=`.
+GNU tar 1.35 has no `--uname`/`--gname` options at all; the runner answered
+`tar: unrecognized option '--uname=root'` and the functional probe correctly refused to build
+(step 32 failed, no archive was created and nothing was fingerprinted). The GNU arm is now
+`--format=ustar --owner=root:0 --group=wheel:0`, which sets the symbolic name and the numeric id in
+one option each; the bsdtar arm, the implementation detection and the probe are unchanged, and the
+archive identity did not move.
+
+Two regression cases were added to `tests/test_bundle_build_safety.py` — a static assertion over the
+flag strings (refuses `--uname/--gname/--uid/--gid` in the GNU arm) and a full build driven through
+a shim that models GNU tar's option grammar — plus a local run through a real GNU-format producer
+(`bsdtar --format=gnutar`). All three produce `ce92a09a…` / 348 920 bytes.
+`verification/BUNDLE-PORTABILITY-20261103.md` §8 records the run, the error and the results.
+
+
+## 68. The archive terminates canonically and the bundle is compressed by our own code
+
+### Decision
+
+**Canonical termination.** `release/normalize-bundle-tar.py` now determines the end of the final
+member, requires every remaining byte to be zero, rejects nonzero data after it, discards
+producer-dependent excess padding and appends exactly two 512-byte zero blocks. A bsdtar tail
+(1 024 bytes) and a GNU tar tail (3 584 bytes, padded to its 10 KiB record boundary) now
+canonicalise to the same bytes; the 58-member payload is 1 656 320 bytes uncompressed either way.
+
+**Own compressor.** `release/bundle-gzip.py` writes the .tar.gz itself: fixed header
+(`1f 8b 08 00`, FLG 0, MTIME 0, XFL 0, **OS 255**), stored deflate blocks (BTYPE 00), CRC-32 from
+`binascii`, ISIZE from the input length, and a full inflate-and-compare before the file is
+written. Nothing about the output depends on whether BSD gzip, GNU gzip or a particular zlib
+version is installed, and there is no timestamp, filename or OS byte to drift.
+
+**Cost accepted deliberately.** The archive is no longer compressed: 1 656 468 bytes instead of
+~349 KB. Determinism and a version-free implementation outrank payload size; the installer only
+needs `tar -xzf`, which reads stored blocks. `tests/test_bundle_reproducibility.py` proves the
+round trip through zlib, `gzip -dc` and `tar -tzf`.
+
+**Identity reissued once, honestly.** `7f389248707cf8fa0684760820db85c0fddac4b8b3964e0563318b38b2730fe2`
+/ 1 656 468 bytes replaces `ce92a09a…` / 348 920 (Decision 67) and its runner variant
+`b29e1166…` / 349 052 (run #41627234610); `451a03f4…` / 348 932 remains recorded as the older
+superseded identity. Nothing published refers to 2.13.3, so no released artefact is invalidated.
+
+**Verification is executable.** `tests/test_bundle_reproducibility.py` (9 cases) covers both tar
+padding variants, idempotency, malformed and nonzero tails, compression determinism, gzip header
+stability, decompression equivalence, independent size/digest checks, fail-closed compression and
+the unchanged 58-member metadata. It is wired into `ci.yml` (44 suites / 61 steps), and
+`release/bundle-digest.txt`, `PROJECT_STATE.md`, the deploy plan, the review record and the
+integration assessment are updated together.
+
+### Reason
+
+Run #41627234610 showed the identity still carried two platform facts: how the local tar
+terminates an archive, and which gzip implementation compresses it. Neither is a property of the
+Device Monitor payload, so both had to move inside our own code. Pinning zlib parameters would
+only have moved the second problem to the zlib version; a stored-block stream has no version to
+disagree about, and the gzip container fields are fixed by RFC 1952 rather than by the host.
+
+### Evidence
+
+`verification/BUNDLE-PORTABILITY-20261103.md` §9 records the run, the measured differences (1 024
+vs 3 584 trailing bytes; 348 939 vs 349 052 compressed bytes for the same input), the new
+implementation, the local results (`BUNDLE_REPRODUCIBILITY=PASS cases=9`,
+`BUNDLE_BUILD_SAFETY=PASS cases=7`, `BUNDLE_DETERMINISM=PASS cases=4`) and the rollback paths.
+
+
+## 69. Test fixtures implement the tar interface; they never forward flags to the host tar
+
+### Decision
+
+The build-safety suite generates one platform-neutral fake tar from an embedded Python script. It
+implements only what `release/build-bundle.sh` uses — `--version`, `-cf OUT`, `-T LIST`, positional
+members and both ownership spellings — writes a real ustar archive itself (magic `ustar`+`00`,
+checksums, modes read from disk) and never shells out. Behaviour is selected by three parameters:
+the flavour string it announces, a reject list of options it treats as "unrecognized", and a mode
+(`normal`, `fail-archive`, `empty-archive`, `fail-any`) that decides *where* the failure happens.
+
+A new case, `test_probe_failure_is_reported`, keeps probe failures distinct from archive-stage
+failures, and `test_tar_failure_is_fatal` now asserts the probe passed (`TAR_FORMAT=canonical-ustar
+members=1`) so it cannot silently regress into failing early again. `release/build-bundle.sh` was
+not changed for this: the production path was already correct, and run #41629115055 proved it.
+
+### Reason
+
+Run #41629115055 failed at step 33 because a fake tar announced "bsdtar", refused `-T`, and
+otherwise forwarded its arguments to whatever `tar` the host had. On FreeBSD that is bsdtar and the
+flags work; on the runner it is GNU tar, which rejects `--uid`, so the fake failed at the functional
+probe and the case never reached the stage it was written to test. A fixture that models the
+interface is portable by construction; a fixture that delegates inherits the host's semantics and
+therefore its bugs — and can report the wrong stage, or (worse) a false pass.
+
+### Evidence
+
+`verification/BUNDLE-PORTABILITY-20261103.md` §10 records the run, the exact assertion, the root
+cause, the fixture design and the results: `BUNDLE_BUILD_SAFETY=PASS cases=8`,
+`BUNDLE_REPRODUCIBILITY=PASS cases=9`, `BUNDLE_DETERMINISM=PASS cases=4`, unchanged identity
+`7f389248…` / 1 656 468 bytes and no change under `release/`. Real GNU-tar execution remains a
+remote-CI requirement: this appliance has no GNU tar and no Linux environment.

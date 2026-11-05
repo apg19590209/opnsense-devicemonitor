@@ -407,8 +407,8 @@ category, plus a feed of recent service changes.
 
 ### 9.2 Header statistics
 
-**Total**, **Available**, **Unavailable**, and **Stale** counts for the currently shown
-services.
+**Total**, **Available**, **Unavailable**, **Stale**, and **Unknown** counts for the
+currently shown services.
 
 ### 9.3 Toolbar controls
 
@@ -416,7 +416,8 @@ services.
 - **Discover Now** — trigger an immediate infrastructure-service discovery pass.
   **Changes state** (runs discovery).
 - **All Services** (type filter) — filter by service type.
-- **All Statuses** (status filter) — filter by **Available** / **Unavailable** / **Stale**.
+- **All Statuses** (status filter) — filter by **Available** / **Unavailable** / **Stale** /
+  **Unknown**.
 - **Search services** — free-text filter.
 - **Show archived** — include services hidden with **Archive**.
 - **Showing n** — number of services currently displayed.
@@ -447,7 +448,7 @@ Each service row shows:
 
 - **IP Address** — the device IP.
 - **Hostname** — the device hostname.
-- **Status** — **Available** / **Unavailable** / **Stale**.
+- **Status** — **Available** / **Unavailable** / **Stale** / **Unknown**.
 - **Port / Protocol** — e.g. `22/TCP`.
 - **Interface / VLAN** — where the service was detected.
 - **Detection** — how the service was detected (probe / Nmap / authoritative config).
@@ -457,6 +458,11 @@ Each service row shows:
 
 > **"Stale"** means the service has not been re-verified recently (rather than being
 > confirmed down). "Unavailable" means it was confirmed unreachable.
+>
+> **"Unknown"** means the last confirmed verdict is older than a week: the endpoint is
+> neither known up nor known down. A service that stays unreachable for longer than that
+> is reset to **Unknown** instead of remaining **Unavailable** indefinitely, and its
+> discovery rows are removed when its host has not been seen for 30 days.
 
 ### 9.5 Recent Service Changes tab
 
@@ -827,8 +833,9 @@ installer afterwards to merge the plugin's strings again.
 - **Active / Archived** (lifecycle) — the current vs. historical lifecycle for a device.
 - **Unresolved / Resolved** (identity event) — whether an identity anomaly has been
   acknowledged (resolved) by an administrator.
-- **Available / Unavailable / Stale** (service) — confirmed reachable / confirmed
-  unreachable / not re-verified recently.
+- **Available / Unavailable / Stale / Unknown** (service) — confirmed reachable / confirmed
+  unreachable / not re-verified recently / last verdict older than a week, so neither
+  confirmed up nor confirmed down.
 - **Pending / Failed n/5** (scan status) — a scan is queued or has failed after *n* of 5
   attempts.
 - **Running (PID: n) / Stopped** (widget) — the Device Monitor daemon state.

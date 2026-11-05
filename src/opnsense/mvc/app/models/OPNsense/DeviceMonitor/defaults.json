@@ -1,5 +1,5 @@
 {
-  "version": "2.12",
+  "version": "2.14.0",
   "paths": {
     "dbFile": "/var/db/devicemonitor/devices.db",
     "configFile": "/var/db/devicemonitor/config.json",
@@ -54,6 +54,9 @@
     "email_reminder_identity": "0",
     "email_reminder_new_device": "0",
     "visibility_prime_interval": "0",
-    "sidecar_translation_enabled": "1"
+    "sidecar_translation_enabled": "1",
+    "ha_carp_enabled": "1",
+    "ha_role_override": "auto",
+    "ha_notify_failover": "0"
   }
 }

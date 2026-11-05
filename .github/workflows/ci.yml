@@ -1,6 +1,10 @@
 name: Device Monitor CI
 
 on:
+  # Manual dispatch so any branch can be validated without inventing a push rule. This
+  # trigger only becomes usable once the workflow exists on the default branch; the
+  # explicit branch entries below are what make a remediation branch testable immediately.
+  workflow_dispatch:
   push:
     branches:
       - v2.5-development
@@ -15,6 +19,18 @@ on:
       # match pull requests whose target is this feature branch. The eventual PR into
       # `v2.10-development` is already covered by the entry below.
       - feature/async-db-v2.11
+      # 2.13 release line (3 November 2026): the recovered 2.12 baseline plus the HA / CARP
+      # feature and the restored O4 ageing. Listed so pushes to the released branch are
+      # validated remotely instead of resting on a local run.
+      - release/2.13
+      # 2.13.3 pruning remediation (3 November 2026). `push` is evaluated against the
+      # workflow in the pushed commit, so listing the branch here is enough to get a real
+      # run without touching the default branch or the release line. Remove this entry when
+      # the branch is merged.
+      - fix/pruning-remediation-20261103
+      # DM-BL-009 reconciliation (5 November 2026). Push-only, like the remediation branch:
+      # the eventual pull request is against `main`, whose existing rules already apply.
+      - integration/dm-bl-009-reconcile-20261105
   pull_request:
     branches:
       - v2.5-development
@@ -44,6 +60,8 @@ jobs:
           set -eu
           find src -type f -name '*.py' -print0 |
             xargs -0 -n1 python3 -m py_compile
+          python3 -m py_compile release/normalize-bundle-tar.py
+          python3 -m py_compile release/bundle-gzip.py
 
       - name: Validate opt-in port discovery
         run: python3 tests/test_port_discovery.py
@@ -85,6 +103,12 @@ jobs:
       - name: Validate service miss hysteresis (v2.11)
         run: python3 tests/test_service_miss_hysteresis.py
 
+      # v2.11 service-liveness fix (O4): a stale `unavailable` verdict ages to `unknown`, rows for
+      # hosts unseen for 30 days are retired, and a hostwatch-blackout is refused rather than
+      # emptying the inventory. Temporary databases only — no host, no network.
+      - name: Validate service state ageing (v2.11)
+        run: python3 tests/test_service_ageing.py
+
       # v2.11 HA safety: a CARP backup node must not observe services, and a node that can see no
       # hosts must say so instead of silently suppressing outage verdicts.
       - name: Validate CARP role gate (v2.11)
@@ -96,9 +120,86 @@ jobs:
       - name: Validate non-HA operation (v2.12)
         run: python3 tests/test_non_ha_operation.py
 
+      # Reconciliation guard: the combined 2.14.0 candidate must keep both the
+      # v2.12 scan/alert, reminder, identity-email and fail-open work and the
+      # 2.13 CARP, standby-ageing and verified-installer functionality.
+      - name: Validate DM-BL-009 reconciliation
+        run: python3 tests/test_integration_reconciliation.py
+
       # v2.11 HA safety: the WAN/uplink must never be selectable as a monitored segment.
       - name: Validate monitored interface selection (v2.11)
         run: python3 tests/test_monitored_interfaces.py
+
+      # Device lifecycle and activity history: both suites existed but were never listed,
+      # so a regression in either would only have been caught by a manual run.
+      - name: Validate device activity events
+        run: python3 tests/test_device_activity_events.py
+
+      - name: Validate device lifecycle return path
+        run: python3 tests/test_device_lifecycle_return.py
+
+      # Supported-predecessor claim: a database built by the predecessor's own code must
+      # reach the current schema in one init_db() with its rows intact (2.8-2.13.3 are all
+      # accepted predecessors, so those lines install directly, and the current candidate
+      # is the repair case). Reads the tags plus 2.13.3's reviewed commit; the checkout
+      # above fetches with fetch-depth: 0.
+      # Nine passes and zero skips are required: the suite fails on any skip, and the
+      # summary line is asserted here too so a shrunken table cannot pass silently.
+      - name: Validate every accepted predecessor upgrade
+        run: |
+          set -eu
+          python3 tests/test_upgrade_predecessors.py > /tmp/upgrade-predecessors.log 2>&1 || {
+            cat /tmp/upgrade-predecessors.log
+            exit 1
+          }
+          cat /tmp/upgrade-predecessors.log
+          grep -q '^UPGRADE_PREDECESSORS=PASS passed=9 skipped=0$' /tmp/upgrade-predecessors.log
+
+      # Ownership evidence for pruning (Decision 62): regenerated from the release
+      # manifests at the tags and compared with release/legacy-targets.txt.
+      - name: Validate the legacy ownership evidence
+        run: python3 tests/test_legacy_evidence.py
+
+      - name: Validate the prune plan
+        run: python3 tests/test_prune_plan.py
+
+      - name: Validate prune backup, delete and rollback
+        run: python3 tests/test_prune_apply.py
+
+      - name: Validate the pinned install inputs
+        run: python3 tests/test_release_inputs.py
+
+      - name: Validate the installer status contract
+        run: python3 tests/test_installer_status.py
+
+      # The documented manual rollback, rehearsed in a staging tree: replaced target, pruned
+      # target, modes and the install record must all return to their pre-install bytes.
+      - name: Validate the rollback procedure in isolation
+        run: python3 tests/test_rollback_isolated.py
+
+      # Decision 64: a byte-identical target is not rewritten, but unsafe mode/ownership
+      # drift is corrected. This drives `prune-plan.sh enforce-target` directly.
+      - name: Validate repair permissions and ownership
+        run: python3 tests/test_repair_permissions.py
+
+      # The deployment plan must take a SQLite-consistent snapshot of devices.db (M3).
+      - name: Validate the deployment backup procedure
+        run: python3 tests/test_plan_sqlite_backup.py
+
+      # Catalogue compilation and merging must be deterministic, otherwise a repair install
+      # can never report `unchanged=` (U5).
+      - name: Validate catalogue determinism
+        run: python3 tests/test_catalogue_determinism.py
+
+      # Host-only evidence (U4): on a node with the plugin installed this reproduces the
+      # plan's unchanged/replaced arithmetic; elsewhere it prints an explicit SKIP.
+      - name: Report the upgrade prediction
+        run: python3 tests/test_upgrade_prediction.py
+
+      # Triggers, preserved branch entries and the selection itself: every tests/*.py named
+      # below must exist, and the predecessor step must require passed=9 skipped=0.
+      - name: Validate the CI configuration
+        run: python3 tests/test_ci_config.py
 
       - name: Lint PHP sources
         run: |
@@ -114,6 +215,60 @@ jobs:
           python3 tests/test_release_manifest.py
           sh -n uninstall.sh
           sh -n src/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
+          sh -n release/prune-plan.sh
+          sh -n release/verify-release-inputs.sh
+          sh -n release/build-release-inputs.sh
+          sh -n release/build-legacy-evidence.sh
+          sh -n release/build-bundle.sh
+          sh -n release/merge-opnsense-catalog.sh
+
+      # The bundle is what a firewall actually installs: build it and verify the pinned
+      # inputs from inside the staged tree exactly as install-unattended.sh does. The digest
+      # is asserted here too (Decision 67): run #41609297193 passed this step with a 20-byte
+      # archive because it only checked staged files, and the identity check came later.
+      - name: Verify the release bundle inputs
+        run: |
+          set -eu
+          sh release/build-bundle.sh
+          stage=/tmp/dm-bundle-stage
+          sh "$stage/release/verify-release-inputs.sh" "$stage"
+          test -f "$stage/release/legacy-targets.txt"
+          test -f "$stage/release/prune-plan.sh"
+          test -f "$stage/release/release-inputs.sha256"
+          version=$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')
+          actual=$(sha256sum "/tmp/dm-v${version}-runtime.tar.gz" | awk '{print $1}')
+          recorded=$(sed -n 's/^sha256 \([0-9a-f]\{64\}\)$/\1/p' release/bundle-digest.txt)
+          bytes=$(wc -c < "/tmp/dm-v${version}-runtime.tar.gz" | tr -d ' ')
+          expected_bytes=$(sed -n 's/^bytes \([0-9][0-9]*\)$/\1/p' release/bundle-digest.txt)
+          echo "bundle identity: $actual ($bytes bytes)"
+          test "$actual" = "$recorded" || {
+            echo "BUNDLE_DIGEST_MISMATCH=recorded:$recorded built:$actual" >&2
+            exit 1
+          }
+          test "$bytes" = "$expected_bytes" || {
+            echo "BUNDLE_SIZE_MISMATCH=recorded:$expected_bytes built:$bytes" >&2
+            exit 1
+          }
+
+      # Decision 67: a failed tar, staging, canonicalisation or compression stage must stop
+      # the build. Run #41609297193 published a 20-byte gzip because `tar | gzip` reported
+      # only gzip's status.
+      - name: Validate the bundle build fails safely
+        run: python3 tests/test_bundle_build_safety.py
+
+      # Decision 68: the identity must not depend on the platform's tar termination or
+      # compressor. Run #41627234610 produced a different archive on the runner for both
+      # reasons; this suite pins canonical termination, a fixed gzip header and a stored-block
+      # deflate stream, so FreeBSD and Linux produce identical bytes.
+      - name: Validate bundle reproducibility (tar termination and gzip)
+        run: python3 tests/test_bundle_reproducibility.py
+
+      # The published digest is an artifact identity, so it has to survive a fresh clone:
+      # two independent checkouts of the tested commit, with deliberately different file
+      # timestamps, must produce the same bytes — and that result must equal the digest
+      # recorded in release/bundle-digest.txt.
+      - name: Verify the bundle is deterministic across checkouts
+        run: python3 tests/test_bundle_determinism.py
 
       - name: Compile gettext catalogues
         run: |

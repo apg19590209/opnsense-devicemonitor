@@ -1,0 +1,2 @@
+git switch --detach 90bfcc5
+git checkout 90bfcc5 -- <path>

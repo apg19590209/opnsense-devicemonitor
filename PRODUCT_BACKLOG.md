@@ -443,3 +443,282 @@ confirmation only.
   taken on 29 September 2026 (the v2.10 merge engine; see that entry above). `DM-BL-008a` (Dutch selectability) was closed as
   dropped on 28 September 2026 — an inherited `get_locale_list()` limitation, not a result of this
   work; see the `DM-BL-008a` entry above.
+
+## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `OPEN` (deployed; retirement churns on multi-row IPs)
+
+**Identifier note:** `PROJECT_STATE.md` and `DECISIONS.md` 52 use `O4` for this item. The `O4`
+above (sidecar text-domain view migration, `CLOSED` 28 September 2026) is a different workstream;
+neither references the other in the original records, so the ageing work is named
+`O4-ageing` here.
+
+**Description:** `device_services.status` only ever moved between `available` and `unavailable`.
+Nothing aged an `unavailable` verdict, so a service that failed two consecutive probes stayed
+down indefinitely, and rows whose hosts had not been seen since 2026-09-21 were still presented
+as current inventory.
+
+**Implemented (31 October 2026, branch `feature/async-db-v2.11`, commit `cd8ccbc`):**
+`age_stale_service_state()` rewrites `unavailable` rows older than 7 days to `unknown` (clearing
+`miss_count` so Decision 49's two-miss rule still applies afterwards) and deletes rows whose
+`devices.last_seen` is older than 30 days, together with their held alert. The pass runs on the
+hourly scheduled discovery gate and via `scan_network.py --age-services [--dry-run]`. It refuses
+retirement outright when no host at all is fresh, and never retires an address that has no
+`devices` row. The Devices view renders and filters `unknown`. Decision: `DECISIONS.md` 52.
+
+**Deployed (31 October 2026)** to both HA nodes from a 2.10 predecessor:
+`.252` (CARP BACKUP) `INSTALL_OK version=2.11 files=60`, backup `install-v211.Mni93b`;
+`.253` (CARP MASTER) `INSTALL_OK version=2.11 files=60`, backup `install-v211.bMJF2H`. Both nodes
+now carry `scan_network.py` `843c15f7…` and `infrastructureservices.volt` `6034d980…`, with the
+`miss_count` schema migration applied in place.
+
+**Live evidence:** `--age-services` on `.252` `aged 47, retired 0` (121 services, `unavailable`
+55 -> 8, `unknown` 47); on `.253` `aged 46, retired 21` (128 -> 107 services, `unavailable`
+54 -> 5, `unknown` 40), with 47 and 46 `SERVICE_CHANGED` activity events respectively. A second
+dry run on both nodes reports `aged 0, retired 0`. `.253` retains 13 `devices` rows older than
+30 days with no service rows attached, and both nodes keep their untracked-endpoint rows.
+
+**Controlled proofs (live database byte-identical after each):**
+1. copy of the master database with back-dated `last_verified`/`last_seen`: retirement at the
+   30-day boundary, ageing at the 7-day boundary, `miss_count` reset, untracked endpoint kept,
+   idempotent second run — `PROOF=PASS`, live SHA256 `83a1418c…` unchanged;
+2. copy of the master database with `service_discovery_state.last_run` back-dated and discovery
+   stubbed: the scheduled wrapper logged
+   `[SERVICES] Stale-state ageing: aged 0 row(s) to unknown, retired 0 row(s)` after
+   `[SERVICES] Scheduled discovery completed` — `SCHED_PROOF=PASS`.
+
+**Operator note:** the automatic ageing path sits behind `service_observation_allowed()`, so only
+the CARP MASTER ages state in a scheduled scan; the backup logs `skipping service discovery and
+service alerts on this node`. The `.252` ageing above was an explicit CLI run, consistent with the
+rows its own Devices view shows.
+
+**Open defect found in the first scheduled cycle (19:43:16 on `.253`):**
+`[SERVICES] Scheduled discovery completed: 71 verified service(s)` was followed by
+`[SERVICES] Stale-state ageing: aged 0 row(s) to unknown, retired 12 row(s)` although the manual run
+had left no service rows attached to a stale host. Net inventory stayed at 107 and
+`rows_on_stale_devices` returned to 0, so 12 rows had been inserted by discovery (this cycle or
+a preceding targeted-scan inventory sync) for endpoints whose `devices.last_seen` is older than
+30 days, and the retirement step deleted them. No
+`SERVICE_DISCOVERED` event was written, so those services never reach the Changes feed, and the
+underlying `devices` rows (all long-standing, none added today) stay stale.
+
+Cause: retirement keys on the *device* timestamp; discovery has positive evidence the endpoint
+answers. Candidate fixes: (a) exempt rows whose `last_verified` is inside the retirement window,
+(b) refresh `devices.last_seen` when a service is verified, (c) retire on
+`device_services.last_verified` age alone.
+
+**Resolved by Decision 53 (operator chose (b)), commit `6258914`, deployed 31 October 2026:**
+`upsert_device_service()` advances the existing `devices` row's `last_seen` after a successful
+verification (`available` status, detection method other than `authoritative`, forward-only, never
+inserting a device). Bundle `6a66a068…` installed on both nodes
+(`.252` backup `install-v211.qW0WKO`, `.253` backup `install-v211.apLeor`), installed
+`scan_network.py` `2f3c05b1…`. Live evidence on the master: `192.168.20.127` moved from
+`last_seen 2026-09-12` to `19:56:31` through its DNS/NTP/WEB_ADMIN verifications, those three rows
+now persist and are `available`, `kept_rows_on_refreshed_hosts=5`, `stale_devices` 13 -> 12 and
+`--age-services --dry-run` reports `retired 0` (against 21 then 12 by churn before the fix). The
+backup never runs discovery, so it neither refreshes nor churns.
+
+**Two residual seams found immediately afterwards (measured 19:58:16 on `.253`) — one withdrawn, one
+fixed by Decision 54:**
+
+1. *Withdrawn — the `retired 3` was not churn.* Those three rows (`192.168.20.116`, RDP 3389 and SMB
+   139/445, `nmap_service`, `last_verified 2026-09-21`) were original inventory, not re-imported
+   rows: the only insert path is `upsert_device_service()` and every caller stamps a current time.
+   The scheduled cycle at 22:08:27 retired them once
+   (`aged 0 row(s) to unknown, retired 3 row(s)`), leaving `total=116`, `rows_on_stale=0`.
+2. *Fixed — ageing could re-flip a still-probed endpoint.* `record_service_miss()` never wrote
+   `last_verified` (by design, it is last known-good), so an `unavailable` row aged to `unknown`
+   kept an old timestamp and flipped back to `unavailable` after two failed probes, then aged
+   again — an oscillation with an emailable `SERVICE_UNAVAILABLE` each round. Measured before the
+   fix: 40 `unknown` rows, 22 at `miss_count = 1`, one probe from the first re-flip.
+   `device_services.last_checked` (Decision 54, commit `d266698`) now records every observation and
+   ageing keys on `COALESCE(last_checked, last_verified)`; existing databases are migrated with
+   `ALTER TABLE` plus a backfill. Deployed as bundle `c45715b1…` (`.252` backup
+   `install-v211.4x90pm`, `.253` backup `install-v211.1rHLrw`), installed `scan_network.py`
+   `7560406b…`, `last_checked` present with no NULLs; `.253` ageing then retired 5 pre-existing rows
+   on unseen hosts and a following dry run reads `aged 0, retired 0`, `.252` reads `0/0`; 62 rows
+   carry a `last_checked` inside two hours and no `SERVICE_UNAVAILABLE` event has appeared since
+   19:43. Pinned by `AGE_MISS_ADVANCES_LAST_CHECKED` and `AGE_LAST_CHECKED_MIGRATION`
+   (18 cases), full local suite 30/30, `V211_RELEASE_MANIFEST=PASS`.
+
+**Reopened 31 October 2026 (node time 23:14:22):** the next scheduled cycle logged
+`aged 0 row(s) to unknown, retired 3 row(s)` again, so retirement still churns. Measured cause, on
+the master:
+
+- address `192.168.20.254` has **two** `devices` rows: `a0:10:a2:ba:06:e5`
+  (`last_seen 2026-08-15 11:10:03`) and `00:00:5e:00:01:01` (`last_seen 2026-10-31 12:32:29`);
+- its five service rows were verified at `23:13:37 … 23:14:09` and are `available`;
+- the retirement predicate is `s.ip IN (SELECT ip FROM devices WHERE last_seen < cutoff)`, so **one**
+  stale row for an IP makes every service on that IP retireable, regardless of a fresh sibling row;
+- `touch_device_last_seen()` did advance both rows, but the scan's own hostwatch import then writes
+  `UPDATE devices SET … last_seen = ? … WHERE mac = ?`
+  (`scan_network.py:8428-8435`) with hostwatch's value, which rewinds the legacy row to `2026-08-15`
+  every cycle. The refresh is undone before retirement runs.
+
+Two candidate fixes, both narrow:
+(A) retirement requires that **no** device row for the address is fresh —
+`NOT EXISTS (SELECT 1 FROM devices d WHERE d.ip = s.ip AND COALESCE(d.last_seen,'') >= cutoff)` —
+so "someone has seen this host recently" is enough to keep its inventory;
+(B) the hostwatch upsert must not move `last_seen` backwards
+(`last_seen = MAX(COALESCE(last_seen,''), ?)`), so a replayed hostwatch value cannot undo a probe.
+
+(A) is the smallest change that stops this churn and is correct on its own terms; (B) removes the
+rewind that made it possible. Both were applied as Decision 55, commit `9a300cd`, bundle
+`c2aedfc0…`, installed on both nodes (`.252` backup `install-v211.MBQu7J`, `.253` backup
+`install-v211.EJPCJH`), installed `scan_network.py` `71e2edfc…`.
+
+Field effect of the redeploy, measured on the master:
+
+- `(B)` is proven: the legacy `192.168.20.254` row moved from `2026-08-15 11:10:03` to
+  `2026-11-01 00:16:52` and stayed there instead of being rewound by the hostwatch import;
+- `(A)` is proven for that address: both of its rows are now fresh and its five services
+  (verified `00:16:18 … 00:16:52`) persist;
+- no address now has service rows with no fresh device row, and no address has a mixed stale/fresh
+  row set — the candidate set the predicate looks at is empty;
+- **but** the `00:17:06` cycle (the first scheduled discovery after this install) still logged
+  `aged 0 row(s) to unknown, retired 3 row(s)`, with the total unchanged at 116. Those three rows
+  could not be identified afterwards: no device row was refreshed between `00:17:06` and `00:25:00`,
+  no service row was verified after `00:17:06`, and the candidate query returns nothing. They were
+  therefore either genuinely abandoned rows retired once (correct behaviour) or authoritative
+  (config-derived) rows whose address never refreshes by design. The `01:17` cycle decides which:
+  `retired 0` means the churn is over, a repeat of `retired 3` means the authoritative path is the
+  remaining source and needs an insert-side guard.
+
+**Identified and fixed 1 November 2026 — Decision 56, commit `6493d5a`.** The `01:23:03` cycle
+repeated `retired 3`, so one real discovery pass was run against a **copy** of the live database
+(`sqlite3 .backup`, live file hash-checked before and after). It named the rows exactly:
+`192.168.20.116` RDP 3389 and SMB 139/445, `detection_method` `nmap_service`, `last_verified`
+`2026-09-21 09:07:55` — the `finished_at` of nmap history row 35. Phase-3 discovery re-uses previous
+Nmap evidence and stamped inventory with that historical time
+(`evidence_time = finished_at or now_text`, `scan_network.py:5488-5506`), so each cycle recreated the
+rows six weeks old; Decision 53's forward-only refresh correctly refused to move `devices.last_seen`
+backwards to that date; Decision 55's predicate then treated the address as unseen and retirement
+deleted the rows again. Both earlier fixes were correct but aimed at the wrong side of the loop.
+
+`nmap_evidence_is_current()` now rejects evidence older than `SERVICE_UNKNOWN_AFTER_DAYS` and the
+pass logs `[SERVICES] Skipped N Nmap evidence row(s) older than 7 days`. Deployed as bundle
+`41cd357b…` (`.252` backup `install-v211.UE7JJ9`, `.253` backup `install-v211.AzOAj2`), installed
+`scan_network.py` `175598e4…` on both; dry runs read `{"aged": 0, "retired": 0}` on both.
+
+Proof against the same copy of the live database, with the new build performing a full real
+discovery:
+
+```
+LOG [SERVICES] Skipped 6 Nmap evidence row(s) older than 7 days
+DISCOVERED=66            (was 72)
+CANDIDATES=0             (was 3)
+ALL_STALE_ADDRESSES=192.168.20.109(2),192.168.20.116(1),…
+LIVE_UNCHANGED=True
+```
+
+i.e. the three rows are no longer recreated, and no service row is attached to an address whose
+device rows are all stale. Tests: `PHASE3_STALE_EVIDENCE_SKIPPED` (a six-week-old evidence row writes
+no inventory) and `NMAP_EVIDENCE_AGE_BOUND` (one hour and exactly seven days are current, seven days
+plus a second is not, empty/unparseable fall back to current); full local suite 30/30 PASS,
+`V211_RELEASE_MANIFEST=PASS`.
+
+**Closes when:** the next scheduled cycle on the master logs
+`aged 0 row(s) to unknown, retired 0 row(s)` and the rows stay gone. Until then this item stays
+open, because the copy run proves the code and only the live cycle proves the deployment.
+
+**Not caused by this item, recorded because it was observed during the deployment:** both nodes log
+chronic `database is locked` scan failures (14,760 on `.252` since 06-10-2026, 16,130 on `.253`
+since 09-09-2026) and `/usr/local/sbin/sendmail: not found` from the targeted-Nmap email path.
+
+### DM-BL-009 — local `main` reconciliation exists; publication and `main` integration outstanding: **`OPEN`**
+
+**Description:** after the canonical clone was refetched on 3 November 2026, the remediation branch
+was neither ahead of nor behind `origin/main` but **diverged** from it:
+
+    git rev-list --left-right --count origin/main...HEAD   ->   14   48
+    merge base                                             ->   40cced8
+
+(Measured against the locally recorded `origin/main` at the validated M5 checkpoint
+`a1f759e9b64a1265a951260d45845df46435b1be`. This is a point-in-time evidence reference, not a
+claim that the branch tip remains at that commit; re-measure before any `main` reconciliation.)
+
+`origin/main` (`d5d73ed`) carried work the branch did not contain — `8ea1203 release: v2.12`,
+`c494485 merge: bring v2.12 (and the About-version fix) onto main`, `c9373b8 fix(ha)`,
+`a12ede8 feat(identity)`, `d268680 fix(devicemonitor)` and `d5d73ed test: pin fail-open non-HA
+behaviour` — while the branch carried the 48 commits of the 2.13.3 remediation and its records at
+that checkpoint.
+
+**This does not block the 2.13.3 release.** `origin/release/2.13` (`6bd122e`) is an **ancestor** of
+the branch, so integrating there is a **fast-forward with zero conflicts** — no merge and no rebase is
+necessary (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md` §2 and §4).
+
+**Local reconciliation completed:** `integration/dm-bl-009-reconcile-20261105` was created from
+`origin/main` `d5d73ed` and merges `fix/pruning-remediation-20261103` `b2c74fc`. Both histories are
+preserved; the combined payload is a new candidate, `2.14.0`
+(`release/v2.14.0-runtime.manifest`, 42 rows; bundle sha256
+`530facc661e681b3461ba15100db6e8604228454814cb5125423fe4684d7f24d`, 1 716 377 bytes).
+It has not been published, deployed or accepted on a host. Local bundle, manifest, installer,
+pruning, reconciliation, Python, PHP, JavaScript and catalogue/language checks passed; GitHub CI and
+the FreeBSD installer-jail scenarios are still outstanding for this changed candidate. The 2.13.3
+live deployment and historical M5 jail results do not validate it.
+
+**Deployment status:** Device Monitor 2.13.3 remains installed on the `.23` testbed; that host was
+subsequently upgraded to OPNsense 26.7.8_2, and the post-update checker retained all 61 Device
+Monitor targets plus its database, configuration and record. The 2.13.3 live evidence does not
+validate the changed 2.14.0 tree, so DM-BL-009 remains **OPEN**.
+
+**Decision still required:** whether to publish the local integration branch and, after its CI is
+green, how to land it on `main`. No push, PR, merge to `main`, rebase, reset, release promotion or
+tag change was performed. The earlier repository-consolidation and release-integration evidence
+remains untouched.
+
+**Also open here: CI went red on the first run.** The validated M5 checkpoint is published at
+`a1f759e9b64a` and run #41609297193 failed at "Verify the bundle is deterministic across
+checkouts"; Decision 67 fixed the two causes, Decision 68 replaced the archive tail and
+compressor, and Decision 69 made the build-safety tar fixtures platform-neutral. **CI at the
+validated M5 checkpoint `a1f759e9b64a` is green: run #41977736287, 64/64 steps, zero skips**,
+so review item H1b is closed.
+
+**Closes when:** the chosen `main` path is executed with the branch published and its CI green, or the
+branch is explicitly abandoned in favour of `main`/`release/2.13` with the remediation re-applied.
+
+**Related, also open:** `/usr/local/cline-freebsd/src/cline` still sets `origin` to this repository
+while carrying an untracked Cline installation (Decision 65 §Preservation). Repointing it needs the
+intended Cline remote and explicit authorisation; it is preserved unchanged until then.
+
+## Deployment verification notes
+
+### 2.13.3 live upgrade lifecycle on `.23` — **`CLOSED`** (5 November 2026)
+
+**Description:** the M5 sandbox deliberately did not execute the daemon stop/wait/start branch or a
+real `service configd restart`. The gated 2.13.3 deployment on `.23` exercised both.
+
+**Evidence:** `INSTALL_OK version=2.13.3 files=61 core_locales=10 pruned=0
+backup=/var/backups/devicemonitor/install-v213.xKjyg1 daemon_restarted=1 unchanged=60
+repaired=6`. The old daemon PID 6557 exited; replacement PID 31483 started and remained running
+after 60 seconds. The log records `Daemon stopping`, `Daemon stopped`, `Daemon started` and
+`Monitoring DISABLED`. configd restarted from PID 71926 to 76711; `service configd status` and
+`configctl devicemonitor status` both passed.
+
+All 40 manifest rows and all 61 installed targets passed digest/mode/owner/group checks. The new
+record has 61 digest rows (21 `.mo` targets), while the database and configuration remained
+byte-identical and SQLite integrity passed. Six notification scripts were corrected to `0644
+root:wheel`; this was the installer's non-fatal `repaired=6` result, not a failure. Monitoring
+remained disabled.
+
+**Closed scope:** the live daemon stop/wait/start and real configd restart verification gaps.
+
+**Deliberately not established:** rollback was not invoked, so this deployment is not a live
+rollback test. `FRESH=1` remains untested. The installer backup
+`/var/backups/devicemonitor/install-v213.xKjyg1` and pre-install backup `/root/dm-pre-2133` remain
+in place. `.253` and `.252` were not touched and remain on 2.13.2; DM-BL-009 remains OPEN.
+
+### OPNsense 26.7.8_2 retained the 2.13.3 baseline on `.23` — **`CLOSED`** (5 November 2026)
+
+**Description:** the authorised testbed OS update completed through `configctl firmware update`
+and the required reboot. `POSTBOOT_RESULT=PASS` covered all 61 installed targets, the 61-digest
+record, unchanged Device Monitor database/configuration, SQLite integrity, configd, the daemon and
+`configctl devicemonitor status`; monitoring remained disabled. The post-update host is OPNsense
+`26.7.8_2` / FreeBSD `15.1-RELEASE-p6`.
+
+**Host tooling repair:** Codex initially could not load `libdbus-1.so.3` after the reboot.
+`dbus 1.16.2_4,1` was installed from the OPNsense repository; `codex-cli 0.165.0` then started
+normally. This did not change the Device Monitor payload or its configuration.
+
+**Retained warning:** the update log records one package-audit warning for `libgpg-error-1.61`.
+No Device Monitor or service check failed. Rollback was not invoked, `FRESH=1` remains untested,
+the OPNsense-generated configuration backup remains under `/conf/backup/`, and DM-BL-009 remains
+**OPEN**.

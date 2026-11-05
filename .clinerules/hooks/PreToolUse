@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""Cline PreToolUse guard for the Device Monitor workspace (Decision 65).
+
+Reads the hook payload on stdin and answers on stdout:
+
+    {"cancel": false}
+    {"cancel": true, "errorMessage": "...", "contextModification": "..."}
+
+Blocked, unless the operator edits this file deliberately:
+
+  * repository creation or cloning            (git init, git clone, gh repo create)
+  * worktree creation                         (git worktree add)
+  * writes into protected checkouts           (the Cline installation and its worktrees)
+  * git mutations aimed at another checkout   (git -C <protected path> ...)
+
+Anything else is allowed unchanged. A parse failure never blocks work.
+"""
+import json
+import re
+import sys
+
+CANONICAL = "/root/src/opnsense-devicemonitor-upstream"
+PROTECTED = (
+    "/usr/local/cline-freebsd",
+    "/root/o3-branch",
+    "/root/tb-branch",
+    "/root/src/cline-github",
+    "/root/src/cline-freebsd-port",
+)
+
+REPO_CREATE = re.compile(
+    r"(?:^|[;&|()\s])(?:git\s+(?:init|clone)|gh\s+repo\s+create|hub\s+create)(?:\s|$)"
+)
+WORKTREE_ADD = re.compile(r"git\s+worktree\s+add(?:\s|$)")
+GIT_MUTATING = re.compile(
+    r"git\b[^;&|]*\s(?:add|commit|checkout|switch|restore|reset|clean|merge|rebase|cherry-pick|"
+    r"tag|push|stash|apply|am|rm|mv)\b"
+)
+WRITE_TOOLS = {
+    "write_to_file",
+    "replace_in_file",
+    "apply_patch",
+    "new_rule",
+    "insert_content",
+    "multi_replace_in_file",
+}
+PATH_KEYS = ("path", "file_path", "absolute_path", "target_file", "cwd", "working_directory")
+
+
+def answer(cancel, message="", context=""):
+    payload = {"cancel": cancel}
+    if message:
+        payload["errorMessage"] = message
+    if context:
+        payload["contextModification"] = context
+    print(json.dumps(payload))
+    return 0
+
+
+def load_payload():
+    raw = sys.stdin.read()
+    if not raw.strip():
+        return {}
+    data = json.loads(raw)
+    section = data.get("preToolUse") or data.get("tool_call") or data
+    if isinstance(section, dict) and "toolName" not in section:
+        inner = data.get("preToolUse")
+        if isinstance(inner, dict):
+            section = inner
+    return section if isinstance(section, dict) else {}
+
+
+def main():
+    try:
+        payload = load_payload()
+    except Exception:
+        return answer(False)
+
+    tool = str(payload.get("toolName") or payload.get("tool_name") or "")
+    params = payload.get("parameters") or payload.get("params") or {}
+    if not isinstance(params, dict):
+        params = {}
+
+    command = ""
+    for key in ("command", "cmd", "script"):
+        value = params.get(key)
+        if isinstance(value, str) and value.strip():
+            command = value
+            break
+
+    if command:
+        if REPO_CREATE.search(command):
+            return answer(
+                True,
+                "cline-dm workspace guard: repository creation/cloning is not authorised "
+                "in the Device Monitor workspace (Decision 65).",
+                "Do not create or clone repositories. Work inside "
+                f"{CANONICAL} and report the refused command instead.",
+            )
+        if WORKTREE_ADD.search(command):
+            return answer(
+                True,
+                "cline-dm workspace guard: worktree creation is not authorised "
+                "in the Device Monitor workspace (Decision 65).",
+                "Work in the canonical checkout; do not create worktrees.",
+            )
+        for path in PROTECTED:
+            if path in command and GIT_MUTATING.search(command):
+                return answer(
+                    True,
+                    f"cline-dm workspace guard: git mutations against {path} are not "
+                    "authorised (protected checkout).",
+                    "The Cline installation and its worktrees are read-only to Device "
+                    "Monitor sessions.",
+                )
+
+    if tool in WRITE_TOOLS:
+        for key in PATH_KEYS:
+            value = params.get(key)
+            if not isinstance(value, str):
+                continue
+            for path in PROTECTED:
+                if value == path or value.startswith(path.rstrip("/") + "/"):
+                    return answer(
+                        True,
+                        f"cline-dm workspace guard: writing to {value} is not authorised "
+                        "(protected checkout).",
+                        "Edits belong in the canonical workspace "
+                        f"{CANONICAL}.",
+                    )
+
+    return answer(False)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

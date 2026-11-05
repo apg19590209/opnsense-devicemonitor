@@ -6,6 +6,16 @@
 
 Plugin for automatic network device monitoring in OPNsense firewall. Detects new devices on the network using the native OPNsense hostwatch database and sends email or webhook notifications.
 
+> **Integration candidate: 2.14.0** — payload `release/v2.14.0-runtime.manifest` (42
+> targets), combining the mainline v2.12 scan, alert, identity-email, reminder and
+> configuration-visibility work with the 2.13 HA/CARP, O4 ageing and verified
+> installer/pruning/rollback line. The candidate is local only: it has not been published,
+> deployed or accepted on a host, and its bundle identity must not be confused with the
+> deployed 2.13.3 identity. The testbed `192.168.20.23` runs 2.13.3; the CARP pair
+> `192.168.20.253` (master) / `.252` (standby) remains on 2.13.2. The Installation section
+> documents the guarded `install-unattended.sh --host <hostname>` flow; `PROJECT_STATE.md`
+> holds release, deployment and rollback records.
+
 > **Translations:** the interface is available in English, Czech, German, French, Spanish, Italian, Portuguese (Brazil), Dutch, Russian, Japanese and Simplified Chinese. All translations except English and Czech are machine-generated — native-speaker corrections are welcome.
 
 ---
@@ -39,6 +49,61 @@ The plugin automatically monitors the network and alerts you about:
 ---
 
 ## Version history
+
+### v2.14.0 (integration candidate, November 2026) — combined reliability and HA line
+
+- Reconciles the mainline v2.12 scan-loop, state-change alert, identity-email, reminder
+  and configuration-visibility work with the 2.13 HA/CARP, O4 ageing and verified
+  installer/pruning/rollback line.
+- The combined runtime contains both notification entry points (`notify_identity_mail.php`
+  and `notify_failover.php`) and the mainline deployment verifier.
+- This candidate has passed local validation only. It is not published or deployed, and
+  the historical 2.13.3 bundle digest and live acceptance do not apply to its changed code.
+
+### v2.13.3 (November 2026) — pruning you can prove, and a repair that repeats
+
+- **Pruning requires proof of ownership.** A path is removed only when the previous
+  install's own record shows it was installed *and* the file still matches the digest that
+  record carries, or when a published historical release manifest shipped that exact digest
+  and the path is inside the plugin's namespaces. Everything else is retained and reported
+  (`RETAINED modified <path>`), so a hand-edited or third-party file is never deleted.
+- **Legacy leftovers are cleaned on the first upgrade.** `release/legacy-targets.txt`
+  carries the published digests of every release manifest from v2.9 to v2.13.2, so a node
+  coming from an older line loses e.g. the v2.9 `cs_CZ_devicemonitor.po` catalogues that no
+  release ships any more — something 2.13.2 could never do, because it had no record yet.
+- **The record is the whole target set.** `/var/db/devicemonitor/installed-manifest.txt` now
+  records manifest targets *and* the generated catalogues (11 `.mo`, 10 merged core
+  catalogues) with their digests, so a release that drops a language can identify and remove
+  the catalogue it no longer produces. The current side of the diff is the running install's
+  own target plan, so the catalogues a run builds can never be classified as stale.
+- **Every executed input is pinned.** `release/release-inputs.sha256` covers the manifest,
+  the prune helper, the legacy evidence and the catalogue merge helper;
+  `release/verify-release-inputs.sh` enforces it and the installer pins that file inline. A
+  tampered helper aborts the run before anything is written.
+- **A repair install is genuinely idempotent.** Re-installing the same payload skips every
+  byte-identical target — content, mode, owner and mtime are preserved — and reports
+  `unchanged=<n>`. The same version is now an accepted predecessor.
+- **The rollback verifies itself.** Both halves (replaced targets and pruned files) restore
+  from one backup directory, every restore is digest-checked and a damaged backup is a
+  reported `ROLLBACK_FAILED` instead of a silent wrong file.
+- **Status output is append-only**: `CHECK_OK` gains `legacy_prunable=` and `retained=`,
+  `INSTALL_OK` gains `unchanged=`, and the 2.13.2 keys keep their positions.
+
+### v2.13.2 (November 2026) - HA / CARP awareness and restored service-state ageing
+
+- **HA / CARP tab** under Services -> Device Monitor -> Settings: detected role, effective
+  mode, whether this node is observing, and the CARP virtual IPs with their state.
+- **Standby safety**: a CARP backup does not observe services, so infrastructure-service
+  discovery and service alerts are deferred to the master instead of inventing outages.
+  `ha_carp_enabled`, `ha_role_override` (auto / master / backup) and
+  `ha_notify_failover` control it; the notifier reports role transitions on the existing
+  email and webhook channels.
+- **A standby ages its own inventory** even while it refuses observation, so a long-lived
+  backup does not accumulate stale verdicts until a failover.
+- **Service-state ageing restored** on this line: `unavailable` verdicts age to `unknown`
+  after 7 days without observation, rows for hosts unseen for 30 days are retired, the
+  pass refuses to run when no host looks fresh (a stopped hostwatch), and an address with
+  no device row is never retired. Operators can run it with `--age-services [--dry-run]`.
 
 ### v2.12 (1 November 2026) — Scan reliability, state-change alerts and HA ownership
 
@@ -330,64 +395,168 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 
 ## Installation
 
-### Method 1: Download runtime package + WinSCP
+Current integration candidate: `dm-v2.14.0-runtime.tar.gz`, built from
+`release/v2.14.0-runtime.manifest` (42 hash-verified targets). The bundle carries the runtime files, the 11 gettext
+catalogues, `install.sh` / `install-unattended.sh` / `uninstall.sh`, the manifest, the
+pinned-inputs file with its verifier, the catalogue merge helper and the prune helper with
+its legacy ownership evidence. `install.sh` is a thin wrapper that execs
+`install-unattended.sh`, which is the authoritative procedure.
 
-1. Download the **v2.12 runtime package** from the v2.12 GitHub release assets.
-2. Enable SSH in OPNsense: **System -> Settings -> Administration -> Secure Shell -> Enable**.
-3. Upload `dm-v2.12-runtime.tar.gz` to `/tmp/` using WinSCP.
-4. Connect by SSH and install:
+### Method 1: bundle over WinSCP
+
+1. Obtain `dm-v2.14.0-runtime.tar.gz` from the reviewed build output (the candidate is not
+   published until CI and publication are authorised).
+2. Enable SSH in OPNsense: **System → Settings → Administration → Secure Shell → Enable**.
+3. Upload the bundle to `/tmp/` with WinSCP.
+4. Extract and install:
 
 ```sh
 cd /tmp
-mkdir dm-v2.12
-tar -xzf dm-v2.12-runtime.tar.gz -C dm-v2.12
-cd dm-v2.12
-sh install.sh --host YOUR-FIREWALL-HOSTNAME
+mkdir dm-v2.14.0
+tar -xzf dm-v2.14.0-runtime.tar.gz -C dm-v2.14.0
+cd dm-v2.14.0
+sh install.sh --host "$(/bin/hostname)"
 ```
 
-Replace `YOUR-FIREWALL-HOSTNAME` with the exact output of `/bin/hostname`. The
-installer checks the host, source, dependencies and predecessor before changing
-installed files. For a dry run, add `--check`. No reboot is normally required; installation restarts
-`configd` and restarts Device Monitor only if it was already running (a fresh
-installation starts the daemon with monitoring disabled by default).
-
-### Method 2: Direct SSH
+### Method 2: direct SSH
 
 ```sh
 ssh root@your.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.12/dm-v2.12-runtime.tar.gz
-mkdir dm-v2.12
-tar -xzf dm-v2.12-runtime.tar.gz -C dm-v2.12
-cd dm-v2.12
-sh install.sh --host YOUR-FIREWALL-HOSTNAME
+fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.14.0/dm-v2.14.0-runtime.tar.gz
+mkdir dm-v2.14.0
+tar -xzf dm-v2.14.0-runtime.tar.gz -C dm-v2.14.0
+cd dm-v2.14.0
+sh install.sh --host "$(/bin/hostname)"
+```
+
+`--host` must match the exact output of `/bin/hostname`, otherwise the installer
+aborts before touching anything. Add `--check` for a dry run, which validates
+everything and prints a report without writing:
+
+```text
+CHECK_OK version=2.14.0 predecessor=2.13.3 files=63 core_locales=10 prunable=0 daemon_running=1 host=... legacy_prunable=0 retained=0
+INSTALL_OK version=2.14.0 files=63 core_locales=10 pruned=0 backup=/var/backups/devicemonitor/install-v213.XXXXXX daemon_restarted=1 unchanged=0 repaired=0
+```
+
+Both lines are a contract, not prose: keys are only ever **appended**, so the 2.13.2 order
+is a prefix of the current one and a parser that reads `key=value` pairs keeps working
+across releases. When a prune candidate is refused, the plan is listed before the status
+line (`PRUNE_PLAN=<RECORD|LEGACY> <path>`) and the refusal is reported on stderr as
+`PRUNE_RETAINED <reason> <path>`; the last `CHECK_OK` line on stdout is always the summary.
+
+### What the installer verifies and does
+
+1. Runs as root, on FreeBSD, on OPNsense, with a hostname matching `--host`.
+2. Reads the installed version and accepts a predecessor of 2.8 … 2.13.3, including the
+   version it is installing (a repair). A payload installed on an unexpected version aborts
+   rather than upgrading blind.
+3. Verifies `release/release-inputs.sha256` against the digest pinned in the script, then
+   every input it lists — the manifest, the prune helper, the legacy evidence and the
+   catalogue merge helper — and only then reads the pinned SHA256 of the manifest, its row
+   count (42) and the staged target count (63, or 64 on a fresh install), hashing **every**
+   source file before a single installed file is replaced.
+4. Writes a plan of `old hash → new hash` per target and a timestamped rollback
+   backup under `/var/backups/devicemonitor/install-v213.<id>/` (`files/` + `plan`).
+5. Installs with the mode recorded in the manifest, compiles the 11 catalogues with
+   `msgfmt --check`, merges the plugin keys into the 10 core catalogues that can host
+   them (DM-BL-008c, pristine copies recorded for `uninstall.sh`), clears the OPNsense
+   menu cache, restarts `configd`, cycles the daemon (stop → wait for exit → start)
+   and stops the installation if the daemon does not come back. A target that is already
+   byte-identical is left exactly as it is (mode, owner and mtime preserved) and counted in
+   `unchanged=<n>`.
+6. Re-hashes every installed file and runs `PRAGMA quick_check` on
+   `/var/db/devicemonitor/devices.db`.
+7. **Prunes** what a previous install owned but this run no longer installs.
+   `release/prune-plan.sh` diffs the previous record at
+   `/var/db/devicemonitor/installed-manifest.txt` (path + digest per target) and the
+   published digests in `release/legacy-targets.txt` against the full target set of this
+   run. A path is removed only with proof of ownership — the record's digest still matches,
+   or a historical manifest published that digest — and only inside the plugin's four
+   namespaces. Everything else is retained and reported; each removal is backed up into the
+   rollback directory first. `--check` reports `prunable=<n>`, `legacy_prunable=<n>` and
+   `retained=<n>`; a real run reports `pruned=<n>` in `INSTALL_OK`.
+
+Any mismatch rolls the node back — replaced targets first, then pruned files, every restore
+digest-verified — and prints `ROLLBACK_ATTEMPTED=/var/backups/devicemonitor/install-v213.<id>`.
+Nothing is left half-installed.
+
+### Verifying after install
+
+```sh
+/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh   # expect: running
+grep -m1 version /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
+```
+
+To prove the node matches the bundle byte for byte, from the extracted bundle:
+
+```sh
+cd /tmp/dm-v2.14.0
+while read -r h m s t; do
+    [ "$(sha256 -q "$t")" = "$h" ] || echo "MISMATCH $t"
+done < release/v2.14.0-runtime.manifest
 ```
 
 ### Upgrading an existing installation
 
-Before upgrading, back up the runtime data:
+### Upgrading from 2.10, 2.11 or 2.12
+
+Install the current bundle **directly** - no staged hop is required. The installer
+accepts `2.8`, `2.9`, `2.10`, `2.11`, `2.12`, `2.13`, `2.13.1`, `2.13.2` and `2.13.3` as predecessors and
+reaches the same final state from any of them:
+
+| Property | Evidence |
+|---|---|
+| Every schema change is additive (`CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN`), so one `init_db()` migrates in place | `tests/test_upgrade_from_v2_10.py` builds a database with the **v2.10 code**, then upgrades it with the shipped code |
+| Added columns are backfilled, never left `NULL` for existing rows | that test asserts `last_checked` is backfilled from the old `last_verified` |
+| Device and service rows survive, and re-running the migration changes nothing | same test: 1 device / 2 services before and after, two extra `init_db()` calls are no-ops |
+| No file is orphaned | the current 42-target manifest retains the 2.13.3 payload and adds the mainline `notify_identity_mail.php` and `verify-devicemonitor.sh` targets |
+| An old `config.json` gains the new keys instead of losing its values | the model merges `defaults.json` under the saved file, preserving operator values while adding reminder, visibility and HA keys |
+
+There is no 2.12 **release** to install: the 2.12 line was recovered as
+`v2.12-baseline`, which is a source baseline and not an installable payload. A firewall
+that reports `2.12` (as the CARP pair did) upgrades to the current bundle in one step.
+
+On a CARP pair, upgrade the master first, verify, then the standby, so the virtual IP
+keeps being served. Keep the pre-upgrade data backup and the installer's
+`install-v213.<id>/` rollback directory until you have seen a clean scan cycle.
+
+> **Removed files are pruned, but only with proof.** Each install records the full target
+> set it owns — manifest files and the catalogues it generates, with a digest each — in
+> `/var/db/devicemonitor/installed-manifest.txt`. The next install removes a path only when
+> that record still matches the file, or when a published historical manifest
+> (`release/legacy-targets.txt`, v2.9 … v2.13.2) shipped that exact digest, and only inside
+> the plugin's own namespaces. Anything else — an edited file, a third-party file, a path
+> outside those namespaces — is retained and reported. `--check` reports how many would go
+> (`prunable=<n>`, split as `legacy_prunable=`) and how many were refused (`retained=<n>`);
+> `INSTALL_OK` reports how many did (`pruned=<n>`).
+
+Back up the runtime data first — it is not part of the bundle:
 
 ```sh
 tar -czf /root/devicemonitor-backup.tgz /var/db/devicemonitor
 ```
 
-Then install v2.12 using either method above. The installer validates the host,
-source and dependencies before modifying files, and retains a rollback backup.
-It aborts on failed checks instead of continuing with a partial installation.
+Then install the candidate as above. The installer validates the host, source and
+dependencies before modifying files and retains a rollback backup. Configuration
+(`/var/db/devicemonitor/config.json`) and the device database are preserved; new
+settings keys appear automatically because the model merges `defaults.json` under the
+saved configuration. It aborts on failed checks instead of continuing with a partial
+installation.
 
-Existing configuration and device data are preserved during the upgrade.
-
-After installation, verify the daemon:
+To roll back, either re-run the previous bundle, or restore in place:
 
 ```sh
-/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
+service devicemonitor stop
+BASE=/var/backups/devicemonitor/install-v213.<id>
+while read -r id old new mode src dest; do
+    [ "$old" = absent ] || cp -p "$BASE/files/$id" "$dest"
+done < "$BASE/plan"
+service devicemonitor start
 ```
 
-Expected result:
-
-```text
-running
-```
+A CARP pair is upgraded one node at a time — master first, then standby — so the
+VIP keeps being served while the other node restarts its daemon.
 
 ### Targeted Nmap scanning in v2.6
 

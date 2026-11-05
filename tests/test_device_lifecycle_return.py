@@ -221,7 +221,7 @@ def test_returning_device_gets_fresh_first_seen():
             "isc": {"enabled": False},
             "dnsmasq": {"configured": False},
         }
-        module.prime_selected_interface_visibility = lambda networks: None
+        module.prime_selected_interface_visibility = lambda networks, config=None: None
         module.get_hostwatch_devices = lambda networks: [{
             "mac": mac,
             "ip": "192.168.50.50",

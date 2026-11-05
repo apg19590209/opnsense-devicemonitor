@@ -8,9 +8,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Device Monitor 2.10\n"
-"POT-Creation-Date: 2026-04-10 00:00+0000\n"
-"PO-Revision-Date: 2026-04-10 00:00+0000\n"
+"Project-Id-Version: Device Monitor 2.14.0\n"
+"POT-Creation-Date: 2026-11-02 03:16+0000\n"
+"PO-Revision-Date: 2026-11-02 03:15+0000\n"
 "Last-Translator: Device Monitor contributors\n"
 "Language-Team: Chinese\n"
 "Language: zh_CN\n"
@@ -519,14 +519,6 @@ msgstr "未解决"
 
 msgid "Resolved"
 msgstr "已解决"
-
-#: settings.volt - IP and MAC conflict webhook alerts
-msgid "Identity conflict alerts"
-msgstr "标识冲突警报"
-
-#: settings.volt - IP and MAC conflict webhook alerts
-msgid "Send a high-severity IPv4 or IPv6 address conflict alert to the webhook endpoint."
-msgstr "将新的高严重性 IPv4 或 IPv6 地址冲突警报发送到 Webhook 端点。"
 
 msgid "IP and MAC Conflicts"
 msgstr "IP 和 MAC 冲突"
@@ -1571,20 +1563,173 @@ msgstr "设备总数"
 msgid "Stopped"
 msgstr "已停止"
 
+# ============================================
+# [settings.volt] Settings subtab: HA / CARP and webhook identity alerts
+# ============================================
+
+#: settings.volt
+msgid "A CARP standby does not carry the monitored traffic, so hostwatch there under-reports and every liveness verdict would be wrong. With this enabled a standby node skips infrastructure-service discovery and service alerts instead of inventing outages."
+msgstr "CARP 备用节点不承载受监控的流量，因此 hostwatch 在此处的数据偏少，任何活性判定都会出错。启用后，备用节点会跳过基础设施服务发现和服务告警，而不是凭空报告故障。"
+
+#: settings.volt
+msgid "A backup override suppresses service discovery even when CARP awareness is enabled."
+msgstr "即使启用了 CARP 感知，强制为备用角色也会抑制服务发现。"
+
+#: settings.volt
+msgid "Always act as backup (never observe)"
+msgstr "始终作为备用节点（从不观测）"
+
+#: settings.volt
+msgid "Always act as master"
+msgstr "始终作为主节点"
+
+#: settings.volt
+msgid "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
+msgstr "仅适用于受监控的接口。没有 CARP 状态的节点不受影响，因此独立防火墙会继续观测。"
+
+#: settings.volt
+msgid "Automatic (from CARP state)"
+msgstr "自动（依据 CARP 状态）"
+
+#: settings.volt
+msgid "Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance."
+msgstr "自动模式会从 ifconfig 读取 CARP 状态。当受监控接口没有自身的 CARP 地址，或需要在维护期间固定节点时，请指定明确的角色。"
+
+#: settings.volt
+msgid "CARP awareness"
+msgstr "CARP 感知"
+
+#: settings.volt
+msgid "Defer service observation to the CARP master"
+msgstr "将服务观测交给 CARP 主节点"
+
+#: settings.volt
+msgid "Delivery uses whichever channels are enabled on the Email and Webhook tabs; a disabled channel is skipped."
+msgstr "投递会使用“电子邮件”和“Webhook”选项卡中已启用的渠道；已禁用的渠道将被跳过。"
+
+#: settings.volt
+msgid "Detected role"
+msgstr "检测到的角色"
+
+#: settings.volt
+msgid "Effective mode"
+msgstr "生效模式"
+
+#: settings.volt
+msgid "Enable sidecar catalogue translations"
+msgstr "启用 Sidecar 目录翻译"
+
+#: settings.volt
+msgid "Failover notification"
+msgstr "故障切换通知"
+
+#: settings.volt
+msgid "Forces the interface to use the dedicated translation file of this plugin. If disabled, labels may default to English."
+msgstr "强制界面使用本插件自带的翻译文件。禁用后，标签可能仍然显示为英文。"
+
+#: settings.volt
+msgid "HA / CARP"
+msgstr "HA / CARP"
+
+#: settings.volt
+msgid "Live CARP status"
+msgstr "实时 CARP 状态"
+
+#: settings.volt
+msgid "No CARP virtual IP defined on this firewall."
+msgstr "此防火墙上未定义 CARP 虚拟 IP。"
+
+#: settings.volt
+msgid "Notify when this node changes CARP role"
+msgstr "当本节点 CARP 角色变化时通知"
+
+#: settings.volt
+msgid "Plugin Options"
+msgstr "插件选项"
+
+#: settings.volt
+msgid "Read-only view of this node: the role ifconfig reports for the monitored interfaces, and the CARP virtual IPs defined on this firewall. Nothing here is saved."
+msgstr "本节点的只读视图：ifconfig 为受监控接口报告的角色，以及此防火墙上定义的 CARP 虚拟 IP。此处内容不会被保存。"
+
+#: settings.volt
+msgid "Reports a MASTER/BACKUP transition once, through the configured email and webhook channels. Without this the transition is only written to the Device Monitor log."
+msgstr "通过已配置的电子邮件和 Webhook 渠道一次性报告 MASTER/BACKUP 切换。若未启用，切换仅写入 Device Monitor 日志。"
+
+#: settings.volt
+msgid "Role override"
+msgstr "角色覆盖"
+
+#: settings.volt
+msgid "Send Test Webhook"
+msgstr "发送测试 Webhook"
+
+#: settings.volt
+msgid "Service observation"
+msgstr "服务观测"
+
+#: settings.volt
+msgid "State"
+msgstr "状态"
+
+#: settings.volt
+msgid "VHID"
+msgstr "VHID"
+
+#: settings.volt
+msgid "Virtual IP"
+msgstr "虚拟 IP"
+
+#: settings.volt
+msgid "Identity conflict alerts"
+msgstr "身份冲突告警"
+
+#: settings.volt
+msgid "Send a high-severity IPv4 or IPv6 address conflict alert to the webhook endpoint."
+msgstr "将 IPv4 或 IPv6 地址冲突的高严重性告警发送到 Webhook 端点。"
+
+#: settings.volt
 msgid "Language"
 msgstr "语言"
+
+#: settings.volt
 msgid "Plugin translations (sidecar catalogue)"
-msgstr "插件翻译（附属目录）"
+msgstr "插件翻译（Sidecar 目录）"
+
+#: settings.volt
 msgid "Translate Device Monitor strings from the plugin sidecar catalogue. When disabled, the plugin uses the stock OPNsense core catalogues only."
-msgstr "从插件的附属目录翻译 Device Monitor 字符串。禁用时，插件仅使用 OPNsense 自带的核心目录。"
+msgstr "从插件的 Sidecar 目录翻译 Device Monitor 文本。禁用后，插件仅使用 OPNsense 核心自带的目录。"
+
+#: settings.volt
 msgid "Enable immediate webhook identity conflict alerts"
-msgstr "Enable immediate webhook identity conflict alerts"
+msgstr "启用即时的 Webhook 身份冲突告警"
+
+#: settings.volt
 msgid "Enables the primary high-speed HTTP POST notification engine. This serves as the master transport route used to instantly dispatch both asset summaries (New Device Discoveries) and high-severity security events to your monitoring endpoints."
-msgstr "Enables the primary high-speed HTTP POST notification engine. This serves as the master transport route used to instantly dispatch both asset summaries (New Device Discoveries) and high-severity security events to your monitoring endpoints."
+msgstr "启用主要的高速 HTTP POST 通知引擎。它作为主传输通道，用于将资产摘要（新发现的设备）和高严重性安全事件立即发送到您的监控端点。"
+
+#: settings.volt
 msgid "Triggers a webhook payload dispatch immediately upon detection of an existing MAC address switching between multiple IP addresses (IP Spoofing / Identity Hijacking). Recommended to leave enabled."
-msgstr "Triggers a webhook payload dispatch immediately upon detection of an existing MAC address switching between multiple IP addresses (IP Spoofing / Identity Hijacking). Recommended to leave enabled."
+msgstr "检测到现有 MAC 地址在多个 IP 地址之间切换（IP 欺骗／身份劫持）时，立即触发 Webhook 负载发送。建议保持启用。"
+
+#: settings.volt
 msgid "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."
-msgstr "Select the specific network interfaces to actively monitor for device footprint shifts and identity conflicts."
+msgstr "选择要主动监控设备构成变化和身份冲突的网络接口。"
+
+# ============================================
+# [settings.volt] HA / CARP live status values
+# ============================================
+
+#: settings.volt
+msgid "observing"
+msgstr "观测中"
+
+#: settings.volt
+msgid "suppressed"
+msgstr "已抑制"
+
+#: settings.volt
+msgid "unknown"
+msgstr "未知"
 
 #: settings.volt - IP and MAC conflict email alerts
 msgid "Email high-severity conflict alerts"
@@ -1596,3 +1741,43 @@ msgstr "当检测到新的高严重性 IPv4 或 IPv6 地址冲突时发送电子
 
 msgid "About Conflict Alerts"
 msgstr "关于冲突警报"
+
+#: settings.volt
+msgid "Also email identity conflict alerts"
+msgstr "同时通过电子邮件发送身份冲突警报"
+
+#: settings.volt
+msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
+msgstr "状态变化时发送电子邮件。设置状态未变化时各类别的重复间隔。0 表示从不重复。"
+
+#: settings.volt
+msgid "Features and Enhancements"
+msgstr "功能和增强"
+
+#: settings.volt
+msgid "Identity conflicts"
+msgstr "身份冲突"
+
+#: settings.volt
+msgid "MAC change announcements"
+msgstr "MAC 变更通知"
+
+#: settings.volt
+msgid "Repeat unchanged alerts"
+msgstr "重复未变化的警报"
+
+#: settings.volt
+msgid "Scan results"
+msgstr "扫描结果"
+
+#: settings.volt
+msgid "Service outages"
+msgstr "服务中断"
+
+#: settings.volt
+msgid "minutes"
+msgstr "分钟"
+
+#: infrastructureservices.volt
+msgid "Unknown"
+msgstr "未知"

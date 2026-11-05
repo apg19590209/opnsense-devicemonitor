@@ -85,7 +85,7 @@ def prepare_runtime(module):
         "isc": {"enabled": False},
         "dnsmasq": {"configured": False},
     }
-    module.prime_selected_interface_visibility = lambda networks: None
+    module.prime_selected_interface_visibility = lambda networks, config=None: None
     module.get_dhcp_descriptions = lambda: {}
     module.get_kea_ipv4_leases = lambda: []
     module.get_dnsmasq_descriptions = lambda: {}
@@ -100,6 +100,9 @@ def prepare_runtime(module):
     )
     module.get_new_high_identity_events = lambda *args, **kwargs: []
     module.should_send_identity_email = lambda *args, **kwargs: False
+    module.service_observation_allowed = lambda *args, **kwargs: (True, None, '')
+    module.record_carp_role = lambda role: False
+    module.read_carp_role = lambda: ''
     module.run_scheduled_service_discovery = lambda networks=None: None
 
 
