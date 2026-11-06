@@ -623,7 +623,7 @@ open, because the copy run proves the code and only the live cycle proves the de
 chronic `database is locked` scan failures (14,760 on `.252` since 06-10-2026, 16,130 on `.253`
 since 09-09-2026) and `/usr/local/sbin/sendmail: not found` from the targeted-Nmap email path.
 
-### DM-BL-009 — local `main` reconciliation exists; corrected candidate publication and `main` integration outstanding: **`OPEN`**
+### DM-BL-009 — local `main` reconciliation exists; 2.14.0 live upgrade, authenticated UI, live rollback, isolated fresh-install and bounded monitoring exercise COMPLETE / ACCEPTANCE PASS, with further execution unauthorised; full live lifecycle and `main` integration outstanding: **`OPEN`**
 
 **Description:** after the canonical clone was refetched on 3 November 2026, the remediation branch
 was neither ahead of nor behind `origin/main` but **diverged** from it:
@@ -651,10 +651,10 @@ preserved; the combined payload is a new candidate, `2.14.0`
 (`release/v2.14.0-runtime.manifest`, 42 rows). The integration history starts at `eac1160` and
 includes the rollback correction. Its immutable candidate is 1,725,593 bytes with sha256
 `5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f`; the validation evidence
-records `CANDIDATE_SOURCE=worktree` because it was collected before the publication commit. It has
-not been deployed or accepted on a host. Local bundle, manifest, installer, pruning,
-reconciliation, Python, PHP, JavaScript and catalogue/language checks passed. The 2.13.3 live
-deployment and historical M5 jail results do not validate it.
+records `CANDIDATE_SOURCE=worktree` because it was collected before the publication commit. Local
+bundle, manifest, installer, pruning, reconciliation, Python, PHP, JavaScript and catalogue/language
+checks passed. It was subsequently deployed to `.23` on 6 November; the 2.13.3 live deployment and
+historical M5 jail results do not themselves validate the changed tree.
 
 **2.14.0 rollback correction:** the earlier `530facc…` candidate exposed a real rollback defect.
 After an injected post-prune `configd` failure it reported `ROLLBACK_STATUS=COMPLETE` and restored
@@ -671,18 +671,85 @@ scenarios passed. Rollback reported `ROLLBACK_STATUS=COMPLETE`, target restorati
 `restored=1 skipped=0 conflicts=0 failed=0`, and core-locale restoration
 `restored=19 removed=0 conflicts=0 failed=0`. The before/after snapshots differ only by the retained
 installer backup directory. The earlier candidate digest and failed transcripts remain preserved
-as superseded diagnostic evidence. `FRESH=1`, live rollback, real configd/daemon lifecycle and
-authenticated browser validation remain untested. DM-BL-009 remains **OPEN**.
+as superseded diagnostic evidence. The later live deployment exercised the real configd restart and
+daemon stop/wait/start lifecycle.
 
-**Deployment status:** Device Monitor 2.13.3 remains installed on the `.23` testbed; that host was
-subsequently upgraded to OPNsense 26.7.8_2, and the post-update checker retained all 61 Device
-Monitor targets plus its database, configuration and record. The 2.13.3 live evidence does not
-validate the changed 2.14.0 tree, so DM-BL-009 remains **OPEN**.
+**2.14.0 fresh-install correction and validation:** the harness now has `fresh` and
+`fresh-rollback` scenarios. Both passed on 6 November against the unchanged bundle. `fresh`
+reported `CHECK_OK ... predecessor=fresh files=64 core_locales=10 prunable=0 daemon_running=0 ...`
+and `INSTALL_OK version=2.14.0 files=64 core_locales=10 pruned=0 ... daemon_restarted=0 unchanged=0
+repaired=0`; all 64 targets, the 64-row record, the ten pristine core catalogues, the rc.conf/rc.d
+wiring and a running daemon were verified, with no database or configuration created. The injected
+post-mutation failure reported `ROLLBACK_STATUS=COMPLETE`, targets `restored=64 skipped=0
+conflicts=0 failed=0`, core-locale `restored=0 removed=19 conflicts=0 failed=0`, and restored every
+originally absent path. Evidence: `/root/dm-validation-2140/jail-evidence-fresh-20261106/`
+(`SHA256SUMS` sha256 `1448ec56adf75dab2461da9f0fda6447486a9258fadd4afa9c4deec70e43b05b`). The
+jail-only `rc.configure_plugins` stub proves the call boundary, not real OPNsense plugin
+registration. Live `FRESH=1` and real plugin registration remain untested; the bounded monitoring
+exercise is recorded separately below. The live successful-install rollback is recorded below.
+DM-BL-009 remains **OPEN**.
 
-**Decision still required:** whether the published candidate and its exact-commit CI result are
-acceptable, then how to land the result on `main`. No PR, merge to `main`, rebase, reset, release
-promotion or tag change was performed in this task. The earlier repository-consolidation and
-release-integration evidence remains untouched.
+**Deployment status:** Device Monitor 2.14.0 is installed on the `.23` testbed only. The host runs
+OPNsense 26.7.8_2; `os-git-backup-1.1_5` was installed immediately before the upgrade and caused an
+OPNsense configuration migration/plugin-registration revision, which the pre-install backup
+captured. `.253` and `.252` remain on 2.13.2 and were not contacted.
+
+**2.14.0 host preflight:** published HEAD `690204bb1d6c402de9a2b41e16f753b37335279f` passed CI
+run `42116897417` (one `validate` job, 66 steps, zero failures or skips). A read-only `.23`
+preflight confirmed OPNsense `26.7.8_2`, installed Device Monitor 2.13.3, 61 valid record rows,
+SQLite integrity `ok`, monitoring disabled, no WAL, healthy daemon/configd and 3.0 GB free. The
+non-mutating installer check reported
+`CHECK_OK version=2.14.0 predecessor=2.13.3 files=63 core_locales=10 prunable=0 daemon_running=1 host=OPNsense.internal legacy_prunable=0 retained=0`;
+live state, the 90-entry backup inventory and temporary stages were unchanged. Those counts are
+the actual-predecessor expectations, not the jail fixtures. The candidate adds the lazy
+`device_identity_events.notified_at` column and six default-off settings without changing any
+existing common default. A disposable database copy migrated idempotently with all rows preserved;
+the live database intentionally remains on the old schema while monitoring stays disabled.
+
+**2.14.0 live deployment:** the authorised normal upgrade completed with
+`INSTALL_OK version=2.14.0 files=63 core_locales=10 pruned=0 backup=/var/backups/devicemonitor/install-v214.JeYC44 daemon_restarted=1 unchanged=32 repaired=0`.
+All 42 manifest rows and all 63 installer-plan targets passed digest/mode/ownership checks. The
+record has 63 digest rows including 21 locale rows. Database, Device Monitor configuration and
+OPNsense configuration remained byte-identical; SQLite integrity is `ok`; monitoring is disabled
+with no WAL. Daemon PID `34058` → `79168` remained alive after 60 seconds; configd PID `639` →
+`35685`; `configctl devicemonitor status` is `running`. Rollback was **not invoked during the
+initial deployment**; the separate live rollback test follows.
+
+**2.14.0 successful-install live rollback (6 November): PASS.** The authorised §9.3 cycle first
+restored the accepted 2.14.0 state to 2.13.3 through `install-v214.JeYC44`, then installed 2.14.0
+normally and created `/var/backups/devicemonitor/install-v214.zGJRuq`. The helper rollback of that
+successful installation reported `ROLLBACK_SUMMARY=restored=31 skipped=32 conflicts=0 failed=0`
+and `CORE_LOCALE_ROLLBACK_SUMMARY=restored=19 removed=0 conflicts=0 failed=0`; the manual helper
+does not emit `ROLLBACK_STATUS`. Independent checks found 61 restored targets and the 2.13.3
+record, unchanged database/configuration, SQLite integrity `ok`, the two 2.14-only targets absent
+again, and healthy daemon/configd. A final normal install returned to 2.14.0 with 63 targets,
+zero prunes, record `d891ce68…`, unchanged data/configuration and
+`backup=/var/backups/devicemonitor/install-v214.qMPS7n`. Evidence:
+`/root/dm-validation-2140/live-rollback-20261105T231701Z/` (`SHA256SUMS` sha256
+`5cc19b38d4b8a294ef83f8ddfdf86db0622a652c943c4f83a48bdaa258f79fe3`).
+
+Pre-install backup: `/root/dm-pre-2140/runtime-data.tgz`, 7,632,213 bytes, sha256
+`ff7873ce0fbc1826663aa86c3271014c9c2ad3cdb3bd7b4eacce164a4a63753e`, with 61 payload files,
+19 core-locale files, record, consistent database and configuration. Installer backup:
+`/var/backups/devicemonitor/install-v214.JeYC44`. The rollback test and final reinstall are
+preserved as `install-v214.zGJRuq` and `install-v214.qMPS7n`; the pre-mutation recovery point is
+`/root/dm-validation-2140/rollback/20261105T231610Z`. The exact procedures and evidence references
+are in `verification/DEPLOY-2.14.0-23-PLAN.md` and
+`verification/LIVE-ROLLBACK-2.14.0-23-20261106.md`.
+
+**§9.4 bounded monitoring execution (6 November 2026): COMPLETE / ACCEPTANCE PASS — further execution is unauthorised.** After operator acceptance of `/conf/config.xml` `15ce9e6c…831b4` and preservation of the current Git Backup configuration, the reviewed detached watchdog completed exactly two scheduled inventory scans (`3497 → 3499`) within the 900-second limit. The scheduled scans logged service discovery as not due; the five DMTEST services were observed through a separate direct `scan_network.py --discover-services` command. Visibility probing covered 253 addresses within `opt1`/DMTEST/`192.168.50.0/24` only. The loopback SMTP sink captured two messages from directly invoked PHP helpers, not daemon-generated notification delivery. Identity/service/new-device/aged/retired and fresh-host refusal were copy-only fixtures. Final `ACCEPTANCE=PASS`: monitoring `enabled=0`, empty interface selection, Device Monitor and configd running, no `2525` listener, no scan/Nmap/sink/sampler process and no WAL/SHM. Device Monitor configuration `027594eb…`, record `d891ce68…`, OPNsense configuration `15ce9e6c…` and all 19 core-locale files are byte-identical.
+
+**Live `notified_at` migration and database restoration.** The migration was observed live before restoration: the guard/pre-install snapshot had the column absent, `live-after-discovery.txt` recorded it present at `08:36:24Z` before monitoring was enabled at `08:36:26Z`, and it remained present after the cycles. Its final absence is restoration evidence, not proof that migration did not occur. The saved evidence records the original live database as `c17874a7…` and the verified consistent SQLite snapshot as `796d28c7…`; the final guard snapshot and live file are both `796d28c7…`. Both states produced `.dump` digest `d7ed7f81…` and guard `iterdump` digest `10460718…`; the retained snapshot has 21 schema tables, 22 indexes, one trigger, 382 user rows, the same 26/60/2/96 counts and `notified_at` absent. The transition is traced: `/root/dm-pre-2133/devices.db` first retained `796d28c7…` via `src.backup(dst)` on 5 November while the live hash was `c17874a7…`; at `08:31:33Z` the historical guard independently backed up the then-live `c17874a7…` database to `796d28c7…`; after pre-monitoring configuration validation failed, its `08:32:04Z` recovery copied that snapshot over the live path. The installer did not replace the live file during §9.3. No retained physical database matches `c17874a7…` (21 files named `devices.db` and 12 retained archive members checked), so the internal header/page delta cannot be compared or reproduced. The historical guard's `prestate.db_sha` was its backup hash rather than the original live hash, so `PASS` proved restoration to the verified snapshot, not byte identity to `c17874a7…`. Physical byte identity is not claimed for the completed exercise and remains an unresolved acceptance discrepancy under its recorded criteria. The guard was subsequently corrected to stop and verify writers before capture, retain original database/WAL/SHM bytes separately from the consistent SQLite fallback, archive the post-state database before restoration, and verify restored physical bytes, metadata, schema/data and integrity against the original recovery copy. That correction prevents recurrence but cannot retroactively prove the historical bytes.
+
+The first supervised status check saw a transient configd socket; manual `guard recover` passed and the wrapper now retries within a bounded window. The SMTP parser now normalises angle-bracketed addresses and ESMTP `SIZE=` values while retaining the single-recipient rule. The corrected guard keeps original, snapshot and restored database identities separate; its 35 mock/disposable-copy tests all pass, including distinguishing logically equal but physically different snapshots, rejecting normalised snapshot bytes as physical restoration, accepting original bytes, archiving WAL/SHM before replacement, capturing and restoring a real uncheckpointed WAL/SHM pair exactly, and leaving monitoring stopped on unsafe capture or restoration. This correction cannot retroactively prove the completed exercise's physical bytes. Evidence: `verification/monitoring-validation/EXECUTION-20261106.md` and `/root/dm-validation-2140/monitoring/20261106T083522Z/`.
+
+Remaining gaps are classified relative to this bounded exercise and DM-BL-009 closure. Physical DB byte identity for the completed exercise is a **release blocker for an unqualified exact-restoration claim** and remains an unresolved acceptance discrepancy: the operation is traced and the logical state is verified, but the original bytes and their page map were never retained. The corrected guard now enforces original-byte identity for any future authorised run but cannot prove the historical bytes. Live `FRESH=1` and real OPNsense plugin registration/lifecycle are **deferred limitations for this exercise but release blockers for DM-BL-009 closure**. Full reminder/ageing/CARP and daemon-generated notification/service-discovery paths are **deferred limitations for this exercise but release blockers for full monitoring sign-off**. Exact daemon-triggered attribution of the `notified_at` migration is a **deferred limitation, not a blocker for the observed mutation**. External SMTP, webhook, AdGuard/Pi-hole and targeted-Nmap delivery are **deferred limitations and were intentionally excluded**. No further run is authorised. DM-BL-009 and issue #5 remain **OPEN**; §9.4 is paused.
+
+**Decision still required:** how to land the accepted result on `main`. The authenticated visual UI
+check is no longer pending; its Network-capture evidence remains outstanding but is not required
+for the visual acceptance recorded here. No PR, merge to `main`, rebase, reset, release promotion or
+tag change has been performed. The earlier repository-consolidation and release-integration
+evidence remains untouched.
 
 **Also open here: CI went red on the first run.** The validated M5 checkpoint is published at
 `a1f759e9b64a` and run #41609297193 failed at "Verify the bundle is deterministic across
@@ -691,10 +758,13 @@ compressor, and Decision 69 made the build-safety tar fixtures platform-neutral.
 validated M5 checkpoint `a1f759e9b64a` is green: run #41977736287, 64/64 steps, zero skips**,
 so review item H1b is closed.
 
-**Closes when:** the corrected candidate is committed and published with CI green for that exact
-commit and the chosen `main` path is executed, or the branch is explicitly abandoned in favour of
-`main`/`release/2.13` with the remediation re-applied. The untested `FRESH=1` and live-rollback
-paths must remain open unless separately validated or explicitly accepted as residual risk.
+**Closes when:** the chosen `main` path is executed, or the branch is explicitly abandoned in
+favour of `main`/`release/2.13` with the remediation re-applied. The candidate is published at
+`690204b` with green CI run `42116897417`. Live `FRESH=1`, real `rc.configure_plugins`
+registration and full reminder/ageing/CARP/lifecycle behaviour must remain open unless separately
+validated or explicitly accepted as residual risk. The isolated fresh-install scenarios, the live
+successful-install rollback and one bounded two-cycle monitoring exercise are validated; they do
+not close those remaining live paths.
 
 **Related, also open:** `/usr/local/cline-freebsd/src/cline` still sets `origin` to this repository
 while carrying an untracked Cline installation (Decision 65 §Preservation). Repointing it needs the
@@ -723,7 +793,8 @@ remained disabled.
 **Closed scope:** the live daemon stop/wait/start and real configd restart verification gaps.
 
 **Deliberately not established:** rollback was not invoked, so this deployment is not a live
-rollback test. `FRESH=1` remains untested. The installer backup
+rollback test. `FRESH=1` was not exercised on this host; it was later validated only in the
+isolated 2.14.0 jail scenarios. The installer backup
 `/var/backups/devicemonitor/install-v213.xKjyg1` and pre-install backup `/root/dm-pre-2133` remain
 in place. `.253` and `.252` were not touched and remain on 2.13.2; DM-BL-009 remains OPEN.
 

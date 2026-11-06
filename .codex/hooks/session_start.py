@@ -27,6 +27,7 @@ EXPECTED_BRANCHES = {
     "master",
     "release/2.13",
     "fix/pruning-remediation-20261103",
+    "integration/dm-bl-009-reconcile-20261105",
 }
 GIT = shutil.which("git") or "/usr/local/bin/git"
 
