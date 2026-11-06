@@ -1588,3 +1588,39 @@ msgstr "Select the specific network interfaces to actively monitor for device fo
 #: infrastructureservices.volt
 msgid "Unknown"
 msgstr "Neznámé"
+
+#: settings.volt
+msgid "Also email identity conflict alerts"
+msgstr "Odesílat e-mailem také upozornění na konflikty identit"
+
+#: settings.volt
+msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
+msgstr "E-maily se odesílají při změně stavu. Nastavte, jak často se každá kategorie opakuje, pokud se stav nezměnil. 0 znamená nikdy neopakovat."
+
+#: settings.volt
+msgid "Features and Enhancements"
+msgstr "Funkce a vylepšení"
+
+#: settings.volt
+msgid "Identity conflicts"
+msgstr "Konflikty identit"
+
+#: settings.volt
+msgid "MAC change announcements"
+msgstr "Oznámení změn MAC"
+
+#: settings.volt
+msgid "Repeat unchanged alerts"
+msgstr "Opakovat nezměněná upozornění"
+
+#: settings.volt
+msgid "Scan results"
+msgstr "Výsledky skenování"
+
+#: settings.volt
+msgid "Service outages"
+msgstr "Výpadky služeb"
+
+#: settings.volt
+msgid "minutes"
+msgstr "minut"

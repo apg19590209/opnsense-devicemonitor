@@ -1596,3 +1596,43 @@ msgstr "高重大度の新しいIPv4またはIPv6アドレス競合が検出さ�
 
 msgid "About Conflict Alerts"
 msgstr "競合アラートについて"
+
+#: settings.volt
+msgid "Also email identity conflict alerts"
+msgstr "ID 競合アラートをメールでも送信"
+
+#: settings.volt
+msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
+msgstr "状態が変化したときにメールを送信します。状態が変わらない場合に各カテゴリを繰り返す頻度を設定します。0 は繰り返しません。"
+
+#: settings.volt
+msgid "Features and Enhancements"
+msgstr "機能と改善"
+
+#: settings.volt
+msgid "Identity conflicts"
+msgstr "ID 競合"
+
+#: settings.volt
+msgid "MAC change announcements"
+msgstr "MAC 変更のお知らせ"
+
+#: settings.volt
+msgid "Repeat unchanged alerts"
+msgstr "変更のないアラートを繰り返す"
+
+#: settings.volt
+msgid "Scan results"
+msgstr "スキャン結果"
+
+#: settings.volt
+msgid "Service outages"
+msgstr "サービス停止"
+
+#: settings.volt
+msgid "minutes"
+msgstr "分"
+
+#: infrastructureservices.volt
+msgid "Unknown"
+msgstr "不明"

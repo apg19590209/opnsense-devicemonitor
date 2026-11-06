@@ -1,0 +1,498 @@
+--- a/src/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES/devicemonitor.po
++++ b/src/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES/devicemonitor.po
+@@ -1588,3 +1588,39 @@
+ #: infrastructureservices.volt
+ msgid "Unknown"
+ msgstr "Neznámé"
++
++#: settings.volt
++msgid "Also email identity conflict alerts"
++msgstr "Odesílat e-mailem také upozornění na konflikty identit"
++
++#: settings.volt
++msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
++msgstr "E-maily se odesílají při změně stavu. Nastavte, jak často se každá kategorie opakuje, pokud se stav nezměnil. 0 znamená nikdy neopakovat."
++
++#: settings.volt
++msgid "Features and Enhancements"
++msgstr "Funkce a vylepšení"
++
++#: settings.volt
++msgid "Identity conflicts"
++msgstr "Konflikty identit"
++
++#: settings.volt
++msgid "MAC change announcements"
++msgstr "Oznámení změn MAC"
++
++#: settings.volt
++msgid "Repeat unchanged alerts"
++msgstr "Opakovat nezměněná upozornění"
++
++#: settings.volt
++msgid "Scan results"
++msgstr "Výsledky skenování"
++
++#: settings.volt
++msgid "Service outages"
++msgstr "Výpadky služeb"
++
++#: settings.volt
++msgid "minutes"
++msgstr "minut"
+--- a/src/opnsense/mvc/app/languages/de_DE/LC_MESSAGES/devicemonitor.po
++++ b/src/opnsense/mvc/app/languages/de_DE/LC_MESSAGES/devicemonitor.po
+@@ -1596,3 +1596,43 @@
+
+ msgid "About Conflict Alerts"
+ msgstr "Über Konfliktwarnungen"
++
++#: settings.volt
++msgid "Also email identity conflict alerts"
++msgstr "Identitätskonflikte zusätzlich per E-Mail melden"
++
++#: settings.volt
++msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
++msgstr "E-Mails werden bei Statusänderungen gesendet. Legen Sie fest, wie oft jede Kategorie wiederholt wird, solange sich der Status nicht geändert hat. 0 bedeutet keine Wiederholung."
++
++#: settings.volt
++msgid "Features and Enhancements"
++msgstr "Funktionen und Verbesserungen"
++
++#: settings.volt
++msgid "Identity conflicts"
++msgstr "Identitätskonflikte"
++
++#: settings.volt
++msgid "MAC change announcements"
++msgstr "MAC-Änderungsbenachrichtigungen"
++
++#: settings.volt
++msgid "Repeat unchanged alerts"
++msgstr "Unveränderte Warnungen wiederholen"
++
++#: settings.volt
++msgid "Scan results"
++msgstr "Scanergebnisse"
++
++#: settings.volt
++msgid "Service outages"
++msgstr "Dienstausfälle"
++
++#: settings.volt
++msgid "minutes"
++msgstr "Minuten"
++
++#: infrastructureservices.volt
++msgid "Unknown"
++msgstr "Unbekannt"
+--- a/src/opnsense/mvc/app/languages/en_US/LC_MESSAGES/devicemonitor.po
++++ b/src/opnsense/mvc/app/languages/en_US/LC_MESSAGES/devicemonitor.po
+@@ -1588,3 +1588,39 @@
+ #: infrastructureservices.volt
+ msgid "Unknown"
+ msgstr "Unknown"
++
++#: settings.volt
++msgid "Also email identity conflict alerts"
++msgstr "Also email identity conflict alerts"
++
++#: settings.volt
++msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
++msgstr "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
++
++#: settings.volt
++msgid "Features and Enhancements"
++msgstr "Features and Enhancements"
++
++#: settings.volt
++msgid "Identity conflicts"
++msgstr "Identity conflicts"
++
++#: settings.volt
++msgid "MAC change announcements"
++msgstr "MAC change announcements"
++
++#: settings.volt
++msgid "Repeat unchanged alerts"
++msgstr "Repeat unchanged alerts"
++
++#: settings.volt
++msgid "Scan results"
++msgstr "Scan results"
++
++#: settings.volt
++msgid "Service outages"
++msgstr "Service outages"
++
++#: settings.volt
++msgid "minutes"
++msgstr "minutes"
+--- a/src/opnsense/mvc/app/languages/es_ES/LC_MESSAGES/devicemonitor.po
++++ b/src/opnsense/mvc/app/languages/es_ES/LC_MESSAGES/devicemonitor.po
+@@ -1596,3 +1596,43 @@
+
+ msgid "About Conflict Alerts"
+ msgstr "Acerca de las alertas de conflicto"
++
++#: settings.volt
++msgid "Also email identity conflict alerts"
++msgstr "Enviar también por correo las alertas de conflicto de identidad"
++
++#: settings.volt
++msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
++msgstr "Los correos se envían cuando cambia el estado. Establezca cada cuánto se repite cada categoría mientras el estado no ha cambiado. 0 nunca repite."
++
++#: settings.volt
++msgid "Features and Enhancements"
++msgstr "Funciones y mejoras"
++
++#: settings.volt
++msgid "Identity conflicts"
++msgstr "Conflictos de identidad"
++
++#: settings.volt
++msgid "MAC change announcements"
++msgstr "Anuncios de cambio de MAC"
++
++#: settings.volt
++msgid "Repeat unchanged alerts"
++msgstr "Repetir alertas sin cambios"
++
++#: settings.volt
++msgid "Scan results"
++msgstr "Resultados del escaneo"
++
++#: settings.volt
++msgid "Service outages"
++msgstr "Interrupciones del servicio"
++
++#: settings.volt
++msgid "minutes"
++msgstr "minutos"
++
++#: infrastructureservices.volt
++msgid "Unknown"
++msgstr "Desconocido"
+--- a/src/opnsense/mvc/app/languages/fr_FR/LC_MESSAGES/devicemonitor.po
++++ b/src/opnsense/mvc/app/languages/fr_FR/LC_MESSAGES/devicemonitor.po
+@@ -1596,3 +1596,43 @@
+
+ msgid "About Conflict Alerts"
+ msgstr "À propos des alertes de conflit"
++
++#: settings.volt
++msgid "Also email identity conflict alerts"
++msgstr "Envoyer aussi les alertes de conflit d'identité par e-mail"
++
++#: settings.volt
++msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
++msgstr "Les e-mails sont envoyés lors d'un changement d'état. Définissez la fréquence de répétition de chaque catégorie lorsque l'état n'a pas changé. 0 signifie jamais."
++
++#: settings.volt
++msgid "Features and Enhancements"
++msgstr "Fonctionnalités et améliorations"
++
++#: settings.volt
++msgid "Identity conflicts"
++msgstr "Conflits d'identité"
++
++#: settings.volt
++msgid "MAC change announcements"
++msgstr "Annonces de changement de MAC"
++
++#: settings.volt
++msgid "Repeat unchanged alerts"
++msgstr "Répéter les alertes inchangées"
++
++#: settings.volt
++msgid "Scan results"
++msgstr "Résultats de l'analyse"
++
++#: settings.volt
++msgid "Service outages"
++msgstr "Pannes de service"
++
++#: settings.volt
++msgid "minutes"
++msgstr "minutes"
++
++#: infrastructureservices.volt
++msgid "Unknown"
++msgstr "Inconnu"
+--- a/src/opnsense/mvc/app/languages/it_IT/LC_MESSAGES/devicemonitor.po
++++ b/src/opnsense/mvc/app/languages/it_IT/LC_MESSAGES/devicemonitor.po
+@@ -1596,3 +1596,43 @@
+
+ msgid "About Conflict Alerts"
+ msgstr "Informazioni sugli avvisi di conflitto"
++
++#: settings.volt
++msgid "Also email identity conflict alerts"
++msgstr "Invia anche via email gli avvisi sui conflitti di identità"
++
++#: settings.volt
++msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
++msgstr "Le email vengono inviate quando cambia lo stato. Imposta ogni quanto ripetere ciascuna categoria finché lo stato non cambia. 0 non ripete mai."
++
++#: settings.volt
++msgid "Features and Enhancements"
++msgstr "Funzionalità e miglioramenti"
++
++#: settings.volt
++msgid "Identity conflicts"
++msgstr "Conflitti di identità"
++
++#: settings.volt
++msgid "MAC change announcements"
++msgstr "Annunci di cambio MAC"
++
++#: settings.volt
++msgid "Repeat unchanged alerts"
++msgstr "Ripeti avvisi invariati"
++
++#: settings.volt
++msgid "Scan results"
++msgstr "Risultati della scansione"
++
++#: settings.volt
++msgid "Service outages"
++msgstr "Interruzioni del servizio"
++
++#: settings.volt
++msgid "minutes"
++msgstr "minuti"
++
++#: infrastructureservices.volt
++msgid "Unknown"
++msgstr "Sconosciuto"
+--- a/src/opnsense/mvc/app/languages/ja_JP/LC_MESSAGES/devicemonitor.po
++++ b/src/opnsense/mvc/app/languages/ja_JP/LC_MESSAGES/devicemonitor.po
+@@ -1596,3 +1596,43 @@
+
+ msgid "About Conflict Alerts"
+ msgstr "競合アラートについて"
++
++#: settings.volt
++msgid "Also email identity conflict alerts"
++msgstr "ID 競合アラートをメールでも送信"
++
++#: settings.volt
++msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
++msgstr "状態が変化したときにメールを送信します。状態が変わらない場合に各カテゴリを繰り返す頻度を設定します。0 は繰り返しません。"
++
++#: settings.volt
++msgid "Features and Enhancements"
++msgstr "機能と改善"
++
++#: settings.volt
++msgid "Identity conflicts"
++msgstr "ID 競合"
++
++#: settings.volt
++msgid "MAC change announcements"
++msgstr "MAC 変更のお知らせ"
++
++#: settings.volt
++msgid "Repeat unchanged alerts"
++msgstr "変更のないアラートを繰り返す"
++
++#: settings.volt
++msgid "Scan results"
++msgstr "スキャン結果"
++
++#: settings.volt
++msgid "Service outages"
++msgstr "サービス停止"
++
++#: settings.volt
++msgid "minutes"
++msgstr "分"
++
++#: infrastructureservices.volt
++msgid "Unknown"
++msgstr "不明"
+--- a/src/opnsense/mvc/app/languages/nl_NL/LC_MESSAGES/devicemonitor.po
++++ b/src/opnsense/mvc/app/languages/nl_NL/LC_MESSAGES/devicemonitor.po
+@@ -1596,3 +1596,43 @@
+
+ msgid "About Conflict Alerts"
+ msgstr "Over conflictmeldingen"
++
++#: settings.volt
++msgid "Also email identity conflict alerts"
++msgstr "Identiteitsconflictwarschuwingen ook per e-mail verzenden"
++
++#: settings.volt
++msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
++msgstr "E-mails worden verzonden wanneer de status verandert. Stel in hoe vaak elke categorie wordt herhaald zolang de status niet is gewijzigd. 0 herhaalt nooit."
++
++#: settings.volt
++msgid "Features and Enhancements"
++msgstr "Functies en verbeteringen"
++
++#: settings.volt
++msgid "Identity conflicts"
++msgstr "Identiteitsconflicten"
++
++#: settings.volt
++msgid "MAC change announcements"
++msgstr "Meldingen van MAC-wijzigingen"
++
++#: settings.volt
++msgid "Repeat unchanged alerts"
++msgstr "Ongewijzigde waarschuwingen herhalen"
++
++#: settings.volt
++msgid "Scan results"
++msgstr "Scanresultaten"
++
++#: settings.volt
++msgid "Service outages"
++msgstr "Servicestoringen"
++
++#: settings.volt
++msgid "minutes"
++msgstr "minuten"
++
++#: infrastructureservices.volt
++msgid "Unknown"
++msgstr "Onbekend"
+--- a/src/opnsense/mvc/app/languages/pt_BR/LC_MESSAGES/devicemonitor.po
++++ b/src/opnsense/mvc/app/languages/pt_BR/LC_MESSAGES/devicemonitor.po
+@@ -1596,3 +1596,43 @@
+
+ msgid "About Conflict Alerts"
+ msgstr "Sobre alertas de conflito"
++
++#: settings.volt
++msgid "Also email identity conflict alerts"
++msgstr "Também enviar por e-mail alertas de conflito de identidade"
++
++#: settings.volt
++msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
++msgstr "Os e-mails são enviados quando o estado muda. Defina com que frequência cada categoria é repetida enquanto o estado não muda. 0 nunca repete."
++
++#: settings.volt
++msgid "Features and Enhancements"
++msgstr "Recursos e melhorias"
++
++#: settings.volt
++msgid "Identity conflicts"
++msgstr "Conflitos de identidade"
++
++#: settings.volt
++msgid "MAC change announcements"
++msgstr "Avisos de alteração de MAC"
++
++#: settings.volt
++msgid "Repeat unchanged alerts"
++msgstr "Repetir alertas inalterados"
++
++#: settings.volt
++msgid "Scan results"
++msgstr "Resultados da verificação"
++
++#: settings.volt
++msgid "Service outages"
++msgstr "Interrupções de serviço"
++
++#: settings.volt
++msgid "minutes"
++msgstr "minutos"
++
++#: infrastructureservices.volt
++msgid "Unknown"
++msgstr "Desconhecido"
+--- a/src/opnsense/mvc/app/languages/ru_RU/LC_MESSAGES/devicemonitor.po
++++ b/src/opnsense/mvc/app/languages/ru_RU/LC_MESSAGES/devicemonitor.po
+@@ -1596,3 +1596,43 @@
+
+ msgid "About Conflict Alerts"
+ msgstr "О конфликтных уведомлениях"
++
++#: settings.volt
++msgid "Also email identity conflict alerts"
++msgstr "Также отправлять оповещения о конфликтах идентичности по электронной почте"
++
++#: settings.volt
++msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
++msgstr "Письма отправляются при изменении состояния. Укажите, как часто повторять каждую категорию, пока состояние не изменилось. 0 — никогда."
++
++#: settings.volt
++msgid "Features and Enhancements"
++msgstr "Возможности и улучшения"
++
++#: settings.volt
++msgid "Identity conflicts"
++msgstr "Конфликты идентичности"
++
++#: settings.volt
++msgid "MAC change announcements"
++msgstr "Уведомления об изменении MAC"
++
++#: settings.volt
++msgid "Repeat unchanged alerts"
++msgstr "Повторять неизменные оповещения"
++
++#: settings.volt
++msgid "Scan results"
++msgstr "Результаты сканирования"
++
++#: settings.volt
++msgid "Service outages"
++msgstr "Сбои служб"
++
++#: settings.volt
++msgid "minutes"
++msgstr "минут"
++
++#: infrastructureservices.volt
++msgid "Unknown"
++msgstr "Неизвестно"
+--- a/src/opnsense/mvc/app/languages/zh_CN/LC_MESSAGES/devicemonitor.po
++++ b/src/opnsense/mvc/app/languages/zh_CN/LC_MESSAGES/devicemonitor.po
+@@ -1596,3 +1596,43 @@
+
+ msgid "About Conflict Alerts"
+ msgstr "关于冲突警报"
++
++#: settings.volt
++msgid "Also email identity conflict alerts"
++msgstr "同时通过电子邮件发送身份冲突警报"
++
++#: settings.volt
++msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
++msgstr "状态变化时发送电子邮件。设置状态未变化时各类别的重复间隔。0 表示从不重复。"
++
++#: settings.volt
++msgid "Features and Enhancements"
++msgstr "功能和增强"
++
++#: settings.volt
++msgid "Identity conflicts"
++msgstr "身份冲突"
++
++#: settings.volt
++msgid "MAC change announcements"
++msgstr "MAC 变更通知"
++
++#: settings.volt
++msgid "Repeat unchanged alerts"
++msgstr "重复未变化的警报"
++
++#: settings.volt
++msgid "Scan results"
++msgstr "扫描结果"
++
++#: settings.volt
++msgid "Service outages"
++msgstr "服务中断"
++
++#: settings.volt
++msgid "minutes"
++msgstr "分钟"
++
++#: infrastructureservices.volt
++msgid "Unknown"
++msgstr "未知"

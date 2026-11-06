@@ -1,0 +1,374 @@
+{
+  "/usr/local/etc/inc/devicemonitor_locale.inc": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "1404c3f2716f862027346dfcb7d54e981498253106feefc34546b571d428640f",
+    "uid": 0
+  },
+  "/usr/local/etc/inc/plugins.inc.d/devicemonitor.inc": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "cecdb6386624ca26de9cd5cdc5cd1454e88140b206464fa4d2f6ba9bf87b0cfd",
+    "uid": 0
+  },
+  "/usr/local/etc/rc.d/devicemonitor": {
+    "gid": 0,
+    "mode": "0o755",
+    "sha256": "710f07212a5de5d0df98ab435073827801fef1d696b40587570d0069afc665df",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ConfigController.php": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "60955154dc0b6591fb42320d110d4bb08f394113bc9cd683d3416f2a754e1fde",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/DevicesController.php": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "06ff77409eb899644e21cce5d5b0544a679c53abf660d933d4e7372f27171ad8",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ServiceController.php": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "93787dd9d1809bac2492d1ec731fa50110708d032098f638e3a587739be101c3",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/IndexController.php": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "cb2d32001afb46af40158c9d4dd3456c050964e154c575da8a24e5510a630eaa",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES/devicemonitor.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "0198e5767148e9689ee974f4792ff9379776becf671df7d7bdd20c1063659d21",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES/devicemonitor.po": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "d987d70474aa86d680a76d9e7b5a85347f8747a80701e20828ef3e4a0887a368",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/languages/de_DE/LC_MESSAGES/devicemonitor.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "6fed26a6780e7b672dad565cc6328dd39ce8a9b19ede927d21804ea1b70e97f2",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/languages/en_US/LC_MESSAGES/devicemonitor.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "a83d74c1a825166b42b22cf3d69015ad376114ea8b20a68e3e475cdb2f7a8c23",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/languages/en_US/LC_MESSAGES/devicemonitor.po": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "c9e716ea550e7f8713a757031aff0fa73e4ff3a5bba87a866b7ce98460477001",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/languages/es_ES/LC_MESSAGES/devicemonitor.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "95276bfbbb57433898c2e1931f937fcf3347e21942a480db444abd406c8e653c",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/languages/fr_FR/LC_MESSAGES/devicemonitor.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "f55f6e18bdd8084726ae9bb1cb826d85434b2a57269106fc4512a8007331ee34",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/languages/it_IT/LC_MESSAGES/devicemonitor.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "d9f883114e48209b5f408df838c230c9088c5cead2309d11214adea3a2f874ea",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/languages/ja_JP/LC_MESSAGES/devicemonitor.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "894352aa808e44124f14c6edf65dc6383e16298db9c9981d82686368f5ef22fc",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/languages/nl_NL/LC_MESSAGES/devicemonitor.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "c74ae7cf034d25efc331a43512a2e260ec0acf9888740e8eadb1fa84dc630c3d",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/languages/pt_BR/LC_MESSAGES/devicemonitor.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "e763cb1250ce662bae73861cad46fc11e0a638aea7e6ba4049314a710c7d82d5",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/languages/ru_RU/LC_MESSAGES/devicemonitor.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "ab8ef1bce735ff8d1232b2af0116cf9b24e0e9177e66ee9e2d118e2c6e8687ab",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/languages/zh_CN/LC_MESSAGES/devicemonitor.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "065fd2a528ff1625c745e160a7022952f519b0b714a3fc56d69579bc0d751acd",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/ACL/ACL.xml": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "0763dc76982278abf22bfb4b712ddf0e31ec56d9157fef0fb65bac673d314150",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "f8e689d1187292d6c306df31bfe68e6ea14401a4daf372d110ccd580919f7abb",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.xml": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "728186ed56e466629ec2ec78733c8780e3a2f7e608f3ab8e9fde086c9bacb630",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/Menu/Menu.xml": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "97d7c7e3a79576aea444673108cbad79db2aa81b092db98b9338b6d13107d777",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/Metadata/service.xml": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "5b92cc16208b1f6b421876b13897d1e7f70abf1cce586f70e009577f22988f3b",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "774cd91dc5bc9fc36b17d74aac714d3c455e2641fed2fdd1acceae4f712d4de9",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/activitytimeline.volt": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "b07ff56f9881e3443abfd36097a7f6fd83081ad2c71882f340f210f3d884c0a4",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/changesummary.volt": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "b7aa5631344ea410326d18f6fc07a52e0a43ddf0a1e160c6c91f2f5326003d0c",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devicehistory.volt": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "30aef2f481e9c9e76987eff00eb6f83ba2b98d1a740971aab90f0138d8431b60",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "b73490b7d2a6c9e3dd73f1e04753b56a39a6b76e56dfcd7e2802716be881712b",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/identityevents.volt": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "71a656bbc73a04ae7844365a8868b94e1bff183fe968257d51e20b7f4f5d66ce",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/infrastructureservices.volt": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "6034d98016892e20bcce2cf452bb85717fef2efaf9790547fd3cd3fe498ec449",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/physicaldevices.volt": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "997bdad955f390a060bb05c26dd4e4e8268d59e8df252b1b59fce8fe19f49861",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/scanhistory.volt": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "5fd95a8c91e8a6155ea4e5e4ebf67acf89be8b9dbf25b77110bc65af072f6856",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/service_widget.volt": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "35f50befb3e57d8e2c3e382ea4851af3259b88f6dc474de19cc56b8b53efa3ed",
+    "uid": 0
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "a75a5bf7db43a0d2da2c3e0f99824fe28def94101398a36644f19c0510d60464",
+    "uid": 0
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php": {
+    "gid": 0,
+    "mode": "0o755",
+    "sha256": "28e2d252e9bf22605fc9186fecba83acbd4417bc90739bf4129b6f5e370426b3",
+    "uid": 0
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh": {
+    "gid": 0,
+    "mode": "0o755",
+    "sha256": "312ee0e8c1d1449f569052147eaa1fbfeefefae9315b220a8d1746fdd125fd2d",
+    "uid": 0
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py": {
+    "gid": 0,
+    "mode": "0o755",
+    "sha256": "4efd2dbd94808790479d21e07787fdde41204c1b785e50abe6f99680ae4dbc63",
+    "uid": 0
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_email.php": {
+    "gid": 0,
+    "mode": "0o755",
+    "sha256": "16c190852db6a502c7f4f658a844c9b827a7ccfc4500cfc1190ecaa74eb93937",
+    "uid": 0
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_email.php": {
+    "gid": 0,
+    "mode": "0o755",
+    "sha256": "151c9cd4f3ceaf8dbb9109e49b62b4a65152a7cad548e1dd7c3c2d7f9d282391",
+    "uid": 0
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_mail.php": {
+    "gid": 0,
+    "mode": "0o755",
+    "sha256": "dbb6a952184ef77b5ab17a6d557d87b4ca2f4769a9e3716cbd4eda0dbeece5e9",
+    "uid": 0
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_scan_email.php": {
+    "gid": 0,
+    "mode": "0o755",
+    "sha256": "7351341bab3d1726d0ff035ac581fa461e15a806aa0dd4734fc8c130f6238cc0",
+    "uid": 0
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_service_email.php": {
+    "gid": 0,
+    "mode": "0o755",
+    "sha256": "488939b0588d75718193f424eb7939292c35aa35f7665c576a2e08bc334aeaf2",
+    "uid": 0
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_webhook.php": {
+    "gid": 0,
+    "mode": "0o755",
+    "sha256": "d9181a7be03d010ee1c8ddff082ff81dd2cd308957d3b7ad2cdd3ac351c24e21",
+    "uid": 0
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py": {
+    "gid": 0,
+    "mode": "0o755",
+    "sha256": "4105fe811572eb9e03545438af4db78e0f732004852f73a01c7aa57e94124cdf",
+    "uid": 0
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/smtp_send.py": {
+    "gid": 0,
+    "mode": "0o755",
+    "sha256": "8ae36c20dd54fead22c510ea59f7221b3bfff2eeb8ef0f58f818148de41a0624",
+    "uid": 0
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/verify-devicemonitor.sh": {
+    "gid": 0,
+    "mode": "0o755",
+    "sha256": "de88c9de7ee13534e4a89060019e4bedfe1950e74f564df1dc6a3ac004eef9b2",
+    "uid": 0
+  },
+  "/usr/local/opnsense/service/conf/actions.d/actions_devicemonitor.conf": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "5757224cd36490af35db646edbda7ceb1321ec2dc1562a73e72b396c69d8891a",
+    "uid": 0
+  },
+  "/usr/local/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "48e7f6537ffe9a4f16041dd9dc0c85987ef8d9f7305218bcbea6c139ac5a6646",
+    "uid": 0
+  },
+  "/usr/local/opnsense/www/js/widgets/DeviceMonitor.js": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "282f943830ddfc0d0df8adc220c8c8ac5f7383363bff362f67ad6fae6177c858",
+    "uid": 0
+  },
+  "/usr/local/opnsense/www/js/widgets/Metadata/DeviceMonitor.xml": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "8bf809e2fad16e3a2b5b48b177e47733603cb4080e121df03611fee1114bc239",
+    "uid": 0
+  },
+  "/usr/local/share/locale/cs_CZ/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "3b829cd2a6461c808d616af2fd3a57a63932937405166b0e82a5fbbfb9fc992b",
+    "uid": 0
+  },
+  "/usr/local/share/locale/de_DE/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "4767c2df25750debc9cb73fc6dd37d38a9eeec546f4578e698c4affb32dd5914",
+    "uid": 0
+  },
+  "/usr/local/share/locale/es_ES/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "28171ab2a138fb285bd80a72cf3cdfbe370458f13d065feec87d64f73f2ceb07",
+    "uid": 0
+  },
+  "/usr/local/share/locale/fr_FR/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "ed1bdad415ea56ab59112ef5d3bc4052cfc3effbe80f86242056576d69519282",
+    "uid": 0
+  },
+  "/usr/local/share/locale/it_IT/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "8173b0054469742a1bc0c94cebb584903bcba7d9b9cdaef398adf910ee09ea43",
+    "uid": 0
+  },
+  "/usr/local/share/locale/ja_JP/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "d4d0dfe32b87d20e72c3f5da053d2a3cff7983edecfcaebc59b375d0cf1f8cb2",
+    "uid": 0
+  },
+  "/usr/local/share/locale/nl_NL/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "c74ae7cf034d25efc331a43512a2e260ec0acf9888740e8eadb1fa84dc630c3d",
+    "uid": 0
+  },
+  "/usr/local/share/locale/pt_BR/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "524123280374ccce3e73497a07848e1c6ab5d7073ec27ebcc78de5c90fd48bdd",
+    "uid": 0
+  },
+  "/usr/local/share/locale/ru_RU/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "61eb85a8fe10287ad2bea8e0b75ac8bdd8467805c4fc6ca5493cc09ba7280de3",
+    "uid": 0
+  },
+  "/usr/local/share/locale/zh_CN/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "f2cf35e959f01b3f51211a6540d387d08b4556e0660fbcf9dd1558f590154acc",
+    "uid": 0
+  }
+}

@@ -1,0 +1,15 @@
+  repeated builds        identical (1596559 bytes)
+  test_repeated_builds_are_byte_identical PASS
+  gzip header            mtime 0, OS 255, no filename
+  test_gzip_header_is_fixed              PASS
+  compressor             two runs identical
+  test_compressor_is_deterministic       PASS
+  inventory              56 members, gzip -dc and tar -tzf agree
+  test_decompression_and_member_inventory PASS
+  tar headers            root/wheel, uid/gid 0, fixed mtime
+  test_tar_headers_are_canonical         PASS
+  normaliser             padding variants collapse; malformed tail refused
+  test_tar_tail_and_header_encoding_normalise_identically PASS
+  fail-closed            compressor failure leaves no bundle
+  test_gzip_failure_leaves_no_bundle     PASS
+BUNDLE_REPRODUCIBILITY=PASS cases=7

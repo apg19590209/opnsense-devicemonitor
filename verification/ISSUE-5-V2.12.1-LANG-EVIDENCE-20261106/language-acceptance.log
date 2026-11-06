@@ -1,0 +1,11 @@
+de_DE PASS pages=10 keys=459 translated=439 identical-to-english=20 selectable=True locale=None identity=de_DE engine=interpolate
+fr_FR PASS pages=10 keys=459 translated=436 identical-to-english=23 selectable=True locale=None identity=fr_FR engine=interpolate
+es_ES PASS pages=10 keys=459 translated=447 identical-to-english=12 selectable=True locale=None identity=es_ES engine=interpolate
+it_IT PASS pages=10 keys=459 translated=446 identical-to-english=13 selectable=True locale=None identity=it_IT engine=interpolate
+pt_BR PASS pages=10 keys=459 translated=442 identical-to-english=17 selectable=True locale=None identity=pt_BR engine=interpolate
+WARN: nl_NL: absent from System > Settings > General > Language (get_locale_list, 19 languages); the pages still render this language
+nl_NL PASS pages=10 keys=459 translated=435 identical-to-english=24 selectable=False locale=None identity=nl_NL engine=interpolate
+ru_RU PASS pages=10 keys=459 translated=450 identical-to-english=9 selectable=True locale=None identity=ru_RU engine=interpolate
+ja_JP PASS pages=10 keys=459 translated=447 identical-to-english=12 selectable=True locale=None identity=ja_JP engine=interpolate
+zh_CN PASS pages=10 keys=459 translated=447 identical-to-english=12 selectable=True locale=None identity=zh_CN engine=interpolate
+LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=interpolate failures=0

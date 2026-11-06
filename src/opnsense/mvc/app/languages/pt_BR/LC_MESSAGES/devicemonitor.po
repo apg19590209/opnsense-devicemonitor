@@ -1596,3 +1596,43 @@ msgstr "Enviar um e-mail quando um novo conflito de endereço IPv4 ou IPv6 de al
 
 msgid "About Conflict Alerts"
 msgstr "Sobre alertas de conflito"
+
+#: settings.volt
+msgid "Also email identity conflict alerts"
+msgstr "Também enviar por e-mail alertas de conflito de identidade"
+
+#: settings.volt
+msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
+msgstr "Os e-mails são enviados quando o estado muda. Defina com que frequência cada categoria é repetida enquanto o estado não muda. 0 nunca repete."
+
+#: settings.volt
+msgid "Features and Enhancements"
+msgstr "Recursos e melhorias"
+
+#: settings.volt
+msgid "Identity conflicts"
+msgstr "Conflitos de identidade"
+
+#: settings.volt
+msgid "MAC change announcements"
+msgstr "Avisos de alteração de MAC"
+
+#: settings.volt
+msgid "Repeat unchanged alerts"
+msgstr "Repetir alertas inalterados"
+
+#: settings.volt
+msgid "Scan results"
+msgstr "Resultados da verificação"
+
+#: settings.volt
+msgid "Service outages"
+msgstr "Interrupções de serviço"
+
+#: settings.volt
+msgid "minutes"
+msgstr "minutos"
+
+#: infrastructureservices.volt
+msgid "Unknown"
+msgstr "Desconhecido"

@@ -1,0 +1,15 @@
+PARENT=d5d73edffc0200cf8c84a63689e1937f92002435
+COMMAND=test_language_acceptance.py --engine interpolate --views source --installed-po empty --locale-dir empty
+FAIL: de_DE: 10 page strings absent from the source catalogue, e.g. Also email identity conflict alerts
+Traceback (most recent call last):
+  File "/root/dm-issue5-v2121-repair-20261106T045721Z/baseline/tests/test_language_acceptance.py", line 530, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/root/dm-issue5-v2121-repair-20261106T045721Z/baseline/tests/test_language_acceptance.py", line 432, in main
+    check_page_text(language, page, markup, page_values, catalogues, reference, engine)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/dm-issue5-v2121-repair-20261106T045721Z/baseline/tests/test_language_acceptance.py", line 329, in check_page_text
+    plain_reference = {key: normalise(reference[key]) for key in keys}
+                                      ~~~~~~~~~^^^^^
+KeyError: 'Identity conflicts'
+PARENT_REPRO_EXIT=1

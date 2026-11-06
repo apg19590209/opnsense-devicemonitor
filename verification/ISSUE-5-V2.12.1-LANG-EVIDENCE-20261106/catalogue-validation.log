@@ -1,0 +1,14 @@
+LOCALE_MERGE=PASS
+cs_CZ: 10 script blocks PASS
+de_DE: 10 script blocks PASS
+en_US: 10 script blocks PASS
+es_ES: 10 script blocks PASS
+fr_FR: 10 script blocks PASS
+it_IT: 10 script blocks PASS
+ja_JP: 10 script blocks PASS
+nl_NL: 10 script blocks PASS
+pt_BR: 10 script blocks PASS
+ru_RU: 10 script blocks PASS
+zh_CN: 10 script blocks PASS
+quotes-backslashes-newlines-script-tags-unicode: 10 script blocks PASS
+TRANSLATED_JAVASCRIPT=PASS

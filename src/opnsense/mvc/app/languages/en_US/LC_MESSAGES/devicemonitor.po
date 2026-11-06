@@ -1588,3 +1588,39 @@ msgstr "Select the specific network interfaces to actively monitor for device fo
 #: infrastructureservices.volt
 msgid "Unknown"
 msgstr "Unknown"
+
+#: settings.volt
+msgid "Also email identity conflict alerts"
+msgstr "Also email identity conflict alerts"
+
+#: settings.volt
+msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
+msgstr "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
+
+#: settings.volt
+msgid "Features and Enhancements"
+msgstr "Features and Enhancements"
+
+#: settings.volt
+msgid "Identity conflicts"
+msgstr "Identity conflicts"
+
+#: settings.volt
+msgid "MAC change announcements"
+msgstr "MAC change announcements"
+
+#: settings.volt
+msgid "Repeat unchanged alerts"
+msgstr "Repeat unchanged alerts"
+
+#: settings.volt
+msgid "Scan results"
+msgstr "Scan results"
+
+#: settings.volt
+msgid "Service outages"
+msgstr "Service outages"
+
+#: settings.volt
+msgid "minutes"
+msgstr "minutes"

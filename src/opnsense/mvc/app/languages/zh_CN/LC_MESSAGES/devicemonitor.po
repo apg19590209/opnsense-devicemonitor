@@ -1596,3 +1596,43 @@ msgstr "当检测到新的高严重性 IPv4 或 IPv6 地址冲突时发送电子
 
 msgid "About Conflict Alerts"
 msgstr "关于冲突警报"
+
+#: settings.volt
+msgid "Also email identity conflict alerts"
+msgstr "同时通过电子邮件发送身份冲突警报"
+
+#: settings.volt
+msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
+msgstr "状态变化时发送电子邮件。设置状态未变化时各类别的重复间隔。0 表示从不重复。"
+
+#: settings.volt
+msgid "Features and Enhancements"
+msgstr "功能和增强"
+
+#: settings.volt
+msgid "Identity conflicts"
+msgstr "身份冲突"
+
+#: settings.volt
+msgid "MAC change announcements"
+msgstr "MAC 变更通知"
+
+#: settings.volt
+msgid "Repeat unchanged alerts"
+msgstr "重复未变化的警报"
+
+#: settings.volt
+msgid "Scan results"
+msgstr "扫描结果"
+
+#: settings.volt
+msgid "Service outages"
+msgstr "服务中断"
+
+#: settings.volt
+msgid "minutes"
+msgstr "分钟"
+
+#: infrastructureservices.volt
+msgid "Unknown"
+msgstr "未知"

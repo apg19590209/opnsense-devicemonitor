@@ -1596,3 +1596,43 @@ msgstr "Eine E-Mail senden, wenn ein neuer schwerwiegender IPv4- oder IPv6-Adres
 
 msgid "About Conflict Alerts"
 msgstr "Über Konfliktwarnungen"
+
+#: settings.volt
+msgid "Also email identity conflict alerts"
+msgstr "Identitätskonflikte zusätzlich per E-Mail melden"
+
+#: settings.volt
+msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
+msgstr "E-Mails werden bei Statusänderungen gesendet. Legen Sie fest, wie oft jede Kategorie wiederholt wird, solange sich der Status nicht geändert hat. 0 bedeutet keine Wiederholung."
+
+#: settings.volt
+msgid "Features and Enhancements"
+msgstr "Funktionen und Verbesserungen"
+
+#: settings.volt
+msgid "Identity conflicts"
+msgstr "Identitätskonflikte"
+
+#: settings.volt
+msgid "MAC change announcements"
+msgstr "MAC-Änderungsbenachrichtigungen"
+
+#: settings.volt
+msgid "Repeat unchanged alerts"
+msgstr "Unveränderte Warnungen wiederholen"
+
+#: settings.volt
+msgid "Scan results"
+msgstr "Scanergebnisse"
+
+#: settings.volt
+msgid "Service outages"
+msgstr "Dienstausfälle"
+
+#: settings.volt
+msgid "minutes"
+msgstr "Minuten"
+
+#: infrastructureservices.volt
+msgid "Unknown"
+msgstr "Unbekannt"

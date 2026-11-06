@@ -1596,3 +1596,43 @@ msgstr "Отправить письмо при обнаружении новог
 
 msgid "About Conflict Alerts"
 msgstr "О конфликтных уведомлениях"
+
+#: settings.volt
+msgid "Also email identity conflict alerts"
+msgstr "Также отправлять оповещения о конфликтах идентичности по электронной почте"
+
+#: settings.volt
+msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
+msgstr "Письма отправляются при изменении состояния. Укажите, как часто повторять каждую категорию, пока состояние не изменилось. 0 — никогда."
+
+#: settings.volt
+msgid "Features and Enhancements"
+msgstr "Возможности и улучшения"
+
+#: settings.volt
+msgid "Identity conflicts"
+msgstr "Конфликты идентичности"
+
+#: settings.volt
+msgid "MAC change announcements"
+msgstr "Уведомления об изменении MAC"
+
+#: settings.volt
+msgid "Repeat unchanged alerts"
+msgstr "Повторять неизменные оповещения"
+
+#: settings.volt
+msgid "Scan results"
+msgstr "Результаты сканирования"
+
+#: settings.volt
+msgid "Service outages"
+msgstr "Сбои служб"
+
+#: settings.volt
+msgid "minutes"
+msgstr "минут"
+
+#: infrastructureservices.volt
+msgid "Unknown"
+msgstr "Неизвестно"

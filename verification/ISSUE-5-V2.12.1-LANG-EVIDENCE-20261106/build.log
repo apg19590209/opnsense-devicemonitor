@@ -1,0 +1,11 @@
+allow-list entries: 56
+staged files      : 56
+staged .pyc       : 0 (must be 0)
+staged __pycache__: 0 (must be 0)
+tar implementation: bsdtar (tar - bsdtar 3.8.7 - libarchive 3.8.7 zlib/1.3.2 liblzma/5.8.3 bz2lib/1.0.8 libzstd/1.5.7 openssl/3.5.7 libb2/bundled )
+TAR_FORMAT=canonical-ustar members=1
+TAR_CANONICALISED members=56 bytes=1596416
+gzip deterministic: stored blocks, mtime 0, os 255
+GZIP_OK bytes=1596559 sha256=ba5737e9e2fc0d9b78edaacef82aeee30c9a8656db4f27cc9800473af71957c0
+archive bytes     : 1596559
+bundle sha256: ba5737e9e2fc0d9b78edaacef82aeee30c9a8656db4f27cc9800473af71957c0

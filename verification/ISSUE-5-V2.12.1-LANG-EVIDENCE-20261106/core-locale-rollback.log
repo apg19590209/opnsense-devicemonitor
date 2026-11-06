@@ -1,0 +1,4 @@
+  test_preexisting_state_and_metadata_are_restored_exactly PASS
+  test_originally_absent_directory_and_files_are_removed   PASS
+  test_damaged_backup_is_refused_before_mutation           PASS
+CORE_LOCALE_ROLLBACK=PASS cases=3

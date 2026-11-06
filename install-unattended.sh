@@ -36,7 +36,7 @@ CORE_LOCALE_HELPER=release/core-locale-state.sh
 cd "$SCRIPT_DIR"
 VERSION=2.12.1
 MANIFEST=release/v${VERSION}-runtime.manifest
-MANIFEST_SHA=77947c4b8cf915344cf167085f1ff8a609d488f617f37c2cc2a37d5cc9afc9d6
+MANIFEST_SHA=dd61ffe5ed51d05091417feb5bc43de059b551b922b6ef9923a62073cb351e5a
 [ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = "$MANIFEST_SHA" ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 41 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
 [ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = "$VERSION" ] || { echo 'ABORT: source version' >&2; exit 1; }
