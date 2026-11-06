@@ -56,6 +56,29 @@ def installed_version():
     return match.group(1)
 
 
+def assert_manifest_guards(text, manifest_rows):
+    """The installer's row and target guards follow the manifest and locale loop."""
+    count = re.search(r'^\[ .*wc -l < "\$MANIFEST".*?= ([0-9]+) \]', text, re.M)
+    assert count, 'installer has no manifest row-count guard'
+    assert int(count.group(1)) == manifest_rows, (count.group(1), manifest_rows)
+
+    languages_match = re.search(r'^for lang in ([^;]+); do$', text, re.M)
+    assert languages_match, 'installer has no sidecar language loop'
+    languages = languages_match.group(1).split()
+    assert 'en_US' in languages, languages
+
+    expected = re.search(r'^expected=([0-9]+)$', text, re.M)
+    expected_fresh = re.search(r'^\[ "\$FRESH" = 0 \] \|\| expected=([0-9]+)$', text, re.M)
+    assert expected and expected_fresh, 'installer has no target-count guards'
+
+    # Every language gets a sidecar .mo; every language except en_US also gets a
+    # merged core-domain catalogue. A fresh install adds one rc.conf target.
+    upgrade_targets = manifest_rows + len(languages) + (len(languages) - 1)
+    assert int(expected.group(1)) == upgrade_targets, (expected.group(1), upgrade_targets, languages)
+    assert int(expected_fresh.group(1)) == upgrade_targets + 1, (
+        expected_fresh.group(1), upgrade_targets + 1, languages)
+
+
 def verify(root):
     return subprocess.run(['sh', str(Path(root) / 'release/verify-release-inputs.sh'), str(root)],
                           capture_output=True, text=True, timeout=120)
@@ -77,6 +100,14 @@ def test_pins_are_consistent():
     assert pin('MANIFEST_SHA') == rows[manifest]
     assert pin('RELEASE_INPUTS_SHA') == sha256(RELEASE / 'release-inputs.sha256')
     assert pin('VERIFIER_SHA') == sha256(RELEASE / 'verify-release-inputs.sh')
+
+
+def test_manifest_guards_match_target_derivation():
+    """A manifest row change must move every coupled installer guard."""
+    version = installed_version()
+    manifest = RELEASE / ('v%s-runtime.manifest' % version)
+    manifest_rows = len(manifest.read_text().splitlines())
+    assert_manifest_guards(installer_text(), manifest_rows)
 
 
 def test_version_is_single_sourced():
@@ -177,6 +208,7 @@ def test_generator_is_atomic():
 
 CASES = [
     test_pins_are_consistent,
+    test_manifest_guards_match_target_derivation,
     test_version_is_single_sourced,
     test_verifier_accepts_the_checkout,
     test_corrupted_helper_is_refused,
