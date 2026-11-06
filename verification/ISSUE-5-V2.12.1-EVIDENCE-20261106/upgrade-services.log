@@ -1,0 +1,2 @@
+SANDBOX_SERVICE configd restart
+SANDBOX_SERVICE devicemonitor restart

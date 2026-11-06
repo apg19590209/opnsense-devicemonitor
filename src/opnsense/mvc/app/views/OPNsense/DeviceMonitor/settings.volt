@@ -641,7 +641,7 @@
                         </tr>
 
                         <tr>
-                            <th colspan="2" style="padding-top:18px;"><span id="about-features-version">v2.12</span> {{ devicemonitor_t('Features and Enhancements') }}</th>
+                            <th colspan="2" style="padding-top:18px;"><span id="about-features-version">v2.12.1</span> {{ devicemonitor_t('Features and Enhancements') }}</th>
                         </tr>
                         <tr>
                             <td style="color:#888;">{{ devicemonitor_t('Developer') }}</td>

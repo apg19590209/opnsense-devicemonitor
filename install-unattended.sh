@@ -1,5 +1,5 @@
 #!/bin/sh
-# Guarded Device Monitor v2.12 installation on OPNsense/FreeBSD.
+# Guarded Device Monitor v2.12.1 installation on OPNsense/FreeBSD.
 set -eu
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 EXPECTED_HOST=
@@ -31,11 +31,15 @@ done
 NMAP_MISSING=0
 command -v nmap >/dev/null 2>&1 || NMAP_MISSING=1
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+CORE_LOCALE_HELPER=release/core-locale-state.sh
+[ -f "$SCRIPT_DIR/$CORE_LOCALE_HELPER" ] || { echo 'ABORT: core-locale rollback helper missing' >&2; exit 1; }
 cd "$SCRIPT_DIR"
-MANIFEST=release/v2.12-runtime.manifest
-[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = 8ae03861694a36641c91a7cfbbc81cd358137d8cf96606625b1b7eb15f940097 ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
-[ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 39 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
-[ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = 2.12 ] || { echo 'ABORT: source version' >&2; exit 1; }
+VERSION=2.12.1
+MANIFEST=release/v${VERSION}-runtime.manifest
+MANIFEST_SHA=77947c4b8cf915344cf167085f1ff8a609d488f617f37c2cc2a37d5cc9afc9d6
+[ -f "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = "$MANIFEST_SHA" ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
+[ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 41 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
+[ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = "$VERSION" ] || { echo 'ABORT: source version' >&2; exit 1; }
 LIVE_DEFAULTS=/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
 if [ -f "$LIVE_DEFAULTS" ]; then
     installed=$(python3 - "$LIVE_DEFAULTS" <<'PY'
@@ -43,20 +47,21 @@ import json,sys
 print(json.load(open(sys.argv[1]))['version'])
 PY
 ) || { echo 'ABORT: installed defaults invalid' >&2; exit 1; }
-    case "$installed" in 2.8|2.9|2.10|2.11|2.12) :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
+    case "$installed" in 2.8|2.9|2.10|2.11|2.12|"$VERSION") :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
 elif [ -d /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor ]; then
     echo 'ABORT: partial existing installation' >&2; exit 1
 else
     installed=fresh
 fi
 [ ! -e /etc/rc.d/devicemonitor ] && [ ! -L /etc/rc.d/devicemonitor ] || [ "$(readlink /etc/rc.d/devicemonitor)" = /usr/local/etc/rc.d/devicemonitor ] || { echo 'ABORT: rc link collision' >&2; exit 1; }
-STAGE=$(mktemp -d /tmp/dm_install_v211.XXXXXX)
+STAGE=$(mktemp -d /tmp/dm_install_v2121.XXXXXX)
 BACKUP=
 MUTATING=0
 WAS_RUNNING=0
 CONFIGD_CHANGED=0
 FRESH=0
 RC_LINK_CREATED=0
+CORE_LOCALE_STATE=/var/backups/devicemonitor/core-locale
 [ "$installed" = fresh ] && FRESH=1
 cleanup() {
     rc=$?
@@ -64,21 +69,45 @@ cleanup() {
     if [ "$rc" -ne 0 ] && [ "$MUTATING" = 1 ]; then
         echo "ROLLBACK_START=$BACKUP" >&2
         if [ "$WAS_RUNNING" = 1 ] || [ "$FRESH" = 1 ]; then service devicemonitor stop || :; fi
+        rollback_rc=0
         while read -r id old new mode src dest; do
             if [ "$old" = absent ]; then
                 if [ -f "$dest" ] && [ "$(sha256 -q "$dest")" = "$new" ]; then
-                    rm -f "$dest" || echo "ROLLBACK_FAILED=$dest" >&2
+                    rm -f "$dest" || { echo "ROLLBACK_FAILED=$dest" >&2; rollback_rc=1; }
                 elif [ -e "$dest" ]; then
                     echo "ROLLBACK_CONFLICT=$dest" >&2
+                    rollback_rc=1
                 fi
             else
                 if [ -f "$dest" ] && [ "$(sha256 -q "$dest")" = "$new" ]; then
-                    cp -p "$BACKUP/files/$id" "$dest" || echo "ROLLBACK_FAILED=$dest" >&2
+                    if cp -p "$BACKUP/files/$id" "$dest" &&
+                            [ "$(sha256 -q "$dest")" = "$old" ]; then
+                        :
+                    else
+                        echo "ROLLBACK_FAILED=$dest" >&2
+                        rollback_rc=1
+                    fi
                 elif [ "$(sha256 -q "$dest" 2>/dev/null || :)" != "$old" ]; then
                     echo "ROLLBACK_CONFLICT=$dest" >&2
+                    rollback_rc=1
                 fi
             fi
         done < "$BACKUP/plan"
+        # The installer rewrites the pristine-catalogue ownership records after the target
+        # snapshot. Restore that whole state directory, including files it created, so a
+        # failed upgrade leaves uninstall.sh with the exact pre-install records.
+        if /bin/sh "$SCRIPT_DIR/$CORE_LOCALE_HELPER" restore-core-locale-state \
+                --state "$CORE_LOCALE_STATE" --backup "$BACKUP"; then
+            :
+        else
+            rollback_rc=1
+            echo "ROLLBACK_CORE_LOCALE_STATE_INCOMPLETE=$BACKUP" >&2
+        fi
+        if [ "$rollback_rc" = 0 ]; then
+            echo 'ROLLBACK_STATUS=COMPLETE' >&2
+        else
+            echo 'ROLLBACK_STATUS=INCOMPLETE' >&2
+        fi
         if [ "$RC_LINK_CREATED" = 1 ]; then rm -f /etc/rc.d/devicemonitor; fi
         if [ "$CONFIGD_CHANGED" = 1 ]; then service configd restart || echo 'ROLLBACK_CONFIGD_RESTART_FAILED' >&2; fi
         if [ "$WAS_RUNNING" = 1 ]; then service devicemonitor restart || echo 'ROLLBACK_DAEMON_RESTART_FAILED' >&2; fi
@@ -167,16 +196,16 @@ while read -r hash mode source target; do
     id=$((id + 1))
 done < "$STAGE/items"
 count=$id
-# 39 manifest rows + 11 sidecar catalogues + one merged core-domain catalogue per locale that
+# 41 manifest rows + 11 sidecar catalogues + one merged core-domain catalogue per locale that
 # can host one (all but en_US); a fresh install adds rc.conf.
-expected=60
-[ "$FRESH" = 0 ] || expected=61
+expected=62
+[ "$FRESH" = 0 ] || expected=63
 [ "$count" = "$expected" ] || { echo 'ABORT: target count' >&2; exit 1; }
 [ "$NMAP_MISSING" = 0 ] || printf 'NOTICE: nmap is not installed; a real installation runs pkg install -y nmap\n'
-printf 'CHECK_OK version=2.12 predecessor=%s files=%s core_locales=%s daemon_running=%s host=%s\n' "$installed" "$count" "$CORE_LOCALES" "$WAS_RUNNING" "$EXPECTED_HOST"
+printf 'CHECK_OK version=%s predecessor=%s files=%s core_locales=%s daemon_running=%s host=%s\n' "$VERSION" "$installed" "$count" "$CORE_LOCALES" "$WAS_RUNNING" "$EXPECTED_HOST"
 [ "$CHECK_ONLY" = 0 ] || exit 0
 mkdir -p /var/backups/devicemonitor
-BACKUP=$(mktemp -d /var/backups/devicemonitor/install-v211.XXXXXX)
+BACKUP=$(mktemp -d /var/backups/devicemonitor/install-v2121.XXXXXX)
 mkdir "$BACKUP/files"
 cp "$STAGE/plan" "$BACKUP/plan"
 while read -r id old new mode source target; do
@@ -199,8 +228,13 @@ printf 'BACKUP_READY=%s\n' "$BACKUP"
 # DM-BL-008c: preserve the pristine core catalogues once, before the first merge, so that
 # uninstall.sh can restore them exactly (or delete a file this installer created itself). The
 # record is first-write-wins per locale: a later install must never treat its own merged output
-# as the pristine state. This runs only on a real install, never during --check.
-CORE_LOCALE_STATE=/var/backups/devicemonitor/core-locale
+# as the pristine state. This runs only on a real install, never during --check. Snapshot the
+# whole state directory before changing it so an injected failure restores original bytes,
+# metadata and absence semantics rather than leaving records for the attempted release.
+/bin/sh "$SCRIPT_DIR/$CORE_LOCALE_HELPER" backup-core-locale-state \
+    --state "$CORE_LOCALE_STATE" --backup "$BACKUP" ||
+    { echo 'ABORT: core-locale state backup' >&2; exit 1; }
+MUTATING=1
 mkdir -p "$CORE_LOCALE_STATE"
 while read -r id old new mode source target; do
     case "$target" in
@@ -247,7 +281,6 @@ if [ "$NMAP_MISSING" = 1 ]; then
     pkg install -y nmap >&2 || { echo 'ABORT: missing dependency nmap; pkg install failed' >&2; exit 1; }
     command -v nmap >/dev/null 2>&1 || { echo 'ABORT: missing dependency nmap; pkg install did not provide nmap' >&2; exit 1; }
 fi
-MUTATING=1
 while read -r id old new mode source target; do
     mkdir -p "$(dirname "$target")"
     if [ "$old" = absent ]; then owner=root; group=wheel
@@ -300,4 +333,4 @@ c.close()
 PY
 fi
 MUTATING=0
-printf 'INSTALL_OK version=2.12 files=%s core_locales=%s backup=%s daemon_restarted=%s\n' "$count" "$CORE_LOCALES" "$BACKUP" "$WAS_RUNNING"
+printf 'INSTALL_OK version=%s files=%s core_locales=%s backup=%s daemon_restarted=%s\n' "$VERSION" "$count" "$CORE_LOCALES" "$BACKUP" "$WAS_RUNNING"

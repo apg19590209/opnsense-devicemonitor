@@ -1,0 +1,30 @@
+===== tests/test_release_manifest.py =====
+V2121_RELEASE_MANIFEST=PASS rows=41 payload_hashes=41 upgrade_targets=62 fresh_targets=63
+===== tests/test_core_locale_rollback.py =====
+  test_preexisting_state_and_metadata_are_restored_exactly PASS
+  test_originally_absent_directory_and_files_are_removed   PASS
+  test_damaged_backup_is_refused_before_mutation           PASS
+CORE_LOCALE_ROLLBACK=PASS cases=3
+===== tests/test_bundle_reproducibility.py =====
+  repeated builds        identical (1584271 bytes)
+  test_repeated_builds_are_byte_identical PASS
+  gzip header            mtime 0, OS 255, no filename
+  test_gzip_header_is_fixed              PASS
+  compressor             two runs identical
+  test_compressor_is_deterministic       PASS
+  inventory              56 members, gzip -dc and tar -tzf agree
+  test_decompression_and_member_inventory PASS
+  tar headers            root/wheel, uid/gid 0, fixed mtime
+  test_tar_headers_are_canonical         PASS
+  normaliser             padding variants collapse; malformed tail refused
+  test_tar_tail_and_header_encoding_normalise_identically PASS
+  fail-closed            compressor failure leaves no bundle
+  test_gzip_failure_leaves_no_bundle     PASS
+BUNDLE_REPRODUCIBILITY=PASS cases=7
+===== tests/test_fresh_install_defaults.py =====
+FRESH_INSTALL_EMAIL_DEFAULT=PASS
+FRESH_INSTALL_PROVIDERS_DISABLED=PASS
+FRESH_INSTALL_DEFAULTS_REGRESSION=PASS
+===== tests/test_locale_merge.py =====
+LOCALE_MERGE=PASS
+SHELL_SYNTAX=PASS files=6

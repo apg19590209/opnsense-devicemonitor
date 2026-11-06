@@ -332,16 +332,16 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 
 ### Method 1: Download runtime package + WinSCP
 
-1. Download the **v2.12 runtime package** from the v2.12 GitHub release assets.
+1. Download the **v2.12.1 runtime package** from the v2.12.1 GitHub release assets.
 2. Enable SSH in OPNsense: **System -> Settings -> Administration -> Secure Shell -> Enable**.
-3. Upload `dm-v2.12-runtime.tar.gz` to `/tmp/` using WinSCP.
+3. Upload `dm-v2.12.1-runtime.tar.gz` to `/tmp/` using WinSCP.
 4. Connect by SSH and install:
 
 ```sh
 cd /tmp
-mkdir dm-v2.12
-tar -xzf dm-v2.12-runtime.tar.gz -C dm-v2.12
-cd dm-v2.12
+mkdir dm-v2.12.1
+tar -xzf dm-v2.12.1-runtime.tar.gz -C dm-v2.12.1
+cd dm-v2.12.1
 sh install.sh --host YOUR-FIREWALL-HOSTNAME
 ```
 
@@ -356,10 +356,10 @@ installation starts the daemon with monitoring disabled by default).
 ```sh
 ssh root@your.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.12/dm-v2.12-runtime.tar.gz
-mkdir dm-v2.12
-tar -xzf dm-v2.12-runtime.tar.gz -C dm-v2.12
-cd dm-v2.12
+fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.12.1/dm-v2.12.1-runtime.tar.gz
+mkdir dm-v2.12.1
+tar -xzf dm-v2.12.1-runtime.tar.gz -C dm-v2.12.1
+cd dm-v2.12.1
 sh install.sh --host YOUR-FIREWALL-HOSTNAME
 ```
 
@@ -371,7 +371,7 @@ Before upgrading, back up the runtime data:
 tar -czf /root/devicemonitor-backup.tgz /var/db/devicemonitor
 ```
 
-Then install v2.12 using either method above. The installer validates the host,
+Then install v2.12.1 using either method above. The installer validates the host,
 source and dependencies before modifying files, and retains a rollback backup.
 It aborts on failed checks instead of continuing with a partial installation.
 
@@ -714,7 +714,7 @@ This removes all files, stops the daemon, disables autostart, and clears caches.
 sh uninstall.sh --silent
 ```
 
-The v2.12 installer upgrades files in place and does not invoke the uninstaller.
+The v2.12.1 installer upgrades files in place and does not invoke the uninstaller.
 
 ### Method 3: Manual
 

@@ -15,6 +15,9 @@ on:
       # match pull requests whose target is this feature branch. The eventual PR into
       # `v2.10-development` is already covered by the entry below.
       - feature/async-db-v2.11
+      # Issue #5 v2.12.1 repair. Push-only so the exact repair commit is
+      # validated before any tag or release publication.
+      - fix/issue-5-v2.12.1
   pull_request:
     branches:
       - v2.5-development
@@ -111,9 +114,17 @@ jobs:
           set -eu
           sh -n install.sh
           sh -n install-unattended.sh
+          sh -n release/build-bundle.sh
+          sh -n release/core-locale-state.sh
           python3 tests/test_release_manifest.py
           sh -n uninstall.sh
           sh -n src/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
+
+      - name: Validate core-locale rollback state
+        run: python3 tests/test_core_locale_rollback.py
+
+      - name: Validate bundle reproducibility
+        run: python3 tests/test_bundle_reproducibility.py
 
       - name: Compile gettext catalogues
         run: |

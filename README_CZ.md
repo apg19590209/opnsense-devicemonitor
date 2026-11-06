@@ -325,7 +325,7 @@ Také odstraněno rozbité `configctl webgui restart` a `service php-fpm restart
 
 ### Metoda 1: WinSCP + SSH (doporučeno)
 
-**Krok 1:** Stáhni balíček `dm-v2.12-runtime.tar.gz` z příloh vydání v2.12 na GitHubu.
+**Krok 1:** Stáhni balíček `dm-v2.12.1-runtime.tar.gz` z příloh vydání v2.12.1 na GitHubu.
 
 **Krok 2:** Povol SSH na OPNsense:
 ```
@@ -337,9 +337,9 @@ System → Settings → Administration → Secure Shell → Enable
 **Krok 4:** Připoj se přes SSH a nainstaluj:
 ```bash
 cd /tmp
-mkdir dm-v2.12
-tar -xzf dm-v2.12-runtime.tar.gz -C dm-v2.12
-cd dm-v2.12
+mkdir dm-v2.12.1
+tar -xzf dm-v2.12.1-runtime.tar.gz -C dm-v2.12.1
+cd dm-v2.12.1
 sh install.sh --host NAZEV-VASEHO-FIREWALLU
 ```
 
@@ -352,10 +352,10 @@ Restart firewallu není potřeba. Instalátor restartuje `configd` a již běž�
 ```bash
 ssh root@tvoje.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.12/dm-v2.12-runtime.tar.gz
-mkdir dm-v2.12
-tar -xzf dm-v2.12-runtime.tar.gz -C dm-v2.12
-cd dm-v2.12
+fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.12.1/dm-v2.12.1-runtime.tar.gz
+mkdir dm-v2.12.1
+tar -xzf dm-v2.12.1-runtime.tar.gz -C dm-v2.12.1
+cd dm-v2.12.1
 sh install.sh --host NAZEV-VASEHO-FIREWALLU
 ```
 
@@ -668,7 +668,7 @@ Odstraní všechny soubory, zastaví daemon, vypne autostart a vyčistí cache. 
 sh uninstall.sh --silent
 ```
 
-Instalační program v2.12 aktualizuje soubory na místě a nevolá odinstalační program.
+Instalační program v2.12.1 aktualizuje soubory na místě a nevolá odinstalační program.
 
 ### Metoda 3: Ruční
 

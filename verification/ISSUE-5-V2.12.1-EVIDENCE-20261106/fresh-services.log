@@ -1,0 +1,3 @@
+SANDBOX_CONFIGURE_PLUGINS
+SANDBOX_SERVICE configd restart
+SANDBOX_SERVICE devicemonitor start

@@ -1,0 +1,380 @@
+{
+  "/etc/rc.conf.d/devicemonitor": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/etc/inc/devicemonitor_locale.inc": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/etc/inc/plugins.inc.d/devicemonitor.inc": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/etc/rc.d/devicemonitor": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ConfigController.php": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/DevicesController.php": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ServiceController.php": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/IndexController.php": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES/devicemonitor.mo": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/languages/cs_CZ/LC_MESSAGES/devicemonitor.po": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/languages/de_DE/LC_MESSAGES/devicemonitor.mo": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/languages/en_US/LC_MESSAGES/devicemonitor.mo": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/languages/en_US/LC_MESSAGES/devicemonitor.po": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/languages/es_ES/LC_MESSAGES/devicemonitor.mo": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/languages/fr_FR/LC_MESSAGES/devicemonitor.mo": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/languages/it_IT/LC_MESSAGES/devicemonitor.mo": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/languages/ja_JP/LC_MESSAGES/devicemonitor.mo": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/languages/nl_NL/LC_MESSAGES/devicemonitor.mo": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/languages/pt_BR/LC_MESSAGES/devicemonitor.mo": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/languages/ru_RU/LC_MESSAGES/devicemonitor.mo": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/languages/zh_CN/LC_MESSAGES/devicemonitor.mo": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/ACL/ACL.xml": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.xml": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/Menu/Menu.xml": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/Metadata/service.xml": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/activitytimeline.volt": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/changesummary.volt": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devicehistory.volt": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/devices.volt": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/identityevents.volt": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/infrastructureservices.volt": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/physicaldevices.volt": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/scanhistory.volt": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/service_widget.volt": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_email.php": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_email.php": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_mail.php": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_scan_email.php": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_service_email.php": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/notify_webhook.php": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/smtp_send.py": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/verify-devicemonitor.sh": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/service/conf/actions.d/actions_devicemonitor.conf": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/www/js/widgets/DeviceMonitor.js": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/opnsense/www/js/widgets/Metadata/DeviceMonitor.xml": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/share/locale/cs_CZ/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "5876dfb110d26f42324e94035cfa5551bcb943df2dd004a08bba3079c650ee1f",
+    "uid": 0
+  },
+  "/usr/local/share/locale/de_DE/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "75c269909d705d91b995578bb3f8f667422d00e6b15eb775fad77a3477494974",
+    "uid": 0
+  },
+  "/usr/local/share/locale/es_ES/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "1104496c52f19f9aa2bddba32732cd292316aee878dfce6b9bc337f6c12707bd",
+    "uid": 0
+  },
+  "/usr/local/share/locale/fr_FR/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "a5ade5cdf62ac010ce2fef94e3ba81bd25609a26f8a66deb9753955651d30a2f",
+    "uid": 0
+  },
+  "/usr/local/share/locale/it_IT/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "7340219d5d216cbda507080465fb9769c1ace1919cf138bb34285384c0d211fd",
+    "uid": 0
+  },
+  "/usr/local/share/locale/ja_JP/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "ab8ad9a907d3d67cd9ec70d81663200a0524ffd06e73a64bba9ce1bc9ab64de3",
+    "uid": 0
+  },
+  "/usr/local/share/locale/nl_NL/LC_MESSAGES/OPNsense.mo": {
+    "gid": "absent",
+    "mode": "absent",
+    "sha256": "absent",
+    "uid": "absent"
+  },
+  "/usr/local/share/locale/pt_BR/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "42d0e726c69215bf4f15792a08ecd5ebe4b42d0a701cf9218ac08dbb96fa5de9",
+    "uid": 0
+  },
+  "/usr/local/share/locale/ru_RU/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "c06ebe69140b416f215f871a7f732f2ea96a80de6565a5f351dfca25eee6b40e",
+    "uid": 0
+  },
+  "/usr/local/share/locale/zh_CN/LC_MESSAGES/OPNsense.mo": {
+    "gid": 0,
+    "mode": "0o644",
+    "sha256": "1670e6fae2e0466a45b58636541db0e57532cbfb633d90e7f2fe4c61bf0fb6fd",
+    "uid": 0
+  }
+}
