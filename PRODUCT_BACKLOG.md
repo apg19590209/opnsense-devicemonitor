@@ -623,7 +623,7 @@ open, because the copy run proves the code and only the live cycle proves the de
 chronic `database is locked` scan failures (14,760 on `.252` since 06-10-2026, 16,130 on `.253`
 since 09-09-2026) and `/usr/local/sbin/sendmail: not found` from the targeted-Nmap email path.
 
-### DM-BL-009 — local `main` reconciliation exists; 2.14.0 live upgrade, authenticated UI, live rollback, isolated fresh-install and bounded monitoring exercise COMPLETE / ACCEPTANCE PASS, with further execution unauthorised; full live lifecycle and `main` integration outstanding: **`OPEN`**
+### DM-BL-009 — 2.14.0 `main` reconciliation and integration: **`CLOSED`** (7 November 2026)
 
 **Description:** after the canonical clone was refetched on 3 November 2026, the remediation branch
 was neither ahead of nor behind `origin/main` but **diverged** from it:
@@ -641,6 +641,14 @@ claim that the branch tip remains at that commit; re-measure before any `main` r
 behaviour` — while the branch carried the 48 commits of the 2.13.3 remediation and its records at
 that checkpoint.
 
+**Closure result (7 November 2026):** PR #6 was fast-forwarded from `d5d73ed` to
+`282517744260920b18c9217efd09ce738af21d70`, preserving all 54 integration commits. Remote `main`
+and its tree `73750b8e1247f21a8b5dd2c888e5ece64bbfe8af` match the reviewed head. Exact-main CI
+run `42342362864` completed successfully with `RELEASE_INPUTS=PASS cases=7`,
+`V2140_RELEASE_MANIFEST=PASS`, and bundle SHA-256
+`5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f` / 1,725,593 bytes. Evidence:
+`verification/MAIN-INTEGRATION-2.14.0-20261107.md`.
+
 **This does not block the 2.13.3 release.** `origin/release/2.13` (`6bd122e`) is an **ancestor** of
 the branch, so integrating there is a **fast-forward with zero conflicts** — no merge and no rebase is
 necessary (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md` §2 and §4).
@@ -651,7 +659,7 @@ preserved; the combined payload is a new candidate, `2.14.0`
 (`release/v2.14.0-runtime.manifest`, 42 rows). The integration history starts at `eac1160` and
 includes the rollback correction. Its immutable candidate is 1,725,593 bytes with sha256
 `5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f`; the validation evidence
-records `CANDIDATE_SOURCE=worktree` because it was collected before the publication commit. Local
+records `CANDIDATE_SOURCE=worktree` because it was collected before the branch commit. Local
 bundle, manifest, installer, pruning, reconciliation, Python, PHP, JavaScript and catalogue/language
 checks passed. It was subsequently deployed to `.23` on 6 November; the 2.13.3 live deployment and
 historical M5 jail results do not themselves validate the changed tree.
@@ -687,14 +695,14 @@ originally absent path. Evidence: `/root/dm-validation-2140/jail-evidence-fresh-
 jail-only `rc.configure_plugins` stub proves the call boundary, not real OPNsense plugin
 registration. Live `FRESH=1` and real plugin registration remain untested; the bounded monitoring
 exercise is recorded separately below. The live successful-install rollback is recorded below.
-DM-BL-009 remains **OPEN**.
+Real-host fresh-install and plugin lifecycle validation are tracked as **DM-BL-012**.
 
 **Deployment status:** Device Monitor 2.14.0 is installed on the `.23` testbed only. The host runs
 OPNsense 26.7.8_2; `os-git-backup-1.1_5` was installed immediately before the upgrade and caused an
 OPNsense configuration migration/plugin-registration revision, which the pre-install backup
 captured. `.253` and `.252` remain on 2.13.2 and were not contacted.
 
-**2.14.0 host preflight:** published HEAD `690204bb1d6c402de9a2b41e16f753b37335279f` passed CI
+**2.14.0 host preflight:** pre-integration pushed HEAD `690204bb1d6c402de9a2b41e16f753b37335279f` passed CI
 run `42116897417` (one `validate` job, 66 steps, zero failures or skips). A read-only `.23`
 preflight confirmed OPNsense `26.7.8_2`, installed Device Monitor 2.13.3, 61 valid record rows,
 SQLite integrity `ok`, monitoring disabled, no WAL, healthy daemon/configd and 3.0 GB free. The
@@ -743,13 +751,12 @@ are in `verification/DEPLOY-2.14.0-23-PLAN.md` and
 
 The first supervised status check saw a transient configd socket; manual `guard recover` passed and the wrapper now retries within a bounded window. The SMTP parser now normalises angle-bracketed addresses and ESMTP `SIZE=` values while retaining the single-recipient rule. The corrected guard keeps original, snapshot and restored database identities separate; its 35 mock/disposable-copy tests all pass, including distinguishing logically equal but physically different snapshots, rejecting normalised snapshot bytes as physical restoration, accepting original bytes, archiving WAL/SHM before replacement, capturing and restoring a real uncheckpointed WAL/SHM pair exactly, and leaving monitoring stopped on unsafe capture or restoration. This correction cannot retroactively prove the completed exercise's physical bytes. Evidence: `verification/monitoring-validation/EXECUTION-20261106.md` and `/root/dm-validation-2140/monitoring/20261106T083522Z/`.
 
-Remaining gaps are classified relative to this bounded exercise and DM-BL-009 closure. Physical DB byte identity for the completed exercise is a **release blocker for an unqualified exact-restoration claim** and remains an unresolved acceptance discrepancy: the operation is traced and the logical state is verified, but the original bytes and their page map were never retained. The corrected guard now enforces original-byte identity for any future authorised run but cannot prove the historical bytes. Live `FRESH=1` and real OPNsense plugin registration/lifecycle are **deferred limitations for this exercise but release blockers for DM-BL-009 closure**. Full reminder/ageing/CARP and daemon-generated notification/service-discovery paths are **deferred limitations for this exercise but release blockers for full monitoring sign-off**. Exact daemon-triggered attribution of the `notified_at` migration is a **deferred limitation, not a blocker for the observed mutation**. External SMTP, webhook, AdGuard/Pi-hole and targeted-Nmap delivery are **deferred limitations and were intentionally excluded**. No further run is authorised. DM-BL-009 and issue #5 remain **OPEN**; §9.4 is paused.
+The remaining validation limits do not reopen DM-BL-009; they are separately identified. Physical DB byte identity for the completed exercise is **DM-BL-011** and remains a release blocker for an unqualified exact-restoration claim: the operation is traced and the logical state is verified, but the original bytes and their page map were never retained. The corrected guard now enforces original-byte identity for any future authorised run but cannot prove the historical bytes. Live `FRESH=1` and real OPNsense plugin registration/lifecycle are **DM-BL-012**; the disposable jail proves the call boundary but is not a real-host pass. Full reminder/ageing/CARP and daemon-generated notification/service-discovery paths are **DM-BL-013**, as are exact daemon-triggered attribution of the `notified_at` migration and external delivery. No further run is authorised. Issue #5 remains **OPEN**; §9.4 is paused.
 
-**Decision still required:** how to land the accepted result on `main`. The authenticated visual UI
-check is no longer pending; its Network-capture evidence remains outstanding but is not required
-for the visual acceptance recorded here. No PR, merge to `main`, rebase, reset, release promotion or
-tag change has been performed. The earlier repository-consolidation and release-integration
-evidence remains untouched.
+**Main integration completed (7 November 2026):** draft PR #6 was reviewed and then fast-forwarded
+with no squash, rebase or force-push. The authenticated About/Features screenshot remains accepted
+as visual evidence; its Network-capture evidence was not required for visual acceptance. The latest
+published GitHub release remains v2.12.1, and 2.14.0 has no tag or GitHub release.
 
 **Also open here: CI went red on the first run.** The validated M5 checkpoint is published at
 `a1f759e9b64a` and run #41609297193 failed at "Verify the bundle is deterministic across
@@ -758,17 +765,71 @@ compressor, and Decision 69 made the build-safety tar fixtures platform-neutral.
 validated M5 checkpoint `a1f759e9b64a` is green: run #41977736287, 64/64 steps, zero skips**,
 so review item H1b is closed.
 
-**Closes when:** the chosen `main` path is executed, or the branch is explicitly abandoned in
-favour of `main`/`release/2.13` with the remediation re-applied. The candidate is published at
-`690204b` with green CI run `42116897417`. Live `FRESH=1`, real `rc.configure_plugins`
-registration and full reminder/ageing/CARP/lifecycle behaviour must remain open unless separately
-validated or explicitly accepted as residual risk. The isolated fresh-install scenarios, the live
-successful-install rollback and one bounded two-cycle monitoring exercise are validated; they do
-not close those remaining live paths.
+**Closure criterion (met):** the chosen `main` path was executed by fast-forwarding the exact
+reviewed head into `main` and validating the resulting SHA. Live `FRESH=1`, real
+`rc.configure_plugins` registration and full reminder/ageing/CARP/lifecycle behaviour were not
+claimed as part of this reconciliation item; they remain open as DM-BL-012 and DM-BL-013. The
+isolated fresh-install scenarios, the live successful-install rollback and the bounded two-cycle
+monitoring exercise remain validated evidence, not a transfer of those residual gates.
 
 **Related, also open:** `/usr/local/cline-freebsd/src/cline` still sets `origin` to this repository
 while carrying an untracked Cline installation (Decision 65 §Preservation). Repointing it needs the
 intended Cline remote and explicit authorisation; it is preserved unchanged until then.
+
+### DM-BL-011 — historical database-byte identity for the completed §9.4 monitoring exercise: **`OPEN`**
+
+**Description:** the completed bounded monitoring exercise has verified logical restoration but no
+proven physical database-byte identity. The original live database was `c17874a7…`; the retained
+consistent SQLite snapshot and later live file were `796d28c7…`. Both produced the same logical
+`.dump` and `iterdump` digests, with clean integrity/quick checks and matching schema/table/row
+counts, but the original bytes and their page map were not retained. Exact physical attribution is
+therefore unproven and no unqualified exact-restoration claim may be made.
+
+**Guard status:** the guard was corrected to stop and verify writers before capture, preserve the
+original database/WAL/SHM bytes separately from the SQLite fallback, archive the post-state
+database, and compare restored bytes/metadata/schema/data/integrity against the original recovery
+copy. The 35 mock/disposable-copy guard tests pass. This prevents recurrence but cannot prove the
+historical bytes.
+
+**Closure evidence:** either new evidence capable of reconstructing and comparing the original
+bytes, or explicit operator acceptance of the historical byte-identity limitation. Neither is
+currently recorded. The limitation is distinct from DM-BL-009's completed `main` reconciliation.
+
+**Evidence:** `verification/monitoring-validation/EXECUTION-20261106.md` and
+`/root/dm-validation-2140/monitoring/20261106T083522Z/`.
+
+### DM-BL-012 — real-host 2.14.0 `FRESH=1` and OPNsense plugin lifecycle validation: **`OPEN`**
+
+**Description:** the isolated FreeBSD-jail `fresh` and `fresh-rollback` scenarios passed against the
+unchanged 2.14.0 bundle, but their `configd`, `rc.configure_plugins` and `pgrep` stubs prove only
+the installer's call boundary. They do not demonstrate real OPNsense plugin registration, real
+configd interaction, a real daemon lifecycle after a fresh install, real-host `FRESH=1`, or
+whole-tree live core-locale continuity.
+
+The normal 2.13.3 → 2.14.0 upgrade on `.23` and its live successful-install rollback are validated
+and are not this item. The outstanding work is specifically the **real-host fresh-install path and
+real plugin lifecycle**.
+
+**Closure evidence:** a separately authorised real-host `FRESH=1` test and plugin lifecycle check,
+or explicit operator acceptance of the residual risk. The existing jail evidence must not be
+described as equivalent.
+
+**Evidence:** `verification/FRESH-INSTALL-JAIL-2.14.0-20261106.md`,
+`verification/INSTALLER-JAIL-2.14.0-20261106.md`, and `PROJECT_STATE.md`.
+
+### DM-BL-013 — full monitoring lifecycle, HA/CARP and delivery-path validation: **`OPEN`**
+
+**Description:** the bounded §9.4 exercise completed two scheduled inventory scans, DMTEST-only
+direct service discovery and two loopback SMTP messages from directly invoked PHP helpers. It did
+not exercise scheduled daemon-triggered service discovery, full reminder/ageing/CARP behaviour,
+daemon-generated notification delivery, exact daemon attribution of the `notified_at` migration,
+external SMTP/webhook/AdGuard/Pi-hole delivery or targeted Nmap delivery.
+
+**Closure evidence:** separately authorised live tests covering the relevant paths, or explicit
+operator acceptance of the residual risk. No further live execution is currently authorised.
+
+**Evidence:** `verification/monitoring-validation/EXECUTION-20261106.md` and
+`verification/monitoring-validation/PREFLIGHT-20261106.md`.
 
 ## Deployment verification notes
 
@@ -796,7 +857,8 @@ remained disabled.
 rollback test. `FRESH=1` was not exercised on this host; it was later validated only in the
 isolated 2.14.0 jail scenarios. The installer backup
 `/var/backups/devicemonitor/install-v213.xKjyg1` and pre-install backup `/root/dm-pre-2133` remain
-in place. `.253` and `.252` were not touched and remain on 2.13.2; DM-BL-009 remains OPEN.
+in place. `.253` and `.252` were not touched and remain on 2.13.2. DM-BL-009 was later closed by
+the 2.14.0 `main` integration; live `FRESH=1` remains tracked as DM-BL-012.
 
 ### OPNsense 26.7.8_2 retained the 2.13.3 baseline on `.23` — **`CLOSED`** (5 November 2026)
 
@@ -812,5 +874,5 @@ normally. This did not change the Device Monitor payload or its configuration.
 
 **Retained warning:** the update log records one package-audit warning for `libgpg-error-1.61`.
 No Device Monitor or service check failed. Rollback was not invoked, `FRESH=1` remains untested,
-the OPNsense-generated configuration backup remains under `/conf/backup/`, and DM-BL-009 remains
-**OPEN**.
+the OPNsense-generated configuration backup remains under `/conf/backup/`, and real-host
+`FRESH=1` remains tracked as **DM-BL-012**.

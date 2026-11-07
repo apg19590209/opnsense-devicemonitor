@@ -6,6 +6,12 @@
 
 Plugin pro automatické sledování síťových zařízení v OPNsense firewallu. Detekuje nová zařízení pomocí nativní OPNsense hostwatch databáze a odesílá emailová nebo webhook upozornění.
 
+> **Stav verze (7. listopadu 2026):** zdrojová větev `main` je Device Monitor **2.14.0**;
+> nejnovější **publikované vydání na GitHubu** je **v2.12.1**. Vydání 2.14.0 zatím **nebylo
+> publikováno** a nemá tag ani release asset. Tato česká stránka popisuje historickou
+> v2.12; aktuální anglický [README](README.md) je autoritativní pro zdroj 2.14.0,
+> aktuální instalační postup a omezení validace.
+
 ---
 
 ## 📋 Obsah

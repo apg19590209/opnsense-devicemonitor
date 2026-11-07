@@ -9,7 +9,8 @@ inventory, manifest and installer guards. The v2.12 release notes now carry an i
 warning and v2.12.1 link, while its tag and asset remain unchanged. The earlier `adaa2b2…` and
 intermediate `dbf350…` candidates remain retained as superseded. One scoped publication follow-up
 was posted to issue #5, which remains OPEN. No host deployment, monitoring activation or
-main/release movement was made. DM-BL-009 remains OPEN and §9.4 remains paused.**
+main/release movement was made. DM-BL-009 has since been closed by the separate 2.14.0 main
+integration; issue #5 remains OPEN and §9.4 remains paused.**
 
 ## Scope
 
@@ -662,7 +663,7 @@ necessary; do not force-push or rewrite the already-pushed branch.
 
 Do **not** overwrite `dm-v2.12-runtime.tar.gz` and do **not** move or replace tag `v2.12`. Preserve
 that tag and asset as the immutable record of the defect. Do not direct the reporter to the
-unreleased 2.14.0 integration candidate.
+unreleased 2.14.0 main source.
 
 The safe path is a new patch release, `v2.12.1`, based on `main` at `d5d73ed` (the first commit
 whose v2.12 test suite is repaired; it has no runtime `src/` changes relative to tag `v2.12`).
@@ -688,7 +689,8 @@ verification and follow-up boundaries, not outstanding tag/release actions.
    matrix was explicitly skipped for missing runner assets.
 4. The live locale fingerprint does not hash every file under
    `/usr/local/share/locale/*/LC_MESSAGES/`; whole-tree live catalogue continuity is not claimed.
-5. DM-BL-009 remains **OPEN** and §9.4 remains paused; neither is moved by this release repair.
+5. DM-BL-009 has since been closed by the separate 2.14.0 main integration; issue #5 remains
+   **OPEN** and §9.4 remains paused.
 
 No production, `.252` or `.253` contact is required. A live `.23` deployment is not part of this
 investigation proposal.
@@ -698,7 +700,7 @@ investigation proposal.
 * GitHub issue #5: **OPEN**, with one scoped follow-up comment at
   https://github.com/apg19590209/opnsense-devicemonitor/issues/5#issuecomment-6680082397;
   issue `updatedAt` is `2026-11-06T07:55:40Z`.
-* DM-BL-009: **OPEN**.
+* DM-BL-009: **CLOSED** (2.14.0 main integration completed 7 November 2026).
 * §9.4: paused, not executed.
 * Published v2.12.1: annotated tag object `349dc0932aebaa148a59b60cedf046a8a8414a88` (unsigned)
   targets `5c3ee29e9bc3ae7baf1f55a8cf7f25ad231399d6`; release and tag URLs are recorded above.

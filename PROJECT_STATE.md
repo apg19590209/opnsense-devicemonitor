@@ -2,23 +2,25 @@
 
 ## Current state
 
-Last updated: 6 November 2026
+Last updated: 7 November 2026
 
-Branches: `release/2.13` (HEAD `6bd122e`, the released line),
-`fix/pruning-remediation-20261103` (HEAD `b2c74fc`, the 2.13.3 remediation) and `main`
-(HEAD `d5d73ed`, the v2.12 line). The local reconciliation branch
-`integration/dm-bl-009-reconcile-20261105` merges those two histories. `baseline/2.12`
-(`d04739a`) holds the recovered pre-HA 2.12 tree; `feature/async-db-v2.11` (`0ad95b0`) is
-the historical v2.11 development branch.
+Branches: `main` (HEAD `282517744260920b18c9217efd09ce738af21d70`, the Device Monitor
+2.14.0 source line), `release/2.13` (HEAD `6bd122e`) and
+`fix/pruning-remediation-20261103` (HEAD `b2c74fc`, the 2.13.3 remediation). The
+`integration/dm-bl-009-reconcile-20261105` history was fast-forwarded into `main` on
+7 November 2026. The latest published GitHub release is **v2.12.1**; 2.14.0 is not yet published.
+`baseline/2.12` (`d04739a`) holds the recovered pre-HA 2.12 tree;
+`feature/async-db-v2.11` (`0ad95b0`) is the historical v2.11 development branch.
 
-### 2.14.0 — deployed to `.23` on 6 November 2026
+### 2.14.0 — main source and `.23` deployment; not yet published
 
 | Item | Value |
 |---|---|
-| Branch | `integration/dm-bl-009-reconcile-20261105`, created from `origin/main` `d5d73ed`; merging `fix/pruning-remediation-20261103` `b2c74fc` |
+| Branch | `main` at `282517744260920b18c9217efd09ce738af21d70`; PR #6 fast-forwarded the reviewed `integration/dm-bl-009-reconcile-20261105` history from `d5d73ed`, preserving all 54 commits |
 | Payload | `release/v2.14.0-runtime.manifest`, 42 rows; 63 generated targets on an upgrade and 64 on a fresh install |
 | Bundle | `dm-v2.14.0-runtime.tar.gz`, 1 725 593 bytes, sha256 `5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f`; 60 bundle members. The corrected artifact was first validated from a worktree based on `eac1160`, so its evidence records `CANDIDATE_SOURCE=worktree` |
-| CI | Run `42116897417` at published HEAD `690204bb1d6c402de9a2b41e16f753b37335279f`: success; one `validate` job, 66 steps, zero failures or skips. Linux CI does not execute the FreeBSD installer-jail or live-service scenarios |
+| CI | Run `42116897417` at pre-integration pushed HEAD `690204bb1d6c402de9a2b41e16f753b37335279f`: success; one `validate` job, 66 steps, zero failures or skips. Linux CI does not execute the FreeBSD installer-jail or live-service scenarios |
+| Main integration CI | Exact-main workflow-dispatch run `42342362864` at `282517744260920b18c9217efd09ce738af21d70`: **success**. Logs report `RELEASE_INPUTS=PASS cases=7`, `V2140_RELEASE_MANIFEST=PASS`, and bundle identity `5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f` / 1,725,593 bytes. Record: `verification/MAIN-INTEGRATION-2.14.0-20261107.md` |
 | Preserved from main | Scan-loop/state-change alert refactor, MAC-rotation policy, repeat reminders, identity email, configuration visibility, non-HA fail-open CARP behaviour and the deployment verifier |
 | Preserved from 2.13.x | HA/CARP role gating, O4 ageing and standby hygiene, installer pruning evidence, repair semantics, pinned inputs, deterministic bundling and rollback verification |
 | Local validation | The corrected candidate builds reproducibly; focused reconciliation, installer/pruning, Python, PHP, JavaScript, catalogue and both language-engine suites passed locally. All five upgrade FreeBSD installer-jail scenarios passed on 6 November: `check`, `install`, `repair`, `rollback` and `failclosed`. The isolated `fresh` and `fresh-rollback` scenarios also passed on 6 November: 64 targets, a 64-row record, no database/configuration, a running daemon and complete restoration to empty state after an injected failure. Rollback restored all 63 upgrade targets, the prune fixture, the record and 19 core-locale state/pristine files with zero conflicts or failures |
@@ -28,18 +30,18 @@ the historical v2.11 development branch.
 | Acceptance | PASS: all 42 manifest rows and all 63 installer-plan targets matched digest/mode/ownership; record has 63 digest rows including 21 locale rows; database, Device Monitor configuration and OPNsense configuration stayed byte-identical; SQLite integrity `ok`; daemon PID `34058` → `79168` remained stable after 60 seconds; configd PID `639` → `35685`; `configctl devicemonitor status` is `running`; monitoring remains disabled with no WAL |
 | State after §9.3 rollback validation (historical checkpoint) | PASS: Device Monitor `2.14.0`; 63 targets and 63-row record `d891ce68…`; database `c17874a7…`, Device Monitor configuration `027594eb…` and OPNsense configuration `c2ce5800…` unchanged at that checkpoint; daemon PID `49278` → `74577`; configd PID `30312` → `32439`; daemon alive after five seconds; monitoring `enabled=0`; no WAL/SHM. The later bounded §9.4 exercise changed the physical database representation to the consistent snapshot `796d28c7…`; the current accepted `/conf/config.xml` is `15ce9e6c…` |
 | Backups | Pre-install `/root/dm-pre-2140/runtime-data.tgz`, 7,632,213 bytes, sha256 `ff7873ce0fbc1826663aa86c3271014c9c2ad3cdb3bd7b4eacce164a4a63753e`, containing 61 payload files, 19 core-locale files, record, consistent database and configuration; installer backups `/var/backups/devicemonitor/install-v214.JeYC44`, `install-v214.zGJRuq` and `install-v214.qMPS7n`; pre-mutation recovery point `/root/dm-validation-2140/rollback/20261105T231610Z` |
-| Open item | Authenticated visual About/Features rendering is **PASS** on operator-supplied evidence: the Settings → About page shows both Device Monitor `v2.14.0` and `v2.14.0 Features and Enhancements`; no browser Network capture was supplied. Live successful-install rollback is **PASS**. The isolated fresh-install and fresh-rollback jail paths are **PASS**. The bounded §9.4 monitoring exercise is **COMPLETE / ACCEPTANCE PASS**; further execution is **unauthorised**. Live evidence covers two scheduled inventory scans, direct DMTEST-only service discovery, scope-limited visibility probing and a live-observed `notified_at` schema mutation before restoration. The two SMTP messages came from direct PHP helper calls, not daemon-generated delivery; identity/service/new-device/aged/retired and fresh-host refusal were copy-only fixtures. Scheduled daemon-triggered service discovery, full reminder/ageing/CARP, live `FRESH=1` and real OPNsense plugin registration/lifecycle remain untested. Logical database restoration is verified, but the original `c17874a7…` bytes were not retained. The guard has since been corrected to enforce original-byte identity for future authorised runs, but that correction cannot retroactively prove the completed exercise's physical restoration. DM-BL-009 remains **OPEN** pending those boundaries and completion of the chosen `main` integration |
-| §9.4 monitoring execution | **COMPLETE / ACCEPTANCE PASS — further execution is unauthorised.** The supervised run completed exactly two scans (`3497 → 3499`) with DMTEST-only discovery, loopback SMTP helpers and copy-only fixtures; final acceptance restored monitoring `enabled=0`, healthy services, no test processes/listener and no WAL/SHM. Configuration `027594eb…`, record `d891ce68…`, OPNsense configuration `15ce9e6c…` and all 19 core-locale files are byte-identical. The `notified_at` migration was observed live before restoration. The original database was `c17874a7…`; the consistent snapshot and historical restored file were `796d28c7…`, with identical logical digest `10460718…`, clean integrity/quick checks and 21 schema tables; the trace is in `verification/monitoring-validation/EXECUTION-20261106.md`. No retained file contains the original bytes, so the completed exercise cannot be claimed as physically byte-identical. The guard was corrected to stop and verify writers before capture, preserve original database/WAL/SHM bytes separately, retain the SQLite snapshot as an independently verified fallback, archive the post-state database, and verify restored bytes/metadata/schema/data/integrity against the original recovery copy; snapshot equivalence cannot satisfy original-byte identity. All 35 mock/disposable-copy tests pass, but this does not retroactively prove the historical bytes. §9.4 remains paused; issue #5 and DM-BL-009 remain **OPEN** |
+| Acceptance / residual gates | Authenticated visual About/Features rendering is **PASS** on operator-supplied evidence: the Settings → About page shows both Device Monitor `v2.14.0` and `v2.14.0 Features and Enhancements`; no browser Network capture was supplied. Live successful-install rollback is **PASS**. The isolated fresh-install and fresh-rollback jail paths are **PASS**. The bounded §9.4 monitoring exercise is **COMPLETE / ACCEPTANCE PASS**; further execution is **unauthorised**. Live evidence covers two scheduled inventory scans, direct DMTEST-only service discovery, scope-limited visibility probing and a live-observed `notified_at` schema mutation before restoration. The two SMTP messages came from direct PHP helper calls, not daemon-generated delivery; identity/service/new-device/aged/retired and fresh-host refusal were copy-only fixtures. The remaining validation limits are separate backlog items: DM-BL-011 (historical database-byte identity), DM-BL-012 (real-host `FRESH=1` and plugin lifecycle) and DM-BL-013 (full monitoring lifecycle). DM-BL-009 is **CLOSED** because its `main` integration criterion is met |
+| §9.4 monitoring execution | **COMPLETE / ACCEPTANCE PASS — further execution is unauthorised.** The supervised run completed exactly two scans (`3497 → 3499`) with DMTEST-only discovery, loopback SMTP helpers and copy-only fixtures; final acceptance restored monitoring `enabled=0`, healthy services, no test processes/listener and no WAL/SHM. Configuration `027594eb…`, record `d891ce68…`, OPNsense configuration `15ce9e6c…` and all 19 core-locale files are byte-identical. The `notified_at` migration was observed live before restoration. The original database was `c17874a7…`; the consistent snapshot and historical restored file were `796d28c7…`, with identical logical digest `10460718…`, clean integrity/quick checks and 21 schema tables; the trace is in `verification/monitoring-validation/EXECUTION-20261106.md`. No retained file contains the original bytes, so the completed exercise cannot be claimed as physically byte-identical. The guard was corrected to stop and verify writers before capture, preserve original database/WAL/SHM bytes separately, retain the SQLite snapshot as an independently verified fallback, archive the post-state database, and verify restored bytes/metadata/schema/data/integrity against the original recovery copy; snapshot equivalence cannot satisfy original-byte identity. All 35 mock/disposable-copy tests pass, but this does not retroactively prove the historical bytes. §9.4 remains paused; issue #5 remains **OPEN**. Historical byte identity is tracked as **DM-BL-011** |
 
 ### §9.4 residual-gap classification
 
 | Gap | Classification | Rationale |
 |---|---|---|
-| Physical DB byte identity (`c17874a7…` → `796d28c7…`) | **Release blocker for an unqualified exact-restoration claim about the completed exercise; recurrence corrected in the guard** | Logical digest, schema, integrity and row counts match, so data integrity is not in question. The live replacement is traced to the historical guard's `796d28c7…` snapshot and its `08:32:04Z` recovery copy; that guard's physical expectation was the snapshot hash, not the original live hash. The original `c17874a7…` bytes were never retained, leaving the internal header/page delta unverifiable. The corrected guard now enforces original-byte identity for future authorised runs, but cannot retroactively prove the completed exercise. |
-| Live `FRESH=1` and real OPNsense plugin registration/lifecycle | **Deferred limitation for the bounded exercise; release blocker for DM-BL-009 closure** | The disposable jail and copy-only fixtures prove call boundaries, not real-host registration or lifecycle. |
-| Full reminder/ageing/CARP and daemon-generated notification/service-discovery paths | **Deferred limitation for the bounded exercise; release blocker for full monitoring sign-off** | The two scheduled scans did not run scheduled service discovery; reminders, ageing and CARP were not exercised, and helper emails were direct PHP calls. |
-| Daemon-triggered attribution of the `notified_at` migration | **Deferred limitation; not a blocker for the observed live mutation** | The column was observed live-present after direct discovery and before restoration; the caller beyond the direct-discovery path was not separately instrumented. |
-| External SMTP, webhook, AdGuard/Pi-hole and targeted-Nmap delivery | **Deferred limitation; intentionally excluded** | These paths were prohibited by the authorised scope; only the loopback SMTP sink was used. |
+| Physical DB byte identity (`c17874a7…` → `796d28c7…`) | **Open: DM-BL-011** — blocks an unqualified exact-restoration claim for the completed exercise; recurrence is corrected in the guard | Logical digest, schema, integrity and row counts match, so data integrity is not in question. The live replacement is traced to the historical guard's `796d28c7…` snapshot and its `08:32:04Z` recovery copy; that guard's physical expectation was the snapshot hash, not the original live hash. The original `c17874a7…` bytes were never retained, leaving the internal header/page delta unverifiable. The corrected guard now enforces original-byte identity for future authorised runs, but cannot retroactively prove the completed exercise. |
+| Live `FRESH=1` and real OPNsense plugin registration/lifecycle | **Open: DM-BL-012** | The disposable jail and copy-only fixtures prove call boundaries, not real-host registration or lifecycle. Live `FRESH=1` remains untested. |
+| Full reminder/ageing/CARP and daemon-generated notification/service-discovery paths | **Open: DM-BL-013** | The two scheduled scans did not run scheduled service discovery; reminders, ageing and CARP were not exercised, and helper emails were direct PHP calls. |
+| Daemon-triggered attribution of the `notified_at` migration | **Open: DM-BL-013** — not a blocker for the observed live mutation | The column was observed live-present after direct discovery and before restoration; the caller beyond the direct-discovery path was not separately instrumented. |
+| External SMTP, webhook, AdGuard/Pi-hole and targeted-Nmap delivery | **Open: DM-BL-013** — intentionally excluded from the prior scope | These paths were prohibited by the authorised scope; only the loopback SMTP sink was used. |
 
 ### Release 2.13.2 — the production/CARP field line
 
@@ -47,7 +49,7 @@ the historical v2.11 development branch.
 |---|---|
 | Commit | `74e1f6f` on `release/2.13`, tag `v2.13.2` (unchanged by the remediation) |
 | Payload | `release/v2.13.2-runtime.manifest`, 40 rows, staged targets 61 |
-| Bundle | `dm-v2.13.2-runtime.tar.gz`, 336 261 bytes, sha256 `8fd6a7a703a63b4fa23f694d6dbd9d0aa50947f60ce23f37ffbd2c67a6b16f5a` (published; never rebuilt) |
+| Bundle | `dm-v2.13.2-runtime.tar.gz`, 336 261 bytes, sha256 `8fd6a7a703a63b4fa23f694d6dbd9d0aa50947f60ce23f37ffbd2c67a6b16f5a` (release-line artifact; never rebuilt). The latest published GitHub release remains v2.12.1 |
 | Deployed | `.253` (CARP master), `.252` (CARP standby), 40/40 manifest parity; `.23` was upgraded to 2.13.3 on 5 November 2026 |
 | Rollback | `/var/backups/devicemonitor/install-v213.{6KTQFY,.HuGjkL,.ivbMZd}` |
 | New behaviour | A standby ages its own inventory: `[SERVICES] Stale-state ageing (standby)` (Decision 60) |
@@ -102,7 +104,7 @@ Record: `verification/UPDATE-OPNSENSE-26.7.8-23-PLAN.md`. Post-boot evidence is 
 | Tool guard | `.clinerules/hooks/PreToolUse` — blocks repository creation/cloning, worktree creation and writes into protected checkouts |
 | Commit guard | `.githooks/pre-commit` via `core.hooksPath=.githooks` — refuses commits outside the canonical top-level and any Cline-installation path |
 | Preserved | `/usr/local/cline-freebsd/src/cline` (second clone carrying the untracked Cline installation) and the worktrees `/root/o3-branch`, `/root/tb-branch` — unchanged |
-| Open decision | `main` vs the validated M5 checkpoint: **14 behind / 48 ahead** against the locally recorded `origin/main`, merge base `40cced8` — DM-BL-009, still **OPEN**; re-measure before any reconciliation |
+| Main integration | **Complete (7 November 2026):** PR #6 was fast-forwarded from `d5d73ed` to `2825177`, preserving all 54 commits. Remote `main` and its tree match the reviewed head; exact-main CI run `42342362864` passed. DM-BL-009 is **CLOSED**; residual validation is tracked as DM-BL-011/012/013 |
 | Integration path | `release/2.13` (`6bd122e`) is an **ancestor** of this branch, so integration into the release line is a plain **fast-forward with zero conflicts** — no merge and no rebase is necessary (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md`) |
 | CI readiness | the validated M5 checkpoint `a1f759e9b64a` is published and green (run `41977736287`, 64/64, zero skips); H1b is closed |
 | Evidence | `verification/WORKSPACE-PROTECTION-20261103.md`, `verification/REPO-CONSOLIDATION-20261103.md` |
@@ -175,11 +177,10 @@ The 2.13.3 installer now has executable end-to-end coverage that does not touch 
 * The historical pre-deployment sandbox run did not touch `.23`, `.253` or `.252`; the later
   2.13.3 deployment touched `.23` only. `.253`/`.252` remain on 2.13.2.
 
-**Next step:** decide the deliberate `main` integration path. Publication CI at
-`690204bb1d6c402de9a2b41e16f753b37335279f` is already green in run `42116897417`. DM-BL-009
-remains OPEN until that integration decision and the remaining live validation boundaries are
-resolved. The OPNsense 26.7.8_2 update on `.23` is complete; `.23` remains on the accepted Device
-Monitor 2.14.0 baseline with monitoring disabled.
+**Next step:** no further DM-BL-009 integration action is pending. DM-BL-011, DM-BL-012 and
+DM-BL-013 remain OPEN for separately authorised validation, and issue #5 remains OPEN pending
+reporter confirmation. The OPNsense 26.7.8_2 update on `.23` is complete; `.23` remains on the
+accepted Device Monitor 2.14.0 baseline with monitoring disabled.
 
 ## 2.14.0 installer-jail validation (6 November 2026)
 
@@ -199,8 +200,8 @@ remained. The fail-closed scenario refused a tampered helper before mutation.
 
 The earlier `530facc…` candidate and its failed rollback evidence are retained as superseded
 diagnostic records; they are not the current validation result. The artifact was validated before
-its publication commit, so the recorded source form is the worktree; CI status for the published
-commit is tracked in the milestone report. No deployment, service change, monitoring activation,
+its integration commit, so the recorded source form is the worktree; CI status for the pushed commit
+is tracked in the milestone report. No deployment, service change, monitoring activation,
 production or `.252`/`.253` access occurred during that jail work. The later live deployment
 exercised the real configd restart and daemon stop/wait/start lifecycle. The subsequent §9.3
 successful-install live rollback cycle also passed; the later bounded §9.4 exercise verified
@@ -209,7 +210,8 @@ CARP behaviour and live `FRESH=1` remain separate untested paths. Full evidence 
 correction are in
 `verification/INSTALLER-JAIL-2.14.0-20261106.md`; the fresh results are in
 `verification/FRESH-INSTALL-JAIL-2.14.0-20261106.md`; the live cycle is in
-`verification/LIVE-ROLLBACK-2.14.0-23-20261106.md`. DM-BL-009 remains **OPEN**.
+`verification/LIVE-ROLLBACK-2.14.0-23-20261106.md`. DM-BL-009 is **CLOSED**; the remaining
+real-host validation is tracked as **DM-BL-012**.
 
 ## 2.14.0 fresh-install jail validation (6 November 2026)
 
@@ -233,4 +235,5 @@ at HEAD `690204bb1d6c402de9a2b41e16f753b37335279f`.
 The jail-only `rc.configure_plugins` stub proves the installer's call boundary, not real OPNsense
 plugin registration. Live `FRESH=1` remains unauthorised and untested. A screenshot from the
 operator's authenticated browser confirms both About and Features render `v2.14.0`; no Network
-capture was supplied. DM-BL-009 remains **OPEN**.
+capture was supplied. Real-host `FRESH=1` and plugin lifecycle validation remain tracked as
+**DM-BL-012**.

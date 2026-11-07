@@ -6,15 +6,19 @@
 
 Plugin for automatic network device monitoring in OPNsense firewall. Detects new devices on the network using the native OPNsense hostwatch database and sends email or webhook notifications.
 
-> **Integration candidate: 2.14.0** — payload `release/v2.14.0-runtime.manifest` (42
-> targets), combining the mainline v2.12 scan, alert, identity-email, reminder and
-> configuration-visibility work with the 2.13 HA/CARP, O4 ageing and verified
-> installer/pruning/rollback line. The candidate is local only: it has not been published,
-> deployed or accepted on a host, and its bundle identity must not be confused with the
-> deployed 2.13.3 identity. The testbed `192.168.20.23` runs 2.13.3; the CARP pair
-> `192.168.20.253` (master) / `.252` (standby) remains on 2.13.2. The Installation section
-> documents the guarded `install-unattended.sh --host <hostname>` flow; `PROJECT_STATE.md`
-> holds release, deployment and rollback records.
+> **Version status (7 November 2026)** — the `main` source is Device Monitor **2.14.0**
+> (`release/v2.14.0-runtime.manifest`, 42 targets), combining the mainline v2.12 scan,
+> alert, identity-email, reminder and configuration-visibility work with the 2.13
+> HA/CARP, O4 ageing and verified installer/pruning/rollback line. The fast-forward
+> integration is complete at `282517744260920b18c9217efd09ce738af21d70`; exact-main CI
+> run `42342362864` passed with bundle SHA-256
+> `5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f`.
+>
+> The latest **published GitHub release** remains **v2.12.1**. **2.14.0 is not yet published**:
+> there is no v2.14.0 tag or release asset. The testbed `192.168.20.23` runs 2.14.0;
+> the CARP pair `192.168.20.253` (master) / `.252` (standby) remains on 2.13.2. The
+> Installation section documents the guarded `install-unattended.sh --host <hostname>`
+> flow; `PROJECT_STATE.md` holds release, deployment and rollback records.
 
 > **Translations:** the interface is available in English, Czech, German, French, Spanish, Italian, Portuguese (Brazil), Dutch, Russian, Japanese and Simplified Chinese. All translations except English and Czech are machine-generated — native-speaker corrections are welcome.
 
@@ -50,15 +54,20 @@ The plugin automatically monitors the network and alerts you about:
 
 ## Version history
 
-### v2.14.0 (integration candidate, November 2026) — combined reliability and HA line
+### v2.14.0 (main source, November 2026; not yet published) — combined reliability and HA line
 
 - Reconciles the mainline v2.12 scan-loop, state-change alert, identity-email, reminder
   and configuration-visibility work with the 2.13 HA/CARP, O4 ageing and verified
   installer/pruning/rollback line.
 - The combined runtime contains both notification entry points (`notify_identity_mail.php`
   and `notify_failover.php`) and the mainline deployment verifier.
-- This candidate has passed local validation only. It is not published or deployed, and
-  the historical 2.13.3 bundle digest and live acceptance do not apply to its changed code.
+- `main` is the 2.14.0 source line. The integration was merged by fast-forward at
+  `2825177`; all 54 integration commits were preserved and exact-main CI passed in run
+  `42342362864`.
+- 2.14.0 is deployed on the `.23` testbed only. It has passed local, disposable-jail and
+  bounded live validation, but it is **not a published release**.
+- The latest published GitHub release is **v2.12.1**. No v2.14.0 tag, GitHub release or release
+  asset exists yet.
 
 ### v2.13.3 (November 2026) — pruning you can prove, and a repair that repeats
 
@@ -395,17 +404,19 @@ Also removed broken `configctl webgui restart` and `service php-fpm restart` cal
 
 ## Installation
 
-Current integration candidate: `dm-v2.14.0-runtime.tar.gz`, built from
+Current `main`-source build: `dm-v2.14.0-runtime.tar.gz`, built from
 `release/v2.14.0-runtime.manifest` (42 hash-verified targets). The bundle carries the runtime files, the 11 gettext
 catalogues, `install.sh` / `install-unattended.sh` / `uninstall.sh`, the manifest, the
 pinned-inputs file with its verifier, the catalogue merge helper and the prune helper with
 its legacy ownership evidence. `install.sh` is a thin wrapper that execs
-`install-unattended.sh`, which is the authoritative procedure.
+`install-unattended.sh`, which is the authoritative procedure. **2.14.0 is not yet
+published**; until publication is separately authorised, use only a reviewed local build.
+The latest published GitHub release is [v2.12.1](https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.12.1).
 
 ### Method 1: bundle over WinSCP
 
-1. Obtain `dm-v2.14.0-runtime.tar.gz` from the reviewed build output (the candidate is not
-   published until CI and publication are authorised).
+1. Obtain `dm-v2.14.0-runtime.tar.gz` from the reviewed build output. There is no published
+   2.14.0 asset yet.
 2. Enable SSH in OPNsense: **System → Settings → Administration → Secure Shell → Enable**.
 3. Upload the bundle to `/tmp/` with WinSCP.
 4. Extract and install:
@@ -418,12 +429,14 @@ cd dm-v2.14.0
 sh install.sh --host "$(/bin/hostname)"
 ```
 
-### Method 2: direct SSH
+### Method 2: direct SSH after a guarded local transfer
 
 ```sh
+# 2.14.0 is not published, so there is no release URL yet. Transfer the reviewed build
+# from the build host first:
+scp /path/to/dm-v2.14.0-runtime.tar.gz root@your.opnsense.ip:/tmp/
 ssh root@your.opnsense.ip
 cd /tmp
-fetch https://github.com/apg19590209/opnsense-devicemonitor/releases/download/v2.14.0/dm-v2.14.0-runtime.tar.gz
 mkdir dm-v2.14.0
 tar -xzf dm-v2.14.0-runtime.tar.gz -C dm-v2.14.0
 cd dm-v2.14.0
