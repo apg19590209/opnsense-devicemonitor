@@ -776,7 +776,7 @@ monitoring exercise remain validated evidence, not a transfer of those residual 
 while carrying an untracked Cline installation (Decision 65 §Preservation). Repointing it needs the
 intended Cline remote and explicit authorisation; it is preserved unchanged until then.
 
-### DM-BL-010 — translation-header metadata warnings in the v2.12.1 installation output (`PO-Revision-Date`, `Last-Translator`, `Language-Team`): **`OPEN`** — implemented in an unpublished 2.14.0 candidate
+### DM-BL-010 — translation-header metadata warnings in the v2.12.1 installation output (`PO-Revision-Date`, `Last-Translator`, `Language-Team`): **`OPEN`** — integrated in `main`; publication pending
 
 **Description:** the reporter's v2.12.1 installation log contains non-fatal translation-header
 metadata warnings for catalogue entries missing the following headers:
@@ -794,6 +794,7 @@ are **not** a defect of the issue #5 installation result.
 - GitHub issue #5 — **OPEN** (installation result recorded 7 November 2026)
 - Investigation: `verification/ISSUE-5-V2.12-MANIFEST-20261106.md`, section *Reporter result (7 November 2026)*
 - Verification: `verification/DM-BL-010-CATALOGUE-HEADERS-20261107.md`
+- Phase 1 evidence: `verification/PHASE1-EXACT-CANDIDATE-23-20261107.md`
 - DM-BL-009 — **CLOSED** (main reconciliation completed 7 November 2026)
 
 **Implementation state (7 November 2026):**
@@ -816,9 +817,17 @@ are **not** a defect of the issue #5 installation result.
   `90afa55dd826c0dc3be8a23902b809baa465e25191dc372dc6cc2ef4e57fc243`.
 - The previous main-integration candidate (1,725,593 bytes, SHA-256 `5149bfd4…`) and its evidence
   remain preserved as superseded, not deleted or overwritten.
-- This candidate is on `fix/dm-bl-010-catalogue-warnings-20261107`; it is not merged to `main` and
-  is not in any published release. The live `.23` installation and published v2.12.1 assets are
-  unchanged.
+- PR #7 integrated the candidate into `main` at
+  `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`; exact-main CI run `42359428985` passed. It is not in
+  any published release; published v2.12.1 assets remain unchanged.
+- The exact candidate was installed once on `.23` as a same-version repair:
+  `INSTALL_OK version=2.14.0 files=63 core_locales=10 pruned=0 backup=/var/backups/devicemonitor/install-v214.Uwwqu1 daemon_restarted=1 unchanged=63 repaired=0`.
+  All 42 manifest rows and 63 targets passed, current core catalogues merged warning-free, nine
+  available pristine translations were preserved, `nl_NL` remained plugin-only as expected, and
+  configuration plus logical/physical database bytes were unchanged. Services remained healthy and
+  monitoring/notifications remained disabled. Authenticated UI rendering was not observed.
+- Because all 63 installed targets were already byte-identical, this live run did not exercise a
+  sparse-header repair delta. That case remains covered by the regression and jail evidence.
 
 **Constraints preserved by the implementation:**
 
@@ -829,10 +838,10 @@ are **not** a defect of the issue #5 installation result.
 - Repair belongs in the catalogue/header data (or the build inputs that produce it), not in the
   published release payloads.
 
-**Status:** **`OPEN`** — recorded from reporter-supplied output on 7 November 2026. The source,
-regression coverage, regenerated pins and reproducible candidate are ready for review, but the item
-stays open until the candidate is integrated and published under separate authorisation. Device
-Monitor 2.14.0 remains unpublished and v2.12.1 remains the latest published release.
+**Status:** **`OPEN`** — the source, regression, deterministic bundle and exact-candidate Phase 1
+live validation are complete, and the correction is integrated into `main`. The item stays open
+only because 2.14.0 is not yet published. Device Monitor 2.14.0 remains unpublished and v2.12.1
+remains the latest published release.
 
 ### DM-BL-011 — historical database-byte identity for the completed §9.4 monitoring exercise: **`OPEN`**
 

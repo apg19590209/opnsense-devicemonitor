@@ -2,11 +2,13 @@
 
 ## Result
 
-DM-BL-010's non-fatal `msgfmt` warnings were reproduced and corrected in a development-branch
-candidate for the forthcoming 2.14.0 release. The investigation evidence below predates the branch
-commit; the companion milestone report records the commit, exact-SHA CI and PR evidence. The
-correction is not merged, tagged or published. The live `.23` installation, published v2.12.1
-payload and all existing tags/assets are unchanged. DM-BL-010 and issue #5 remain **OPEN**.
+DM-BL-010's non-fatal `msgfmt` warnings were reproduced and corrected in the forthcoming 2.14.0
+release candidate. The investigation evidence below predates the branch commit; PR #7 integrated the
+correction into `main` at `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`, where exact-main CI passed.
+The correction is not tagged or published. The exact candidate then passed the Phase 1 live repair
+and acceptance run on `.23`; see `verification/PHASE1-EXACT-CANDIDATE-23-20261107.md`. Published
+v2.12.1 payloads and all existing tags/assets are unchanged. DM-BL-010 remains **OPEN** only for
+publication; issue #5 remains **OPEN**.
 
 This candidate also adds the published v2.12.1 release to the supported upgrade-predecessor set. It
 does not modify v2.12.1 itself and does not make 2.14.0 available.
@@ -146,20 +148,48 @@ harness was corrected to validate the reported repair count against the byte-ide
 while retaining the zero-repair requirement for the live predecessor. The installer itself was not
 changed by that correction.
 
+## Phase 1 exact-candidate live result on `.23`
+
+The exact archive, 1,729,177 bytes / SHA-256
+`90afa55dd826c0dc3be8a23902b809baa465e25191dc372dc6cc2ef4e57fc243`, was checked and installed
+once as a same-version 2.14.0 repair. The accepted `/conf/config.xml` was
+`e86a7058b894a3cea6d63e4edee420885e9dc3d136ad72f054aa9c1f6b5f0e72`.
+
+```text
+CHECK_OK version=2.14.0 predecessor=2.14.0 files=63 core_locales=10 prunable=0 daemon_running=1 host=OPNsense.internal legacy_prunable=0 retained=0
+INSTALL_OK version=2.14.0 files=63 core_locales=10 pruned=0 backup=/var/backups/devicemonitor/install-v214.Uwwqu1 daemon_restarted=1 unchanged=63 repaired=0
+```
+
+All 42 manifest rows and 63 installer-plan/record targets matched digest, mode, owner and group.
+The ten current core catalogues and eleven sidecar catalogues compiled warning-free; the three
+repaired header fields were present in all ten core catalogues. All nine available pristine core
+catalogues retained their translations, and `nl_NL` remained plugin-only because it has no pristine
+core catalogue. The 19 core-locale state files, Device Monitor configuration, `/conf/config.xml`
+and the logical and physical database bytes were unchanged. SQLite `quick_check` and
+`integrity_check` passed; services restarted and remained healthy; monitoring and notification
+delivery remained disabled. The authenticated UI was not observed, so no authenticated rendering
+claim is made.
+
+The live run exercised the new merge helper against the current catalogues, but all 63 targets were
+already byte-identical (`unchanged=63`). It therefore does not prove a live sparse-header repair
+delta; that remains covered by the regression and disposable-jail evidence. Recovery assets and
+their verification are recorded in
+`/root/dm-validation-2140/phase1-90afa55d-20261107T104937Z/`.
+
 ## Boundaries and remaining gates
 
 - The investigation itself made no live deployment, host contact, production access, monitoring
   change, commit, push, merge, tag, release or issue reply.
-- The `.23` host remains on the accepted 2.14.0 main-integration build; the new candidate was not
-  installed there.
+- `.23` now runs the exact candidate through the Phase 1 same-version repair with monitoring and
+  notification delivery disabled.
 - Published v2.12.1 and all existing tags/assets remain unchanged. 2.14.0 remains unpublished.
 - Jail coverage proves installer paths with stubs, not real OPNsense plugin registration, configd,
   live `FRESH=1` or the real plugin lifecycle. These remain **DM-BL-012**.
 - The historical database-byte limitation remains **DM-BL-011**; logical restoration evidence for
   the completed §9.4 exercise does not prove the original physical bytes.
 - The broader monitoring lifecycle and delivery paths remain **DM-BL-013**.
-- DM-BL-010 remains **OPEN** until this development-branch candidate is integrated and published
-  under separate authorisation. Issue #5 remains **OPEN** pending reporter confirmation.
+- DM-BL-010 is integrated in `main` and remains **OPEN** only for publication under separate
+  authorisation. Issue #5 remains **OPEN** pending reporter confirmation.
 
 ## Authorised commit scope
 
