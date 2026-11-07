@@ -1169,7 +1169,10 @@ def create_backup(state: dict[str, Any]) -> None:
         state["recovery_db"], "device_identity_events", "notified_at"
     )
 
-    sqlite_backup(state["db"], state["backup_db"])
+    with tempfile.TemporaryDirectory(prefix="dm-guard-snapshot-") as directory:
+        snapshot_source = str(Path(directory) / "devices.db")
+        copy_database_assets(state["recovery_db"], snapshot_source)
+        sqlite_backup(snapshot_source, state["backup_db"])
     snapshot_database = database_assets(state["backup_db"])
     if not snapshot_database["db"]["present"]:
         raise GuardError("consistent SQLite fallback snapshot is missing")

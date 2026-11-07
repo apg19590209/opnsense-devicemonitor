@@ -81,6 +81,11 @@ eleven-catalogue payload and all 372 HTML-context view call sites route through
 non-upstream change; `python3 tests/test_language_acceptance.py --strict` is the gate for that
 case. This closure changes no installer, manifest, catalogue, release-note or Makefile content.
 
+**Latest 2.14.0 runtime confirmation:** the production-engine run on the installed tree reports
+`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`; the sole gap is this
+same `nl_NL` selector omission. All nine languages render 10 pages and 490 keys. See
+`verification/LANGUAGE-ACCEPTANCE-GAP-20261107.md`.
+
 ### DM-BL-008b — JavaScript strings receive HTML entities: **`CLOSED`**
 
 **Description:** Stop HTML-escaped text from reaching JavaScript string contexts.
@@ -795,6 +800,7 @@ are **not** a defect of the issue #5 installation result.
 - Investigation: `verification/ISSUE-5-V2.12-MANIFEST-20261106.md`, section *Reporter result (7 November 2026)*
 - Verification: `verification/DM-BL-010-CATALOGUE-HEADERS-20261107.md`
 - Phase 1 evidence: `verification/PHASE1-EXACT-CANDIDATE-23-20261107.md`
+- Release-readiness record: `verification/RELEASE-READINESS-2.14.0-4611447-20261107.md`
 - DM-BL-009 — **CLOSED** (main reconciliation completed 7 November 2026)
 
 **Implementation state (7 November 2026):**
@@ -820,14 +826,31 @@ are **not** a defect of the issue #5 installation result.
 - PR #7 integrated the candidate into `main` at
   `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`; exact-main CI run `42359428985` passed. It is not in
   any published release; published v2.12.1 assets remain unchanged.
+- The reviewed documentation candidate is
+  `4611447089e2482a0c6af7a1844e9f6fa16c84d1` (tree
+  `e3d551967fcd673cefd9031448c0e1791db2a2ab`), one docs-only commit ahead of `main`. Its CI run
+  `42368818807` passed and reproduced the unchanged 1,729,177-byte / `90afa55d…` archive.
 - The exact candidate was installed once on `.23` as a same-version repair:
   `INSTALL_OK version=2.14.0 files=63 core_locales=10 pruned=0 backup=/var/backups/devicemonitor/install-v214.Uwwqu1 daemon_restarted=1 unchanged=63 repaired=0`.
   All 42 manifest rows and 63 targets passed, current core catalogues merged warning-free, nine
   available pristine translations were preserved, `nl_NL` remained plugin-only as expected, and
   configuration plus logical/physical database bytes were unchanged. Services remained healthy and
-  monitoring/notifications remained disabled. Authenticated UI rendering was not observed.
+  monitoring/notifications remained disabled. Operator-supplied authenticated evidence received
+  7 November 2026 (Australia/Sydney) shows Device Monitor `v2.14.0` and
+  `v2.14.0 Features and Enhancements` in the About screenshot; the operator confirms Devices loads
+  without error. No exact observation time was recorded.
 - Because all 63 installed targets were already byte-identical, this live run did not exercise a
   sparse-header repair delta. That case remains covered by the regression and jail evidence.
+- The GitHub Actions native language runtime matrix remains skipped because that runner lacks the
+  required assets. A separate local production-engine run on the installed 2.14.0 tree passed on
+  7 November 2026: `LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`, with 10
+  pages and 490 keys per language. The `nl_NL` GUI-selector absence remains the documented gap; it
+  is not a runtime rendering failure. Report:
+  `/root/dm-validation-2140/language-runtime-2.14.0-20261107.md`.
+- A validation-closure pass on 7 November 2026 found and fixed a guard snapshot-side-effect defect,
+  passed a disposable DB/WAL/SHM rehearsal and changed publication to **NO-GO** pending
+  DM-BL-011/012/013. See `verification/VALIDATION-CLOSURE-2.14.0-20261107.md` and
+  `verification/RELEASE-READINESS-2.14.0-4611447-20261107.md`.
 
 **Constraints preserved by the implementation:**
 
@@ -838,9 +861,11 @@ are **not** a defect of the issue #5 installation result.
 - Repair belongs in the catalogue/header data (or the build inputs that produce it), not in the
   published release payloads.
 
-**Status:** **`OPEN`** — the source, regression, deterministic bundle and exact-candidate Phase 1
-live validation are complete, and the correction is integrated into `main`. The item stays open
-only because 2.14.0 is not yet published. Device Monitor 2.14.0 remains unpublished and v2.12.1
+**Status:** **`OPEN`** — the source, regression, deterministic bundle, exact-candidate Phase 1
+live validation, authenticated About/Features/Devices-loading evidence and native runtime language
+matrix are complete, and the correction is integrated into `main`. The item remains publication
+pending because 2.14.0 is not yet published and the revised closure objective requires
+DM-BL-011/012/013 to be resolved first. Device Monitor 2.14.0 remains unpublished and v2.12.1
 remains the latest published release.
 
 ### DM-BL-011 — historical database-byte identity for the completed §9.4 monitoring exercise: **`OPEN`**
@@ -855,15 +880,31 @@ therefore unproven and no unqualified exact-restoration claim may be made.
 **Guard status:** the guard was corrected to stop and verify writers before capture, preserve the
 original database/WAL/SHM bytes separately from the SQLite fallback, archive the post-state
 database, and compare restored bytes/metadata/schema/data/integrity against the original recovery
-copy. The 35 mock/disposable-copy guard tests pass. This prevents recurrence but cannot prove the
-historical bytes.
+copy. A disposable Phase 2A rehearsal on 7 November found that the fallback snapshot was being taken
+from the live WAL-mode database and could checkpoint/remove its sidecars; the guard now snapshots a
+disposable copy of the exact recovery assets instead. The strengthened WAL/SHM regression and all
+35 guard tests pass locally and have now been added to the validation-only CI workflow with an exact
+`Ran 35 tests`/`OK` assertion; `tests/test_ci_config.py` pins that wiring. The workflow change is not
+yet exercised by an exact-SHA run, so execution in CI remains unproven until that run is recorded. The
+rehearsal also passes separate DB/WAL/SHM capture, mutation detection,
+snapshot-equivalence rejection, exact-byte restoration, configuration/record/OPNsense/core-locale
+preservation and post-state archiving. This prevents recurrence but cannot prove the historical
+bytes.
 
 **Closure evidence:** either new evidence capable of reconstructing and comparing the original
 bytes, or explicit operator acceptance of the historical byte-identity limitation. Neither is
-currently recorded. The limitation is distinct from DM-BL-009's completed `main` reconciliation.
+currently recorded. All retained database files rechecked on 7 November are `796d28c7…` or older;
+the `/var/backups/devicemonitor/devices.db.pre-monitor-scan-20260923-070801` copy is `65e11a3b…`, not
+the 6 November original. A broader read-only search covered 128 physical database candidates and 67
+archives; no exact copy was found, and common SQLite copy/`VACUUM`/`VACUUM INTO`/`PRAGMA optimize`
+transformations on a copy did not reproduce the hash. This item is a publication blocker under the
+revised objective and is distinct from DM-BL-009's completed `main` reconciliation.
 
-**Evidence:** `verification/monitoring-validation/EXECUTION-20261106.md` and
-`/root/dm-validation-2140/monitoring/20261106T083522Z/`.
+**Evidence:** `verification/monitoring-validation/EXECUTION-20261106.md`,
+`verification/VALIDATION-CLOSURE-2.14.0-20261107.md`,
+`verification/DM-BL-011-BYTE-RECOVERY-20261107.md`,
+`/root/dm-validation-2140/monitoring/20261106T083522Z/` and
+`/root/dm-validation-2140/phase2a-guard-20261107T123250Z/`.
 
 ### DM-BL-012 — real-host 2.14.0 `FRESH=1` and OPNsense plugin lifecycle validation: **`OPEN`**
 
@@ -877,12 +918,15 @@ The normal 2.13.3 → 2.14.0 upgrade on `.23` and its live successful-install ro
 and are not this item. The outstanding work is specifically the **real-host fresh-install path and
 real plugin lifecycle**.
 
-**Closure evidence:** a separately authorised real-host `FRESH=1` test and plugin lifecycle check,
-or explicit operator acceptance of the residual risk. The existing jail evidence must not be
-described as equivalent.
+**Closure evidence:** a separately authorised real-host `FRESH=1` test and plugin lifecycle check
+on a disposable OPNsense VM, or explicit operator acceptance of the residual risk. The existing jail
+evidence must not be described as equivalent. This is a publication blocker under the revised
+objective. The current host has no `vmm`, `/dev/vmm` or `vm-bhyve`, so the phase is environment-
+blocked rather than code-blocked.
 
 **Evidence:** `verification/FRESH-INSTALL-JAIL-2.14.0-20261106.md`,
-`verification/INSTALLER-JAIL-2.14.0-20261106.md`, and `PROJECT_STATE.md`.
+`verification/INSTALLER-JAIL-2.14.0-20261106.md`, `verification/VALIDATION-CLOSURE-2.14.0-20261107.md`,
+`verification/PHASE3-DISPOSABLE-OPNSENSE-VM-PLAN-20261107.md` and `PROJECT_STATE.md`.
 
 ### DM-BL-013 — full monitoring lifecycle, HA/CARP and delivery-path validation: **`OPEN`**
 
@@ -892,11 +936,15 @@ not exercise scheduled daemon-triggered service discovery, full reminder/ageing/
 daemon-generated notification delivery, exact daemon attribution of the `notified_at` migration,
 external SMTP/webhook/AdGuard/Pi-hole delivery or targeted Nmap delivery.
 
-**Closure evidence:** separately authorised live tests covering the relevant paths, or explicit
-operator acceptance of the residual risk. No further live execution is currently authorised.
+**Closure evidence:** separately authorised tests on a disposable single OPNsense VM for the
+single-host paths and an isolated two-node CARP/pfsync pair for HA; external delivery requires a
+separately approved lab endpoint, or explicit operator acceptance of the residual risk. No further
+live execution is currently authorised. This is a publication blocker under the revised objective.
+Single-host success will not prove HA, and HA success will not prove an external provider path.
 
-**Evidence:** `verification/monitoring-validation/EXECUTION-20261106.md` and
-`verification/monitoring-validation/PREFLIGHT-20261106.md`.
+**Evidence:** `verification/monitoring-validation/EXECUTION-20261106.md`,
+`verification/monitoring-validation/PREFLIGHT-20261106.md` and
+`verification/VALIDATION-CLOSURE-2.14.0-20261107.md`.
 
 ## Deployment verification notes
 

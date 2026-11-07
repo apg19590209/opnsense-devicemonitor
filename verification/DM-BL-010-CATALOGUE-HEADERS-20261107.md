@@ -6,9 +6,11 @@ DM-BL-010's non-fatal `msgfmt` warnings were reproduced and corrected in the for
 release candidate. The investigation evidence below predates the branch commit; PR #7 integrated the
 correction into `main` at `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`, where exact-main CI passed.
 The correction is not tagged or published. The exact candidate then passed the Phase 1 live repair
-and acceptance run on `.23`; see `verification/PHASE1-EXACT-CANDIDATE-23-20261107.md`. Published
-v2.12.1 payloads and all existing tags/assets are unchanged. DM-BL-010 remains **OPEN** only for
-publication; issue #5 remains **OPEN**.
+and acceptance run on `.23`, followed by operator-supplied authenticated About/Features evidence
+received on 7 November 2026 (Australia/Sydney); see
+`verification/PHASE1-EXACT-CANDIDATE-23-20261107.md`. The exact observation time was not recorded.
+Published v2.12.1 payloads and all existing tags/assets are unchanged. DM-BL-010 remains **OPEN**
+only for publication; issue #5 remains **OPEN**.
 
 This candidate also adds the published v2.12.1 release to the supported upgrade-predecessor set. It
 does not modify v2.12.1 itself and does not make 2.14.0 available.
@@ -64,7 +66,7 @@ The suite is selected by `.github/workflows/ci.yml`. Local results:
 |---|---|
 | `python3 tests/test_locale_merge.py` | `LOCALE_MERGE=PASS` |
 | `python3 tests/test_upgrade_predecessors.py` | `UPGRADE_PREDECESSORS=PASS passed=10 skipped=0` |
-| `python3 tests/test_ci_config.py` | `CI_CONFIG=PASS cases=6` |
+| `python3 tests/test_ci_config.py` | `CI_CONFIG=PASS cases=7` |
 | `python3 tests/test_release_inputs.py` | `RELEASE_INPUTS=PASS cases=7` |
 | `python3 tests/test_release_manifest.py` | `V2140_RELEASE_MANIFEST=PASS` |
 | `python3 tests/test_catalogue_determinism.py` | `CATALOGUE_DETERMINISM=PASS cases=2` |
@@ -167,8 +169,10 @@ catalogues retained their translations, and `nl_NL` remained plugin-only because
 core catalogue. The 19 core-locale state files, Device Monitor configuration, `/conf/config.xml`
 and the logical and physical database bytes were unchanged. SQLite `quick_check` and
 `integrity_check` passed; services restarted and remained healthy; monitoring and notification
-delivery remained disabled. The authenticated UI was not observed, so no authenticated rendering
-claim is made.
+delivery remained disabled. Operator-supplied authenticated evidence received 7 November 2026
+(Australia/Sydney) shows Device Monitor `v2.14.0` and `v2.14.0 Features and Enhancements` in the
+About screenshot, and the operator confirms that Devices loads without error. No exact observation
+time was recorded. This does not validate monitoring, delivery, HA/CARP or native language rendering.
 
 The live run exercised the new merge helper against the current catalogues, but all 63 targets were
 already byte-identical (`unchanged=63`). It therefore does not prove a live sparse-header repair
@@ -188,8 +192,20 @@ their verification are recorded in
 - The historical database-byte limitation remains **DM-BL-011**; logical restoration evidence for
   the completed §9.4 exercise does not prove the original physical bytes.
 - The broader monitoring lifecycle and delivery paths remain **DM-BL-013**.
-- DM-BL-010 is integrated in `main` and remains **OPEN** only for publication under separate
-  authorisation. Issue #5 remains **OPEN** pending reporter confirmation.
+- The GitHub Actions runtime language matrix remains skipped because that runner lacks the
+  required assets. A separate production-engine run on the installed 2.14.0 tree passed on
+  7 November 2026: `LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`, with 10
+  pages and 490 keys per language. Report:
+  `/root/dm-validation-2140/language-runtime-2.14.0-20261107.md`. The `nl_NL` GUI-selector absence
+  remains the documented gap; browser layout and wording quality are not claimed.
+- Phase 2A disposable guard validation passed after a snapshot-side-effect defect was found and
+  fixed; all 35 guard tests pass locally. The suite is now wired into the validation-only CI
+  workflow with exact `Ran 35 tests`/`OK` assertions, pinned by `tests/test_ci_config.py`, but no
+  exact-SHA run has yet exercised that step. See
+  `verification/VALIDATION-CLOSURE-2.14.0-20261107.md`.
+- DM-BL-010 is integrated in `main` and remains **OPEN** for publication. Under the revised
+  7 November closure objective, publication is **NO-GO** until DM-BL-011/012/013 are closed or
+  explicitly accepted. Issue #5 remains **OPEN** pending reporter confirmation.
 
 ## Authorised commit scope
 
@@ -214,3 +230,6 @@ verification/installer-sandbox/run-installer-sandbox.sh
 
 The companion milestone report records the commit, push, exact-SHA CI, PR and clean-checkout bundle
 determinism evidence after those gates are completed.
+
+This is the historical PR #7 source scope. The separate validation-closure candidate and its exact
+14-path scope are enumerated in `verification/VALIDATION-CLOSURE-2.14.0-20261107.md`.

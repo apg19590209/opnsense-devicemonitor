@@ -7,9 +7,11 @@ repair. The installer and all Phase 1 acceptance gates passed. Monitoring and no
 delivery remained disabled. No source, commit, push, tag, release, production or `.252`/`.253`
 change occurred. Publication remains paused.
 
-One limitation is explicit: the authenticated Device Monitor UI was not observed in this run. The
-installed model version and the unauthenticated login endpoint were checked, but no authenticated
-UI claim is made.
+Operator-supplied authenticated UI evidence was received on 7 November 2026 (Australia/Sydney):
+the supplied Settings → About screenshot shows Device Monitor `v2.14.0` and
+`v2.14.0 Features and Enhancements`, and the operator confirms that Devices loads without error.
+No exact observation time was recorded. This evidence does not extend to monitoring, notification
+delivery, HA/CARP or native language rendering.
 
 ## Candidate and baseline
 
@@ -83,7 +85,7 @@ passes both SQLite integrity checks.
 | Install record | `d891ce68…`, 63 rows; core-locale state has 19 unchanged files |
 | Services | Daemon PID `16776` → `18384`, alive at 60 seconds; configd PID `728` → `328`; `configctl devicemonitor status` is `running` |
 | Monitoring | `enabled=0`, empty interfaces, email/webhook disabled, no WAL/SHM, no `2525` listener, no CARP interface |
-| UI source | Installed `defaults.json` version is `2.14.0`; unauthenticated login endpoint returned HTTP `200`; authenticated UI was not observed |
+| UI source and authenticated acceptance | Installed `defaults.json` version is `2.14.0`; unauthenticated login endpoint returned HTTP `200`. Operator-supplied authenticated evidence received 7 November 2026 (Australia/Sydney): the About screenshot shows Device Monitor `v2.14.0` and `v2.14.0 Features and Enhancements`, and the operator confirms Devices loads without error. Exact observation time was not recorded |
 
 The live run exercises the new merge helper against the current `.23` catalogues and confirms
 warning-free output, but all 63 installed targets were already byte-identical (`UNCHANGED=63`).
@@ -98,6 +100,7 @@ Closed by this phase:
 - Live warning-free catalogue merge and header presence on the current ten core catalogues.
 - Translation preservation for the nine available pristine core catalogues; `nl_NL` absent as expected.
 - Manifest, 63-target, data/config, SQLite, service-restart and monitoring-disabled acceptance.
+- Operator-supplied authenticated About/Features evidence and confirmation that Devices loads.
 - Recovery-asset creation and independent verification.
 
 Remaining:
@@ -108,11 +111,21 @@ Remaining:
   unvalidated.
 - **DM-BL-013:** full monitoring lifecycle, HA/CARP and daemon-generated/external delivery remain
   unvalidated.
-- Authenticated Settings → About/Features UI rendering was not observed; no such claim is made.
+- The native runtime language matrix was subsequently validated on 7 November 2026:
+  `LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`, with 10 pages and 490
+  keys per language through Phalcon/Volt/ViewTranslator. Report:
+  `/root/dm-validation-2140/language-runtime-2.14.0-20261107.md`. The `nl_NL` selector gap and human
+  wording/browser-layout review remain separate.
+- A Phase 2A disposable WAL/SHM rehearsal passed after the guard's snapshot-side-effect defect was
+  found and fixed; all 35 guard tests pass locally and are now wired into validation-only CI with
+  exact `Ran 35 tests`/`OK` assertions. No exact-SHA run has yet exercised that step. This does not
+  reconstruct the historical DM-BL-011 bytes. See
+  `verification/VALIDATION-CLOSURE-2.14.0-20261107.md`.
 - Sparse-header live repair is not a delta in this run because the live targets were already
   complete; regression/jail evidence remains the proof for that path.
-- Publication of 2.14.0 remains paused; v2.12.1 remains the latest published release. Issue #5
-  remains **OPEN**. DM-BL-010 remains integrated in `main` but publication-pending.
+- Publication of 2.14.0 is **NO-GO** under the revised closure objective until DM-BL-011/012/013 are
+  closed or explicitly accepted. v2.12.1 remains the latest published release. Issue #5 remains
+  **OPEN**. DM-BL-010 remains integrated in `main` but publication-pending.
 
 ## Boundaries
 

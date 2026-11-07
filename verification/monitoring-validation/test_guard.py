@@ -457,9 +457,12 @@ class GuardTests(unittest.TestCase):
         subprocess.run([sys.executable, "-c", script, str(db_path)], check=True)
         self.assertTrue(Path(str(db_path) + "-wal").exists())
         self.assertTrue(Path(str(db_path) + "-shm").exists())
+        live_before = guard.database_assets(str(db_path))
 
         guard.create_backup(state)
         original = state["prestate"]["original_database"]
+        self.assertEqual(guard.database_assets(str(db_path)), live_before)
+        self.assertEqual(guard.database_assets(str(state["recovery_db"])), original)
         self.assertTrue(original["wal"]["present"])
         self.assertTrue(original["shm"]["present"])
         self.assertFalse(state["prestate"]["snapshot_database"]["wal"]["present"])

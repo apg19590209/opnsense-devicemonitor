@@ -62,6 +62,22 @@ jobs:
             xargs -0 -n1 python3 -m py_compile
           python3 -m py_compile release/normalize-bundle-tar.py
           python3 -m py_compile release/bundle-gzip.py
+          python3 -m py_compile verification/monitoring-validation/guard.py
+          python3 -m py_compile verification/monitoring-validation/test_guard.py
+
+      # The monitoring guard is verification code, not part of the runtime archive. It must
+      # nevertheless run on every validation job: a skipped or shrunken suite must not pass as
+      # an unexplained skip. The exact summary and OK lines are asserted below.
+      - name: Validate monitoring guard safety (DM-BL-011)
+        run: |
+          set -eu
+          python3 verification/monitoring-validation/test_guard.py > /tmp/dm-guard-tests.log 2>&1 || {
+            cat /tmp/dm-guard-tests.log
+            exit 1
+          }
+          cat /tmp/dm-guard-tests.log
+          grep -q '^Ran 35 tests in ' /tmp/dm-guard-tests.log
+          grep -q '^OK$' /tmp/dm-guard-tests.log
 
       - name: Validate opt-in port discovery
         run: python3 tests/test_port_discovery.py

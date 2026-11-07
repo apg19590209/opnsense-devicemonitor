@@ -94,6 +94,18 @@ def test_determinism_step_is_wired():
     print('  determinism step      wired')
 
 
+def test_guard_step_requires_thirty_five_tests():
+    step = re.search(
+        r'name: Validate monitoring guard safety \(DM-BL-011\)\n(.*?)(?=^      - name:)',
+        WORKFLOW, re.M | re.S)
+    assert step, 'no monitoring-guard step'
+    body = step.group(1)
+    assert 'python3 verification/monitoring-validation/test_guard.py' in body, body
+    assert "grep -q '^Ran 35 tests in '" in body, body
+    assert "grep -q '^OK$'" in body, body
+    print('  guard step            asserts 35 tests and OK')
+
+
 CASES = [
     test_remediation_branch_can_be_tested,
     test_integration_branch_can_be_tested,
@@ -101,6 +113,7 @@ CASES = [
     test_every_named_suite_exists,
     test_predecessor_step_requires_ten_passes,
     test_determinism_step_is_wired,
+    test_guard_step_requires_thirty_five_tests,
 ]
 
 
