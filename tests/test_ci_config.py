@@ -73,19 +73,20 @@ def test_every_named_suite_exists():
     assert not missing, 'workflow names missing suites: %s' % missing
     for required in ('test_upgrade_predecessors.py', 'test_bundle_determinism.py',
                      'test_rollback_isolated.py', 'test_prune_plan.py',
+                     'test_locale_merge.py',
                      'test_integration_reconciliation.py'):
         assert required in names, '%s is not wired into CI' % required
     print('  suites referenced     %d (all present)' % len(names))
 
 
-def test_predecessor_step_requires_nine_passes():
+def test_predecessor_step_requires_ten_passes():
     step = re.search(r'name: Validate every accepted predecessor upgrade\n(.*?)(?=^      - name:)',
                      WORKFLOW, re.M | re.S)
     assert step, 'no predecessor step'
     body = step.group(1)
-    assert "grep -q '^UPGRADE_PREDECESSORS=PASS passed=9 skipped=0$'" in body, body
+    assert "grep -q '^UPGRADE_PREDECESSORS=PASS passed=10 skipped=0$'" in body, body
     assert 'DM_ALLOW_SKIPPED_PREDECESSORS' not in body, body
-    print('  predecessor step      asserts passed=9 skipped=0')
+    print('  predecessor step      asserts passed=10 skipped=0')
 
 
 def test_determinism_step_is_wired():
@@ -98,7 +99,7 @@ CASES = [
     test_integration_branch_can_be_tested,
     test_existing_branches_are_preserved,
     test_every_named_suite_exists,
-    test_predecessor_step_requires_nine_passes,
+    test_predecessor_step_requires_ten_passes,
     test_determinism_step_is_wired,
 ]
 

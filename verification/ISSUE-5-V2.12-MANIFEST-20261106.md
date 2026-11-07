@@ -8,9 +8,9 @@ six disposable-jail scenarios pass. The annotated `v2.12.1` tag and release publ
 inventory, manifest and installer guards. The v2.12 release notes now carry an installer-defect
 warning and v2.12.1 link, while its tag and asset remain unchanged. The earlier `adaa2b2…` and
 intermediate `dbf350…` candidates remain retained as superseded. One scoped publication follow-up
-was posted to issue #5, which remains OPEN. No host deployment, monitoring activation or
-main/release movement was made. DM-BL-009 has since been closed by the separate 2.14.0 main
-integration; issue #5 remains OPEN and §9.4 remains paused.**
+was posted to issue #5, which remains OPEN. At the time of that repair, no host deployment,
+monitoring activation or main/release movement was made. DM-BL-009 has since been closed by the
+separate 2.14.0 main integration; issue #5 remains OPEN and §9.4 remains paused.**
 
 ## Scope
 
@@ -310,6 +310,91 @@ behaviour.
 
 Issue #5 remained OPEN after the comment. GitHub reported one comment, updated
 `2026-11-06T07:55:40Z`, and no other GitHub change was made.
+
+### Reporter result (7 November 2026)
+
+> **Evidence class:** reporter-reported. The transcript was supplied by the reporter and was **not**
+> independently reproduced from this workspace, because no host contact is authorised for this
+> investigation.
+
+| # | Reporter-reported fact | Status |
+|---|---|---|
+| 1 | v2.12.1 installed successfully | **Confirmed by reporter** |
+| 2 | About page displays `v2.12.1` | **Confirmed by reporter** |
+| 3 | Installation log ends with `INSTALL_OK` | **Confirmed by reporter** |
+| 4 | Installation log reports `daemon_restarted=1` | **Confirmed by reporter** |
+| 5 | Service running / pages load normally | **PENDING** reporter confirmation |
+| 6 | Functional verification complete | **NOT complete — do not claim** |
+
+- The log therefore records a daemon **restart**, not an observed healthy service: ongoing service
+  health and normal page loading remain unconfirmed.
+- This is an **installation-success confirmation only**. Functional verification must not be
+  recorded as complete until the reporter confirms rows 5 and 6.
+- Issue #5 stays **OPEN**.
+
+| Warning class | Assessment | Disposition |
+|---|---|---|
+| Translation-header metadata warnings | Non-fatal; did not prevent installation | No reinstall required; reproduced and corrected in an unpublished 2.14.0 candidate; [DM-BL-010](../../PRODUCT_BACKLOG.md) remains **OPEN** |
+
+### DM-BL-010 investigation and unpublished candidate (7 November 2026)
+
+- **Reproduced exactly:** the pre-repair `msgunfmt` → `msgcat` → `msgfmt --check` sequence exits `0`
+  but reports `warning: header field 'PO-Revision-Date' missing in header`, followed by the same
+  warning for `Last-Translator` and `Language-Team`. Evidence:
+  `/root/dm-validation-2140/dm-bl-010-20261107/warning-reproduction/`.
+- **Corrected at generation time:** `release/merge-opnsense-catalog.sh` fills only absent or empty
+  fields from the plugin catalogue's real metadata. It does not overwrite metadata already present
+  in the core catalogue, does not change translations, aborts on incomplete plugin metadata, and
+  keeps `msgfmt --check` active for both the prepared core and merged output. stderr is not
+  suppressed.
+- **Regression coverage:** `tests/test_locale_merge.py` passes it locally and in CI selection,
+  covering warning-free merging, preservation of existing translations/metadata, incomplete plugin
+  rejection, and malformed plugin/core rejection.
+- **Upgrade predecessor:** the actual published `v2.12.1` payload is accepted as a predecessor. The
+  local ten-case matrix passes (`UPGRADE_PREDECESSORS=PASS passed=10 skipped=0`), including a
+  database created by v2.12.1's own `init_db()`.
+- **Candidate:** four builds are byte-identical at 1,729,177 bytes, SHA-256
+  `90afa55dd826c0dc3be8a23902b809baa465e25191dc372dc6cc2ef4e57fc243`. The previous 2.14.0
+  main-integration candidate (`5149bfd4…`, 1,725,593 bytes) remains preserved as superseded.
+- **Jail validation:** the published v2.12.1 archive and all 56 members match tag `v2.12.1`; an
+  upgrade preserved `devices.db` and `config.json`, pruned only the unchanged historical leftover,
+  retained the modified one, and the injected failure restored all 63 targets, the record, data,
+  configuration and 19 core-locale state/pristine files. Existing live-predecessor and fresh
+  scenarios also pass against the same candidate.
+- **Not published:** the fix is a development-branch candidate on
+  `fix/dm-bl-010-catalogue-warnings-20261107`, not merged to `main` and not in any release. The
+  live `.23` installation, published v2.12.1 tag/assets and all existing tags are unchanged. This
+  section does not claim that an updated release is available.
+
+### Unposted acknowledgement draft (prepared, NOT posted)
+
+| Field | Value |
+|---|---|
+| Intended destination | GitHub issue #5 (comment) |
+| State | **Draft only — not posted** |
+| Prepared | 7 November 2026 |
+| Stored form | Exact draft, source line breaks normalised to one paragraph |
+| Bytes / SHA-256 | `345` bytes · `fd078955c635be2bb3bfcc7ef308bf8b37380f8a0796e0c2b2955742b0c5ecc7` |
+
+```text
+Thanks for confirming. The log shows v2.12.1 installed successfully. The messages shown are non-fatal translation-header metadata warnings; they did not prevent installation. No reinstall is needed for those warnings. Please confirm Device Monitor’s service is running and its pages load normally. We’ll track the warning cleanup separately.
+```
+
+**Cross-references**
+
+- [DM-BL-010](../../PRODUCT_BACKLOG.md) — translation-header metadata warning cleanup (**OPEN**)
+- [DM-BL-009](../../PRODUCT_BACKLOG.md) — local `main` reconciliation (**CLOSED**)
+- Release under discussion: `v2.12.1` (published tag/asset unchanged)
+
+### Current combined reporter-response draft (prepared, NOT posted)
+
+This draft adds the DM-BL-010 result to the still-pending functional-confirmation request. It is
+stored verbatim below and must not be posted without separate authorisation. It is `405` bytes with
+SHA-256 `4da3e395b45fb0d48218abcffb759696a28f3ddfc5ab0368a0a862c7af735de8`.
+
+```text
+Thanks for confirming. The log shows v2.12.1 installed successfully. We reproduced the three non-fatal translation-header warnings and prepared a correction for the forthcoming 2.14.0 candidate. It is not in any published release yet, and no action or reinstall is needed now; v2.12.1 remains the latest published release. Please confirm Device Monitor’s service is running and its pages load normally.
+```
 
 ## Initial v2.12.1 repair candidate (historical)
 
@@ -681,8 +766,13 @@ verification and follow-up boundaries, not outstanding tag/release actions.
    validated the uploaded archive and checksum file.
 2. One scoped reporter follow-up was posted at
    https://github.com/apg19590209/opnsense-devicemonitor/issues/5#issuecomment-6680082397.
-   Issue #5 remains OPEN pending the reporter's preflight/installation results and any further
-   follow-up, which requires separate authorisation.
+   The reporter replied on 7 November 2026: v2.12.1 installed successfully, About shows `v2.12.1`,
+   and the installation log ends with `INSTALL_OK` with `daemon_restarted=1`. Functional
+   confirmation (service running, pages loading normally) is still **pending**; issue #5 remains
+   **OPEN** and no acknowledgement has been posted. Warning cleanup is tracked as DM-BL-010: the
+   warnings have been reproduced and corrected in an unpublished 2.14.0 candidate, with the
+   published v2.12.1 predecessor covered by the ten-case local upgrade matrix and a disposable-jail
+   upgrade from the actual published payload.
 3. Any live deployment or host-level validation remains separately gated and is not part of this
    investigation. The jail proves installer paths with stubs, not real OPNsense plugin
    registration, configd interaction, daemon lifecycle or live `FRESH=1`; the CI runtime rendering
@@ -700,6 +790,16 @@ investigation proposal.
 * GitHub issue #5: **OPEN**, with one scoped follow-up comment at
   https://github.com/apg19590209/opnsense-devicemonitor/issues/5#issuecomment-6680082397;
   issue `updatedAt` is `2026-11-06T07:55:40Z`.
+* Reporter result (7 November 2026, reporter-reported): v2.12.1 installation **successful**; About
+  displays `v2.12.1`; installation log ends `INSTALL_OK` with `daemon_restarted=1`. Functional
+  confirmation (service health, normal page loading) is **pending** and is not claimed.
+* Acknowledgement to the reporter: prepared as a draft in this record, **not posted**. No issue
+  comment, release edit, tag or asset change has been made.
+* Translation-header metadata warning cleanup (PO-Revision-Date, Last-Translator, Language-Team):
+  tracked separately as **DM-BL-010**, **OPEN**. The three warnings were reproduced exactly and a
+  correction is present in the unpublished 2.14.0 candidate, whose regression, ten-case predecessor
+  matrix, reproducible bundle and published-v2.12.1 jail upgrade pass. It is not merged or
+  published; no v2.12.1 or other published asset was modified.
 * DM-BL-009: **CLOSED** (2.14.0 main integration completed 7 November 2026).
 * §9.4: paused, not executed.
 * Published v2.12.1: annotated tag object `349dc0932aebaa148a59b60cedf046a8a8414a88` (unsigned)

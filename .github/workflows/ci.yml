@@ -139,11 +139,12 @@ jobs:
         run: python3 tests/test_device_lifecycle_return.py
 
       # Supported-predecessor claim: a database built by the predecessor's own code must
-      # reach the current schema in one init_db() with its rows intact (2.8-2.13.3 are all
+      # reach the current schema in one init_db() with its rows intact (2.8-2.13.3, including
+      # the published 2.12.1 repair release, are all
       # accepted predecessors, so those lines install directly, and the current candidate
       # is the repair case). Reads the tags plus 2.13.3's reviewed commit; the checkout
       # above fetches with fetch-depth: 0.
-      # Nine passes and zero skips are required: the suite fails on any skip, and the
+      # Ten passes and zero skips are required: the suite fails on any skip, and the
       # summary line is asserted here too so a shrunken table cannot pass silently.
       - name: Validate every accepted predecessor upgrade
         run: |
@@ -153,7 +154,7 @@ jobs:
             exit 1
           }
           cat /tmp/upgrade-predecessors.log
-          grep -q '^UPGRADE_PREDECESSORS=PASS passed=9 skipped=0$' /tmp/upgrade-predecessors.log
+          grep -q '^UPGRADE_PREDECESSORS=PASS passed=10 skipped=0$' /tmp/upgrade-predecessors.log
 
       # Ownership evidence for pruning (Decision 62): regenerated from the release
       # manifests at the tags and compared with release/legacy-targets.txt.
@@ -197,7 +198,7 @@ jobs:
         run: python3 tests/test_upgrade_prediction.py
 
       # Triggers, preserved branch entries and the selection itself: every tests/*.py named
-      # below must exist, and the predecessor step must require passed=9 skipped=0.
+      # below must exist, and the predecessor step must require passed=10 skipped=0.
       - name: Validate the CI configuration
         run: python3 tests/test_ci_config.py
 
@@ -284,7 +285,7 @@ jobs:
       - name: Validate translated JavaScript
         run: python3 tests/test_translated_javascript.py
 
-      - name: Validate core catalogue merge (DM-BL-008c)
+      - name: Validate core catalogue merge and header repair (DM-BL-008c/DM-BL-010)
         run: python3 tests/test_locale_merge.py
 
       - name: Validate language acceptance (DM-BL-008)

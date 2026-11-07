@@ -776,6 +776,64 @@ monitoring exercise remain validated evidence, not a transfer of those residual 
 while carrying an untracked Cline installation (Decision 65 §Preservation). Repointing it needs the
 intended Cline remote and explicit authorisation; it is preserved unchanged until then.
 
+### DM-BL-010 — translation-header metadata warnings in the v2.12.1 installation output (`PO-Revision-Date`, `Last-Translator`, `Language-Team`): **`OPEN`** — implemented in an unpublished 2.14.0 candidate
+
+**Description:** the reporter's v2.12.1 installation log contains non-fatal translation-header
+metadata warnings for catalogue entries missing the following headers:
+
+- `PO-Revision-Date`
+- `Last-Translator`
+- `Language-Team`
+
+The run still ended `INSTALL_OK` with `daemon_restarted=1`, so the warnings did **not** prevent
+installation and no reinstall is required for them. They are recorded here for separate cleanup and
+are **not** a defect of the issue #5 installation result.
+
+**Cross-links:**
+
+- GitHub issue #5 — **OPEN** (installation result recorded 7 November 2026)
+- Investigation: `verification/ISSUE-5-V2.12-MANIFEST-20261106.md`, section *Reporter result (7 November 2026)*
+- Verification: `verification/DM-BL-010-CATALOGUE-HEADERS-20261107.md`
+- DM-BL-009 — **CLOSED** (main reconciliation completed 7 November 2026)
+
+**Implementation state (7 November 2026):**
+
+- The pre-repair `msgunfmt` → `msgcat` → `msgfmt --check` sequence was reproduced against a
+  sparse core header. It exited `0` but emitted exactly the three reporter warning fields; the
+  retained evidence is `/root/dm-validation-2140/dm-bl-010-20261107/warning-reproduction/`.
+- `release/merge-opnsense-catalog.sh` now fills only absent or empty `PO-Revision-Date`,
+  `Last-Translator` and `Language-Team` fields from the plugin catalogue's real metadata. Existing
+  core metadata and translations are never replaced, incomplete plugin metadata aborts, and both
+  the prepared core and final merged catalogue remain subject to `msgfmt --check`.
+- `tests/test_locale_merge.py` covers warning-free sparse-header merging, preservation of existing
+  metadata/translations, rejection of incomplete plugin headers, and rejection of malformed plugin
+  and core catalogues. The suite is wired into CI and passes locally as `LOCALE_MERGE=PASS`.
+- Published v2.12.1 is now an accepted installer predecessor, covered by the ten-case local upgrade
+  matrix (`UPGRADE_PREDECESSORS=PASS passed=10 skipped=0`) and a jail upgrade from the actual
+  published `v2.12.1` payload.
+- The affected release-input pin was regenerated (`VERIFY_OK=4`). Four independent builds are
+  byte-identical: 1,729,177 bytes, SHA-256
+  `90afa55dd826c0dc3be8a23902b809baa465e25191dc372dc6cc2ef4e57fc243`.
+- The previous main-integration candidate (1,725,593 bytes, SHA-256 `5149bfd4…`) and its evidence
+  remain preserved as superseded, not deleted or overwritten.
+- This candidate is on `fix/dm-bl-010-catalogue-warnings-20261107`; it is not merged to `main` and
+  is not in any published release. The live `.23` installation and published v2.12.1 assets are
+  unchanged.
+
+**Constraints preserved by the implementation:**
+
+- Preserve translation validation and meaningful diagnostics; these warnings must not become silent.
+- Do **not** broadly suppress stderr or filter installer output generally.
+- Do **not** modify published assets: tag `v2.12`, tag `v2.12.1`, their release notes and their
+  assets remain immutable.
+- Repair belongs in the catalogue/header data (or the build inputs that produce it), not in the
+  published release payloads.
+
+**Status:** **`OPEN`** — recorded from reporter-supplied output on 7 November 2026. The source,
+regression coverage, regenerated pins and reproducible candidate are ready for review, but the item
+stays open until the candidate is integrated and published under separate authorisation. Device
+Monitor 2.14.0 remains unpublished and v2.12.1 remains the latest published release.
+
 ### DM-BL-011 — historical database-byte identity for the completed §9.4 monitoring exercise: **`OPEN`**
 
 **Description:** the completed bounded monitoring exercise has verified logical restoration but no

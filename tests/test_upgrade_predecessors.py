@@ -1,6 +1,7 @@
 """Every accepted predecessor upgrades in place to the current schema, losing nothing.
 
-The installer accepts `2.8 ... 2.13.3` as predecessors, so a firewall on any of those
+The installer accepts `2.8 ... 2.13.3` as predecessors, including the published 2.12.1
+repair release, so a firewall on any of those
 lines installs the current bundle directly instead of stepping through the intermediate
 releases. That claim rests on three properties, and this test pins them against a
 database built by each predecessor's **own** `init_db()` rather than a hand-written
@@ -40,6 +41,7 @@ PREDECESSORS = [
     ('2.10', 'v2.10'),
     ('2.11', 'v2.11-patch1'),
     ('2.12', 'v2.12-baseline'),
+    ('2.12.1', 'v2.12.1'),
     ('2.13', 'v2.13'),
     ('2.13.1', 'v2.13.1'),
     ('2.13.2', 'v2.13.2'),
@@ -105,9 +107,9 @@ def upgrade_one(version, tag):
 
         with sqlite3.connect(db) as conn:
             before = columns(conn, 'device_services')
-            # 2.13.1 restored the ageing work, so it through 2.13.3 carry the column already;
-            # 2.13 and everything before it ship without it.
-            if version in ('2.13.1', '2.13.2', '2.13.3'):
+            # The v2.12.1 repair release backported the ageing work, as did 2.13.1
+            # onward; 2.13 and earlier ship without it.
+            if version in ('2.12.1', '2.13.1', '2.13.2', '2.13.3'):
                 assert 'last_checked' in before, (version, before)
             else:
                 assert 'last_checked' not in before, (version, before)
@@ -198,7 +200,7 @@ def test_every_predecessor_upgrades():
     if allowed:
         assert passed > 0, results
     else:
-        # Nine accepted predecessors, nine passes, no skips: the deployment plan and the
+        # Ten accepted predecessors, ten passes, no skips: the deployment plan and the
         # CI step both rely on this exact number.
         assert passed == len(PREDECESSORS), (passed, len(PREDECESSORS), results)
         assert skipped == 0, results

@@ -40,6 +40,9 @@
 #   3131b8b481a5a6723d1733b214c118921def77e003863fcf4816e0b278caf9cb  346013 bytes
 #       (before archival metadata was normalised; reproducible only inside the original
 #        working copy, because member mtimes came from that checkout)
+#   5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f  1725593 bytes
+#       (the DM-BL-009 main-integration candidate; superseded for the forthcoming 2.14.0
+#        release by the DM-BL-010 catalogue-header repair and its regenerated input pin)
 version 2.14.0
-bytes 1725593
-sha256 5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f
+bytes 1729177
+sha256 90afa55dd826c0dc3be8a23902b809baa465e25191dc372dc6cc2ef4e57fc243

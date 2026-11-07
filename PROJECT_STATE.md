@@ -4,19 +4,24 @@
 
 Last updated: 7 November 2026
 
-Branches: `main` (HEAD `282517744260920b18c9217efd09ce738af21d70`, the Device Monitor
-2.14.0 source line), `release/2.13` (HEAD `6bd122e`) and
+Branches: `main` (HEAD `46370688fb6891a049929f2498ae62bc52b17b3e`, the Device Monitor
+2.14.0 source line including the DM-BL-009 closeout documentation), `release/2.13` (HEAD `6bd122e`) and
 `fix/pruning-remediation-20261103` (HEAD `b2c74fc`, the 2.13.3 remediation). The
 `integration/dm-bl-009-reconcile-20261105` history was fast-forwarded into `main` on
 7 November 2026. The latest published GitHub release is **v2.12.1**; 2.14.0 is not yet published.
 `baseline/2.12` (`d04739a`) holds the recovered pre-HA 2.12 tree;
 `feature/async-db-v2.11` (`0ad95b0`) is the historical v2.11 development branch.
+The DM-BL-010 catalogue-header candidate is a development branch,
+`fix/dm-bl-010-catalogue-warnings-20261107`, based on
+`46370688fb6891a049929f2498ae62bc52b17b3e`. The companion milestone report records its commit,
+exact-SHA CI and PR evidence. `main` remains at `46370688`; the candidate is not merged, tagged or
+published.
 
 ### 2.14.0 — main source and `.23` deployment; not yet published
 
 | Item | Value |
 |---|---|
-| Branch | `main` at `282517744260920b18c9217efd09ce738af21d70`; PR #6 fast-forwarded the reviewed `integration/dm-bl-009-reconcile-20261105` history from `d5d73ed`, preserving all 54 commits |
+| Branch | `main` at `46370688fb6891a049929f2498ae62bc52b17b3e`; PR #6 fast-forwarded the reviewed `integration/dm-bl-009-reconcile-20261105` history from `d5d73ed` to `282517744260920b18c9217efd09ce738af21d70`, preserving all 54 commits; the subsequent DM-BL-009 closeout documentation commit produced `46370688` |
 | Payload | `release/v2.14.0-runtime.manifest`, 42 rows; 63 generated targets on an upgrade and 64 on a fresh install |
 | Bundle | `dm-v2.14.0-runtime.tar.gz`, 1 725 593 bytes, sha256 `5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f`; 60 bundle members. The corrected artifact was first validated from a worktree based on `eac1160`, so its evidence records `CANDIDATE_SOURCE=worktree` |
 | CI | Run `42116897417` at pre-integration pushed HEAD `690204bb1d6c402de9a2b41e16f753b37335279f`: success; one `validate` job, 66 steps, zero failures or skips. Linux CI does not execute the FreeBSD installer-jail or live-service scenarios |
@@ -32,6 +37,27 @@ Branches: `main` (HEAD `282517744260920b18c9217efd09ce738af21d70`, the Device Mo
 | Backups | Pre-install `/root/dm-pre-2140/runtime-data.tgz`, 7,632,213 bytes, sha256 `ff7873ce0fbc1826663aa86c3271014c9c2ad3cdb3bd7b4eacce164a4a63753e`, containing 61 payload files, 19 core-locale files, record, consistent database and configuration; installer backups `/var/backups/devicemonitor/install-v214.JeYC44`, `install-v214.zGJRuq` and `install-v214.qMPS7n`; pre-mutation recovery point `/root/dm-validation-2140/rollback/20261105T231610Z` |
 | Acceptance / residual gates | Authenticated visual About/Features rendering is **PASS** on operator-supplied evidence: the Settings → About page shows both Device Monitor `v2.14.0` and `v2.14.0 Features and Enhancements`; no browser Network capture was supplied. Live successful-install rollback is **PASS**. The isolated fresh-install and fresh-rollback jail paths are **PASS**. The bounded §9.4 monitoring exercise is **COMPLETE / ACCEPTANCE PASS**; further execution is **unauthorised**. Live evidence covers two scheduled inventory scans, direct DMTEST-only service discovery, scope-limited visibility probing and a live-observed `notified_at` schema mutation before restoration. The two SMTP messages came from direct PHP helper calls, not daemon-generated delivery; identity/service/new-device/aged/retired and fresh-host refusal were copy-only fixtures. The remaining validation limits are separate backlog items: DM-BL-011 (historical database-byte identity), DM-BL-012 (real-host `FRESH=1` and plugin lifecycle) and DM-BL-013 (full monitoring lifecycle). DM-BL-009 is **CLOSED** because its `main` integration criterion is met |
 | §9.4 monitoring execution | **COMPLETE / ACCEPTANCE PASS — further execution is unauthorised.** The supervised run completed exactly two scans (`3497 → 3499`) with DMTEST-only discovery, loopback SMTP helpers and copy-only fixtures; final acceptance restored monitoring `enabled=0`, healthy services, no test processes/listener and no WAL/SHM. Configuration `027594eb…`, record `d891ce68…`, OPNsense configuration `15ce9e6c…` and all 19 core-locale files are byte-identical. The `notified_at` migration was observed live before restoration. The original database was `c17874a7…`; the consistent snapshot and historical restored file were `796d28c7…`, with identical logical digest `10460718…`, clean integrity/quick checks and 21 schema tables; the trace is in `verification/monitoring-validation/EXECUTION-20261106.md`. No retained file contains the original bytes, so the completed exercise cannot be claimed as physically byte-identical. The guard was corrected to stop and verify writers before capture, preserve original database/WAL/SHM bytes separately, retain the SQLite snapshot as an independently verified fallback, archive the post-state database, and verify restored bytes/metadata/schema/data/integrity against the original recovery copy; snapshot equivalence cannot satisfy original-byte identity. All 35 mock/disposable-copy tests pass, but this does not retroactively prove the historical bytes. §9.4 remains paused; issue #5 remains **OPEN**. Historical byte identity is tracked as **DM-BL-011** |
+
+### DM-BL-010 — forthcoming 2.14.0 candidate (development only)
+
+| Item | Value |
+|---|---|
+| Status | Development-branch candidate on `fix/dm-bl-010-catalogue-warnings-20261107`; **not merged or published**. Exact-SHA CI and PR evidence are recorded in the milestone report |
+| Base / candidate source | `46370688fb6891a049929f2498ae62bc52b17b3e`; retained jail evidence predates the branch commit and records `CANDIDATE_SOURCE=worktree`; clean committed-tree bundle determinism remains a required gate |
+| Defect | The reporter's three non-fatal `msgfmt` header warnings were reproduced exactly in the pre-repair merge path; they name `PO-Revision-Date`, `Last-Translator` and `Language-Team` and do not fail compilation |
+| Correction | Catalogue generation fills only absent/empty generated header fields from real plugin metadata; existing core metadata/translations and `msgfmt --check` are preserved, incomplete/malformed inputs abort, and stderr is not broadly suppressed |
+| Regression | `LOCALE_MERGE=PASS`; `RELEASE_INPUTS=PASS cases=7`; `V2140_RELEASE_MANIFEST=PASS`; `CI_CONFIG=PASS cases=6`; `CATALOGUE_DETERMINISM=PASS cases=2`; `BUNDLE_REPRODUCIBILITY=PASS cases=9`; `BUNDLE_BUILD_SAFETY=PASS cases=8` |
+| Predecessors | `UPGRADE_PREDECESSORS=PASS passed=10 skipped=0`, now including the published `v2.12.1` tag; its own database code creates the starting schema |
+| Candidate bundle | `dm-v2.14.0-runtime.tar.gz`, 1,729,177 bytes, SHA-256 `90afa55dd826c0dc3be8a23902b809baa465e25191dc372dc6cc2ef4e57fc243`; four builds (`build-a`…`build-d`) are byte-identical |
+| Superseded evidence | Previous 2.14.0 main-integration candidate: 1,725,593 bytes, SHA-256 `5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f`; retained, not overwritten |
+| Jail validation | Existing live-2.14.0 predecessor `check`/`install`/`repair`/`rollback`/`failclosed` and fresh `fresh`/`fresh-rollback` scenarios pass. A published-v2.12.1 predecessor `check`, `install` and `rollback` pass: all 56 archive members match the tag, `devices.db` and `config.json` remain byte-identical on install, the modified legacy file is retained, and rollback restores all 63 targets, the record and 19 core-locale files |
+| Evidence | `/root/dm-validation-2140/dm-bl-010-20261107/`, `/root/dm-backups/dm-bl-010-candidate-20261107-075441/`, and `verification/DM-BL-010-CATALOGUE-HEADERS-20261107.md` |
+| Live / release state | Live `.23` remains on the accepted 2.14.0 main-integration build; no host contact, deployment or monitoring change occurred. Published v2.12.1 and all existing tags/assets are unchanged; 2.14.0 remains unpublished |
+
+DM-BL-010 stays **OPEN** until the development-branch candidate is integrated and published under
+separate authorisation. The historical database-byte limitation remains DM-BL-011, real-host
+`FRESH=1` and plugin lifecycle remain DM-BL-012, and the broader monitoring lifecycle remains
+DM-BL-013.
 
 ### §9.4 residual-gap classification
 
@@ -104,7 +130,7 @@ Record: `verification/UPDATE-OPNSENSE-26.7.8-23-PLAN.md`. Post-boot evidence is 
 | Tool guard | `.clinerules/hooks/PreToolUse` — blocks repository creation/cloning, worktree creation and writes into protected checkouts |
 | Commit guard | `.githooks/pre-commit` via `core.hooksPath=.githooks` — refuses commits outside the canonical top-level and any Cline-installation path |
 | Preserved | `/usr/local/cline-freebsd/src/cline` (second clone carrying the untracked Cline installation) and the worktrees `/root/o3-branch`, `/root/tb-branch` — unchanged |
-| Main integration | **Complete (7 November 2026):** PR #6 was fast-forwarded from `d5d73ed` to `2825177`, preserving all 54 commits. Remote `main` and its tree match the reviewed head; exact-main CI run `42342362864` passed. DM-BL-009 is **CLOSED**; residual validation is tracked as DM-BL-011/012/013 |
+| Main integration | **Complete (7 November 2026):** PR #6 was fast-forwarded from `d5d73ed` to `2825177`, preserving all 54 commits and matching the reviewed tree; exact-main CI run `42342362864` passed. The separately authorised closeout documentation commit then produced current `main` at `46370688`. DM-BL-009 is **CLOSED**; residual validation is tracked as DM-BL-011/012/013 |
 | Integration path | `release/2.13` (`6bd122e`) is an **ancestor** of this branch, so integration into the release line is a plain **fast-forward with zero conflicts** — no merge and no rebase is necessary (Decision 66, `verification/RELEASE-INTEGRATION-ASSESSMENT-20261103.md`) |
 | CI readiness | the validated M5 checkpoint `a1f759e9b64a` is published and green (run `41977736287`, 64/64, zero skips); H1b is closed |
 | Evidence | `verification/WORKSPACE-PROTECTION-20261103.md`, `verification/REPO-CONSOLIDATION-20261103.md` |
@@ -177,10 +203,11 @@ The 2.13.3 installer now has executable end-to-end coverage that does not touch 
 * The historical pre-deployment sandbox run did not touch `.23`, `.253` or `.252`; the later
   2.13.3 deployment touched `.23` only. `.253`/`.252` remain on 2.13.2.
 
-**Next step:** no further DM-BL-009 integration action is pending. DM-BL-011, DM-BL-012 and
-DM-BL-013 remain OPEN for separately authorised validation, and issue #5 remains OPEN pending
-reporter confirmation. The OPNsense 26.7.8_2 update on `.23` is complete; `.23` remains on the
-accepted Device Monitor 2.14.0 baseline with monitoring disabled.
+**Next step:** validate the committed DM-BL-010 development branch and review its prepared PR; no
+merge or publication is implied. DM-BL-011, DM-BL-012 and DM-BL-013 remain OPEN for separately
+authorised validation, and issue #5 remains OPEN pending reporter confirmation. The OPNsense
+26.7.8_2 update on `.23` is complete; `.23` remains on the accepted Device Monitor 2.14.0
+main-integration baseline with monitoring disabled.
 
 ## 2.14.0 installer-jail validation (6 November 2026)
 

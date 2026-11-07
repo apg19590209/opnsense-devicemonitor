@@ -57,12 +57,17 @@ SB_HOST=dm-installer-sandbox.internal
 MARKER=.dm-sandbox-marker
 VERSION=${DM_SANDBOX_VERSION:-2.14.0}
 PREDECESSOR_VERSION=${DM_SANDBOX_PREDECESSOR_VERSION:-2.13.3}
-CANDIDATE_COMMIT=${DM_SANDBOX_CANDIDATE_COMMIT:-690204bb1d6c402de9a2b41e16f753b37335279f}
-CANDIDATE_SOURCE=${DM_SANDBOX_CANDIDATE_SOURCE:-commit}
+PREDECESSOR_SOURCE=${DM_SANDBOX_PREDECESSOR_SOURCE:-live}
+PREDECESSOR_TAG=${DM_SANDBOX_PREDECESSOR_TAG:-v2.12.1}
+PREDECESSOR_BUNDLE_DIGEST=${DM_SANDBOX_PREDECESSOR_BUNDLE_DIGEST:-ba5737e9e2fc0d9b78edaacef82aeee30c9a8656db4f27cc9800473af71957c0}
+PREDECESSOR_BUNDLE_BYTES=${DM_SANDBOX_PREDECESSOR_BUNDLE_BYTES:-1596559}
+DEFAULT_PREDECESSOR_BUNDLE=/root/dm-issue5-v2121-langfix-20261106T061929Z/publication/independent-download/dm-v2.12.1-runtime.tar.gz
+CANDIDATE_COMMIT=${DM_SANDBOX_CANDIDATE_COMMIT:-46370688fb6891a049929f2498ae62bc52b17b3e}
+CANDIDATE_SOURCE=${DM_SANDBOX_CANDIDATE_SOURCE:-worktree}
 PREDECESSOR_COMMIT=${DM_SANDBOX_PREDECESSOR_COMMIT:-eadfc577b9ef184a12edba72780ec548a8486510}
-BUNDLE_DIGEST=${DM_SANDBOX_BUNDLE_DIGEST:-5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f}
-BUNDLE_BYTES=${DM_SANDBOX_BUNDLE_BYTES:-1725593}
-DEFAULT_CANDIDATE_BUNDLE=${DM_SANDBOX_BUNDLE:-/root/dm-backups/dm-bl009-candidate-rollback-fix-20261106-083105/dm-v2.14.0-runtime.tar.gz}
+BUNDLE_DIGEST=${DM_SANDBOX_BUNDLE_DIGEST:-90afa55dd826c0dc3be8a23902b809baa465e25191dc372dc6cc2ef4e57fc243}
+BUNDLE_BYTES=${DM_SANDBOX_BUNDLE_BYTES:-1729177}
+DEFAULT_CANDIDATE_BUNDLE=${DM_SANDBOX_BUNDLE:-/root/dm-backups/dm-bl-010-candidate-20261107-075441/build-a/dm-v2.14.0-runtime.tar.gz}
 VERSION_SERIES=v$(printf '%s' "$VERSION" | awk -F. '{print $1 $2}')
 STAGE_GLOB=/tmp/dm_install_${VERSION_SERIES}.*
 BACKUP_PREFIX=install-${VERSION_SERIES}.
@@ -98,14 +103,28 @@ require_platform() {
     head=$(git -C "$REPO" rev-parse HEAD)
     [ "$head" = "$CANDIDATE_COMMIT" ] ||
         fail "candidate commit mismatch: HEAD $head != $CANDIDATE_COMMIT"
-    git -C "$REPO" cat-file -e "$PREDECESSOR_COMMIT^{commit}" 2>/dev/null ||
-        fail "predecessor commit not found: $PREDECESSOR_COMMIT"
+    case "$PREDECESSOR_SOURCE" in
+        live)
+            git -C "$REPO" cat-file -e "$PREDECESSOR_COMMIT^{commit}" 2>/dev/null ||
+                fail "predecessor commit not found: $PREDECESSOR_COMMIT"
+            ;;
+        bundle)
+            [ -n "${DM_SANDBOX_PREDECESSOR_BUNDLE:-$DEFAULT_PREDECESSOR_BUNDLE}" ] ||
+                fail 'no published predecessor bundle selected'
+            git -C "$REPO" cat-file -e "$PREDECESSOR_TAG^{commit}" 2>/dev/null ||
+                fail "predecessor tag not found: $PREDECESSOR_TAG"
+            ;;
+        *)
+            fail "unknown predecessor source: $PREDECESSOR_SOURCE"
+            ;;
+    esac
     for t in tar msgfmt python3 sha256; do
         command -v "$t" >/dev/null 2>&1 || fail "$t is required"
     done
 }
 
 require_upgrade_predecessor() {
+    [ "$PREDECESSOR_SOURCE" = live ] || return 0
     [ -f /var/db/devicemonitor/installed-manifest.txt ] ||
         fail 'the live 2.13.3 installation record is missing'
     live_first=$(sed -n '1p' /var/db/devicemonitor/installed-manifest.txt)
@@ -315,7 +334,7 @@ mvc.app.languages /usr/local/opnsense/mvc/app/languages
 service.actions.d /usr/local/opnsense/service/conf/actions.d
 www.js.widgets /usr/local/opnsense/www/js/widgets
 share.locale /usr/local/share/locale'
-    if [ "${SCENARIO_MODE:-upgrade}" = fresh ]; then
+    if [ "${MOUNT_MODE:-${SCENARIO_MODE:-upgrade}}" = fresh ]; then
         overlay_list="$overlay_list
 mvc.app.models.parent /usr/local/opnsense/mvc/app/models/OPNsense
 mvc.app.controllers.parent /usr/local/opnsense/mvc/app/controllers/OPNsense
@@ -568,6 +587,14 @@ PY
     [ "$rc_target" = /usr/local/etc/rc.d/devicemonitor ] || fail "unexpected rc link: ${rc_target:-absent}"
     printf '%s\n' "$rc_target" > "$SCR/root/prestate/rc-link"
 
+    sb_stage_legacy_fixtures
+    say "SANDBOX_PRESTATE record_rows=$rows predecessor=$live_conf legacy_prune=1 legacy_retain=1"
+}
+
+# The historical leftovers are needed by both the live-predecessor and published-bundle
+# upgrade paths. Extract the two published v2.9 catalogues, verify their immutable digests,
+# prune one and deliberately modify the other for the retention assertion.
+sb_stage_legacy_fixtures() {
     mkdir -p "$SCR/root/predecessor-legacy"
     git -C "$REPO" archive --format=tar "$LEGACY_TAG" "$LEGACY_SRC_ONE" "$LEGACY_SRC_TWO" |
         tar -xf - -C "$SCR/root/predecessor-legacy" || fail "cannot extract $LEGACY_TAG"
@@ -587,7 +614,6 @@ PY
         fail 'modified legacy fixture accidentally matches published ownership evidence' || :
     printf '%s %s %s\n' "$prune_digest" "$LEGACY_SRC_ONE" "$LEGACY_PATH_ONE" > "$SCR/root/legacy-prune.txt"
     printf '%s %s %s\n' "$retain_digest" "$LEGACY_SRC_TWO" "$LEGACY_PATH_TWO" > "$SCR/root/legacy-retain.txt"
-    say "SANDBOX_PRESTATE record_rows=$rows predecessor=$live_conf legacy_prune=1 legacy_retain=1"
 }
 
 # Builds an empty predecessor tree for a genuine fresh install. The host's own Device
@@ -681,6 +707,158 @@ sb_stage_fresh_inputs() {
         fail 'fresh seed lacks the jail-only rc.configure_plugins stub'
     [ -x "$SCR/usr.local.etc.rc.d/configd" ] || fail 'fresh seed lacks the configd stub'
     pass 'fresh predecessor tree is empty and core catalogues are reset to recorded pristine copies'
+}
+
+# Verify the actual published predecessor archive, extract it, and compare every member with
+# the corresponding source commit's tag. This is deliberately separate from the live .23
+# predecessor: the upgrade evidence must stand on the published v2.12.1 payload, not on a
+# synthetic copy of the current host state.
+sb_stage_predecessor_bundle() {
+    [ "$PREDECESSOR_SOURCE" = bundle ] || return 0
+    pred=${DM_SANDBOX_PREDECESSOR_BUNDLE:-$DEFAULT_PREDECESSOR_BUNDLE}
+    [ -f "$pred" ] && [ ! -L "$pred" ] || fail "published predecessor bundle is missing: $pred"
+    out=$BASE/predecessor-bundle.tar.gz
+    cp "$pred" "$out" || fail "cannot copy published predecessor bundle: $pred"
+    got=$(sha256 -q "$out")
+    [ "$got" = "$PREDECESSOR_BUNDLE_DIGEST" ] ||
+        fail "published predecessor digest $got != $PREDECESSOR_BUNDLE_DIGEST"
+    got_bytes=$(stat -f %z "$out")
+    [ "$got_bytes" = "$PREDECESSOR_BUNDLE_BYTES" ] ||
+        fail "published predecessor size $got_bytes != $PREDECESSOR_BUNDLE_BYTES"
+
+    mkdir -p "$SCR/root/predecessor-release" "$BASE/predecessor-git"
+    tar -xzf "$out" -C "$SCR/root/predecessor-release" || fail 'cannot extract the published predecessor bundle'
+    git -C "$REPO" archive --format=tar "$PREDECESSOR_TAG" |
+        tar -xf - -C "$BASE/predecessor-git" || fail "cannot extract predecessor tag $PREDECESSOR_TAG"
+    pred_defaults=$SCR/root/predecessor-release/src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
+    [ -f "$pred_defaults" ] || fail 'published predecessor has no defaults.json'
+    pred_version=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$pred_defaults") ||
+        fail 'cannot read published predecessor version'
+    [ "$pred_version" = "$PREDECESSOR_VERSION" ] ||
+        fail "published predecessor version $pred_version != $PREDECESSOR_VERSION"
+
+    tar -tzf "$out" > "$EVI/predecessor-members.txt" || fail 'cannot list the predecessor bundle'
+    while IFS= read -r member; do
+        [ -n "$member" ] || continue
+        case "$member" in
+            /*|*..*) fail "unsafe predecessor member: $member" ;;
+        esac
+        [ -f "$SCR/root/predecessor-release/$member" ] ||
+            fail "predecessor member is not a regular file: $member"
+        [ -f "$BASE/predecessor-git/$member" ] ||
+            fail "predecessor tag lacks member: $member"
+        cmp -s "$SCR/root/predecessor-release/$member" "$BASE/predecessor-git/$member" ||
+            fail "predecessor member differs from tag $PREDECESSOR_TAG: $member"
+    done < "$EVI/predecessor-members.txt"
+    pass "published predecessor $pred_version, $got_bytes bytes, sha256 $got, $(grep -c . "$EVI/predecessor-members.txt") members match $PREDECESSOR_TAG"
+}
+
+# Runs the unmodified published installer in the disposable jail. The empty overlay is the
+# predecessor's fresh-install state; the later data/configuration seed represents a real
+# installation's retained state.
+sb_install_predecessor() {
+    [ "$PREDECESSOR_SOURCE" = bundle ] || return 0
+    rc=0
+    sb_run "$SB_HOST" > "$EVI/predecessor-install.log" 2>&1 <<'INSTALL' || rc=$?
+host=$1
+sh /root/predecessor-release/install-unattended.sh --host "$host"
+INSTALL
+    [ "$rc" = 0 ] || { cat "$EVI/predecessor-install.log" >&2; fail "published predecessor installer exited $rc"; }
+    grep -q "^INSTALL_OK version=$PREDECESSOR_VERSION " "$EVI/predecessor-install.log" ||
+        { cat "$EVI/predecessor-install.log" >&2; fail 'published predecessor did not report the expected INSTALL_OK'; }
+    pass "published $PREDECESSOR_VERSION installer completed in the jail"
+}
+
+# Seed the predecessor with a real database built by its own schema code and a configuration
+# file. The candidate must preserve both byte-for-byte; the rollback scenario must restore them
+# along with every installed target.
+sb_seed_predecessor_data() {
+    [ "$PREDECESSOR_SOURCE" = bundle ] || return 0
+    rc=0
+    sb_run > "$EVI/predecessor-seed.log" 2>&1 <<'SEED' || rc=$?
+service devicemonitor stop >/dev/null 2>&1 || :
+rm -f /var/db/devicemonitor/devices.db-wal /var/db/devicemonitor/devices.db-shm
+python3 - <<'PY'
+import importlib.util
+import json
+import sqlite3
+
+path = '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py'
+spec = importlib.util.spec_from_file_location('v2121_scan_network', path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+module.log = lambda message: None
+module.init_db()
+with sqlite3.connect(module.DB_FILE) as conn:
+    conn.execute(
+        'INSERT INTO devices (mac, ip, last_seen) VALUES (?, ?, ?)',
+        ('02:00:00:00:12:01', '203.0.113.121', '2026-11-01 00:00:00'),
+    )
+    conn.execute(
+        'INSERT INTO device_services (mac, ip, interface, service_type, port, protocol, '
+        "status, detection_method, confidence, product, version, first_detected, last_verified) "
+        "VALUES (?, ?, 'LAN', ?, ?, 'tcp', ?, ?, 'verified', '', '', ?, ?)",
+        ('02:00:00:00:12:01', '203.0.113.121', 'http', 8080, 'available', 'banner',
+         '2026-11-01 00:00:00', '2026-11-01 00:00:00'),
+    )
+    conn.commit()
+    assert conn.execute('SELECT count(*) FROM devices').fetchone()[0] == 1
+    assert conn.execute('SELECT count(*) FROM device_services').fetchone()[0] == 1
+    conn.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+
+with open('/var/db/devicemonitor/config.json', 'w', encoding='utf-8') as stream:
+    json.dump({'preserve': 'dm-bl-010', 'source': 'v2.12.1'}, stream,
+              sort_keys=True, separators=(',', ':'))
+    stream.write('\n')
+PY
+chmod 644 /var/db/devicemonitor/config.json
+rm -f /var/db/devicemonitor/devices.db-wal /var/db/devicemonitor/devices.db-shm
+python3 - <<'PY'
+import sqlite3
+conn = sqlite3.connect('file:/var/db/devicemonitor/devices.db?mode=ro', uri=True)
+assert conn.execute('PRAGMA quick_check').fetchone()[0] == 'ok'
+conn.close()
+PY
+echo SEED_OK
+SEED
+    [ "$rc" = 0 ] || { cat "$EVI/predecessor-seed.log" >&2; fail 'cannot seed the published predecessor state'; }
+    grep -q '^SEED_OK$' "$EVI/predecessor-seed.log" || { cat "$EVI/predecessor-seed.log" >&2; fail 'predecessor seed incomplete'; }
+    pred_manifest=$SCR/root/predecessor-release/release/v${PREDECESSOR_VERSION}-runtime.manifest
+    [ -f "$pred_manifest" ] || fail 'published predecessor manifest is missing'
+    awk '{print $4}' "$pred_manifest" >> "$SCR/root/state-paths.txt"
+    for lang in $LANGS; do
+        printf '%s\n' "/usr/local/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.mo" \
+            >> "$SCR/root/state-paths.txt"
+        [ "$lang" = en_US ] && continue
+        printf '%s\n' "/usr/local/share/locale/${lang}/LC_MESSAGES/OPNsense.mo" \
+            >> "$SCR/root/state-paths.txt"
+    done
+    printf '%s\n' /etc/rc.conf.d/devicemonitor >> "$SCR/root/state-paths.txt"
+    sort -u -o "$SCR/root/state-paths.txt" "$SCR/root/state-paths.txt"
+    pass 'seeded the published predecessor database and configuration; rollback snapshot includes every predecessor target'
+}
+
+# Apply the two historical v2.9 leftovers after the published predecessor is installed. The
+# candidate must prune only the unchanged one and retain the deliberately modified one.
+sb_apply_legacy_fixtures() {
+    [ "$PREDECESSOR_SOURCE" = bundle ] || return 0
+    rc=0
+    sb_run > "$EVI/predecessor-legacy.log" 2>&1 <<'LEGACY' || rc=$?
+while read -r digest src target; do
+    mkdir -p "$(dirname "$target")"
+    install -m 644 -o root -g wheel "/root/predecessor-legacy/$src" "$target"
+    [ "$(sha256 -q "$target")" = "$digest" ] || { echo "LEGACY_FAIL $target" >&2; exit 1; }
+done < /root/legacy-prune.txt
+while read -r digest src target; do
+    mkdir -p "$(dirname "$target")"
+    install -m 644 -o root -g wheel "/root/predecessor-legacy/$src" "$target"
+    [ "$(sha256 -q "$target")" = "$digest" ] || { echo "LEGACY_FAIL $target" >&2; exit 1; }
+done < /root/legacy-retain.txt
+echo LEGACY_OK
+LEGACY
+    [ "$rc" = 0 ] || { cat "$EVI/predecessor-legacy.log" >&2; fail 'cannot apply the legacy fixtures'; }
+    grep -q '^LEGACY_OK$' "$EVI/predecessor-legacy.log" || fail 'legacy fixture application incomplete'
+    pass 'planted the unchanged and modified v2.9 leftovers in the published predecessor state'
 }
 
 # The expected target set, derived from the manifest and the locale list, plus a plan of how
@@ -1060,11 +1238,24 @@ VERIFY
 sb_setup() {
     sb_build "$1"
     sb_stage_bundle
-    sb_stage_prestate_inputs
-    sb_stage_expectations upgrade
-    sb_mount
-    sb_start
-    sb_prestate
+    if [ "$PREDECESSOR_SOURCE" = bundle ]; then
+        sb_stage_predecessor_bundle
+        sb_stage_fresh_inputs
+        sb_stage_legacy_fixtures
+        sb_stage_expectations upgrade
+        MOUNT_MODE=fresh
+        sb_mount
+        sb_start
+        sb_install_predecessor
+        sb_seed_predecessor_data
+        sb_apply_legacy_fixtures
+    else
+        sb_stage_prestate_inputs
+        sb_stage_expectations upgrade
+        sb_mount
+        sb_start
+        sb_prestate
+    fi
 }
 
 sb_setup_fresh() {
@@ -1146,9 +1337,9 @@ scenario_install() {
     [ -n "$line" ] || { cat "$EVI/install.log" >&2; fail 'no INSTALL_OK line'; }
     say "  $line"
     printf '%s\n' "$line" | grep -Eq \
-        '^INSTALL_OK version=2\.14\.0 files=63 core_locales=10 pruned=1 backup=/var/backups/devicemonitor/install-v214\.[^ ]+ daemon_restarted=0 unchanged=[0-9]+ repaired=0$' ||
+        '^INSTALL_OK version=2\.14\.0 files=63 core_locales=10 pruned=1 backup=/var/backups/devicemonitor/install-v214\.[^ ]+ daemon_restarted=0 unchanged=[0-9]+ repaired=[0-9]+$' ||
         fail 'INSTALL_OK does not report the 2.14.0 payload, one prune and no daemon restart'
-    pass 'INSTALL_OK version=2.14.0 files=63 core_locales=10 pruned=1 daemon_restarted=0 repaired=0'
+    pass 'INSTALL_OK reports the 2.14.0 payload, one prune and no daemon restart'
     recorded "$EVI/install.log" '^PRUNED=1$' || fail 'the prune step did not report PRUNED=1'
     pass 'the prune step reported PRUNED=1'
     recorded "$EVI/install.log" '^BACKUP_READY=/var/backups/devicemonitor/install-v214\.' ||
@@ -1192,9 +1383,15 @@ scenario_install() {
         "$SCR/root/targets.txt" "$EVI/after.snapshot" | sort > "$EVI/after.targets"
     same=$(comm -12 "$EVI/before.targets" "$EVI/after.targets" | wc -l | tr -d ' ')
     reported=$(printf '%s\n' "$line" | sed -n 's/.*unchanged=\([0-9]*\).*/\1/p')
+    repaired=$(printf '%s\n' "$line" | sed -n 's/.*repaired=\([0-9]*\).*/\1/p')
     [ "$reported" = "$same" ] ||
         fail "unchanged=$reported does not match the $same targets whose content is identical"
-    pass "unchanged=$reported matches the $same byte-identical targets of $(grep -c . "$SCR/root/targets.txt")"
+    [ -n "$repaired" ] && [ "$repaired" -le "$same" ] ||
+        fail "repaired=$repaired is not a valid subset of the $same byte-identical targets"
+    if [ "$PREDECESSOR_SOURCE" = live ]; then
+        [ "$repaired" = 0 ] || fail "the live predecessor required $repaired mode/ownership repairs"
+    fi
+    pass "unchanged=$reported matches the $same byte-identical targets of $(grep -c . "$SCR/root/targets.txt"); repaired=$repaired mode/ownership corrections"
     states=$(ls "$SCR/var/backups/devicemonitor/core-locale" | grep -c '\.state$' || true)
     [ "$states" = "$EXPECTED_CORE_LOCALES" ] ||
         fail "core-locale state files $states != $EXPECTED_CORE_LOCALES"
@@ -1638,7 +1835,7 @@ main() {
         guard=none
     fi
     require_platform
-    [ "$guard" != upgrade ] || require_upgrade_predecessor
+    [ "$guard" != upgrade ] || [ "$PREDECESSOR_SOURCE" = bundle ] || require_upgrade_predecessor
     if [ "$cmd" = clean ]; then clean_all; exit 0; fi
     mkdir -p "$WORK"
     rm -f "$WORK"/status-* "$WORK"/exit-*

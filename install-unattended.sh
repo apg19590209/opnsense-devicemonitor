@@ -44,7 +44,7 @@ VERIFIER=release/verify-release-inputs.sh
 # ownership evidence and the catalogue merge helper. A tampered helper can therefore never
 # decide which files get removed.
 MANIFEST_SHA=c6f4efff490dc157721c825b5227c9fcfc479c55aaa07ea5ca1b6cc2354d4f38
-RELEASE_INPUTS_SHA=e1df8693e1dcabf544fa5020c50aad358bd4c369eab286e969ed74e7b018c400
+RELEASE_INPUTS_SHA=9430099d1254f5e95df0afdd71ae6d3aa02dfde2c1e5bcdd185dd08bcd875db3
 VERIFIER_SHA=68b93f2a08f0808b67b6bd2ca76dca33a6cc5c159de4b61353b721eaefbb583d
 [ -f "$MANIFEST" ] && [ ! -L "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = "$MANIFEST_SHA" ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 42 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
@@ -65,7 +65,7 @@ PY
     # the digest observed before the run, an unchanged target (old == new) is left exactly
     # as it is - content, mode, owner and mtime - and only the rest is rewritten. The prune
     # plan still runs, so a repair also re-asserts the target set this install owns.
-    case "$installed" in 2.8|2.9|2.10|2.11|2.12|2.13|2.13.1|2.13.2|2.13.3|"$VERSION") :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
+    case "$installed" in 2.8|2.9|2.10|2.11|2.12|2.12.1|2.13|2.13.1|2.13.2|2.13.3|"$VERSION") :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
 elif [ -d /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor ]; then
     echo 'ABORT: partial existing installation' >&2; exit 1
 else

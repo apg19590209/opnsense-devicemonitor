@@ -5,16 +5,22 @@ explicitly selected release bundle whose commit, digest and size are verified be
 inside a disposable FreeBSD jail. It exists because review item M5 was that no test ever ran the
 installer itself: every executable check stopped at `release/prune-plan.sh`.
 
-The current defaults select the published 2.14.0 candidate at HEAD
-`690204bb1d6c402de9a2b41e16f753b37335279f`. Its immutable bundle is
-`/root/dm-backups/dm-bl009-candidate-rollback-fix-20261106-083105/dm-v2.14.0-runtime.tar.gz`,
-sha256 `5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f` (1,725,593 bytes).
-The evidence records `CANDIDATE_SOURCE=commit`, compares every bundle member with that commit and
-binds the result to the immutable digest above. The historical upgrade scenarios copy the deployed
-2.13.3 state into the jail as the predecessor; the fresh scenarios build an empty predecessor and
-do not read the live record, database or configuration. Historical M5 evidence under `evidence/`
-is retained unchanged; the five 2.14.0 upgrade transcripts belong in `evidence-2.14.0/` and the
-fresh transcripts in the separate validation directory named below.
+The current defaults select the DM-BL-010 catalogue-header candidate, based on
+`46370688fb6891a049929f2498ae62bc52b17b3e`. Its retained bundle is
+`/root/dm-backups/dm-bl-010-candidate-20261107-075441/build-a/dm-v2.14.0-runtime.tar.gz`, sha256
+`90afa55dd826c0dc3be8a23902b809baa465e25191dc372dc6cc2ef4e57fc243` (1,729,177 bytes). The retained
+evidence predates the branch commit and records `CANDIDATE_SOURCE=worktree`; it compares every
+bundle member with the source tree and binds the result to the immutable digest above. This is not a
+published release: v2.12.1 remains the latest published release and 2.14.0 remains unpublished.
+For an explicitly committed candidate, override `DM_SANDBOX_CANDIDATE_COMMIT` and set
+`DM_SANDBOX_CANDIDATE_SOURCE=commit`.
+
+The historical upgrade scenarios copy the deployed 2.13.3 state into the jail as the predecessor;
+the fresh scenarios build an empty predecessor and do not read the live record, database or
+configuration. Set `DM_SANDBOX_PREDECESSOR_SOURCE=bundle` with the published archive path, digest,
+size and tag to install the actual v2.12.1 payload as the predecessor instead. Historical M5
+evidence under `evidence/` is retained unchanged; the five 2.14.0 upgrade transcripts belong in
+`evidence-2.14.0/` and the fresh transcripts in the separate validation directory named below.
 
 ```sh
 # on the Device Monitor testbed, as root (FreeBSD only)
