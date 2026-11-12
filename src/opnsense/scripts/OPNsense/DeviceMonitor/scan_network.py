@@ -25,6 +25,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from functools import lru_cache
+from zoneinfo import ZoneInfo
 
 # ================================================================
 # CONFIGURATION - ENABLE/DISABLE FEATURES
@@ -69,6 +71,146 @@ PORT_DISCOVERY_LOCK = '/var/run/devicemonitor-port-discovery.lock'
 # failing fast.
 # ================================================================
 DB_BUSY_TIMEOUT_MS = 30000
+
+# Presence and service-ageing state is stored as naive UTC text. Hostwatch
+# already supplies UTC in this shape, and SQLite's CURRENT_TIMESTAMP is UTC.
+# Legacy releases also wrote local wall time into service verification fields,
+# so readers consider both interpretations when they age an unqualified value.
+TIMESTAMP_FORMAT = '%Y-%m-%d %H:%M:%S'
+
+
+@lru_cache(maxsize=1)
+def _system_local_timezone():
+    """Return the host's historical timezone rules for legacy timestamps."""
+    try:
+        with open('/etc/localtime', 'rb') as timezone_file:
+            return ZoneInfo.from_file(timezone_file, key='localtime')
+    except (OSError, ValueError, KeyError):
+        return datetime.now(UTC).astimezone().tzinfo or UTC
+
+
+def _as_utc_datetime(value=None):
+    """Coerce an injected timestamp to an aware UTC datetime.
+
+    A naive datetime is interpreted as host-local time for compatibility with
+    older callers. New production writers pass an aware UTC value explicitly.
+    """
+    if value is None:
+        return datetime.now(UTC)
+
+    if isinstance(value, str):
+        parsed = datetime.strptime(value.strip(), TIMESTAMP_FORMAT)
+        return parsed.replace(tzinfo=UTC)
+
+    if not isinstance(value, datetime):
+        raise TypeError('timestamp must be a datetime or stored timestamp string')
+
+    if value.tzinfo is None:
+        return value.astimezone(UTC)
+
+    return value.astimezone(UTC)
+
+
+def utc_timestamp(value=None):
+    """Format an instant as the canonical naive-UTC database timestamp."""
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return datetime.now(UTC).strftime(TIMESTAMP_FORMAT)
+        return datetime.strptime(text, TIMESTAMP_FORMAT).strftime(TIMESTAMP_FORMAT)
+
+    return _as_utc_datetime(value).strftime(TIMESTAMP_FORMAT)
+
+
+def _parse_stored_timestamp(value):
+    """Parse an unqualified stored timestamp without assigning a timezone."""
+    if isinstance(value, datetime):
+        if value.tzinfo is not None:
+            return value.astimezone(UTC).replace(tzinfo=None)
+        return value
+
+    text = str(value or '').strip()
+    if not text:
+        return None
+
+    try:
+        return datetime.strptime(text, TIMESTAMP_FORMAT)
+    except (TypeError, ValueError):
+        return None
+
+
+def _timestamp_age_bounds(value, now_utc, legacy_tz=None):
+    """Return UTC and valid legacy-local ages of an unqualified timestamp.
+
+    Legacy local wall times are interpreted with the timezone rules in force
+    at that date. An ambiguous fall-back value has one age for each fold.
+    ``None`` means the stored value could not be parsed.
+    """
+    stamp = _parse_stored_timestamp(value)
+    if stamp is None:
+        return None
+
+    now_utc = _as_utc_datetime(now_utc)
+    local_tz = legacy_tz or _system_local_timezone()
+    utc_age = now_utc.replace(tzinfo=None) - stamp
+    local_ages = []
+
+    for fold in (0, 1):
+        local_stamp = stamp.replace(tzinfo=local_tz, fold=fold)
+        round_trip = (
+            local_stamp.astimezone(UTC)
+            .astimezone(local_tz)
+            .replace(tzinfo=None)
+        )
+
+        if round_trip != stamp:
+            continue
+
+        age = now_utc - local_stamp.astimezone(UTC)
+
+        if age not in local_ages:
+            local_ages.append(age)
+
+    if not local_ages:
+        local_now = now_utc.astimezone(local_tz).replace(tzinfo=None)
+        local_ages.append(local_now - stamp)
+
+    return (utc_age, *local_ages)
+
+
+def _timestamp_age(value, now_utc, legacy_tz=None):
+    """Return the conservative age of an unqualified stored timestamp.
+
+    Existing databases can contain a mixture of UTC and local wall-time values.
+    The interpretation closest to the current instant is the best available
+    estimate of the record's real age: it neither ages a legacy value early nor
+    invalidates canonical UTC work by the host's offset. The unavoidable cost is
+    that an ambiguous row can be treated as newer by up to the host's UTC offset,
+    plus one hour at a fall-back fold, until its domain is known.
+    """
+    bounds = _timestamp_age_bounds(value, now_utc, legacy_tz)
+    if bounds is None:
+        return None
+    return min(bounds, key=lambda age: abs(age.total_seconds()))
+
+
+def _conservative_cutoff(now_utc, days, legacy_tz=None):
+    """Return the earlier of the UTC and legacy-local ageing cutoffs."""
+    now_utc = _as_utc_datetime(now_utc)
+    local_tz = legacy_tz or _system_local_timezone()
+    cutoff = now_utc - timedelta(days=days)
+    utc_cutoff = cutoff.strftime(TIMESTAMP_FORMAT)
+    local_cutoff_dt = cutoff.astimezone(local_tz)
+    local_cutoff_naive = local_cutoff_dt.replace(tzinfo=None)
+
+    if (
+        local_cutoff_dt.replace(fold=0).utcoffset()
+        != local_cutoff_dt.replace(fold=1).utcoffset()
+    ):
+        local_cutoff_naive -= timedelta(hours=1)
+
+    local_cutoff = local_cutoff_naive.strftime(TIMESTAMP_FORMAT)
+    return min(utc_cutoff, local_cutoff)
 
 _sqlite_connect = sqlite3.connect
 
@@ -2158,16 +2300,17 @@ def detect_source_capabilities():
 
     return capabilities
 
-def is_recently_seen(last_seen_str, minutes=15):
-    """True if the device was seen within the last N minutes using UTC comparison"""
+def is_recently_seen(last_seen_str, minutes=15, now=None, legacy_tz=None):
+    """True if the device was seen within the last N minutes.
+
+    Canonical values are UTC. For unqualified legacy rows, the conservative age
+    helper prevents an old local-time value from making a device look absent.
+    """
     if not last_seen_str:
         return False
-    try:
-        last_seen = datetime.strptime(last_seen_str, '%Y-%m-%d %H:%M:%S')
-        now_utc = datetime.now(UTC).replace(tzinfo=None)
-        return (now_utc - last_seen).total_seconds() < minutes * 60
-    except:
-        return False
+
+    age = _timestamp_age(last_seen_str, now, legacy_tz)
+    return age is not None and age.total_seconds() < minutes * 60
 
 
 def is_device_active(last_seen_str, ip, was_active=False):
@@ -2207,14 +2350,7 @@ def touch_device_last_seen(conn, ip, seen_at=None):
     if not key:
         return 0
 
-    stamp = (
-        seen_at.strftime('%Y-%m-%d %H:%M:%S')
-        if hasattr(seen_at, 'strftime')
-        else str(seen_at or '').strip()
-    )
-
-    if not stamp:
-        stamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    stamp = utc_timestamp(seen_at)
 
     return conn.execute(
         '''
@@ -2257,6 +2393,8 @@ def upsert_device_service(
 
     if not ip or not service_type or not protocol or not detection_method:
         return False
+
+    verified_at = utc_timestamp(verified_at)
 
     conn.execute(
         '''
@@ -2350,9 +2488,10 @@ def nmap_evidence_is_current(
     except (TypeError, ValueError):
         return True
 
-    now = now or datetime.now()
+    now = _as_utc_datetime(now)
+    age = _timestamp_age(text, now)
 
-    return now - stamp <= timedelta(days=max_age_days)
+    return age is None or age <= timedelta(days=max_age_days)
 
 
 def update_service_inventory_from_nmap(
@@ -2463,9 +2602,7 @@ def _dns_collect_responses(sock, pending, conn, found, verified_ips, deadline):
         if not (flags & 0x8000):
             continue
 
-        verified_at = datetime.now().strftime(
-            '%Y-%m-%d %H:%M:%S'
-        )
+        verified_at = utc_timestamp()
 
         if upsert_device_service(
             conn,
@@ -2834,7 +2971,7 @@ def discover_dhcp_servers(networks):
         found = []
         tested_interfaces = set()
         verified_by_interface = {}
-        verified_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        verified_at = utc_timestamp()
 
         for interface in interfaces:
             cmd = [
@@ -3109,14 +3246,7 @@ def record_service_miss(
     except (TypeError, ValueError):
         threshold = SERVICE_MISS_THRESHOLD
 
-    stamp = (
-        checked_at.strftime('%Y-%m-%d %H:%M:%S')
-        if hasattr(checked_at, 'strftime')
-        else str(checked_at or '').strip()
-    )
-
-    if not stamp:
-        stamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    stamp = utc_timestamp(checked_at)
 
     return conn.execute(
         f'''
@@ -3156,7 +3286,7 @@ def age_stale_service_state_on_standby(observation_reason='CARP backup node'):
     return aged, retired
 
 
-def age_stale_service_state(conn=None, now=None, dry_run=False):
+def age_stale_service_state(conn=None, now=None, dry_run=False, legacy_tz=None):
     """Age `unavailable` verdicts to `unknown` and retire rows for unseen hosts.
 
     O4 (DECISIONS.md 52). An `unavailable` row records what one discovery run
@@ -3196,22 +3326,22 @@ def age_stale_service_state(conn=None, now=None, dry_run=False):
     Returns ``(aged, retired)``. `dry_run` reports the same counts without
     writing anything.
     """
-    now = now or datetime.now()
+    now = _as_utc_datetime(now)
 
     if conn is None:
         init_db()
         owned = sqlite3.connect(DB_FILE)
         try:
-            return age_stale_service_state(owned, now, dry_run)
+            return age_stale_service_state(owned, now, dry_run, legacy_tz)
         finally:
             owned.close()
 
-    unknown_cutoff = (
-        now - timedelta(days=SERVICE_UNKNOWN_AFTER_DAYS)
-    ).strftime('%Y-%m-%d %H:%M:%S')
-    retire_cutoff = (
-        now - timedelta(days=SERVICE_RETIRE_AFTER_DAYS)
-    ).strftime('%Y-%m-%d %H:%M:%S')
+    unknown_cutoff = _conservative_cutoff(
+        now, SERVICE_UNKNOWN_AFTER_DAYS, legacy_tz
+    )
+    retire_cutoff = _conservative_cutoff(
+        now, SERVICE_RETIRE_AFTER_DAYS, legacy_tz
+    )
 
     stale = '''
         status = 'unavailable'
@@ -3831,9 +3961,7 @@ def discover_ntp_servers(networks):
                     pool.map(_probe_ntp_service, targets)
                 )
 
-            verified_at = datetime.now().strftime(
-                '%Y-%m-%d %H:%M:%S'
-            )
+            verified_at = utc_timestamp()
 
             for ip, result in zip(targets, results):
                 if result is None:
@@ -4102,9 +4230,7 @@ def discover_ssh_servers(networks):
                     pool.map(_probe_ssh_service, target_list)
                 )
 
-            verified_at = datetime.now().strftime(
-                '%Y-%m-%d %H:%M:%S'
-            )
+            verified_at = utc_timestamp()
 
             for target, result in zip(target_list, results):
                 if result is None:
@@ -4429,9 +4555,7 @@ def discover_web_admin_services(networks):
                     pool.map(_probe_web_service, target_list)
                 )
 
-            verified_at = datetime.now().strftime(
-                '%Y-%m-%d %H:%M:%S'
-            )
+            verified_at = utc_timestamp()
 
             for target, result in zip(target_list, results):
                 if result is None:
@@ -5233,9 +5357,7 @@ def _discover_local_wireguard(conn, candidates, networks):
         }
     )
 
-    verified_at = datetime.now().strftime(
-        '%Y-%m-%d %H:%M:%S'
-    )
+    verified_at = utc_timestamp()
 
     for wg_interface in interfaces:
         try:
@@ -5387,9 +5509,7 @@ def _probe_phase3_nmap_identification(candidates):
     # each Nmap subprocess must remain bounded to one literal host.
     for target_ip in targets:
         for scan_protocol, options in scans:
-            detected_at = datetime.now().strftime(
-                '%Y-%m-%d %H:%M:%S'
-            )
+            detected_at = utc_timestamp()
 
             command = [
                 '/usr/local/bin/nmap',
@@ -5645,9 +5765,7 @@ def discover_phase3_services(networks):
         # Persist strong Nmap service identification
         # ----------------------------------------------------
 
-        now_text = datetime.now().strftime(
-            '%Y-%m-%d %H:%M:%S'
-        )
+        now_text = utc_timestamp()
 
         seen_nmap = set()
         stale_nmap_evidence = 0
@@ -5983,9 +6101,7 @@ def discover_phase3_services(networks):
                 target_list
             )
 
-            verified_at = datetime.now().strftime(
-                '%Y-%m-%d %H:%M:%S'
-            )
+            verified_at = utc_timestamp()
 
             for target, result in zip(
                 target_list,
@@ -6160,9 +6276,7 @@ def discover_infrastructure_services(networks):
                 f"[SERVICES] {name} discovery failed: {e}"
             )
 
-    completed_at = datetime.now().strftime(
-        '%Y-%m-%d %H:%M:%S'
-    )
+    completed_at = utc_timestamp()
 
     try:
         with sqlite3.connect(DB_FILE) as conn:
@@ -6215,21 +6329,17 @@ def run_scheduled_service_discovery(interval_seconds=3600, networks=None):
 
         if last_run:
             try:
-                last_dt = datetime.strptime(
-                    last_run,
-                    '%Y-%m-%d %H:%M:%S'
-                )
+                age = _timestamp_age(last_run, datetime.now(UTC))
 
-                age = (
-                    datetime.now() - last_dt
-                ).total_seconds()
+                if age is not None:
+                    age = age.total_seconds()
 
-                if age < interval_seconds:
-                    log(
-                        "[SERVICES] Scheduled discovery not due "
-                        f"({int(age)}s since last run)"
-                    )
-                    return False
+                    if age < interval_seconds:
+                        log(
+                            "[SERVICES] Scheduled discovery not due "
+                            f"({int(age)}s since last run)"
+                        )
+                        return False
 
             except (TypeError, ValueError):
                 pass
@@ -7430,7 +7540,7 @@ def run_targeted_scan_with_history(device, config, scan_type):
 
     mac = (device.get('mac') or '').strip().lower()
     ip = (device.get('ip') or '').strip()
-    started_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    started_at = utc_timestamp()
     history_id = None
 
     top_ports = int(config.get('nmap_top_ports', 100))
@@ -7491,7 +7601,7 @@ def run_targeted_scan_with_history(device, config, scan_type):
         details = details or {}
     except Exception as e:
         if history_id is not None:
-            finished_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            finished_at = utc_timestamp()
             try:
                 with sqlite3.connect(DB_FILE) as history_conn:
                     history_conn.execute(
@@ -7510,7 +7620,7 @@ def run_targeted_scan_with_history(device, config, scan_type):
         raise
 
     if history_id is not None:
-        finished_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        finished_at = utc_timestamp()
 
         scan_success = bool(details.get('scan_success'))
         scan_error = details.get('scan_error')
@@ -7673,12 +7783,9 @@ def scan_email_reminder_due(device, interval_minutes):
     if row is None:
         return True
 
-    try:
-        last_sent = datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')
-    except (TypeError, ValueError):
-        return True
+    age = _timestamp_age(row[0], datetime.now(UTC))
 
-    return (datetime.now() - last_sent) >= timedelta(minutes=interval_minutes)
+    return age is None or age >= timedelta(minutes=interval_minutes)
 
 
 def targeted_scan_and_email(device, config):
@@ -8373,13 +8480,7 @@ def detect_mac_rotation(conn, mac, ip, owners=None):
 
     randomised = is_locally_administered_mac(mac)
 
-    age = None
-    try:
-        age = datetime.now() - datetime.strptime(
-            owner_last_seen, '%Y-%m-%d %H:%M:%S'
-        )
-    except (TypeError, ValueError, OverflowError):
-        age = None
+    age = _timestamp_age(owner_last_seen, datetime.now(UTC))
 
     if not randomised:
         if age is None or age > timedelta(hours=MAC_ROTATION_WINDOW_HOURS):
@@ -9117,7 +9218,7 @@ def full_scan():
 
     # 3. Update local database
     new_devices = []
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    now = utc_timestamp()
     conn = sqlite3.connect(DB_FILE)
     in_scope_macs = scoped_device_macs(conn, networks)
 

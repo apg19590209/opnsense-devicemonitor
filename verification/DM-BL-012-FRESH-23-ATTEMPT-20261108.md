@@ -1,6 +1,8 @@
 # DM-BL-012 — real-host fresh-install attempt on `.23` (8 November 2026)
 
-**Status: ABORTED BEFORE REBOOT; HOST RECOVERED; DM-BL-012 REMAINS OPEN.**
+**Status: the 8 November attempt was ABORTED BEFORE REBOOT and the host was recovered. DM-BL-012
+was subsequently CLOSED on 12 November 2026 by explicit operator acceptance; the later lifecycle
+evidence and closure decision are recorded at the end of this file.**
 
 This was an expressly authorised attempt to exercise the real-host uninstall and fresh-install
 path on `192.168.20.23` only, using the approved 2.14.0 candidate. No source file, release input or
@@ -110,10 +112,11 @@ evidence. No reboot was performed, so reboot persistence was not tested.
 ## Acceptance result
 
 The fresh-install, manifest, catalogue, registration and service-start portions passed on the real
-host. DM-BL-012 is nevertheless still **OPEN** because the test was aborted before reboot and the
-monitoring-disabled condition was not sustained. Authenticated UI acceptance was not performed by
-the agent; the operator had a browser session open, but no exact per-page observation was recorded
-for this attempt.
+host. At the time of this attempt DM-BL-012 remained **OPEN** because the test was aborted before
+reboot and the monitoring-disabled condition was not sustained. Authenticated UI acceptance was not
+performed by the agent; the operator had a browser session open, but no exact per-page observation
+was recorded for this attempt. The later closure is recorded below and does not rewrite this
+historical result.
 
 ## Evidence
 

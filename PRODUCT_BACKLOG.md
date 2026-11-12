@@ -756,7 +756,7 @@ are in `verification/DEPLOY-2.14.0-23-PLAN.md` and
 
 The first supervised status check saw a transient configd socket; manual `guard recover` passed and the wrapper now retries within a bounded window. The SMTP parser now normalises angle-bracketed addresses and ESMTP `SIZE=` values while retaining the single-recipient rule. The corrected guard keeps original, snapshot and restored database identities separate; its 35 mock/disposable-copy tests all pass, including distinguishing logically equal but physically different snapshots, rejecting normalised snapshot bytes as physical restoration, accepting original bytes, archiving WAL/SHM before replacement, capturing and restoring a real uncheckpointed WAL/SHM pair exactly, and leaving monitoring stopped on unsafe capture or restoration. This correction cannot retroactively prove the completed exercise's physical bytes. Evidence: `verification/monitoring-validation/EXECUTION-20261106.md` and `/root/dm-validation-2140/monitoring/20261106T083522Z/`.
 
-The remaining validation limits do not reopen DM-BL-009; they are separately identified. Physical DB byte identity for the completed exercise is **DM-BL-011** and remains a release blocker for an unqualified exact-restoration claim: the operation is traced and the logical state is verified, but the original bytes and their page map were never retained. The corrected guard now enforces original-byte identity for any future authorised run but cannot prove the historical bytes. Live `FRESH=1` and real OPNsense plugin registration/lifecycle are **DM-BL-012**; the disposable jail proves the call boundary but is not a real-host pass. Full reminder/ageing/CARP and daemon-generated notification/service-discovery paths are **DM-BL-013**, as are exact daemon-triggered attribution of the `notified_at` migration and external delivery. No further run is authorised. Issue #5 remains **OPEN**; §9.4 is paused.
+The remaining validation limits do not reopen DM-BL-009; they are separately identified. Physical DB byte identity for the completed exercise is **DM-BL-011** and remains a release blocker for an unqualified exact-restoration claim: the operation is traced and the logical state is verified, but the original bytes and their page map were never retained. The corrected guard now enforces original-byte identity for any future authorised run but cannot prove the historical bytes. Live `FRESH=1` and real OPNsense plugin registration/lifecycle were tracked as **DM-BL-012** and **closed on 12 November 2026** by explicit operator acceptance after lifecycle testing on `.23`. Full reminder/ageing/CARP and daemon-generated notification/service-discovery paths remain under **DM-BL-013**, as do the presence/service timestamp defect, exact daemon-triggered attribution of the `notified_at` migration and external delivery. No further run is authorised. Issue #5 remains **OPEN**; §9.4 is paused.
 
 **Main integration completed (7 November 2026):** draft PR #6 was reviewed and then fast-forwarded
 with no squash, rebase or force-push. The authenticated About/Features screenshot remains accepted
@@ -773,7 +773,8 @@ so review item H1b is closed.
 **Closure criterion (met):** the chosen `main` path was executed by fast-forwarding the exact
 reviewed head into `main` and validating the resulting SHA. Live `FRESH=1`, real
 `rc.configure_plugins` registration and full reminder/ageing/CARP/lifecycle behaviour were not
-claimed as part of this reconciliation item; they remain open as DM-BL-012 and DM-BL-013. The
+claimed as part of this reconciliation item. DM-BL-012 was later closed by explicit operator
+acceptance; DM-BL-013 remains open. The
 isolated fresh-install scenarios, the live successful-install rollback and the bounded two-cycle
 monitoring exercise remain validated evidence, not a transfer of those residual gates.
 
@@ -918,7 +919,8 @@ The normal 2.13.3 → 2.14.0 upgrade on `.23` and its live successful-install ro
 and are not this item. The outstanding work is specifically the **real-host fresh-install path and
 real plugin lifecycle**.
 
-**Attempt on 8 November 2026 — aborted; remains OPEN.** An expressly authorised uninstall and
+**Attempt on 8 November 2026 — aborted; DM-BL-012 was subsequently CLOSED on 12 November 2026.**
+An expressly authorised uninstall and
 fresh install of the exact 1,729,177-byte candidate on `.23` passed `CHECK_OK` and `INSTALL_OK`
 (64 targets, 10 core locales), and independently passed the 64-target manifest, 11 plugin plus 10
 core catalogue recomputation, real plugin/configd/daemon registration and initial disabled-default
@@ -982,6 +984,17 @@ direct service discovery and two loopback SMTP messages from directly invoked PH
 not exercise scheduled daemon-triggered service discovery, full reminder/ageing/CARP behaviour,
 daemon-generated notification delivery, exact daemon attribution of the `notified_at` migration,
 external SMTP/webhook/AdGuard/Pi-hole delivery or targeted Nmap delivery.
+
+The ageing scope now also includes the confirmed UTC/local `devices.last_seen` inconsistency from
+2.14.0 development on 12 November 2026. The defect arose because service verification wrote local
+wall time while hostwatch and the freshness/retirement readers used UTC. The candidate now writes
+canonical UTC and reads legacy mixed values conservatively without a production database rewrite.
+Historical monitoring-activation attribution remains **UNKNOWN** and is not a confirmed
+automatic-activation defect. Replacement candidate: 1,735,321 bytes, SHA-256
+`ecaecb04814af41479e1b6e614b05a63de9676158870d749ab51b63d5eee87df`; current evidence at
+`/root/dm-validation-2140/dm-bl-013-timestamp-r3-20261112/`, with the preceding review and
+investigation preserved under `/root/dm-validation-2140/dm-bl-013-timestamp-r2-20261112/` and
+`/root/dm-validation-2140/dm-bl-013-timestamp-20261112/`.
 
 **Closure evidence:** separately authorised tests on a disposable single OPNsense VM for the
 single-host paths and an isolated two-node CARP/pfsync pair for HA; external delivery requires a

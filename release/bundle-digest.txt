@@ -55,6 +55,16 @@
 #   772a6660e0ca5c6b7455e2751b0c404a1f25a4e1aaafc44167525d657eb6d299  1731225 bytes
 #       (the reviewed menu-cache/php-fpm repair candidate validated on .23; superseded by the
 #        residual cleanup for devicemonitor_locale.inc and actions_devicemonitor_update.conf)
+#   3675c7271ad3bbd3a04c325c9f7b03bfea80a19e6ff913c2c3114b78eaa46891  1731225 bytes
+#       (the residual uninstaller-cleanup candidate validated on .23; superseded by the UTC
+#        presence/service timestamp correction)
+#   21594061cf70dead4792abedcd29e1ea32e50ed2eb1c9e8ab489dceea931da26  1733785 bytes
+#       (transient timestamp-fix build made before the installer's release-input checksum pin
+#        was refreshed; never copied out as a candidate or deployed)
+#   19f7583aedede057fc8c61db77705f6d490864a18072ff9b0d27f6ae61f60da8  1733785 bytes
+#       (the UTC presence/service timestamp repair; superseded by the DST-aware review build)
+#   b5ffae79c4a7117e001a2c343487854ec588225f33c2088c7549ed9abc86124e  1734809 bytes
+#       (the first DST-aware review build; superseded by the fall-back cutoff correction)
 version 2.14.0
-bytes 1731225
-sha256 3675c7271ad3bbd3a04c325c9f7b03bfea80a19e6ff913c2c3114b78eaa46891
+bytes 1735321
+sha256 ecaecb04814af41479e1b6e614b05a63de9676158870d749ab51b63d5eee87df

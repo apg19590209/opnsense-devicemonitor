@@ -27,8 +27,9 @@ import json
 import sqlite3
 import tempfile
 from contextlib import closing
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -53,7 +54,8 @@ DEFAULTS = (
     / "defaults.json"
 )
 
-NOW = datetime(2026, 10, 31, 12, 0, 0)
+SYDNEY = ZoneInfo("Australia/Sydney")
+NOW = datetime(2026, 10, 31, 12, 0, 0, tzinfo=UTC)
 STAMP = "%Y-%m-%d %H:%M:%S"
 
 STALE_MAC = "aa:bb:cc:dd:ee:20"
@@ -84,11 +86,13 @@ def load_module():
         builtins.open = original_open
 
     module.log = lambda message: None
+    # These cases pin the policy, not whichever timezone happens to run CI.
+    module._system_local_timezone = lambda: UTC
     return module
 
 
 def stamp(delta):
-    return (NOW + delta).strftime(STAMP)
+    return (NOW + delta).astimezone(UTC).strftime(STAMP)
 
 
 def add_device(conn, mac, ip, last_seen):
@@ -123,6 +127,11 @@ def read_row(module, ip, port=22):
             "WHERE ip = ? AND port = ?",
             (ip, port),
         ).fetchone()
+
+
+def read_status(module, ip, port=22):
+    row = read_row(module, ip, port)
+    return row[0] if row else None
 
 
 def service_count(module):
@@ -608,6 +617,243 @@ def test_refresh_never_invents_or_rewinds_device():
     print("AGE_REFRESH_IS_FORWARD_ONLY=PASS")
 
 
+def test_utc11_and_utc_writers_store_the_same_instant():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        local_verified = datetime(2026, 11, 12, 21, 44, tzinfo=SYDNEY)
+        utc_verified = datetime(2026, 11, 12, 10, 44, tzinfo=UTC)
+        expected = "2026-11-12 10:44:00"
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, FRESH_MAC, FRESH_IP, stamp(-timedelta(days=60)))
+            module.upsert_device_service(
+                conn, FRESH_MAC, FRESH_IP, "VLAN60", "SSH", 22, "tcp",
+                "ssh_banner", "verified", local_verified,
+            )
+            add_device(conn, STALE_MAC, STALE_IP, stamp(-timedelta(days=60)))
+            module.upsert_device_service(
+                conn, STALE_MAC, STALE_IP, "VLAN60", "SSH", 22, "tcp",
+                "ssh_banner", "verified", utc_verified,
+            )
+            conn.commit()
+
+        assert device_last_seen(module, FRESH_IP) == expected
+        assert device_last_seen(module, STALE_IP) == expected
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            assert conn.execute(
+                "SELECT last_verified, last_checked FROM device_services "
+                "WHERE ip = ?", (FRESH_IP,)
+            ).fetchone() == (expected, expected)
+            assert conn.execute(
+                "SELECT last_verified, last_checked FROM device_services "
+                "WHERE ip = ?", (STALE_IP,)
+            ).fetchone() == (expected, expected)
+
+            module.record_service_miss(
+                conn, "SSH", "ssh_banner", FRESH_IP, 22, "VLAN60",
+                checked_at=local_verified,
+            )
+            conn.commit()
+
+        assert read_checked(module, FRESH_IP) == expected
+
+    print("TIMESTAMP_UTC11_AND_UTC=PASS")
+
+
+def test_utc11_legacy_presence_and_retirement_are_conservative():
+    module = load_module()
+    now = datetime(2026, 11, 12, 11, 0, tzinfo=UTC)
+    local_now = now.astimezone(SYDNEY)
+    retire_after = timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS)
+
+    utc_boundary = (now - retire_after).strftime(STAMP)
+    utc_past = (now - retire_after - timedelta(seconds=1)).strftime(STAMP)
+    utc_early_window = (now - retire_after + timedelta(hours=10)).strftime(STAMP)
+    local_boundary = (local_now - retire_after).strftime(STAMP)
+    local_delayed = (
+        local_now - retire_after - timedelta(hours=11) + timedelta(seconds=1)
+    ).strftime(STAMP)
+    local_expired = (
+        local_now - retire_after - timedelta(hours=11) - timedelta(seconds=1)
+    ).strftime(STAMP)
+
+    assert module._timestamp_age(
+        (now - timedelta(hours=1)).strftime(STAMP), now, SYDNEY
+    ) == timedelta(hours=1)
+    assert module._timestamp_age(
+        (local_now - timedelta(hours=1)).strftime(STAMP), now, SYDNEY
+    ) == timedelta(hours=1)
+
+    assert module.is_recently_seen(
+        (local_now - timedelta(minutes=5)).strftime(STAMP),
+        now=now,
+        legacy_tz=SYDNEY,
+    )
+    assert not module.is_recently_seen(
+        (now - timedelta(minutes=20)).strftime(STAMP),
+        now=now,
+        legacy_tz=SYDNEY,
+    )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, FRESH_MAC, FRESH_IP, utc_boundary)
+            add_service(conn, FRESH_MAC, FRESH_IP, "available", utc_boundary)
+
+            add_device(conn, STALE_MAC, STALE_IP, utc_past)
+            add_service(conn, STALE_MAC, STALE_IP, "available", utc_past)
+
+            early_mac = "aa:bb:cc:dd:ee:30"
+            early_ip = "198.51.100.30"
+            add_device(conn, early_mac, early_ip, utc_early_window)
+            add_service(conn, early_mac, early_ip, "available", utc_early_window)
+
+            local_mac = "aa:bb:cc:dd:ee:31"
+            local_ip = "198.51.100.31"
+            add_device(conn, local_mac, local_ip, local_boundary)
+            add_service(conn, local_mac, local_ip, "available", local_boundary)
+
+            delayed_mac = "aa:bb:cc:dd:ee:33"
+            delayed_ip = "198.51.100.33"
+            add_device(conn, delayed_mac, delayed_ip, local_delayed)
+            add_service(conn, delayed_mac, delayed_ip, "available", local_delayed)
+
+            expired_mac = "aa:bb:cc:dd:ee:34"
+            expired_ip = "198.51.100.34"
+            add_device(conn, expired_mac, expired_ip, local_expired)
+            add_service(conn, expired_mac, expired_ip, "available", local_expired)
+
+            add_device(conn, "aa:bb:cc:dd:ee:32", "198.51.100.32",
+                       stamp(-timedelta(hours=1)))
+            conn.commit()
+
+        aged, retired = module.age_stale_service_state(
+            now=now, legacy_tz=SYDNEY
+        )
+
+        assert (aged, retired) == (0, 2), (aged, retired)
+        assert read_row(module, FRESH_IP) is not None
+        assert read_row(module, early_ip) is not None
+        assert read_row(module, local_ip) is not None
+        assert read_row(module, delayed_ip) is not None
+        assert read_row(module, STALE_IP) is None
+        assert read_row(module, expired_ip) is None
+
+    print("TIMESTAMP_UTC11_RETIREMENT_BOUNDARY=PASS")
+
+
+def test_legacy_unknown_age_is_not_premature_and_eventually_expires():
+    module = load_module()
+    now = datetime(2026, 11, 12, 11, 0, tzinfo=UTC)
+    local_now = now.astimezone(SYDNEY)
+    age_after = timedelta(days=module.SERVICE_UNKNOWN_AFTER_DAYS)
+
+    utc_boundary = (now - age_after).strftime(STAMP)
+    utc_expired = (now - age_after - timedelta(seconds=1)).strftime(STAMP)
+    local_boundary = (local_now - age_after).strftime(STAMP)
+    local_delayed = (
+        local_now - age_after - timedelta(hours=11) + timedelta(seconds=1)
+    ).strftime(STAMP)
+    local_expired = (
+        local_now - age_after - timedelta(hours=11) - timedelta(seconds=1)
+    ).strftime(STAMP)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_service(conn, "aa:bb:cc:dd:ee:40", "198.51.100.40",
+                        "unavailable", utc_boundary, port=2240)
+            add_service(conn, "aa:bb:cc:dd:ee:41", "198.51.100.41",
+                        "unavailable", utc_expired, port=2241)
+            add_service(conn, "aa:bb:cc:dd:ee:42", "198.51.100.42",
+                        "unavailable", local_boundary, port=2242)
+            add_service(conn, "aa:bb:cc:dd:ee:43", "198.51.100.43",
+                        "unavailable", local_delayed, port=2243)
+            add_service(conn, "aa:bb:cc:dd:ee:44", "198.51.100.44",
+                        "unavailable", local_expired, port=2244)
+            conn.commit()
+
+        aged, retired = module.age_stale_service_state(
+            now=now, legacy_tz=SYDNEY
+        )
+
+        assert (aged, retired) == (2, 0), (aged, retired)
+        assert read_status(module, "198.51.100.40", 2240) == "unavailable"
+        assert read_status(module, "198.51.100.41", 2241) == "unknown"
+        assert read_status(module, "198.51.100.42", 2242) == "unavailable"
+        assert read_status(module, "198.51.100.43", 2243) == "unavailable"
+        assert read_status(module, "198.51.100.44", 2244) == "unknown"
+
+    print("TIMESTAMP_UNKNOWN_AGE_BOUNDARY=PASS")
+
+
+def test_dst_timestamp_boundaries_are_history_aware():
+    module = load_module()
+
+    assert module.utc_timestamp(
+        datetime(2026, 10, 4, 1, 59, 59, tzinfo=SYDNEY)
+    ) == "2026-10-03 15:59:59"
+    assert module.utc_timestamp(
+        datetime(2026, 10, 4, 3, 0, 0, tzinfo=SYDNEY)
+    ) == "2026-10-03 16:00:00"
+
+    ambiguous = datetime(2026, 4, 5, 2, 30, tzinfo=SYDNEY)
+    assert module.utc_timestamp(ambiguous.replace(fold=0)) == \
+        "2026-04-04 15:30:00"
+    assert module.utc_timestamp(ambiguous.replace(fold=1)) == \
+        "2026-04-04 16:30:00"
+
+    spring_now = datetime(2026, 10, 3, 16, 30, tzinfo=UTC)
+    assert module._timestamp_age(
+        "2026-10-04 01:15:00", spring_now, SYDNEY
+    ) == timedelta(hours=1, minutes=15)
+    assert module._timestamp_age(
+        "2026-10-04 03:25:00", spring_now, SYDNEY
+    ) == timedelta(minutes=5)
+
+    fall_now = datetime(2026, 4, 4, 16, 30, tzinfo=UTC)
+    fall_ages = module._timestamp_age_bounds(
+        "2026-04-05 02:16:00", fall_now, SYDNEY
+    )
+    assert timedelta(minutes=14) in fall_ages, fall_ages
+    assert timedelta(hours=1, minutes=14) in fall_ages, fall_ages
+    assert module.is_recently_seen(
+        "2026-04-05 02:16:00", now=fall_now, legacy_tz=SYDNEY
+    )
+
+    new_york = ZoneInfo("America/New_York")
+    cutoff_now = datetime(2026, 4, 1, 12, 0, tzinfo=UTC)
+    assert module._conservative_cutoff(
+        cutoff_now, 30, new_york
+    ) == "2026-03-02 07:00:00"
+    assert module._conservative_cutoff(
+        datetime(2026, 11, 8, 6, 30, tzinfo=UTC), 7, new_york
+    ) == "2026-11-01 00:30:00"
+
+    canonical_now = datetime(2026, 11, 12, 12, 0, tzinfo=UTC)
+    assert module._timestamp_age(
+        (canonical_now - timedelta(hours=20)).strftime(STAMP),
+        canonical_now,
+        SYDNEY,
+    ) == timedelta(hours=20)
+    assert module._timestamp_age(
+        (canonical_now - timedelta(hours=6)).strftime(STAMP),
+        canonical_now,
+        new_york,
+    ) == timedelta(hours=1)
+
+    print("TIMESTAMP_DST_BOUNDARIES=PASS")
+
 
 def main():
     test_window_constants()
@@ -625,6 +871,10 @@ def main():
     test_verified_service_refreshes_device_last_seen()
     test_authoritative_service_does_not_refresh_device()
     test_refresh_never_invents_or_rewinds_device()
+    test_utc11_and_utc_writers_store_the_same_instant()
+    test_utc11_legacy_presence_and_retirement_are_conservative()
+    test_legacy_unknown_age_is_not_premature_and_eventually_expires()
+    test_dst_timestamp_boundaries_are_history_aware()
     test_recent_probe_prevents_ageing()
     test_miss_stamps_last_checked_and_prevents_reflip_cycle()
     test_init_db_adds_and_backfills_last_checked()
