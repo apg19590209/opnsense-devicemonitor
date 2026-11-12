@@ -28,6 +28,7 @@ PRESERVED = [
 ]
 REMEDIATION = 'fix/pruning-remediation-20261103'
 INTEGRATION = 'integration/dm-bl-009-reconcile-20261105'
+DM_BL_012 = 'fix/dm-bl-012-uninstaller-20261112'
 
 
 def trigger_block(name):
@@ -53,6 +54,13 @@ def test_integration_branch_can_be_tested():
     print('  integration trigger   push-only, %s' % INTEGRATION)
 
 
+def test_dm_bl_012_branch_can_be_tested():
+    branches = trigger_block('  push')
+    assert ('- %s' % DM_BL_012) in branches, branches
+    assert DM_BL_012 not in trigger_block('  pull_request')
+    print('  DM-BL-012 trigger     push-only, %s' % DM_BL_012)
+
+
 def test_existing_branches_are_preserved():
     push = trigger_block('  push')
     pull = trigger_block('  pull_request')
@@ -74,7 +82,8 @@ def test_every_named_suite_exists():
     for required in ('test_upgrade_predecessors.py', 'test_bundle_determinism.py',
                      'test_rollback_isolated.py', 'test_prune_plan.py',
                      'test_locale_merge.py',
-                     'test_integration_reconciliation.py'):
+                     'test_integration_reconciliation.py',
+                     'test_uninstaller.py'):
         assert required in names, '%s is not wired into CI' % required
     print('  suites referenced     %d (all present)' % len(names))
 
@@ -94,6 +103,11 @@ def test_determinism_step_is_wired():
     print('  determinism step      wired')
 
 
+def test_uninstaller_step_is_wired():
+    assert 'run: python3 tests/test_uninstaller.py' in WORKFLOW
+    print('  uninstaller step      wired')
+
+
 def test_guard_step_requires_thirty_five_tests():
     step = re.search(
         r'name: Validate monitoring guard safety \(DM-BL-011\)\n(.*?)(?=^      - name:)',
@@ -109,10 +123,12 @@ def test_guard_step_requires_thirty_five_tests():
 CASES = [
     test_remediation_branch_can_be_tested,
     test_integration_branch_can_be_tested,
+    test_dm_bl_012_branch_can_be_tested,
     test_existing_branches_are_preserved,
     test_every_named_suite_exists,
     test_predecessor_step_requires_ten_passes,
     test_determinism_step_is_wired,
+    test_uninstaller_step_is_wired,
     test_guard_step_requires_thirty_five_tests,
 ]
 

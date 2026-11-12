@@ -278,7 +278,9 @@ Klíčové změny:
 
 Dříve používal `service devicemonitor status`, který vrátil exit 1, čímž zastavení selhalo. Nyní používá `pkill -f monitor_daemon.py`, které vždy funguje bez ohledu na stav pidfile.
 
-Také odstraněno rozbité `configctl webgui restart` a `service php-fpm restart` — tyto příkazy buď nejsou dostupné nebo jsou zbytečné na OPNsense 26.x.
+Odinstalační skript nyní invaliduje aktivní cache menu a ACL v `/var/lib/php/tmp` a již nevolá
+nepodporovaný příkaz `service php-fpm restart`. Podporovaná akce `configctl webgui restart` zůstává
+zachována podle nainstalované konfigurace OPNsense.
 
 ---
 

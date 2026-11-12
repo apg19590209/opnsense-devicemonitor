@@ -31,6 +31,9 @@ on:
       # DM-BL-009 reconciliation (5 November 2026). Push-only, like the remediation branch:
       # the eventual pull request is against `main`, whose existing rules already apply.
       - integration/dm-bl-009-reconcile-20261105
+      # DM-BL-012 uninstaller repair (12 November 2026). Push-only; the eventual pull request
+      # targets `main`, so the base-branch rules above already cover it.
+      - fix/dm-bl-012-uninstaller-20261112
   pull_request:
     branches:
       - v2.5-development
@@ -238,6 +241,9 @@ jobs:
           sh -n release/build-legacy-evidence.sh
           sh -n release/build-bundle.sh
           sh -n release/merge-opnsense-catalog.sh
+
+      - name: Validate the uninstaller in an isolated root
+        run: python3 tests/test_uninstaller.py
 
       # The bundle is what a firewall actually installs: build it and verify the pinned
       # inputs from inside the staged tree exactly as install-unattended.sh does. The digest

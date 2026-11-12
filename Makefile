@@ -117,8 +117,8 @@ db:
 
 clean:
 	@echo "$(YELLOW)Clearing cache...$(NC)"
-	@rm -f /tmp/opnsense_menu_cache.xml
-	@rm -f /tmp/opnsense_acl_cache.json
+	@rm -f /var/lib/php/tmp/opnsense_menu_cache.xml
+	@rm -f /var/lib/php/tmp/opnsense_acl_cache.json
 	@rm -rf /var/cache/opnsense/templates/*
 	@echo "$(YELLOW)Restarting services...$(NC)"
 	@service configd restart

@@ -352,7 +352,9 @@ Key changes:
 
 Previously used `service devicemonitor status` which returned exit 1, causing the stop to fail. Now uses `pkill -f monitor_daemon.py` which always works regardless of pidfile state.
 
-Also removed broken `configctl webgui restart` and `service php-fpm restart` calls — these are either not available or unnecessary on OPNsense 26.x.
+The uninstaller now invalidates the active menu and ACL caches under `/var/lib/php/tmp` and no
+longer calls the unsupported `service php-fpm restart`. It retains the supported `configctl webgui
+restart` action defined by the installed OPNsense configuration.
 
 ---
 

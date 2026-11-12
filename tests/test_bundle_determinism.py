@@ -9,6 +9,9 @@ This suite does what the review asked for: it builds the bundle in **two separat
 checkouts** of the tested commit, gives each checkout deliberately different file
 timestamps, and requires identical bytes. It then compares the result with the digest
 recorded in `release/bundle-digest.txt`, so the published identity cannot drift silently.
+When the source checkout is dirty, its tracked changes are applied to two independent clean
+checkouts. Untracked files are deliberately excluded, so an untracked bundle input changes the
+digest and fails the comparison instead of slipping into a candidate unnoticed.
 """
 import gzip
 import os
@@ -30,11 +33,19 @@ def git(*args, cwd=ROOT):
 
 
 def make_checkout(destination, sha):
+    dirty = bool(git('status', '--porcelain'))
     subprocess.run(['git', 'clone', '--quiet', '--no-hardlinks', str(ROOT), str(destination)],
                    capture_output=True, text=True, check=True, timeout=300)
     subprocess.run(['git', '-C', str(destination), 'checkout', '--quiet', '--detach', sha],
                    capture_output=True, text=True, check=True, timeout=120)
     assert git('rev-parse', 'HEAD', cwd=destination) == sha
+    if dirty:
+        patch = subprocess.run(['git', 'diff', '--binary', sha], cwd=ROOT,
+                               capture_output=True, text=True, check=True, timeout=120)
+        applied = subprocess.run(
+            ['git', '-C', str(destination), 'apply', '--binary', '-'],
+            input=patch.stdout, capture_output=True, text=True, timeout=120)
+        assert applied.returncode == 0, (applied.stdout, applied.stderr)
 
 
 def age(tree, stamp):
