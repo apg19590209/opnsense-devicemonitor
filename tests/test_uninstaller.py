@@ -22,6 +22,9 @@ DB_CONFIG = '/var/db/devicemonitor/config.json'
 DB_FILE = '/var/db/devicemonitor/devices.db'
 CONFIG_XML = '/conf/config.xml'
 RC_LOCAL = '/etc/rc.conf.local'
+LOCALE_INC = '/usr/local/etc/inc/devicemonitor_locale.inc'
+ACTION_UPDATE = '/usr/local/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf'
+PLUGIN_MANIFEST = ROOT / 'release/v2.14.0-runtime.manifest'
 
 
 def script(body):
@@ -142,6 +145,8 @@ exit 0
 def test_static_contract():
     text = UNINSTALLER.read_text()
     assert MENU_CACHE in text
+    assert LOCALE_INC in text, 'uninstaller must remove the plugin locale bootstrap'
+    assert ACTION_UPDATE in text, 'uninstaller must remove the update configd action'
     obsolete_clean = re.compile(
         r'(?m)^\s*(?:@)?rm\s+-f\s+/tmp/opnsense_menu_cache\.xml\s*$')
     assert not obsolete_clean.search(text)
@@ -175,6 +180,8 @@ def test_cache_invalidation_and_preservation():
         box.write(ACL_CACHE, '{}\n')
         box.write('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py', 'plugin\n')
         box.write(DB_FILE, 'device data\n')
+        box.write(LOCALE_INC, 'plugin locale bootstrap\n')
+        box.write(ACTION_UPDATE, '[update]\n')
         preserved = {
             CONFIG_XML: '<opnsense><system/></opnsense>\n',
             RC_LOCAL: 'gateway_enable="YES"\n',
@@ -182,6 +189,11 @@ def test_cache_invalidation_and_preservation():
             '/var/lib/php/tmp/unrelated.xml': 'unrelated cache namespace\n',
             '/usr/local/opnsense/mvc/app/languages/en_US/LC_MESSAGES/other.mo': 'other locale\n',
             '/var/backups/devicemonitor/core-locale/unrelated.txt': 'unrelated backup\n',
+            '/usr/local/etc/inc/unrelated.inc': 'unrelated include\n',
+            '/usr/local/etc/inc/plugins.inc.d/unrelated.inc': 'unrelated plugin include\n',
+            '/usr/local/opnsense/service/conf/actions.d/actions_unrelated.conf': '[unrelated]\n',
+            '/usr/local/opnsense/service/conf/actions.d/actions_devicemonitor_extra.conf':
+                'not a plugin-owned action\n',
         }
         for path, body in preserved.items():
             box.write(path, body)
@@ -193,6 +205,8 @@ def test_cache_invalidation_and_preservation():
         assert not box.path(ACL_CACHE).exists()
         assert not box.path('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor').exists()
         assert not box.path('/var/db/devicemonitor').exists(), 'normal uninstall removes plugin data'
+        assert not box.path(LOCALE_INC).exists(), 'locale bootstrap was left behind'
+        assert not box.path(ACTION_UPDATE).exists(), 'update action was left behind'
         for path, body in preserved.items():
             assert box.path(path).read_text() == body, path
 
@@ -217,6 +231,8 @@ def test_silent_mode_preserves_plugin_data_and_skips_services():
         box.write(MENU_CACHE, '<menu>stale</menu>\n')
         box.write(DB_FILE, 'device data\n')
         box.write(DB_CONFIG, '{"enabled": 0}\n')
+        box.write(LOCALE_INC, 'plugin locale bootstrap\n')
+        box.write(ACTION_UPDATE, '[update]\n')
 
         done = box.run('--silent')
 
@@ -224,10 +240,59 @@ def test_silent_mode_preserves_plugin_data_and_skips_services():
         assert box.path(DB_FILE).read_text() == 'device data\n'
         assert box.path(DB_CONFIG).read_text() == '{"enabled": 0}\n'
         assert not box.path(MENU_CACHE).exists()
+        assert not box.path(LOCALE_INC).exists()
+        assert not box.path(ACTION_UPDATE).exists()
         commands = box.commands()
         assert 'rc.configure_plugins' not in commands, commands
         assert not any(command.startswith('service:') for command in commands), commands
         assert not any(command.startswith('configctl:') for command in commands), commands
+    finally:
+        box.close()
+
+
+def test_locale_bootstrap_and_update_action_are_removed_only():
+    """The two 12 November residuals are plugin-owned files, not directory-wide globs."""
+    box = Sandbox()
+    try:
+        box.write(LOCALE_INC, 'plugin locale bootstrap\n')
+        box.write(ACTION_UPDATE, '[update]\n')
+        preserved = {
+            '/usr/local/etc/inc/unrelated.inc': 'unrelated include\n',
+            '/usr/local/opnsense/service/conf/actions.d/actions_unrelated.conf': '[unrelated]\n',
+            '/usr/local/opnsense/service/conf/actions.d/actions_devicemonitor_extra.conf':
+                'not a plugin-owned action\n',
+        }
+        for path, body in preserved.items():
+            box.write(path, body)
+
+        done = box.run()
+
+        assert done.returncode == 0, (done.stdout, done.stderr)
+        assert not box.path(LOCALE_INC).exists()
+        assert not box.path(ACTION_UPDATE).exists()
+        for path, body in preserved.items():
+            assert box.path(path).read_text() == body, path
+    finally:
+        box.close()
+
+
+def test_every_manifest_target_is_removed():
+    """A normal uninstall must leave no installed payload target behind."""
+    box = Sandbox()
+    try:
+        targets = []
+        for digest, mode, source, target in (
+                line.split() for line in PLUGIN_MANIFEST.read_text().splitlines() if line.strip()):
+            assert re.fullmatch(r'[0-9a-f]{64}', digest), digest
+            box.write(target, 'payload for %s\n' % source, mode=int(mode, 8))
+            targets.append(target)
+        assert len(targets) == 42, targets
+
+        done = box.run()
+
+        assert done.returncode == 0, (done.stdout, done.stderr)
+        leftovers = [target for target in targets if box.path(target).exists()]
+        assert not leftovers, 'uninstaller left manifest targets: %r' % leftovers
     finally:
         box.close()
 
@@ -341,6 +406,8 @@ CASES = [
     test_static_contract,
     test_cache_invalidation_and_preservation,
     test_silent_mode_preserves_plugin_data_and_skips_services,
+    test_locale_bootstrap_and_update_action_are_removed_only,
+    test_every_manifest_target_is_removed,
     test_required_command_failures_propagate,
     test_isolated_root_must_be_canonical_and_not_live_root,
     test_recorded_core_target_cannot_escape_the_root,

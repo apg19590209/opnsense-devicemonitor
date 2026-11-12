@@ -2,7 +2,7 @@
 
 ## Current state
 
-Last updated: 7 November 2026
+Last updated: 12 November 2026
 
 Branches: `main` (HEAD `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`, the Device Monitor
 2.14.0 source line including the DM-BL-009 closeout documentation and the integrated DM-BL-010
@@ -24,6 +24,16 @@ until DM-BL-011/012/013 are closed or explicitly accepted. The final release com
 current uncommitted records, the guard fix and its CI wiring, be reviewed, integrated without
 rewriting history, and pass exact-SHA CI.
 
+On 8 November 2026 an expressly authorised real-host uninstall/fresh-install attempt ran on `.23`
+with the exact 2.14.0 candidate. The install and registration checks passed, but the run was aborted
+before reboot after a configuration save enabled monitoring and caused one scan to probe
+`.252`/`.253`. The daemon was stopped and the verified recovery restored the accepted 2.14.0 data,
+configuration, 63-target manifest and disabled settings. DM-BL-012 remained **OPEN** until the
+12 November 2026 operator-accepted `.23` lifecycle closure; the 8 November attempt did
+not establish reboot persistence or an authenticated UI pass. Two uninstaller defects were found:
+the menu-cache path is wrong and `php-fpm` is not a service on this OPNsense host. See
+`verification/DM-BL-012-FRESH-23-ATTEMPT-20261108.md`.
+
 ### 2.14.0 — main source and `.23` deployment; not yet published
 
 | Item | Value |
@@ -31,6 +41,7 @@ rewriting history, and pass exact-SHA CI.
 | Branch | `main` at `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`; PR #6 fast-forwarded the reviewed `integration/dm-bl-009-reconcile-20261105` history from `d5d73ed` to `282517744260920b18c9217efd09ce738af21d70`, and PR #7 added the DM-BL-010 catalogue-header correction |
 | Payload | `release/v2.14.0-runtime.manifest`, 42 rows; 63 generated targets on an upgrade and 64 on a fresh install |
 | Bundle | `dm-v2.14.0-runtime.tar.gz`, 1,729,177 bytes, SHA-256 `90afa55dd826c0dc3be8a23902b809baa465e25191dc372dc6cc2ef4e57fc243`; 60 members; four byte-identical builds. The earlier 1,725,593-byte `5149bfd4…` main-integration bundle and its evidence remain preserved as superseded |
+| Lifecycle candidate | `dm-v2.14.0-runtime-residual-repair.tar.gz`, 1,731,225 bytes, SHA-256 `3675c7271ad3bbd3a04c325c9f7b03bfea80a19e6ff913c2c3114b78eaa46891`; 60 members. It supersedes the preserved `772a6660…` menu-cache/php-fpm repair candidate and adds uninstaller removal of `devicemonitor_locale.inc` and `actions_devicemonitor_update.conf`. `BUNDLE_DETERMINISM=PASS` (two clean checkouts, canonical headers, recorded digest) |
 | CI | Exact-candidate CI run `42358468231`: **success**; exact-main CI is recorded separately below. Linux CI does not execute the FreeBSD installer-jail or live-service scenarios |
 | Reviewed-candidate CI | Run `42368818807` at `4611447089e2482a0c6af7a1844e9f6fa16c84d1`: **success**. Logs repeat the release-input, manifest, locale-merge, ten-case predecessor and bundle-determinism passes and reproduce 1,729,177 bytes / `90afa55d…`. The native runtime matrix remained skipped on the GitHub runner for missing assets; a separate local production-engine run subsequently passed (see below) |
 | Main integration CI | Exact-main workflow-dispatch run `42359428985` at `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`: **success**. Logs report `RELEASE_INPUTS=PASS cases=7` and `V2140_RELEASE_MANIFEST=PASS`; the DM-BL-010 candidate bundle is 1,729,177 bytes / `90afa55d…`. Historical DM-BL-009 run `42342362864` remains recorded in `verification/MAIN-INTEGRATION-2.14.0-20261107.md` |
@@ -40,6 +51,7 @@ rewriting history, and pass exact-SHA CI.
 | Local validation | The corrected candidate builds reproducibly; focused reconciliation, installer/pruning, Python, PHP, JavaScript, catalogue and both language-engine suites passed locally. All five upgrade FreeBSD installer-jail scenarios passed on 6 November: `check`, `install`, `repair`, `rollback` and `failclosed`. The isolated `fresh` and `fresh-rollback` scenarios also passed on 6 November: 64 targets, a 64-row record, no database/configuration, a running daemon and complete restoration to empty state after an injected failure. Rollback restored all 63 upgrade targets, the prune fixture, the record and 19 core-locale state/pristine files with zero conflicts or failures |
 | Deployment | `.23` only: OPNsense `26.7.8_2`; Device Monitor 2.13.3 → 2.14.0 using the normal upgrade path (`FRESH=1` not used). The execution record is `verification/DEPLOY-2.14.0-23-PLAN.md` |
 | Installation | Phase 1 exact-candidate repair: `INSTALL_OK version=2.14.0 files=63 core_locales=10 pruned=0 backup=/var/backups/devicemonitor/install-v214.Uwwqu1 daemon_restarted=1 unchanged=63 repaired=0`; see `verification/PHASE1-EXACT-CANDIDATE-23-20261107.md` |
+| Real-host fresh-install attempt | **ABORTED before reboot on 8 November 2026; recovered to the accepted 2.14.0 state.** `CHECK_OK … predecessor=fresh files=64 core_locales=10` and `INSTALL_OK … files=64 core_locales=10` passed. A concurrent configuration save set `enabled=1`; one scan probed `.252`/`.253`; no email/webhook delivery occurred. Daemon stopped and recovery restored `027594eb…` / `796d28c7…`, 63 targets and `enabled=0`. DM-BL-012 remained OPEN until the 12 November 2026 operator-accepted `.23` lifecycle closure (see the closure section below). Evidence: `verification/DM-BL-012-FRESH-23-ATTEMPT-20261108.md` |
 | Live rollback validation | **PASS**: preparatory restore to 2.13.3 used `JeYC44`; a fresh 2.14.0 test installation created `zGJRuq`; the live successful-install rollback restored 61 targets and the 2.13.3 record with `ROLLBACK_SUMMARY=restored=31 skipped=32 conflicts=0 failed=0` and core-locale `restored=19 removed=0 conflicts=0 failed=0`; the final 2.14.0 reinstall created `qMPS7n` |
 | Acceptance | Phase 1 PASS: 42/42 manifest rows and 63/63 installer-plan/record targets matched digest/mode/owner/group; 21 `.mo` locale rows plus two `.po` source rows; ten core and eleven sidecar catalogues warning-free; nine available pristine translations preserved and `nl_NL` plugin-only as expected; `/conf/config.xml` `e86a7058…`, Device Monitor configuration `027594eb…`, logical DB `d7ed7f81…` and physical DB `796d28c7…` unchanged; SQLite `ok`; daemon `16776` → `18384` alive at 60 seconds; configd `728` → `328`; monitoring disabled with no WAL/SHM or `2525` listener. Operator-supplied authenticated evidence received 7 November 2026 (Australia/Sydney) shows Device Monitor `v2.14.0` and `v2.14.0 Features and Enhancements` in the About screenshot; the operator confirms Devices loads without error. No exact observation time was recorded |
 | State after §9.3 rollback validation (historical checkpoint) | PASS: Device Monitor `2.14.0`; 63 targets and 63-row record `d891ce68…`; database `c17874a7…`, Device Monitor configuration `027594eb…` and OPNsense configuration `c2ce5800…` unchanged at that checkpoint; daemon PID `49278` → `74577`; configd PID `30312` → `32439`; daemon alive after five seconds; monitoring `enabled=0`; no WAL/SHM. The later bounded §9.4 exercise changed the physical database representation to the consistent snapshot `796d28c7…` and retained `15ce9e6c…` as the OPNsense configuration at that historical checkpoint. The operator subsequently accepted `e86a7058…` as the Phase 1 baseline, and Phase 1 retained it unchanged |
@@ -78,8 +90,8 @@ matrix was separately validated on 7 November. The live run had no sparse-header
 | Native runtime matrix | **PASS** — nine languages, ten pages and 490 keys per language through the production Phalcon/Volt/ViewTranslator path; `nl_NL` selector gap remains documented. Report: `/root/dm-validation-2140/language-runtime-2.14.0-20261107.md`; explanation: `verification/LANGUAGE-ACCEPTANCE-GAP-20261107.md` |
 | Phase 2A guard rehearsal | **PASS** — real DB/WAL/SHM capture, mutation detection, snapshot-equivalence rejection, exact-byte restore and post-state archive. The pass found and fixed a snapshot-side-effect defect; all 35 guard tests pass locally. The suite is now wired into the validation-only CI workflow with exact `Ran 35 tests`/`OK` assertions; that new step still needs an exact-SHA run. Evidence: `verification/monitoring-validation/PHASE2A-DISPOSABLE-20261107.md` and `/root/dm-validation-2140/phase2a-guard-20261107T123250Z/` |
 | Historical original bytes | **Not recovered** — 128 physical database candidates and 67 archives were checked read-only; no `c17874a7…` copy exists in the searched evidence. A supplemental `/root/dm-backups` scan found no database candidate or `devices.db` archive member. Common SQLite copy transformations on a retained `796d28c7…` copy did not reproduce the hash. DM-BL-011 remains OPEN pending explicit operator acceptance or a new original-byte source. Evidence: `verification/DM-BL-011-BYTE-RECOVERY-20261107.md` |
-| Phase 3 infrastructure | **Blocked** — no `kern.vmm`, `/dev/vmm`, `vm-bhyve`, disposable VM image or approved external hypervisor is recorded; `.23` is not a fresh-install target and `.252`/`.253` are prohibited. Exact setup/test plan: `verification/PHASE3-DISPOSABLE-OPNSENSE-VM-PLAN-20261107.md` |
-| Publication | **NO-GO** — DM-BL-011 needs acceptance/evidence; DM-BL-012 needs a disposable OPNsense VM; DM-BL-013 needs single-host, isolated-HA and approved external-delivery tests. The consolidated plan is `verification/VALIDATION-CLOSURE-2.14.0-20261107.md` |
+| Phase 3 infrastructure | **Still requires a disposable VM** — no `kern.vmm`, `/dev/vmm`, `vm-bhyve`, disposable VM image or approved external hypervisor is recorded. One expressly authorised `.23` attempt was aborted and recovered; `.23` remains the existing integration testbed rather than a reusable fresh-install target. `.252`/`.253` remain prohibited. Exact setup/test plan: `verification/PHASE3-DISPOSABLE-OPNSENSE-VM-PLAN-20261107.md` |
+| Publication | **NO-GO** — DM-BL-011 needs acceptance/evidence; DM-BL-012 was **CLOSED** on 12 November 2026 by the operator-accepted `.23` lifecycle validation; DM-BL-013 needs single-host, isolated-HA and approved external-delivery tests. The consolidated plan is `verification/VALIDATION-CLOSURE-2.14.0-20261107.md` |
 | Issue #5 | **OPEN** — the reporter confirmed successful published v2.12.1 installation and version display; service health and normal page loading remain for reporter confirmation. This is external, does not require 2.14.0 publication, and no reply has been posted |
 
 ### §9.4 residual-gap classification
@@ -87,7 +99,7 @@ matrix was separately validated on 7 November. The live run had no sparse-header
 | Gap | Classification | Rationale |
 |---|---|---|
 | Physical DB byte identity (`c17874a7…` → `796d28c7…`) | **Open: DM-BL-011** — blocks an unqualified exact-restoration claim for the completed exercise; recurrence is corrected in the guard | Logical digest, schema, integrity and row counts match, so data integrity is not in question. The live replacement is traced to the historical guard's `796d28c7…` snapshot and its `08:32:04Z` recovery copy; that guard's physical expectation was the snapshot hash, not the original live hash. The original `c17874a7…` bytes were never retained, leaving the internal header/page delta unverifiable. A 7 November disposable Phase 2A rehearsal found and fixed a snapshot-side-effect defect, then passed separate DB/WAL/SHM capture, mutation detection, exact-byte restore, snapshot-equivalence rejection and post-state archiving; all 35 guard tests pass. A repeat search of retained `/root` and `/var/backups/devicemonitor` database files found no `c17874a7…` copy. The guard protects future runs but cannot retroactively prove the completed exercise. |
-| Live `FRESH=1` and real OPNsense plugin registration/lifecycle | **Open: DM-BL-012** | The disposable jail and copy-only fixtures prove call boundaries, not real-host registration or lifecycle. Live `FRESH=1` remains untested. |
+| Live `FRESH=1` and real OPNsense plugin registration/lifecycle | **Closed: DM-BL-012** (12 November 2026) | The disposable jail and copy-only fixtures prove call boundaries, not reboot persistence. A real-host fresh install on `.23` passed registration and startup on 8 November 2026 but was aborted before reboot after monitoring was enabled, then recovered. On 12 November 2026 the operator explicitly superseded the disposable-VM gate and accepted the residual risk. The `772a6660…` menu-cache/`php-fpm` candidate completed uninstall, fresh-state reinstall, registration, one reboot, cache/menu regeneration, data persistence and operator-attested authenticated UI checks on `.23`. The `3675c7271…` residual-cleanup candidate then repeated uninstall/reinstall and was directly tested; reboot persistence remains reused from the preceding candidate because the delta affects uninstall cleanup only. This is lifecycle testing on an existing development host, not a pristine VM. Historical monitoring activation remains **UNKNOWN**; this is an un-attributed settings write, not a confirmed automatic-activation defect, and no documented criterion requires its attribution. |
 | Full reminder/ageing/CARP and daemon-generated notification/service-discovery paths | **Open: DM-BL-013** | The two scheduled scans did not run scheduled service discovery; reminders, ageing and CARP were not exercised, and helper emails were direct PHP calls. |
 | Daemon-triggered attribution of the `notified_at` migration | **Open: DM-BL-013** — not a blocker for the observed live mutation | The column was observed live-present after direct discovery and before restoration; the caller beyond the direct-discovery path was not separately instrumented. |
 | External SMTP, webhook, AdGuard/Pi-hole and targeted-Nmap delivery | **Open: DM-BL-013** — intentionally excluded from the prior scope | These paths were prohibited by the authorised scope; only the loopback SMTP sink was used. |
@@ -220,7 +232,8 @@ The 2.13.3 installer now has executable end-to-end coverage that does not touch 
   those live lifecycle gaps are now closed by host evidence.
 * The 2.14.0 harness later added isolated `fresh` and `fresh-rollback` scenarios. They passed on
   6 November, but live `FRESH=1` on a real OPNsense host remains untested and must not be selected
-  on this existing `.23` installation.
+  on this existing `.23` installation. This was superseded on 12 November 2026 when the operator
+  explicitly authorised the `.23` lifecycle; see the closure section below.
 * Rollback was **not invoked** by the 2.13.3 deployment. The later §9.3 2.14.0 successful-install
   live rollback cycle passed on `.23`; it is separate from the historical M5 sandbox result.
 * The historical pre-deployment sandbox run did not touch `.23`, `.253` or `.252`; the later
@@ -228,10 +241,11 @@ The 2.13.3 installer now has executable end-to-end coverage that does not touch 
 
 **Next step:** 2.14.0 publication is **NO-GO** under the revised closure objective. The exact
 candidate passed Phase 1 and authenticated About/Features/Devices-loading evidence was received on
-7 November 2026; Phase 2A and the native runtime matrix now pass. DM-BL-011 still needs original bytes
-or explicit operator acceptance, while DM-BL-012 and DM-BL-013 need a disposable OPNsense VM,
-single-host monitoring tests and an isolated HA pair respectively. Issue #5 remains OPEN pending
-reporter confirmation. `.23` remains on the accepted exact candidate with monitoring disabled.
+7 November 2026; Phase 2A and the native runtime matrix now pass. DM-BL-011 still needs original
+bytes or explicit operator acceptance; DM-BL-012 was closed on 12 November 2026 by the
+operator-accepted `.23` lifecycle; DM-BL-013 still needs single-host monitoring tests and an
+isolated HA pair. Issue #5 remains OPEN pending reporter confirmation. `.23` remains on the
+accepted exact candidate with monitoring disabled.
 
 ## 2.14.0 installer-jail validation (6 November 2026)
 
@@ -262,7 +276,7 @@ correction are in
 `verification/INSTALLER-JAIL-2.14.0-20261106.md`; the fresh results are in
 `verification/FRESH-INSTALL-JAIL-2.14.0-20261106.md`; the live cycle is in
 `verification/LIVE-ROLLBACK-2.14.0-23-20261106.md`. DM-BL-009 is **CLOSED**; the remaining
-real-host validation is tracked as **DM-BL-012**.
+real-host validation was tracked as **DM-BL-012** and closed on 12 November 2026.
 
 ## 2.14.0 fresh-install jail validation (6 November 2026)
 
@@ -284,7 +298,65 @@ at HEAD `690204bb1d6c402de9a2b41e16f753b37335279f`.
   `1448ec56adf75dab2461da9f0fda6447486a9258fadd4afa9c4deec70e43b05b`).
 
 The jail-only `rc.configure_plugins` stub proves the installer's call boundary, not real OPNsense
-plugin registration. Live `FRESH=1` remains unauthorised and untested. A screenshot from the
-operator's authenticated browser confirms both About and Features render `v2.14.0`; no Network
-capture was supplied. Real-host `FRESH=1` and plugin lifecycle validation remain tracked as
-**DM-BL-012**.
+plugin registration. A real-host `FRESH=1` attempt on `.23` on 8 November 2026 passed install and
+registration checks but was aborted before reboot and recovered; it is not a lifecycle pass. A
+screenshot from the operator's authenticated browser confirms both About and Features render
+`v2.14.0`; no Network capture was supplied for this attempt. Real-host `FRESH=1` and plugin
+lifecycle validation were tracked as **DM-BL-012** and closed on 12 November 2026.
+
+## 2.14.0 real-host fresh-install attempt on `.23` (8 November 2026) — aborted
+
+The authorised attempt used `/root/dm-validation-2140/dm-bl-012-fresh-20261107T202736Z/` and the
+exact `90afa55d…` candidate. Uninstall, clean-predecessor preparation, `CHECK_OK`, `INSTALL_OK`,
+the 64-target plan/record, all 11 plugin and 10 core catalogue recomputations, plugin registration,
+configd and daemon startup passed. The initial fresh state had no `config.json` or `devices.db`.
+
+A configuration save at `07:37:08` then created `config.json` with `enabled=1` and
+`monitored_interfaces=lan`; the validation command stream did not issue that save, and the
+authenticated GUI request origin was not logged. The daemon ran one scan and contacted `.252` and
+`.253` for service probes. Email and webhook were disabled and no notification was sent. The daemon
+was stopped, the activation evidence was preserved, and the reviewed recovery restored the accepted
+data/configuration and 63-target manifest. `RECOVERY_LIVE_VERIFY=PASS` covers the recovered state.
+
+No reboot was performed, so reboot persistence and authenticated post-reboot UI checks remain
+untested. The uninstaller cleared the obsolete menu-cache path and failed on the non-existent
+`php-fpm` service; both defects are recorded but not fixed in this task. DM-BL-012 remained
+**OPEN** until the 12 November 2026 lifecycle closure recorded below.
+Full evidence is in `verification/DM-BL-012-FRESH-23-ATTEMPT-20261108.md`.
+
+## 2.14.0 real-host lifecycle closure on `.23` (12 November 2026) — DM-BL-012 CLOSED
+
+The operator explicitly superseded the disposable-VM environment gate and authorised uninstall,
+reinstall, necessary service actions and one reboot on the existing development host `.23`,
+replacing VM snapshots with a verified pre-state backup and an executable recovery procedure. This
+is the documented explicit-operator-acceptance alternative, not validation on a pristine OPNsense
+VM; the residual risk of using an existing development host was accepted by the operator.
+
+* Repair candidate `772a6660…` (menu-cache path and unsupported `php-fpm` call) ran a normal
+  uninstall and exact-candidate reinstall on `.23`, then one reboot. Post-boot: 64/64 manifest
+  targets, unchanged `/conf/config.xml`, `config.json` `027594eb…` and `devices.db` `796d28c7…`,
+  SQLite integrity `ok`, configd and daemon running, `Monitoring DISABLED` at 19:28:56, corrected
+  menu cache at `/var/lib/php/tmp/opnsense_menu_cache.xml` with all seven Device Monitor entries,
+  and no scan, promiscuous or notification events.
+* Residual-repair candidate `3675c7271ad3bbd3a04c325c9f7b03bfea80a19e6ff913c2c3114b78eaa46891`
+  (1,731,225 bytes) removed `/usr/local/etc/inc/devicemonitor_locale.inc` and
+  `/usr/local/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf` on normal
+  uninstall. Live uninstall exit 0 left zero of the 42 payload targets, no `php-fpm` call, unchanged
+  configuration and 4/4 unrelated sentinels; reinstall exit 0 produced 64/64 targets,
+  `INSTALL_OK … files=64 core_locales=10`, restored data hashes and disabled settings. No reboot was
+  needed for this payload-neutral correction. The latest candidate's uninstall and reinstall were
+  directly tested; reboot persistence is reused from the preceding `772a6660…` candidate because
+  the delta is uninstall cleanup only and cannot affect installed payload, rc wiring, daemon start
+  or reboot behaviour.
+* Operator attestation recorded at 19:56:51 (+1100) states that Services → Device Monitor →
+  Devices and Settings display correctly. It is an operator attestation, not a screenshot or an
+  agent-observed browser check; no observation timestamp was supplied or inferred. Monitoring
+  disabled was verified by the automated checks, not separately attested.
+* Recovery assets: `/root/dm-validation-2140/dm-bl-012-live-23-20261112T191143/` and
+  `/root/dm-validation-2140/dm-bl-012-residuals-20261112T194900/`.
+* Historical monitoring-activation attribution remains **UNKNOWN**. The record is an un-attributed
+  settings write and one scan, not a confirmed automatic-activation defect. The documented
+  DM-BL-012 acceptance criterion is real plugin registration and a daemon surviving reboot with no
+  stub claim, or explicit operator acceptance of the residual risk; attribution is not an
+  acceptance criterion. Uncertainty alone does not therefore add a release blocker; DM-BL-011 and
+  DM-BL-013 remain the documented blockers.

@@ -906,7 +906,7 @@ revised objective and is distinct from DM-BL-009's completed `main` reconciliati
 `/root/dm-validation-2140/monitoring/20261106T083522Z/` and
 `/root/dm-validation-2140/phase2a-guard-20261107T123250Z/`.
 
-### DM-BL-012 — real-host 2.14.0 `FRESH=1` and OPNsense plugin lifecycle validation: **`OPEN`**
+### DM-BL-012 — real-host 2.14.0 `FRESH=1` and OPNsense plugin lifecycle validation: **`CLOSED`** (12 November 2026; operator-accepted `.23` lifecycle)
 
 **Description:** the isolated FreeBSD-jail `fresh` and `fresh-rollback` scenarios passed against the
 unchanged 2.14.0 bundle, but their `configd`, `rc.configure_plugins` and `pgrep` stubs prove only
@@ -918,15 +918,62 @@ The normal 2.13.3 → 2.14.0 upgrade on `.23` and its live successful-install ro
 and are not this item. The outstanding work is specifically the **real-host fresh-install path and
 real plugin lifecycle**.
 
+**Attempt on 8 November 2026 — aborted; remains OPEN.** An expressly authorised uninstall and
+fresh install of the exact 1,729,177-byte candidate on `.23` passed `CHECK_OK` and `INSTALL_OK`
+(64 targets, 10 core locales), and independently passed the 64-target manifest, 11 plugin plus 10
+core catalogue recomputation, real plugin/configd/daemon registration and initial disabled-default
+checks. Before the planned reboot, a configuration save (not issued by the validation command
+stream; the authenticated GUI request origin was not logged) set `enabled=1` and
+`monitored_interfaces=lan`. The daemon immediately ran one scan and probed `.252`/`.253` for
+services. Email and webhook remained disabled. The daemon was stopped, the state was preserved and
+the verified pre-test recovery restored `config.json` `027594eb…`, database `796d28c7…`, 63 targets
+and `enabled=0`. The attempt therefore did not test reboot persistence or authenticated UI pages
+and does not close this item. Two uninstaller defects were also confirmed: it clears the obsolete
+`/tmp/opnsense_menu_cache.xml` instead of `/var/lib/php/tmp/opnsense_menu_cache.xml`, and it calls a
+non-existent `php-fpm` rc service. See
+`verification/DM-BL-012-FRESH-23-ATTEMPT-20261108.md` and the evidence root
+`/root/dm-validation-2140/dm-bl-012-fresh-20261107T202736Z/`.
+
+**Lifecycle closure on `.23` (12 November 2026): CLOSED.** The operator explicitly superseded the
+disposable-VM environment gate and authorised uninstall, reinstall, necessary service actions and
+one reboot on the existing development host `.23`, replacing VM snapshots with verified backups and
+an executable recovery procedure. That is the documented alternative — explicit operator acceptance
+of the residual risk — and it is not a pristine-VM validation. The lifecycle run used candidate
+`772a6660…` for the menu-cache/php-fpm repair and candidate `3675c7271ad3bbd3a04c325c9f7b03bfea80a19e6ff913c2c3114b78eaa46891`
+(1,731,225 bytes) for the residual cleanup. Across the two candidate runs, normal uninstall (exit
+0, no `php-fpm`, correct active menu/ACL cache paths), fresh-state reinstall (`CHECK_OK …
+predecessor=fresh files=64`, `INSTALL_OK … files=64 core_locales=10`), real plugin registration,
+configd and daemon start, 64/64 manifest targets, SQLite integrity, corrected menu-cache
+regeneration with all seven Device Monitor entries, and operator attestation that the authenticated
+Devices and Settings pages display correctly passed. The `772a6660…` run included the one reboot
+with unchanged config/database and `Monitoring DISABLED` at boot; the `3675c7271…` run repeated
+uninstall/reinstall and did not repeat the reboot. The 12 November residual repair removed
+`/usr/local/etc/inc/devicemonitor_locale.inc` and
+`actions_devicemonitor_update.conf` on normal uninstall and proved all 42 payload targets are
+removed while unrelated files, configuration and data are preserved. Evidence:
+`/root/dm-validation-2140/dm-bl-012-live-23-20261112T191143/` and
+`/root/dm-validation-2140/dm-bl-012-residuals-20261112T194900/`.
+The latest candidate's uninstall and reinstall were **directly tested**. Reboot persistence is
+**reused** from the preceding `772a6660…` candidate: the only delta is uninstall cleanup
+(`uninstall.sh` and its tests), which does not alter installed payload, rc wiring, daemon start or
+reboot behaviour. Historical monitoring-activation attribution remains **UNKNOWN**: the 8 November
+evidence records an un-attributed settings write and one scan, not a confirmed automatic-activation
+defect. The documented DM-BL-012 acceptance criteria are real plugin registration and a daemon that
+survives reboot with no stub claim (or explicit operator acceptance of the residual risk); no
+acceptance criterion requires historical attribution. Uncertainty alone therefore does not add a
+release blocker; release remains **NO-GO** on the separately documented DM-BL-011 and DM-BL-013
+criteria.
+
 **Closure evidence:** a separately authorised real-host `FRESH=1` test and plugin lifecycle check
 on a disposable OPNsense VM, or explicit operator acceptance of the residual risk. The existing jail
-evidence must not be described as equivalent. This is a publication blocker under the revised
-objective. The current host has no `vmm`, `/dev/vmm` or `vm-bhyve`, so the phase is environment-
-blocked rather than code-blocked.
+evidence must not be described as equivalent. The explicit-acceptance alternative was exercised on
+12 November 2026 and is recorded above. The phase had been environment-blocked rather than
+code-blocked because the host has no `vmm`, `/dev/vmm` or `vm-bhyve`.
 
 **Evidence:** `verification/FRESH-INSTALL-JAIL-2.14.0-20261106.md`,
 `verification/INSTALLER-JAIL-2.14.0-20261106.md`, `verification/VALIDATION-CLOSURE-2.14.0-20261107.md`,
-`verification/PHASE3-DISPOSABLE-OPNSENSE-VM-PLAN-20261107.md` and `PROJECT_STATE.md`.
+`verification/PHASE3-DISPOSABLE-OPNSENSE-VM-PLAN-20261107.md`,
+`verification/DM-BL-012-FRESH-23-ATTEMPT-20261108.md` and `PROJECT_STATE.md`.
 
 ### DM-BL-013 — full monitoring lifecycle, HA/CARP and delivery-path validation: **`OPEN`**
 

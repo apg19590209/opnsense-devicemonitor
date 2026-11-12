@@ -52,6 +52,9 @@
 #   e5ac897488af412639be0d5458d4100185348080eef37b9e0c8abea5ee19d302  1731225 bytes
 #       (the review-hardened uninstaller-repair candidate; superseded by the active ACL-cache
 #        correction and fail-closed path guards in the uninstaller regression suite)
+#   772a6660e0ca5c6b7455e2751b0c404a1f25a4e1aaafc44167525d657eb6d299  1731225 bytes
+#       (the reviewed menu-cache/php-fpm repair candidate validated on .23; superseded by the
+#        residual cleanup for devicemonitor_locale.inc and actions_devicemonitor_update.conf)
 version 2.14.0
 bytes 1731225
-sha256 772a6660e0ca5c6b7455e2751b0c404a1f25a4e1aaafc44167525d657eb6d299
+sha256 3675c7271ad3bbd3a04c325c9f7b03bfea80a19e6ff913c2c3114b78eaa46891

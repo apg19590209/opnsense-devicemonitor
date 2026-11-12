@@ -97,6 +97,7 @@ rm -f "$(root_path /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_sta
 
 # 
 rm -f "$(root_path /usr/local/etc/inc/plugins.inc.d/devicemonitor.inc)"
+rm -f "$(root_path /usr/local/etc/inc/devicemonitor_locale.inc)"
 
 # Models
 rm -rf "$(root_path /usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor)"
@@ -112,6 +113,7 @@ rm -rf "$(root_path /usr/local/opnsense/scripts/OPNsense/DeviceMonitor)"
 
 # Configd actions
 rm -f "$(root_path /usr/local/opnsense/service/conf/actions.d/actions_devicemonitor.conf)"
+rm -f "$(root_path /usr/local/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf)"
 
 # Config files
 rm -f "$(root_path /tmp/devicemonitor_config.json)"
