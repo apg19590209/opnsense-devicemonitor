@@ -1572,24 +1572,24 @@ msgid "A CARP standby does not carry the monitored traffic, so hostwatch there u
 msgstr "Резервный узел CARP не пропускает наблюдаемый трафик, поэтому hostwatch там занижает данные и любой вывод о доступности был бы неверным. Если включено, резервный узел пропускает обнаружение инфраструктурных служб и оповещения о службах, вместо того чтобы выдумывать сбои."
 
 #: settings.volt
-msgid "A backup override suppresses service discovery even when CARP awareness is enabled."
-msgstr "Принудительная роль backup подавляет обнаружение служб даже при включённом обнаружении CARP."
+msgid "Overrides Device Monitor behaviour only; does not change the firewall’s CARP role."
+msgstr "Меняет только поведение Device Monitor; не изменяет роль CARP межсетевого экрана."
 
 #: settings.volt
-msgid "Always act as backup (never observe)"
-msgstr "Всегда работать как backup (не наблюдать)"
+msgid "Force BACKUP behaviour"
+msgstr "Принудительное поведение BACKUP"
 
 #: settings.volt
-msgid "Always act as master"
-msgstr "Всегда работать как master"
+msgid "Force MASTER behaviour"
+msgstr "Принудительное поведение MASTER"
 
 #: settings.volt
 msgid "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
 msgstr "Применяется только к отслеживаемым интерфейсам. Узел без состояния CARP не затрагивается, поэтому автономный межсетевой экран продолжает наблюдение."
 
 #: settings.volt
-msgid "Automatic (from CARP state)"
-msgstr "Автоматически (по состоянию CARP)"
+msgid "Automatic (use CARP role)"
+msgstr "Автоматически (использовать роль CARP)"
 
 #: settings.volt
 msgid "Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance."
@@ -1664,8 +1664,8 @@ msgid "Send Test Webhook"
 msgstr "Отправить тестовый webhook"
 
 #: settings.volt
-msgid "Service observation"
-msgstr "Наблюдение за службами"
+msgid "HA policy permission"
+msgstr "Разрешение политики HA"
 
 #: settings.volt
 msgid "State"
@@ -1720,12 +1720,12 @@ msgstr "Выберите сетевые интерфейсы, которые с�
 # ============================================
 
 #: settings.volt
-msgid "observing"
-msgstr "наблюдает"
+msgid "permitted"
+msgstr "разрешено"
 
 #: settings.volt
-msgid "suppressed"
-msgstr "подавлено"
+msgid "paused by HA policy"
+msgstr "приостановлено политикой HA"
 
 #: settings.volt
 msgid "unknown"
@@ -1781,3 +1781,143 @@ msgstr "минут"
 #: infrastructureservices.volt
 msgid "Unknown"
 msgstr "Неизвестно"
+
+# ============================================
+# [devices.volt, settings.volt] Node-local HA visibility
+# ============================================
+
+#: devices.volt, settings.volt
+msgid "Node-local Device Monitor data"
+msgstr "Локальные данные Device Monitor этого узла"
+
+msgid "HA role"
+msgstr "Роль HA"
+
+msgid "Node"
+msgstr "Узел"
+
+msgid "Non-HA"
+msgstr "Не HA"
+
+msgid "Unconfirmed"
+msgstr "Не подтверждено"
+
+msgid "HA status unconfirmed"
+msgstr "Состояние HA не подтверждено"
+
+msgid "HA status is unconfirmed because no monitored interface is selected."
+msgstr "Состояние HA не подтверждено, поскольку не выбрано ни одного наблюдаемого интерфейса."
+
+msgid "HA status is unconfirmed because CARP is configured or active on this appliance, but no monitored interface is selected; monitoring-scope roles are unknown."
+msgstr "Статус HA не подтверждён, поскольку CARP настроен или активен на этом устройстве, но ни один наблюдаемый интерфейс не выбран; роли в области мониторинга неизвестны."
+
+msgid "HA status is unconfirmed because the selected monitored interfaces do not resolve to local devices."
+msgstr "Состояние HA не подтверждено, поскольку выбранные наблюдаемые интерфейсы не сопоставлены с локальными устройствами."
+
+msgid "HA status is unconfirmed because CARP virtual IPs are configured without a detected CARP role."
+msgstr "Состояние HA не подтверждено, поскольку виртуальные IP-адреса CARP настроены без обнаруженной роли CARP."
+
+msgid "HA status is unconfirmed. Confirm CARP and the selected monitored interfaces."
+msgstr "Состояние HA не подтверждено. Проверьте CARP и выбранные наблюдаемые интерфейсы."
+
+msgid "Displayed data belongs to this node only and is not merged from the CARP peer."
+msgstr "Отображаемые данные принадлежат только этому узлу и не объединяются с узлом CARP."
+
+msgid "No Device Monitor activities are paused by HA gating."
+msgstr "Ни одна операция Device Monitor не приостановлена фильтрацией HA."
+
+msgid "Paused on this BACKUP node"
+msgstr "Приостановлено на этом узле BACKUP"
+
+msgid "Visibility priming"
+msgstr "Подготовка видимости"
+
+msgid "Service discovery"
+msgstr "Обнаружение служб"
+
+msgid "Service alerts"
+msgstr "Оповещения о службах"
+
+msgid "New device alerts"
+msgstr "Оповещения о новых устройствах"
+
+msgid "Automatic targeted Nmap scans"
+msgstr "Автоматические целевые сканирования Nmap"
+
+msgid "Local inventory and identity recording, node-local ageing, and scheduled port discovery continue."
+msgstr "Локальная инвентаризация и запись идентификаторов, локальное устаревание на узле и плановое обнаружение портов продолжаются."
+
+msgid "A paused activity is not an empty result."
+msgstr "Приостановленная операция не является пустым результатом."
+
+msgid "HA role status is unavailable. Confirm CARP and the effective mode before relying on this view."
+msgstr "Статус роли HA недоступен. Подтвердите CARP и действующий режим, прежде чем полагаться на этот экран."
+
+msgid "HA status could not be retrieved, so the current CARP gating state is unknown."
+msgstr "Не удалось получить состояние HA; текущее состояние управления CARP неизвестно."
+
+msgid "Device Monitor reports that observation continues while the CARP role is unknown."
+msgstr "Device Monitor сообщает, что наблюдение продолжается, пока роль CARP неизвестна."
+
+msgid "Last successful local scan"
+msgstr "Последнее успешное локальное сканирование"
+
+msgid "No successful local scan appears in the available scan history."
+msgstr "В доступной истории сканирований нет успешного локального сканирования."
+
+msgid "The local scan history could not be read."
+msgstr "Не удалось прочитать локальную историю сканирований."
+
+msgid "Scan history was not retrieved because the HA status request failed."
+msgstr "История сканирований не получена, поскольку запрос состояния HA завершился ошибкой."
+
+msgid "CARP awareness is disabled, so no activities are paused."
+msgstr "Обнаружение CARP отключено, поэтому операции не приостанавливаются."
+
+msgid "The detected CARP role is unavailable; the effective mode comes from the role override."
+msgstr "Обнаруженная роль CARP недоступна; эффективный режим взят из переопределения роли."
+
+msgid "Show details"
+msgstr "Показать подробности"
+
+msgid "Hide details"
+msgstr "Скрыть подробности"
+
+msgid "HA-paused activities"
+msgstr "Действия, приостановленные HA"
+
+msgid "Monitoring is disabled; scheduled scans and alert evaluation are not running."
+msgstr "Мониторинг отключён на этом узле; плановые сканирования и оценка оповещений не выполняются."
+
+msgid "Detected and effective roles differ."
+msgstr "Обнаруженная и действующая роли различаются."
+
+msgid "Role override is active."
+msgstr "Переопределение роли активно."
+
+msgid "No CARP configuration detected"
+msgstr "Конфигурация CARP не обнаружена"
+
+msgid "HA controls that require a CARP role are disabled. Saved values are preserved; choose an explicit role override to enable them."
+msgstr "Элементы управления HA, требующие роли CARP, отключены. Сохранённые значения сохраняются; выберите явное переопределение роли, чтобы включить их."
+
+msgid "Monitoring enabled"
+msgstr "Мониторинг включён"
+
+msgid "Monitoring disabled"
+msgstr "Мониторинг отключён"
+
+msgid "Monitoring status unknown"
+msgstr "Состояние мониторинга неизвестно"
+
+msgid "Some activities paused"
+msgstr "Некоторые действия приостановлены"
+
+msgid "Paused activities"
+msgstr "Приостановленные действия"
+
+msgid "Continuing activities"
+msgstr "Продолжающиеся действия"
+
+msgid "Timezone unavailable"
+msgstr "Часовой пояс недоступен"

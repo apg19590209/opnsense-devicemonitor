@@ -996,10 +996,123 @@ automatic-activation defect. Replacement candidate: 1,735,321 bytes, SHA-256
 investigation preserved under `/root/dm-validation-2140/dm-bl-013-timestamp-r2-20261112/` and
 `/root/dm-validation-2140/dm-bl-013-timestamp-20261112/`.
 
+The timestamp candidate was installed on production CARP BACKUP `.252` on 13 November 2026
+(08:14:54–08:15:06 AEDT). The reviewed installer exited 0 after verifying 63 targets, SQLite
+integrity passed, the Device Monitor configuration was unchanged and the node remained BACKUP while
+`.253` remained MASTER. Two normal 300-second cycles completed at approximately 08:20 and 08:25
+AEDT; 23 rows received new canonical UTC `last_seen` values, 21 during the observation window.
+MASTER-only visibility, discovery, identity/new-device alerting, targeted Nmap and notification
+delivery remain unexercised. Evidence:
+`/root/dm-validation-2140/dm-bl-013-prod-252-install-20261112T211341Z/`, sealed at
+`63d740365b2be61e4c0fe9a6c8688d3a33269f85a13ea1d886f4a5c37c0d2315`.
+
+HA-role visibility is a later source candidate, installed on testbed `.23` on 13 November 2026 but
+not on production: 1,795,230 bytes, SHA-256
+`e7dcb7f88ec8f98ca4455542f2106416e2447740c95c818ff2cfdd31d4ef3124`. It reuses the
+existing `getcarpstatus` API for Devices and Settings, distinguishes detected role from effective
+mode, names the exact BACKUP-gated activities, leaves manual scans and scheduled port discovery out
+of that list, and clears stale status on refresh failure. The reviewed correction parses the actual
+daemon scan-log format with a bounded reverse lookup, distinguishes missing history from unreadable
+history and API fetch failure, and reports observation continuation only for the confirmed detector-
+failure state. The checked-in validation is local to `.23` source and does not exercise browser
+rendering or a live CARP role change; the available host lacked a browser, so the agent captured no
+screenshots. An operator-supplied isolated-fixture review on 13 November 2026 reported clear MASTER
+and BACKUP notices, distinct fetch-failure and backend-unavailable messages, correct wrapping for
+German Settings and English Devices at narrow widths, and a simulated MASTER-to-BACKUP transition
+ending in the correct BACKUP view. That is fixture-only operator attestation, not live CARP,
+production rendering or full-matrix acceptance. The earlier HA builds `2dab1385…`, `709288cd…`,
+`e789fb96…` and `f51f1adf…` and all earlier evidence remain preserved.
+
+The `.23` installation returned `INSTALL_OK … files=63 … pruned=0
+backup=/var/backups/devicemonitor/install-v214.lulG0h daemon_restarted=1 unchanged=36 repaired=0`;
+all 63 installed rows verified, configuration (`027594eb…`), database (`796d28c7…`) and OPNsense
+configuration (`e86a7058…`) were unchanged, monitoring stayed disabled and no reboot or CARP change
+occurred. Evidence: `/root/dm-validation-2140/dm-bl-013-ha-deploy-23-20261112T234608Z/`.
+
+A later uncommitted compact-summary revision adds the collapsed Show details/Hide details notice, the read-only monitoring-enabled state, separate HA-pause summary and role/unavailable warnings. It is source-only and is not part of the installed `e7dcb7f8…3124` candidate.
+
+A further source-only automatic-relevance revision makes HA content conditional on a positive
+non-HA result from the existing detector: readable `ifconfig` and `/conf/config.xml`, at least one
+resolved monitored interface, no CARP VIP, no CARP state on monitored devices and no explicit role
+override. Confirmed non-HA hides HA-specific notice content but retains node identity, monitoring
+state and the expanded last successful scan. The HA / CARP tab remains accessible, explains that no
+CARP configuration was detected, disables CARP awareness and failover notification without changing
+saved values, and leaves the role override editable. Unknown detector/API states retain warnings and
+never become non-HA. CARP awareness disabled remains distinct from detected role/effective mode.
+Focused API/UI, non-HA, integration, catalogue, CI, fixture and diff checks passed. The updated
+fixture is sealed at `/root/dm-validation-2140/dm-bl-013-ha-relevance-fixture-20261113T004225Z/`
+(373,094 bytes, SHA-256 `687cc9f2…fbe5`). Language acceptance remains price-gated and browser visual
+acceptance of this revision is pending. This revision is not installed; DM-BL-013 remains **OPEN**
+and historical monitoring-activation attribution remains **UNKNOWN**.
+
+A further source-only review correction addresses the browser findings against the compact-line
+fixture. Confirmed non-HA expanded details now hide the detected/effective role facts and use the
+node-local ownership wording rather than a CARP-peer statement; last-scan information remains. The
+Settings HA / CARP row is now `HA policy permission` with `permitted` / `paused by HA policy` values,
+distinguishing policy permission from actual monitoring activity. The fixture's role-fact leakage
+came from `display:flex` overriding its `hidden` attribute; an explicit `[hidden]` rule now prevents
+that, and the fixture tabs wrap at narrow widths. The real Settings CSS was inspected and left
+unchanged because the clipping was fixture-only; the live view uses Bootstrap `nav-tabs` without that
+fixture overflow rule. Affected checks pass. Updated fixture archive: 374,294 bytes, SHA-256
+`40b2e6b3548b0d664665fa5021989ac660d9613bd72d99c8f741b23facff450b`; the prior `7376a65a…acbab`
+archive is preserved. Language acceptance remains price-gated, browser acceptance remains pending,
+and this revision is not installed. DM-BL-013 remains **OPEN** and historical activation
+attribution remains **UNKNOWN**.
+
+A subsequent source-only compact-line revision removes the repeated collapsed content: the notice now
+shows `node · role · Monitoring enabled` on one line (the role is omitted for confirmed non-HA), adds
+the short `Some activities paused` indicator for BACKUP, and keeps unavailable/override warnings
+visible while collapsed. Expanded details contain detected/effective roles, local-data ownership,
+paused/continuing activities and the last scan once each; the duplicate monitoring note and generic
+`No activities paused` text were removed. The API supplies a timezone label only from a valid
+configured OPNsense timezone and the UI otherwise says `Timezone unavailable`. PHP/JS, translation,
+CI, catalogue, fixture, inline-script and diff checks passed. The fixture was resealed after inline
+JavaScript syntax validation was added to its static checker: 373,818 bytes, SHA-256
+`7376a65a3a0640496926461fdbb76272421c9839ed9e6d630e0aac77d91acbab`. Only the checker and recorded
+log changed; the fixture HTML remains `9dfa112d…a18fa`. The previous `c34d3414…1c88` archive is
+preserved under `.../preserved-c34d3414/`. Language acceptance remains price-gated and browser
+acceptance of this revision is pending. The revision is not installed; DM-BL-013 remains **OPEN**
+and historical monitoring-activation attribution remains **UNKNOWN**.
+
+The operator supplied a screenshot review of the R5 isolated fixture (`374,294` bytes, SHA-256
+`40b2e6b3548b0d664665fa5021989ac660d9613bd72d99c8f741b23facff450b`) on 13 November 2026. The
+sampled review passed for compact and expanded MASTER and BACKUP, confirmed non-HA with monitoring
+disabled, an active role override, narrow-screen tab wrapping and the simulated
+MASTER-to-fetch-failure transition. These are operator attestations of isolated simulated states,
+not agent-observed browser results. No exact observation timestamp was supplied and none is
+inferred. The review does not establish the full state matrix, keyboard acceptance, live CARP, a
+live role change, production rendering, MASTER-only operation or delivery paths.
+
+The final source-only candidate was rebuilt twice with separate stage, output and allow-list paths
+and produced byte-identical results: 1,827,998 bytes, SHA-256
+`2d2c0a884ef169a4f9609a84f2860918bd7fc8432dfb23be52c4b9d6f35d8874`, 60 archive members. Review
+found the first final build still depended on checkout umask and a transient `0600` manifest
+permission; the builder now normalises `0644`/`0755` from the Git index and the determinism test
+varies both timestamps and worktree modes. The regenerated runtime manifest plus release-input pins
+verify against the current sources. Evidence:
+`/root/dm-validation-2140/dm-bl-013-final-20261113T013258Z/`. The superseded installed `.23`
+payload `e7dcb7f8…3124` and all earlier candidates and evidence remain preserved. This final
+candidate is not installed. The premium price gate deferred language acceptance at finalisation;
+no bypass was used. DM-BL-013 remains **OPEN**, and historical monitoring-activation attribution
+remains **UNKNOWN**.
+
+The superseding reviewed keyboard candidate was
+`2f69a69751755891578fb53a3d15f27be1200798b89a0f23ad24137d75d5ef33` (1,850,531 bytes). It was
+deployed to `.23` with a clean preflight and a fresh installer backup. All 63
+installed hashes matched, SQLite integrity remained `ok`, and the configuration, database and
+`/conf/config.xml` stayed byte-identical. The saved role override remained `auto`, monitoring and
+notification gates remained disabled, and the services stayed healthy; no reboot occurred. The
+operator subsequently confirmed, without an observation timestamp being recorded, that Space and
+Enter open the deployed dropdown, Escape closes it, and `Automatic (use CARP role)` remains
+selected.
+This closes only the dropdown keyboard acceptance check. DM-BL-013 remains **OPEN** for production
+MASTER, HA-transition and delivery-path validation, and historical monitoring-activation attribution
+remains **UNKNOWN**.
+
 **Closure evidence:** separately authorised tests on a disposable single OPNsense VM for the
 single-host paths and an isolated two-node CARP/pfsync pair for HA; external delivery requires a
 separately approved lab endpoint, or explicit operator acceptance of the residual risk. No further
-live execution is currently authorised. This is a publication blocker under the revised objective.
+live execution is authorised by the HA-visibility task. This is a publication blocker under the revised objective.
 Single-host success will not prove HA, and HA success will not prove an external provider path.
 
 **Evidence:** `verification/monitoring-validation/EXECUTION-20261106.md`,

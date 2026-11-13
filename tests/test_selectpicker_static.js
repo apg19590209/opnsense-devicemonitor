@@ -32,7 +32,8 @@ const cases = [
     { file: 'infrastructureservices.volt', id: 'port-scans-result', style: 'btn-default btn-sm' },
     { file: 'identityevents.volt', id: 'identity-events-status', style: 'btn-default btn-xs' },
     { file: 'identityevents.volt', id: 'identity-events-limit', style: 'btn-default btn-xs' },
-    { file: 'scanhistory.volt', id: 'scan-history-limit', style: 'btn-default btn-xs' }
+    { file: 'scanhistory.volt', id: 'scan-history-limit', style: 'btn-default btn-xs' },
+    { file: 'settings.volt', id: 'ha_role_override', style: 'btn-default' }
 ];
 
 cases.forEach(function(spec) {

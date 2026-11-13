@@ -2,7 +2,7 @@
 
 ## Current state
 
-Last updated: 12 November 2026
+Last updated: 13 November 2026
 
 Branches: `main` (HEAD `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`, the Device Monitor
 2.14.0 source line including the DM-BL-009 closeout documentation and the integrated DM-BL-010
@@ -12,6 +12,9 @@ catalogue-header correction), `release/2.13` (HEAD `6bd122e`) and
 7 November 2026. The latest published GitHub release is **v2.12.1**; 2.14.0 is not yet published.
 `baseline/2.12` (`d04739a`) holds the recovered pre-HA 2.12 tree;
 `feature/async-db-v2.11` (`0ad95b0`) is the historical v2.11 development branch.
+The active development checkout is `fix/dm-bl-012-uninstaller-20261112` at
+`22884cdbc75204182ab214c8e38947c4aee723f1`; the HA role-visibility changes described below remain
+uncommitted in that checkout.
 The DM-BL-010 catalogue-header correction is integrated into `main` by PR #7 at
 `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`; its exact-candidate Phase 1 repair/acceptance run
 passed on `.23`. It is not tagged or published: v2.12.1 remains the latest release and 2.14.0 is
@@ -42,7 +45,8 @@ the menu-cache path is wrong and `php-fpm` is not a service on this OPNsense hos
 | Payload | `release/v2.14.0-runtime.manifest`, 42 rows; 63 generated targets on an upgrade and 64 on a fresh install |
 | Bundle | `dm-v2.14.0-runtime.tar.gz`, 1,729,177 bytes, SHA-256 `90afa55dd826c0dc3be8a23902b809baa465e25191dc372dc6cc2ef4e57fc243`; 60 members; four byte-identical builds. The earlier 1,725,593-byte `5149bfd4…` main-integration bundle and its evidence remain preserved as superseded |
 | Lifecycle candidate | `dm-v2.14.0-runtime-residual-repair.tar.gz`, 1,731,225 bytes, SHA-256 `3675c7271ad3bbd3a04c325c9f7b03bfea80a19e6ff913c2c3114b78eaa46891`; 60 members. It supersedes the preserved `772a6660…` menu-cache/php-fpm repair candidate and adds uninstaller removal of `devicemonitor_locale.inc` and `actions_devicemonitor_update.conf`. `BUNDLE_DETERMINISM=PASS` (two clean checkouts, canonical headers, recorded digest) |
-| Timestamp candidate | `dm-v2.14.0-runtime.tar.gz`, 1,735,321 bytes, SHA-256 `ecaecb04814af41479e1b6e614b05a63de9676158870d749ab51b63d5eee87df`; 60 members. It adds canonical UTC presence/service timestamps, historical-zone/DST-aware conservative reads of legacy mixed rows, fall-back-safe cutoffs, and the UTC/AEDT/DST/expiry regressions. Two independent stage builds were byte-identical. The `b5ffae79…` and `19f7583a…` timestamp-review candidates, `3675c7271…` lifecycle candidate and all earlier artifacts remain preserved; this candidate has not been installed. |
+| Timestamp candidate | `dm-v2.14.0-runtime.tar.gz`, 1,735,321 bytes, SHA-256 `ecaecb04814af41479e1b6e614b05a63de9676158870d749ab51b63d5eee87df`; 60 members. It adds canonical UTC presence/service timestamps, historical-zone/DST-aware conservative reads of legacy mixed rows, fall-back-safe cutoffs, and the UTC/AEDT/DST/expiry regressions. Two independent stage builds were byte-identical. It was installed on production CARP BACKUP `.252` on 13 November 2026 and observed through two normal cycles; see the `.252` section below. The `b5ffae79…` and `19f7583a…` timestamp-review candidates, `3675c7271…` lifecycle candidate and all earlier artifacts remain preserved. |
+| HA visibility candidate | `dm-v2.14.0-runtime.tar.gz`, 1,795,230 bytes, SHA-256 `e7dcb7f88ec8f98ca4455542f2106416e2447740c95c818ff2cfdd31d4ef3124`; 60 members. It adds the persistent HA/node notice, reuses the existing `getcarpstatus` source for both Devices and Settings, distinguishes detected role from effective mode, exposes the exact BACKUP-paused activities including automatic targeted Nmap, and clears stale status on refresh failure. The reviewed build removes the obsolete Settings loader, ignores superseded responses, initialises refresh state before first use, parses the actual daemon scan-log format with bounded reverse history lookup, separates missing/unreadable history and API fetch failure, and reports fail-open observation only from a confirmed backend detector-failure state. Two independent stage builds were byte-identical. It was installed on testbed `.23` on 13 November 2026 and has not been installed on production or live-CARP-tested; the intervening `2dab1385…`, `709288cd…`, `e789fb96…` and `f51f1adf…` candidates and all earlier artifacts remain preserved as superseded. |
 | CI | Exact-candidate CI run `42358468231`: **success**; exact-main CI is recorded separately below. Linux CI does not execute the FreeBSD installer-jail or live-service scenarios |
 | Reviewed-candidate CI | Run `42368818807` at `4611447089e2482a0c6af7a1844e9f6fa16c84d1`: **success**. Logs repeat the release-input, manifest, locale-merge, ten-case predecessor and bundle-determinism passes and reproduce 1,729,177 bytes / `90afa55d…`. The native runtime matrix remained skipped on the GitHub runner for missing assets; a separate local production-engine run subsequently passed (see below) |
 | Main integration CI | Exact-main workflow-dispatch run `42359428985` at `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`: **success**. Logs report `RELEASE_INPUTS=PASS cases=7` and `V2140_RELEASE_MANIFEST=PASS`; the DM-BL-010 candidate bundle is 1,729,177 bytes / `90afa55d…`. Historical DM-BL-009 run `42342362864` remains recorded in `verification/MAIN-INTEGRATION-2.14.0-20261107.md` |
@@ -401,3 +405,234 @@ push or publication occurred in this work.
 This defect is tracked under **DM-BL-013 / ageing**. DM-BL-012 remains **CLOSED** by explicit
 operator acceptance, and historical monitoring-activation attribution remains **UNKNOWN** rather
 than a confirmed automatic-activation defect.
+
+## Production CARP BACKUP `.252` timestamp-candidate installation (13 November 2026)
+
+The operator authorised installation of the exact UTC timestamp candidate
+`ecaecb04814af41479e1b6e614b05a63de9676158870d749ab51b63d5eee87df` on production CARP BACKUP
+`.252` only. Immediately before installation, `.252` was BACKUP and `.253` remained MASTER;
+`.254` was not contacted directly. The reviewed staged installer ran from 08:14:54 to 08:15:06
+AEDT with exit 0. It verified 63 targets, reported database integrity `ok`, kept the Device Monitor
+configuration unchanged and restarted the documented configd and Device Monitor services. `.252`
+remained BACKUP and `.253` remained MASTER on 2.13.2; no failover, forced scan or notification test
+was performed.
+
+Two normal 300-second cycles completed at approximately 08:20 and 08:25 AEDT. Twenty-three local
+device rows received new canonical UTC `last_seen` values, twenty-one of them during the observation
+window. MASTER-only visibility, service-discovery, identity-alert, new-device, targeted-Nmap and
+notification-delivery paths were not exercised. DM-BL-013 therefore remains **OPEN**. The install
+and cycle evidence is under
+`/root/dm-validation-2140/dm-bl-013-prod-252-install-20261112T211341Z/`; the sealed evidence digest
+is `63d740365b2be61e4c0fe9a6c8688d3a33269f85a13ea1d886f4a5c37c0d2315`.
+
+## HA role visibility on `.23` (13 November 2026) — source validated; installed on testbed
+
+The Devices and Settings pages now share the established read-only
+`/api/devicemonitor/config/getcarpstatus` status source used by Settings → HA / CARP. The API keeps
+the detected CARP role (`role`) separate from the effective mode (`mode`) selected by the role
+override, honours CARP awareness, reports mixed and unavailable detector states, and returns the
+node hostname plus the latest successful daemon scan from the existing log. A full refresh failure
+clears the role, observation and VIP rows rather than retaining an old MASTER verdict; superseded
+requests cannot repopulate them after a newer failure.
+
+On BACKUP, the notice lists only the operations gated by the daemon: visibility priming, service
+discovery, service alerts, identity-conflict alerts, new-device alerts and automatic targeted Nmap
+scans. Local inventory and identity recording, node-local ageing and scheduled port discovery remain
+active. Manual targeted scans are not CARP-gated and are therefore not included in the paused list.
+
+The replacement candidate is 1,795,230 bytes, SHA-256
+`e7dcb7f88ec8f98ca4455542f2106416e2447740c95c818ff2cfdd31d4ef3124`, with two byte-identical stage
+builds. Review corrections replaced the wrong daemon-log timestamp format with the actual bracket
+format, made scan-history lookup bounded-memory and complete, and stopped an unreadable config from
+being described as confirmed observation continuation. The API distinguishes readable history with
+no success, unreadable history and API fetch failure. Source-catalogue language acceptance passed
+for nine selectable languages with the existing `nl_NL` selector gap, and all focused API/UI, CARP,
+non-HA, integration, release and bundle checks passed. The agent host had no browser, so the agent
+captured no screenshots and made no browser layout claim. An operator-supplied review of the
+isolated fixture on 13 November 2026 reported that MASTER and BACKUP notices render clearly,
+fetch-failure and backend-unavailable messages are distinct, German Settings and English Devices
+wrap correctly at narrow widths, and a simulated MASTER-to-BACKUP transition ends in the correct
+BACKUP view. That review is operator attestation of isolated-fixture rendering only, not live CARP,
+a live role transition or full-matrix acceptance. That source-validation pass made no install,
+browser/live UI check by the agent, service action, reboot, monitoring activation, commit or
+publication. The reviewed candidate was then installed on testbed `.23` on 13 November 2026
+(10:49 AEDT) with 63/63 payload hashes verified, unchanged configuration and database, monitoring
+still disabled and no reboot or CARP change. Evidence:
+`verification/DM-BL-013-HA-VISIBILITY-20261113.md` and
+`/root/dm-validation-2140/dm-bl-013-ha-messaging-r3-20261112T225433Z/`. The earlier HA candidates
+`2dab1385…`, `709288cd…`, `e789fb96…` and `f51f1adf…` remain preserved.
+
+### `.23` testbed deployment (13 November 2026)
+
+The reviewed HA-messaging candidate `e7dcb7f8…3124` (1,795,230 bytes) was staged and preflighted
+with `CHECK_OK version=2.14.0 predecessor=2.14.0 files=63 core_locales=10 prunable=0
+daemon_running=1 host=OPNsense.internal legacy_prunable=0 retained=0`. The preflight changed no
+payload, configuration, database or backup state. The authorised install on `.23` returned
+`INSTALL_OK version=2.14.0 files=63 core_locales=10 pruned=0
+backup=/var/backups/devicemonitor/install-v214.lulG0h daemon_restarted=1 unchanged=36 repaired=0`.
+All 63 installed record rows matched, the retained `/etc/rc.conf.d/devicemonitor` remained present,
+SQLite integrity remained `ok` with 26 device rows, and `config.json` (`027594eb…`), `devices.db`
+(`796d28c7…`) and `/conf/config.xml` (`e86a7058…`) were byte-identical to the pre-install state.
+Monitoring remained disabled, no scan or notification occurred, and the kernel boot time was
+unchanged. This is lifecycle testing on the existing development host, not a pristine OPNsense
+installation or a live CARP-transition test. Evidence:
+`/root/dm-validation-2140/dm-bl-013-ha-deploy-23-20261112T234608Z/`.
+
+A later uncommitted compact-summary revision adds the collapsed Show details/Hide details notice, the read-only monitoring-enabled state, separate HA-pause summary and role/unavailable warnings. It is source-only and is not part of the installed `e7dcb7f8…3124` candidate.
+
+An additional source-only revision adds automatic HA relevance detection. `getcarpstatus` now
+confirms non-HA only from readable `ifconfig` and `/conf/config.xml`, at least one resolved monitored
+interface, no configured CARP VIP, no CARP state on monitored devices and no explicit role override.
+That positive result hides HA-specific notice content while retaining the node, monitoring state and
+expanded last-scan information. Other states retain the HA notice and warnings. Settings keeps the HA /
+CARP tab accessible, explains `No CARP configuration detected`, disables CARP awareness and failover
+notification without changing saved values, and leaves the role override editable so an active value
+can be inspected or cleared. Detector/API failures remain unknown, never non-HA. CARP awareness
+disabled remains distinct from detected role and effective mode. Focused PHP/JavaScript, non-HA,
+integration, translation, CI, locale, fixture and diff checks passed; the updated fixture is sealed at
+373,094 bytes with SHA-256
+`687cc9f22d6bb2a9c3c5a47d1e13563471516cf2892922e8520b06ea08a8fbe5`. Language acceptance remains
+deferred by the active premium price window, and browser visual acceptance of this revision remains
+pending. This revision is source-only: it is not installed on `.23` or production, the installed `.23`
+payload remains `e7dcb7f8…3124`, DM-BL-013 remains **OPEN**, and historical monitoring-activation
+attribution remains **UNKNOWN**.
+
+A later source-only compact-line revision reduces the collapsed notice to one fact line where space
+allows: node identity, effective HA role (omitted when non-HA is confirmed), monitoring status, and a
+short `Some activities paused` indicator only on BACKUP. Unavailable and override warnings remain
+outside the collapsed details region. Expanded details now show detected/effective roles, the
+node-local explanation, paused/continuing activities and the last successful scan once each; the
+duplicate monitoring note and `No activities paused` message were removed. `getcarpstatus` exposes a
+timezone label only from a valid `/conf/config.xml` system timezone, and the UI explicitly says
+`Timezone unavailable` rather than guessing. PHP API cases (18), JS cases (23), translation, CI,
+catalogue, fixture, inline-script and diff checks passed. The fixture was resealed after inline
+JavaScript syntax validation was added to its static checker: 373,818 bytes, SHA-256
+`7376a65a3a0640496926461fdbb76272421c9839ed9e6d630e0aac77d91acbab`. Only the checker and recorded
+log changed; the fixture HTML remains `9dfa112d…a18fa`. The previous `c34d3414…1c88` archive is
+preserved under `.../preserved-c34d3414/`. Language acceptance remains deferred by the premium price
+window and browser acceptance of this revision remains pending. This revision is source-only, not
+installed; DM-BL-013 remains **OPEN** and historical activation attribution remains **UNKNOWN**.
+
+A further source-only review correction addresses the browser findings against that fixture. For
+confirmed non-HA with no override, expanded details now replace the CARP-peer ownership sentence
+with the existing node-local wording and keep the role facts hidden; the last scan remains. The
+Settings HA / CARP table now labels the field `HA policy permission`, with `permitted` or `paused by
+HA policy` values, so it does not imply that monitoring or service observation is actually running.
+The fixture-only role-fact leakage was caused by its `display:flex` rule overriding the `hidden`
+attribute and is fixed with an explicit `[hidden]` rule; the real views also carry the defensive
+rule. The fixture tab row now wraps at narrow widths. The real Settings view was inspected and uses
+standard Bootstrap `nav-tabs` without the fixture's horizontal-overflow rule, so no production
+Settings CSS change was made. The affected PHP/JS, non-HA, integration, translation, CI, catalogue,
+locale, fixture and diff checks pass. Updated archive: 374,294 bytes, SHA-256
+`40b2e6b3548b0d664665fa5021989ac660d9613bd72d99c8f741b23facff450b`; the previous `7376a65a…acbab`
+fixture and earlier archives remain preserved. Language acceptance remains deferred by the active
+price window, browser acceptance remains pending, and this remains source-only and not installed.
+DM-BL-013 remains **OPEN** and historical activation attribution remains **UNKNOWN**.
+
+## HA notice sampled browser acceptance and final candidate (13 November 2026)
+
+The operator supplied an isolated-fixture screenshot review of the R5 package (`374,294` bytes,
+SHA-256 `40b2e6b3548b0d664665fa5021989ac660d9613bd72d99c8f741b23facff450b`). The review passed for
+the sampled compact and expanded MASTER and BACKUP states, confirmed non-HA with monitoring
+disabled, an active role override, narrow-screen tab wrapping, and the simulated
+MASTER-to-fetch-failure transition. This is operator attestation of simulated fixtures, not an
+agent-observed browser session or a live CARP test. No exact observation timestamp was supplied and
+none is inferred. It does not establish the full state matrix, keyboard acceptance, live CARP,
+production rendering, MASTER-only operation or delivery paths.
+
+The final source-only candidate was rebuilt twice with separate stages and byte-identical results:
+1,827,998 bytes, SHA-256
+`2d2c0a884ef169a4f9609a84f2860918bd7fc8432dfb23be52c4b9d6f35d8874`, 60 members. Review of the
+first final build found archive modes still depended on checkout umask and a transient `0600`
+manifest permission; the builder now normalises `0644`/`0755` from the Git index, and the
+determinism test varies both timestamps and worktree modes. The regenerated release manifest and
+release-input pins verify against the current sources. Evidence:
+`/root/dm-validation-2140/dm-bl-013-final-20261113T013258Z/`. The installed `.23` payload remains
+the earlier `e7dcb7f8…3124` candidate; this final candidate has not been installed on `.23` or
+production. The active premium price gate deferred language acceptance without a bypass.
+DM-BL-013 remains **OPEN**, and historical monitoring-activation attribution remains **UNKNOWN**.
+
+## Appliance CARP proof vs monitoring-scope readiness (13 November 2026)
+
+Read-only inspection on `.23` established readable `/conf/config.xml` with zero virtual-IP nodes and
+zero CARP VIPs, readable `/sbin/ifconfig -a` with zero `carp:` state lines, and an empty
+`monitored_interfaces` selection with monitoring disabled. The captured installed-candidate response
+returned `non_ha_confirmed=false` and `ha_relevant=true`, so the earlier candidate did not make the
+requested distinction: it required a resolved monitored interface before it would use independently
+positive appliance-wide evidence that CARP was absent.
+
+The uncommitted source correction separates `appliance_carp_state`, `carp_vip_count`,
+`carp_runtime_present`, `monitoring_scope_ready`, `monitoring_scope_reason`, and
+`monitoring_roles_known`. Appliance-wide absence now requires readable configuration, readable
+`ifconfig`, no configured CARP VIP and no runtime CARP state; it does not require a monitored
+interface, but it is disabled by an explicit role override. If CARP exists while the monitored
+selection is empty, `non_ha_confirmed` remains false and the scope-specific
+`carp_present_no_monitored_interfaces` explanation is returned. Detector or configuration failure
+leaves the appliance state `unknown` and never infers non-HA. The actual `.23` source-harness result
+is `appliance_carp_state=absent`, `non_ha_confirmed=true`, `ha_relevant=false`,
+`monitoring_scope_ready=false`, and `monitoring_scope_reason=no_monitored_interfaces`.
+
+The replacement source-only candidate is 1,850,019 bytes with SHA-256
+`c2405fccc43c1c1d6a44d4cdd9af0c5d2927778e42b9e3ecfa0c375eefcaf7d4`; two independent checkout
+builds and the recorded-digest check are byte-identical. The previous `97ac0283…3ace` candidate and
+all earlier evidence remain preserved. Evidence is under
+`/root/dm-validation-2140/dm-bl-013-appliance-carp-scope-20261113T024619Z/`. No install, service
+action, settings change, monitoring activation, reboot, production contact, commit, push or
+publication occurred. DM-BL-013 remains **OPEN**, and historical monitoring-activation attribution
+remains **UNKNOWN**.
+
+## Selectpicker lifecycle correction and `.23` deployment (13 November 2026)
+
+The Settings role-override Bootstrap-select now initialises explicitly instead of relying solely on
+the window-load data hook. It refreshes after the asynchronous configuration value and
+disabled-state changes, preserves the saved `auto`/`master`/`backup` value, and gives the generated
+toggle `tabindex="0"` plus an accessible label when enabled. Opening the control cannot submit the
+pane form: the library's generated toggle is `type="button"`, the refresh helper performs no submit
+or save action, and the existing pane submit handler remains in place.
+
+The candidate is 1,850,019 bytes with SHA-256
+`10ff1509efce5bc109860fa9c8e645e906468cf764b02d6dcaaa1c77886efd47`; two stage builds were
+byte-identical and the clean-checkout determinism suite passed. The release manifest, release-input
+pin and installer pins were regenerated. The previous `c2405fcc…` candidate and all earlier evidence
+remain preserved.
+
+The `.23` preflight was clean and the install returned
+`INSTALL_OK ... backup=/var/backups/devicemonitor/install-v214.tqCqe5 daemon_restarted=1
+unchanged=39 repaired=0`. All 63 installed rows verified, SQLite integrity remained `ok`, the
+installed Settings source matched the candidate, and `config.json`, `devices.db` and
+`/conf/config.xml` remained byte-identical to their pre-install hashes. Monitoring and notifications
+remained disabled; no CARP VIP, reboot, production contact, commit, push or publication occurred.
+Durable evidence is under
+`/root/dm-validation-2140/dm-bl-013-ha-selectpicker-20261113T151521Z/`. The live Settings URL for
+operator inspection is `https://192.168.20.23/ui/devicemonitor/index/settings`.
+The predecessor font, labels and Escape behaviour were reviewed,
+and final-candidate keyboard confirmation is recorded below. DM-BL-013 remains
+**OPEN**, and historical monitoring-activation attribution remains **UNKNOWN**.
+
+### Live operator verification and keyboard correction
+
+An operator review of the deployed `10ff1509…` Settings page on 13 November 2026 confirmed that the
+opened dropdown font matched the surrounding UI, all three revised labels displayed correctly, and
+Escape closed the dropdown. A Space-to-open attempt failed while focus/keyboard conditions were
+uncertain. No exact observation time was supplied, and this is not full keyboard acceptance.
+
+The installed Bootstrap-select 1.13.18 source shows that its closed-state type-ahead branch consumes
+Space and Enter before native button activation can open the menu. The deployed candidate also set
+the generated toggle's tab index directly instead of using the plugin's native-select focus proxy.
+The corrected source gives the native select `tabindex="0"`, leaves the generated toggle under
+plugin focus management, and adds a namespaced closed-state Space/Enter opener. When the menu is
+open, those keys remain with the plugin. Saved option values, save collection and submission
+behaviour are unchanged.
+
+The corrected candidate is 1,850,531 bytes with SHA-256
+`2f69a69751755891578fb53a3d15f27be1200798b89a0f23ad24137d75d5ef33`; two builds and the
+clean-checkout determinism test are byte-identical. It was deployed to `.23` with a clean preflight
+and a fresh installer backup. All 63 installed hashes matched, SQLite integrity remained `ok`, and
+`config.json`, `devices.db` and `/conf/config.xml` remained byte-identical. The saved role override
+remained `auto`, monitoring and notification gates remained disabled, and Device Monitor and configd
+stayed healthy; no reboot occurred. The operator subsequently confirmed, without an observation
+timestamp being recorded, that Space and Enter open the deployed dropdown, Escape closes it, and the
+saved value remains `Automatic (use CARP role)`. Deployment evidence is under
+`/root/dm-validation-2140/dm-bl-013-ha-keyboard-deploy-20261113T053031Z/`. DM-BL-013 remains
+**OPEN** pending production MASTER, HA-transition and delivery-path validation; historical
+monitoring-activation attribution remains **UNKNOWN**.

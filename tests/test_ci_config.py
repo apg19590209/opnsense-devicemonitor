@@ -120,6 +120,14 @@ def test_guard_step_requires_thirty_five_tests():
     print('  guard step            asserts 35 tests and OK')
 
 
+def test_ha_role_visibility_is_wired():
+    assert 'php tests/test_ha_role_visibility.php' in WORKFLOW
+    assert 'node tests/test_ha_role_visibility.js' in WORKFLOW
+    assert (TESTS / 'test_ha_role_visibility.php').is_file()
+    assert (TESTS / 'test_ha_role_visibility.js').is_file()
+    print('  HA visibility         API + UI suites wired')
+
+
 CASES = [
     test_remediation_branch_can_be_tested,
     test_integration_branch_can_be_tested,
@@ -130,6 +138,7 @@ CASES = [
     test_determinism_step_is_wired,
     test_uninstaller_step_is_wired,
     test_guard_step_requires_thirty_five_tests,
+    test_ha_role_visibility_is_wired,
 ]
 
 

@@ -65,6 +65,43 @@
 #       (the UTC presence/service timestamp repair; superseded by the DST-aware review build)
 #   b5ffae79c4a7117e001a2c343487854ec588225f33c2088c7549ed9abc86124e  1734809 bytes
 #       (the first DST-aware review build; superseded by the fall-back cutoff correction)
+#   ecaecb04814af41479e1b6e614b05a63de9676158870d749ab51b63d5eee87df  1735321 bytes
+#       (the installed UTC presence/service timestamp candidate; superseded by the HA role
+#        visibility and shared status-refresh implementation)
+#   2dab13858648651d82c56ab73bcdb08ed60710022bdcabc47524ff4af4fac4e8  1783454 bytes
+#       (the first HA role-visibility candidate; superseded by the removed duplicate Settings
+#        loader, superseded-response protection and explicit automatic-Nmap wording)
+#   709288cd4984c640c7d33a623db6f71a7f7fde6119153ba7ed4f3833e5a078a9  1784478 bytes
+#       (the first reviewed HA role-visibility candidate; superseded by the unavailable-state
+#        correction that separates missing/unreadable scan history, backend detector failure
+#        and API fetch failure, and reports observation policy only when backend-confirmed)
+#   e789fb96b07370ee0d101094ecc4da05cd4636ef4558fd3b533a7742c112e516  1794206 bytes
+#       (the first unavailable-state correction; superseded by plain-language observation
+#        wording and explicit narrow-screen wrapping after the pre-commit review)
+#   f51f1adf7a1f5303ff37f837123502f6ae1dc1d7711b1c33491cc90812f570bd  1794206 bytes
+#       (the reviewed HA role-visibility candidate; superseded by the actual daemon scan-log
+#        format, bounded reverse history lookup and fail-open correction after review)
+#   e7dcb7f88ec8f98ca4455542f2106416e2447740c95c818ff2cfdd31d4ef3124  1795230 bytes
+#       (the HA role-visibility candidate installed on .23; superseded by the compact notice,
+#        automatic non-HA relevance, timezone-labelled scan history and final review corrections)
+#   a35b16bba9efd6f5da4ce58d5f54dee228590f4b5124cf1a5510341a4c98e6c8  1827998 bytes
+#       (the first final HA-notice build; superseded by Git-index mode normalisation, which removed
+#        checkout-umask and transient-permission dependence from the archive identity)
+#   2d2c0a884ef169a4f9609a84f2860918bd7fc8432dfb23be52c4b9d6f35d8874  1827998 bytes
+#       (the final HA-notice candidate installed on .23; superseded by the explicit
+#        unconfirmed non-HA rendering and live-response regression)
+#   2b742a4b316ca88d7688db0aaf3a7d75a793d8afbf2b01340361ee75f8a6c18c  1842339 bytes
+#       (intermediate unconfirmed non-HA build made before the installer's inline manifest
+#        and release-input pins were refreshed; never copied out as the candidate)
+#   97ac0283b108f0cc1ecccd2177340740849dd9c622a08a12917b810dc4ec3ace  1842339 bytes
+#       (the reviewed live non-HA candidate; superseded by the appliance-wide CARP proof
+#        separated from monitoring-scope readiness)
+#   c2405fccc43c1c1d6a44d4cdd9af0c5d2927778e42b9e3ecfa0c375eefcaf7d4  1850019 bytes
+#       (the appliance-wide CARP proof candidate installed on .23; superseded by explicit
+#        selectpicker initialisation and asynchronous value/disabled-state refresh)
+#   10ff1509efce5bc109860fa9c8e645e906468cf764b02d6dcaaa1c77886efd47  1850019 bytes
+#       (the selectpicker lifecycle candidate installed on .23; superseded by the closed-state
+#        Space/Enter correction and restoration of the plugin's native-select focus proxy)
 version 2.14.0
-bytes 1735321
-sha256 ecaecb04814af41479e1b6e614b05a63de9676158870d749ab51b63d5eee87df
+bytes 1850531
+sha256 2f69a69751755891578fb53a3d15f27be1200798b89a0f23ad24137d75d5ef33

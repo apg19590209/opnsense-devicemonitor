@@ -1572,24 +1572,24 @@ msgid "A CARP standby does not carry the monitored traffic, so hostwatch there u
 msgstr "Een CARP-standby verwerkt het bewaakte verkeer niet, dus hostwatch rapporteert daar te weinig en elk beschikbaarheidsoordeel zou onjuist zijn. Als dit is ingeschakeld, slaat een standby-knooppunt de detectie van infrastructuurdiensten en dienstmeldingen over in plaats van storingen te verzinnen."
 
 #: settings.volt
-msgid "A backup override suppresses service discovery even when CARP awareness is enabled."
-msgstr "Een forcering naar back-up onderdrukt de dienstdetectie, zelfs als CARP-detectie is ingeschakeld."
+msgid "Overrides Device Monitor behaviour only; does not change the firewall’s CARP role."
+msgstr "Wijzigt alleen het gedrag van Device Monitor; wijzigt niet de CARP-rol van de firewall."
 
 #: settings.volt
-msgid "Always act as backup (never observe)"
-msgstr "Altijd als back-up optreden (nooit bewaken)"
+msgid "Force BACKUP behaviour"
+msgstr "BACKUP-gedrag forceren"
 
 #: settings.volt
-msgid "Always act as master"
-msgstr "Altijd als master optreden"
+msgid "Force MASTER behaviour"
+msgstr "MASTER-gedrag forceren"
 
 #: settings.volt
 msgid "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
 msgstr "Geldt alleen voor de bewaakte interfaces. Een knooppunt zonder CARP-status wordt niet beïnvloed, dus een zelfstandige firewall blijft observeren."
 
 #: settings.volt
-msgid "Automatic (from CARP state)"
-msgstr "Automatisch (op basis van CARP-status)"
+msgid "Automatic (use CARP role)"
+msgstr "Automatisch (CARP-rol gebruiken)"
 
 #: settings.volt
 msgid "Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance."
@@ -1664,8 +1664,8 @@ msgid "Send Test Webhook"
 msgstr "Testwebhook verzenden"
 
 #: settings.volt
-msgid "Service observation"
-msgstr "Dienstobservatie"
+msgid "HA policy permission"
+msgstr "Toestemming volgens HA-beleid"
 
 #: settings.volt
 msgid "State"
@@ -1720,12 +1720,12 @@ msgstr "Selecteer de netwerkinterfaces die actief moeten worden bewaakt op versc
 # ============================================
 
 #: settings.volt
-msgid "observing"
-msgstr "observeert"
+msgid "permitted"
+msgstr "toegestaan"
 
 #: settings.volt
-msgid "suppressed"
-msgstr "onderdrukt"
+msgid "paused by HA policy"
+msgstr "gepauzeerd door HA-beleid"
 
 #: settings.volt
 msgid "unknown"
@@ -1781,3 +1781,143 @@ msgstr "minuten"
 #: infrastructureservices.volt
 msgid "Unknown"
 msgstr "Onbekend"
+
+# ============================================
+# [devices.volt, settings.volt] Node-local HA visibility
+# ============================================
+
+#: devices.volt, settings.volt
+msgid "Node-local Device Monitor data"
+msgstr "Node-lokale Device Monitor-gegevens"
+
+msgid "HA role"
+msgstr "HA-rol"
+
+msgid "Node"
+msgstr "Node"
+
+msgid "Non-HA"
+msgstr "Niet-HA"
+
+msgid "Unconfirmed"
+msgstr "Niet bevestigd"
+
+msgid "HA status unconfirmed"
+msgstr "HA-status niet bevestigd"
+
+msgid "HA status is unconfirmed because no monitored interface is selected."
+msgstr "De HA-status is niet bevestigd omdat er geen bewaakte interface is geselecteerd."
+
+msgid "HA status is unconfirmed because CARP is configured or active on this appliance, but no monitored interface is selected; monitoring-scope roles are unknown."
+msgstr "De HA-status is niet bevestigd omdat CARP op dit apparaat is geconfigureerd of actief, maar er is geen bewaakte interface geselecteerd; de rollen binnen het monitoringbereik zijn onbekend."
+
+msgid "HA status is unconfirmed because the selected monitored interfaces do not resolve to local devices."
+msgstr "De HA-status is niet bevestigd omdat de geselecteerde bewaakte interfaces niet naar lokale apparaten kunnen worden herleid."
+
+msgid "HA status is unconfirmed because CARP virtual IPs are configured without a detected CARP role."
+msgstr "De HA-status is niet bevestigd omdat er CARP-virtuele IP's zijn geconfigureerd zonder gedetecteerde CARP-rol."
+
+msgid "HA status is unconfirmed. Confirm CARP and the selected monitored interfaces."
+msgstr "De HA-status is niet bevestigd. Controleer CARP en de geselecteerde bewaakte interfaces."
+
+msgid "Displayed data belongs to this node only and is not merged from the CARP peer."
+msgstr "Weergegeven gegevens horen alleen bij deze node en worden niet samengevoegd met de CARP-peer."
+
+msgid "No Device Monitor activities are paused by HA gating."
+msgstr "Geen Device Monitor-activiteiten zijn gepauzeerd door HA-beperking."
+
+msgid "Paused on this BACKUP node"
+msgstr "Gepauzeerd op deze BACKUP-node"
+
+msgid "Visibility priming"
+msgstr "Zichtbaarheid voorbereiden"
+
+msgid "Service discovery"
+msgstr "Serviceontdekking"
+
+msgid "Service alerts"
+msgstr "Servicewaarschuwingen"
+
+msgid "New device alerts"
+msgstr "Waarschuwingen voor nieuwe apparaten"
+
+msgid "Automatic targeted Nmap scans"
+msgstr "Automatische gerichte Nmap-scans"
+
+msgid "Local inventory and identity recording, node-local ageing, and scheduled port discovery continue."
+msgstr "Lokale inventarisatie en identiteitsregistratie, node-lokale veroudering en geplande poortdetectie gaan door."
+
+msgid "A paused activity is not an empty result."
+msgstr "Een gepauzeerde activiteit is geen leeg resultaat."
+
+msgid "HA role status is unavailable. Confirm CARP and the effective mode before relying on this view."
+msgstr "De HA-rostatus is niet beschikbaar. Bevestig CARP en de effectieve modus voordat u op deze weergave vertrouwt."
+
+msgid "HA status could not be retrieved, so the current CARP gating state is unknown."
+msgstr "De HA-status kon niet worden opgehaald; de huidige CARP-beheerstatus is onbekend."
+
+msgid "Device Monitor reports that observation continues while the CARP role is unknown."
+msgstr "Device Monitor meldt dat de observatie doorgaat zolang de CARP-rol onbekend is."
+
+msgid "Last successful local scan"
+msgstr "Laatste geslaagde lokale scan"
+
+msgid "No successful local scan appears in the available scan history."
+msgstr "Er staat geen geslaagde lokale scan in de beschikbare scangeschiedenis."
+
+msgid "The local scan history could not be read."
+msgstr "De lokale scangeschiedenis kon niet worden gelezen."
+
+msgid "Scan history was not retrieved because the HA status request failed."
+msgstr "De scangeschiedenis is niet opgehaald omdat het HA-statusverzoek is mislukt."
+
+msgid "CARP awareness is disabled, so no activities are paused."
+msgstr "CARP-detectie is uitgeschakeld, dus er worden geen activiteiten gepauzeerd."
+
+msgid "The detected CARP role is unavailable; the effective mode comes from the role override."
+msgstr "De gedetecteerde CARP-rol is niet beschikbaar; de effectieve modus komt van de rolopheffing."
+
+msgid "Show details"
+msgstr "Details tonen"
+
+msgid "Hide details"
+msgstr "Details verbergen"
+
+msgid "HA-paused activities"
+msgstr "Door HA gepauzeerde activiteiten"
+
+msgid "Monitoring is disabled; scheduled scans and alert evaluation are not running."
+msgstr "Bewaking is uitgeschakeld op dit knooppunt; geplande scans en waarschuwingsevaluatie worden niet uitgevoerd."
+
+msgid "Detected and effective roles differ."
+msgstr "Gedetecteerde en effectieve rol verschillen."
+
+msgid "Role override is active."
+msgstr "Roloverschrijving is actief."
+
+msgid "No CARP configuration detected"
+msgstr "Geen CARP-configuratie gedetecteerd"
+
+msgid "HA controls that require a CARP role are disabled. Saved values are preserved; choose an explicit role override to enable them."
+msgstr "HA-bedieningselementen die een CARP-rol vereisen, zijn uitgeschakeld. Opgeslagen waarden blijven behouden; kies een expliciete roloverschrijving om ze in te schakelen."
+
+msgid "Monitoring enabled"
+msgstr "Monitoring ingeschakeld"
+
+msgid "Monitoring disabled"
+msgstr "Monitoring uitgeschakeld"
+
+msgid "Monitoring status unknown"
+msgstr "Monitoringstatus onbekend"
+
+msgid "Some activities paused"
+msgstr "Sommige activiteiten zijn gepauzeerd"
+
+msgid "Paused activities"
+msgstr "Gepauzeerde activiteiten"
+
+msgid "Continuing activities"
+msgstr "Doorgaande activiteiten"
+
+msgid "Timezone unavailable"
+msgstr "Tijdzone niet beschikbaar"

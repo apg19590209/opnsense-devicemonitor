@@ -37,6 +37,41 @@
                 </div>
             </div>
 
+            <!-- Persistent node identity and HA-gating notice. A BACKUP node's
+                 paused observations must not be mistaken for empty results. -->
+            <div id="dm-ha-node-notice" class="alert alert-info dm-ha-node-notice" role="status" aria-live="polite">
+                <span class="sr-only">{{ devicemonitor_t('Node-local Device Monitor data') }}</span>
+                <div class="dm-ha-node-notice-head">
+                    <div id="dm-ha-node-summary" class="dm-ha-node-summary"></div>
+                    <button type="button" id="dm-ha-node-toggle"
+                            class="btn btn-default btn-xs dm-ha-node-toggle"
+                            aria-expanded="false" aria-controls="dm-ha-node-details">
+                        <span id="dm-ha-node-toggle-label">{{ devicemonitor_t('Show details') }}</span>
+                        <span class="caret" aria-hidden="true"></span>
+                    </button>
+                </div>
+                <div id="dm-ha-node-summary-warning" class="dm-ha-node-summary-warning" style="display:none;"></div>
+                <div id="dm-ha-node-details" class="dm-ha-node-details" hidden>
+                    <div id="dm-ha-node-role-facts" class="dm-ha-node-role-facts">
+                        <span>{{ devicemonitor_t('Detected role') }}: <strong id="dm-ha-node-role"></strong></span>
+                        <span>{{ devicemonitor_t('Effective mode') }}: <strong id="dm-ha-node-mode"></strong></span>
+                    </div>
+                    <div id="dm-ha-node-ownership" class="dm-ha-node-ownership"></div>
+                    <div id="dm-ha-node-activity-details" class="dm-ha-node-activity-details">
+                        <div id="dm-ha-node-paused-block" style="display:none;">
+                            <strong id="dm-ha-node-paused-heading"></strong>
+                            <ul id="dm-ha-node-paused" class="dm-ha-node-paused-list"></ul>
+                            <div id="dm-ha-node-paused-note"></div>
+                        </div>
+                        <div id="dm-ha-node-continuing-block" class="dm-ha-node-continuing-block">
+                            <strong id="dm-ha-node-continuing-heading"></strong>
+                            <div id="dm-ha-node-continuation"></div>
+                        </div>
+                    </div>
+                    <div id="dm-ha-node-last-scan" class="dm-ha-node-last-scan"></div>
+                </div>
+            </div>
+
             <!-- Toolbar -->
             <div id="devices-sticky-toolbar" class="devices-toolbar">
 
@@ -145,6 +180,25 @@
     color: #888;
     margin-left: 5px;
 }
+.dm-ha-node-notice {
+    margin: 8px 10px 0 10px;
+    padding: 9px 12px;
+    overflow-wrap: anywhere;
+}
+.dm-ha-node-notice-head { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.dm-ha-node-summary { flex:1 1 240px; min-width:0; overflow-wrap:anywhere; }
+.dm-ha-node-toggle { flex:0 0 auto; margin-left:auto; white-space:nowrap; }
+.dm-ha-node-summary-warning { margin-top:4px; font-weight:600; }
+.dm-ha-node-details { margin-top:6px; }
+.dm-ha-node-details[hidden] { display:none; }
+.dm-ha-node-role-facts { display:flex; flex-wrap:wrap; gap:4px 18px; margin-bottom:5px; }
+.dm-ha-node-role-facts[hidden] { display:none; }
+.dm-ha-node-role-facts > span { min-width:0; }
+.dm-ha-node-ownership { margin-bottom:6px; }
+.dm-ha-node-activity-details { margin-top:4px; }
+.dm-ha-node-continuing-block { margin-top:4px; }
+.dm-ha-node-paused-list { margin:5px 0 4px 20px; padding:0; }
+.dm-ha-node-last-scan { margin-top:5px; font-size:12px; }
 .devices-divider {
     color: #777;
     margin: 0 8px;
@@ -402,6 +456,198 @@ main.page-content > .row {
         };
     }
 
+    // Pure state renderer for the persistent node/HA notice. The API returns
+    // the role verdict and the exact paused activity identifiers; this maps
+    // them to translated labels. Missing new fields fall back to the older
+    // role/observing response rather than guessing MASTER.
+    function buildHaNoticeModel(data, t) {
+        data = data || {};
+        t = t || {};
+
+        var status = String(data.ha_status || '').toLowerCase();
+        var detected = String(data.role || data.mode || '').toUpperCase();
+        var effective = String(data.mode || data.role || '').toUpperCase();
+
+        if (data.fetch_failed === true) {
+            status = 'fetch_failed';
+        }
+
+        if (['master', 'backup', 'non_ha', 'unavailable', 'fetch_failed'].indexOf(status) === -1) {
+            if (data.role_available === false) {
+                status = 'unavailable';
+            } else if (effective === 'BACKUP') {
+                status = 'backup';
+            } else if (effective === 'MASTER') {
+                status = 'master';
+            } else {
+                status = 'non_ha';
+            }
+        }
+
+        var overrideName = String(data.override || 'auto').toLowerCase();
+        var overrideActive = data.override_active === true || overrideName !== 'auto';
+        var nonHaConfirmed = typeof data.non_ha_confirmed === 'boolean'
+            ? data.non_ha_confirmed
+            : (status === 'non_ha' && data.role_available === true && !overrideActive);
+        var nonHaConfirmation = String(data.non_ha_confirmation || '');
+        var unconfirmedNonHa = status === 'non_ha' && !nonHaConfirmed && !overrideActive;
+        var haRelevant = data.ha_relevant !== false && !nonHaConfirmed;
+
+        var activityLabels = {
+            visibility_priming: t.visibility_priming,
+            service_discovery: t.service_discovery,
+            service_alerts: t.service_alerts,
+            identity_alerts: t.identity_alerts,
+            new_device_alerts: t.new_device_alerts,
+            targeted_nmap: t.targeted_nmap
+        };
+        var paused = [];
+
+        if (status === 'backup') {
+            (data.paused_activities || []).forEach(function (id) {
+                paused.push(activityLabels[id] || id);
+            });
+        }
+
+        var detectedRole = (data.role_available === false || status === 'fetch_failed')
+            ? t.unavailable
+            : (unconfirmedNonHa
+                ? t.unconfirmed
+                : (detected && detected !== 'NONE'
+                ? (data.role_mixed ? 'MASTER / BACKUP' : detected)
+                : t.non_ha));
+        var effectiveMode = effective;
+        if (unconfirmedNonHa) {
+            effectiveMode = t.unconfirmed;
+        } else if (effectiveMode === 'NONE' || effectiveMode === '') {
+            effectiveMode = (status === 'unavailable' || status === 'fetch_failed')
+                ? t.unavailable
+                : t.non_ha;
+        }
+
+        var tone = (status === 'fetch_failed' || status === 'unavailable')
+            ? 'danger'
+            : ((status === 'backup' || unconfirmedNonHa) ? 'warning' : 'info');
+        var warning = '';
+
+        if (status === 'fetch_failed') {
+            warning = t.fetch_failed;
+        } else if (status === 'unavailable') {
+            warning = [
+                t.role_unavailable,
+                data.carp_aware === false
+                    ? t.carp_aware_off
+                    : (data.role_unknown_observation_continues === true
+                        ? t.role_unknown_observation_continues
+                        : '')
+            ].filter(Boolean).join(' ');
+        } else if (data.role_available === false) {
+            warning = [
+                data.carp_aware === false ? t.carp_aware_off : '',
+                t.role_check_failed
+            ].filter(Boolean).join(' ');
+        } else if (data.carp_aware === false && !nonHaConfirmed) {
+            warning = t.carp_aware_off;
+        }
+
+        var unconfirmedWarning = '';
+        if (unconfirmedNonHa) {
+            if (nonHaConfirmation === 'no_monitored_interfaces') {
+                unconfirmedWarning = t.non_ha_unconfirmed_no_interfaces;
+            } else if (nonHaConfirmation === 'carp_present_no_monitored_interfaces') {
+                unconfirmedWarning = t.non_ha_unconfirmed_carp_no_interfaces;
+            } else if (nonHaConfirmation === 'unresolved_monitored_interfaces') {
+                unconfirmedWarning = t.non_ha_unconfirmed_unresolved_interfaces;
+            } else if (nonHaConfirmation === 'carp_vip_configured') {
+                unconfirmedWarning = t.non_ha_unconfirmed_carp_vip;
+            } else {
+                unconfirmedWarning = t.non_ha_unconfirmed_generic;
+            }
+        }
+        if (unconfirmedWarning) {
+            warning = [warning, unconfirmedWarning].filter(Boolean).join(' ');
+        }
+
+        var roleDiffers = detectedRole !== t.unavailable &&
+            detectedRole !== t.unknown &&
+            effectiveMode !== t.unavailable &&
+            effectiveMode !== t.unknown &&
+            detectedRole !== effectiveMode;
+
+        var monitoringKnown = data.monitoring_enabled === true || data.monitoring_enabled === false;
+        var monitoringEnabled = data.monitoring_enabled === true;
+        var monitoringLabel = monitoringKnown
+            ? (monitoringEnabled ? t.enabled : t.disabled)
+            : t.unknown;
+
+        var summaryParts = [data.node || t.unknown];
+        if (unconfirmedNonHa) {
+            summaryParts.push(t.ha_status_unconfirmed);
+        } else if (!nonHaConfirmed) {
+            summaryParts.push(effectiveMode);
+        }
+        summaryParts.push(monitoringKnown
+            ? (monitoringEnabled ? t.monitoring_enabled : t.monitoring_disabled)
+            : t.monitoring_status_unknown);
+        if (status === 'backup' && paused.length) {
+            summaryParts.push(t.some_activities_paused);
+        }
+        var summary = summaryParts.filter(Boolean).join(' \u00b7 ');
+
+        var summaryWarningParts = [];
+        if (overrideActive) {
+            summaryWarningParts.push(t.role_override_active);
+        }
+        if (warning) {
+            summaryWarningParts.push(warning);
+        }
+        if (roleDiffers && !warning) {
+            summaryWarningParts.push(t.role_mode_difference);
+        }
+        var summaryWarning = summaryWarningParts.filter(Boolean).join(' ');
+
+        var lastScanState = String(data.last_scan_state || '').toLowerCase();
+        var lastScanTimezone = String(data.last_scan_timezone || '').trim();
+        var lastScan = t.no_scan;
+        if (status === 'fetch_failed') {
+            lastScan = t.scan_fetch_failed;
+        } else if (lastScanState === 'unavailable') {
+            lastScan = t.scan_unavailable;
+        } else if (data.last_scan) {
+            lastScan = (t.last_scan || '') + ': ' + data.last_scan
+                + ' (' + (lastScanTimezone || t.timezone_unavailable) + ')';
+        }
+
+        var activityRelevant = haRelevant && (
+            status === 'master' || status === 'backup' ||
+            data.role_unknown_observation_continues === true
+        );
+
+        return {
+            status: status,
+            tone: tone,
+            haRelevant: haRelevant,
+            nonHaConfirmed: nonHaConfirmed,
+            overrideActive: overrideActive,
+            role: detectedRole,
+            mode: effectiveMode,
+            node: data.node || t.unknown,
+            ownership: (nonHaConfirmed || unconfirmedNonHa) ? (t.node_local || t.ownership) : t.ownership,
+            paused: paused,
+            pausedHeading: t.paused_activities,
+            pausedNote: t.paused_note,
+            continuingHeading: t.continuing_activities,
+            continuation: t.continuation,
+            activityRelevant: activityRelevant,
+            monitoringEnabled: monitoringEnabled,
+            monitoringLabel: monitoringLabel,
+            summary: summary,
+            summaryWarning: summaryWarning,
+            roleDiffers: roleDiffers,
+            lastScan: lastScan
+        };
+    }
+
 $(document).ready(function() {
     $('.dm-info').popover({container:'body', placement:'auto bottom', trigger:'focus'});
     $('.dm-info').on('keydown', function(event) {
@@ -421,7 +667,52 @@ $(document).ready(function() {
         all_vlans:      {{ lang.query('All VLANs')|json_encode(15) }},
         select_vlan:    {{ lang.query('Select a VLAN')|json_encode(15) }},
         identity:       {{ lang.query('identity')|json_encode(15) }},
-        identities:     {{ lang.query('identities')|json_encode(15) }}
+        identities:     {{ lang.query('identities')|json_encode(15) }},
+        unknown:        {{ lang.query('unknown')|json_encode(15) }},
+        unavailable:    {{ lang.query('Unavailable')|json_encode(15) }},
+        non_ha:         {{ lang.query('Non-HA')|json_encode(15) }},
+        unconfirmed:    {{ lang.query('Unconfirmed')|json_encode(15) }},
+        ha_status_unconfirmed: {{ lang.query('HA status unconfirmed')|json_encode(15) }},
+        detected_role:  {{ lang.query('Detected role')|json_encode(15) }},
+        effective_mode: {{ lang.query('Effective mode')|json_encode(15) }},
+        monitoring:     {{ lang.query('Monitoring')|json_encode(15) }},
+        enabled:        {{ lang.query('Enabled')|json_encode(15) }},
+        disabled:       {{ lang.query('Disabled')|json_encode(15) }},
+        monitoring_enabled: {{ lang.query('Monitoring enabled')|json_encode(15) }},
+        monitoring_disabled: {{ lang.query('Monitoring disabled')|json_encode(15) }},
+        monitoring_status_unknown: {{ lang.query('Monitoring status unknown')|json_encode(15) }},
+        some_activities_paused: {{ lang.query('Some activities paused')|json_encode(15) }},
+        paused_activities: {{ lang.query('Paused activities')|json_encode(15) }},
+        continuing_activities: {{ lang.query('Continuing activities')|json_encode(15) }},
+        show_details:   {{ lang.query('Show details')|json_encode(15) }},
+        hide_details:   {{ lang.query('Hide details')|json_encode(15) }},
+        role_mode_difference: {{ lang.query('Detected and effective roles differ.')|json_encode(15) }},
+        role_override_active: {{ lang.query('Role override is active.')|json_encode(15) }},
+        node_local:     {{ lang.query('Node-local Device Monitor data')|json_encode(15) }},
+        ownership:      {{ lang.query('Displayed data belongs to this node only and is not merged from the CARP peer.')|json_encode(15) }},
+        visibility_priming: {{ lang.query('Visibility priming')|json_encode(15) }},
+        service_discovery:  {{ lang.query('Service discovery')|json_encode(15) }},
+        service_alerts:     {{ lang.query('Service alerts')|json_encode(15) }},
+        identity_alerts:    {{ lang.query('Identity conflict alerts')|json_encode(15) }},
+        new_device_alerts:  {{ lang.query('New device alerts')|json_encode(15) }},
+        targeted_nmap:      {{ lang.query('Automatic targeted Nmap scans')|json_encode(15) }},
+        continuation:   {{ lang.query('Local inventory and identity recording, node-local ageing, and scheduled port discovery continue.')|json_encode(15) }},
+        paused_note:    {{ lang.query('A paused activity is not an empty result.')|json_encode(15) }},
+        role_unavailable: {{ lang.query('HA role status is unavailable. Confirm CARP and the effective mode before relying on this view.')|json_encode(15) }},
+        fetch_failed:     {{ lang.query('HA status could not be retrieved, so the current CARP gating state is unknown.')|json_encode(15) }},
+        role_unknown_observation_continues: {{ lang.query('Device Monitor reports that observation continues while the CARP role is unknown.')|json_encode(15) }},
+        carp_aware_off:   {{ lang.query('CARP awareness is disabled, so no activities are paused.')|json_encode(15) }},
+        role_check_failed: {{ lang.query('The detected CARP role is unavailable; the effective mode comes from the role override.')|json_encode(15) }},
+        non_ha_unconfirmed_no_interfaces: {{ lang.query('HA status is unconfirmed because no monitored interface is selected.')|json_encode(15) }},
+        non_ha_unconfirmed_carp_no_interfaces: {{ lang.query('HA status is unconfirmed because CARP is configured or active on this appliance, but no monitored interface is selected; monitoring-scope roles are unknown.')|json_encode(15) }},
+        non_ha_unconfirmed_unresolved_interfaces: {{ lang.query('HA status is unconfirmed because the selected monitored interfaces do not resolve to local devices.')|json_encode(15) }},
+        non_ha_unconfirmed_carp_vip: {{ lang.query('HA status is unconfirmed because CARP virtual IPs are configured without a detected CARP role.')|json_encode(15) }},
+        non_ha_unconfirmed_generic: {{ lang.query('HA status is unconfirmed. Confirm CARP and the selected monitored interfaces.')|json_encode(15) }},
+        last_scan:      {{ lang.query('Last successful local scan')|json_encode(15) }},
+        timezone_unavailable: {{ lang.query('Timezone unavailable')|json_encode(15) }},
+        no_scan:        {{ lang.query('No successful local scan appears in the available scan history.')|json_encode(15) }},
+        scan_unavailable: {{ lang.query('The local scan history could not be read.')|json_encode(15) }},
+        scan_fetch_failed: {{ lang.query('Scan history was not retrieved because the HA status request failed.')|json_encode(15) }}
     };
 
     var allRows = [], activeVlans = [], activeStatus = '', vlanNames = {};
@@ -448,6 +739,91 @@ $(document).ready(function() {
         $('#stat-total').text(summary.total);
         $('#stat-online').text(summary.online);
     }
+
+    var haNoticeExpanded = false;
+
+    function setHaNoticeExpanded(expanded) {
+        haNoticeExpanded = !!expanded;
+        $('#dm-ha-node-toggle').attr('aria-expanded', haNoticeExpanded ? 'true' : 'false');
+        $('#dm-ha-node-toggle-label').text(
+            haNoticeExpanded ? translations.hide_details : translations.show_details
+        );
+        $('#dm-ha-node-details').prop('hidden', !haNoticeExpanded).toggle(haNoticeExpanded);
+    }
+
+    function toggleHaNotice() {
+        setHaNoticeExpanded(!haNoticeExpanded);
+    }
+
+    function renderHaNotice(data) {
+        var model = buildHaNoticeModel(data, translations);
+        var $notice = $('#dm-ha-node-notice');
+        var showPaused = model.paused.length > 0;
+
+        $notice
+            .removeClass('alert-info alert-warning alert-danger')
+            .addClass('alert-' + model.tone);
+        $('#dm-ha-node-role').text(model.role || translations.unknown);
+        $('#dm-ha-node-mode').text(model.mode || translations.unknown);
+        $('#dm-ha-node-summary').text(model.summary || '');
+        $('#dm-ha-node-summary-warning')
+            .text(model.summaryWarning || '')
+            .toggle(!!model.summaryWarning);
+        $('#dm-ha-node-role-facts').toggle(model.haRelevant);
+        $('#dm-ha-node-activity-details').toggle(model.activityRelevant);
+        $('#dm-ha-node-ownership').text(model.ownership || '');
+        $('#dm-ha-node-paused-block').toggle(model.activityRelevant && showPaused);
+        $('#dm-ha-node-paused-heading').text(model.pausedHeading || '');
+        $('#dm-ha-node-paused-note').text(model.pausedNote || '');
+        $('#dm-ha-node-continuing-block')
+            .toggle(model.activityRelevant && !!model.continuation);
+        $('#dm-ha-node-continuing-heading').text(model.continuingHeading || '');
+        $('#dm-ha-node-continuation').text(model.continuation || '');
+        $('#dm-ha-node-last-scan').text(model.lastScan || '');
+
+        var $paused = $('#dm-ha-node-paused').empty();
+        model.paused.forEach(function (label) {
+            $paused.append($('<li>').text(label));
+        });
+    }
+
+    var haStatusRequest = 0;
+
+    function loadHaNodeVisibility() {
+        var requestId = ++haStatusRequest;
+        $.ajax({
+            url: '/api/devicemonitor/config/getcarpstatus',
+            type: 'GET',
+            cache: false,
+            timeout: 10000,
+            success: function (data) {
+                if (requestId !== haStatusRequest) {
+                    return;
+                }
+                renderHaNotice(data || {});
+            },
+            error: function () {
+                if (requestId !== haStatusRequest) {
+                    return;
+                }
+                renderHaNotice({
+                    ha_status: 'fetch_failed',
+                    fetch_failed: true,
+                    role_available: false,
+                    mode: 'NONE',
+                    node: '',
+                    last_scan: '',
+                    last_scan_state: 'unavailable'
+                });
+            }
+        });
+    }
+
+    $('#dm-ha-node-toggle').on('click', function (event) {
+        event.preventDefault();
+        toggleHaNotice();
+    });
+    setHaNoticeExpanded(false);
 
     // VLAN multi-select dropdown (pending selection; Apply commits it)
     function buildVlanDropdown(vlans) {
@@ -1278,12 +1654,16 @@ $(document).ready(function() {
         }
     }
 
-    // Initialise by loading interface labels before devices
+    // Initialise by loading interface labels before devices. The HA notice is
+    // independent of the row refresh so an empty inventory cannot hide which
+    // node produced it or which observations are paused.
+    loadHaNodeVisibility();
 
     $.ajax({url:'/api/devicemonitor/config/getinterfaces',type:'GET',
         success:function(data){ vlanNames=data||{}; loadDevices(); },
         error:function(){ loadDevices(); }
     });
     setInterval(function(){ loadDevices(true); },30000);
+    setInterval(loadHaNodeVisibility, 30000);
 });
 </script>
