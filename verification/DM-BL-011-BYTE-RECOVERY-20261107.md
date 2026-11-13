@@ -1,8 +1,9 @@
 # DM-BL-011 — historical database-byte recovery search
 
-**Status: not recovered. No retained authorised local evidence or backup contains the historical
-`c17874a7…` bytes. The logical database state is verified, but physical byte identity cannot be
-reconstructed from the files currently retained. Operator acceptance has not been granted.**
+**Status: CLOSED on 13 November 2026 by explicit operator acceptance of the historical evidence
+limitation; original bytes not recovered. No retained authorised local evidence or backup contains
+the historical `c17874a7…` bytes. The logical database state is verified, but physical byte identity
+cannot be reconstructed from the files currently retained. This record makes no byte-identity claim.**
 
 ## Search scope and method
 
@@ -81,8 +82,20 @@ layout. No transformation with an observed match was found.
   was not retained and the controlled transformations did not match.
 - Raw-disk undelete/forensics was not attempted: it is outside the authorised local evidence scope
   and would not be a safe or auditable substitute for an original retained copy.
-- The only closure paths are a newly discovered original-byte copy or an explicit operator decision
-  accepting the historical physical-byte limitation. Neither is recorded here.
+- The closure paths were a newly discovered original-byte copy or an explicit operator decision
+  accepting the historical physical-byte limitation. The second path was exercised on 13 November
+  2026.
 
 The corrected guard prevents recurrence and the Phase 2A rehearsal proves exact restoration on
-future runs; neither fact retroactively reconstructs `c17874a7…`. DM-BL-011 remains **OPEN**.
+future runs; neither fact retroactively reconstructs `c17874a7…`. DM-BL-011 is **CLOSED** on the
+basis recorded below.
+
+## Closure — 13 November 2026
+
+The operator explicitly accepted that the historical recovery cannot be proven byte-identical.
+Logical restoration was verified, and the byte-preserving guard was corrected and tested. The
+original `c17874a7…` physical bytes remain unavailable; the retained state is `796d28c7…` and the
+logical digest evidence is `10460718…`.
+
+This is an accepted historical evidence limitation, not a current recovery defect. No historical
+byte-identity claim is made. DM-BL-011 is **CLOSED**.

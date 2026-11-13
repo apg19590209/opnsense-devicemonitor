@@ -1,9 +1,11 @@
 # Device Monitor 2.14.0 — validation closure plan
 
 **Status: ACTIVE. Publication remains blocked pending the gates below. No 2.14.0 tag or release
-exists. DM-BL-010 remains integrated but publication-pending; DM-BL-011, DM-BL-013 and issue #5
-remain OPEN. DM-BL-012 was closed on 12 November 2026 by explicit operator acceptance after the
-authorised `.23` lifecycle test. Historical monitoring-activation attribution remains UNKNOWN.**
+exists. DM-BL-010 remains integrated but publication-pending; DM-BL-013 and issue #5 remain OPEN.
+DM-BL-011 was closed on 13 November 2026 by explicit operator acceptance of the historical
+byte-evidence limitation, with no byte-identity claim. DM-BL-012 was closed on 12 November 2026 by
+explicit operator acceptance after the authorised `.23` lifecycle test. Historical
+monitoring-activation attribution remains UNKNOWN.**
 
 ## Objective and policy
 
@@ -20,7 +22,7 @@ HA services, delivery endpoints, releases and tags are not contacted or changed 
 
 | Item | Actual acceptance criterion | Evidence already held | What remains unproven | Classification |
 |---|---|---|---|---|
-| **DM-BL-011** — historical database-byte identity | Reconstruct and compare the original `c17874a7…` bytes, or record explicit operator acceptance of the historical limitation | Logical restoration, schema/data/integrity checks and the historical transition trace pass. The corrected guard now captures DB/WAL/SHM separately. A new disposable Phase 2A rehearsal passes, including exact-byte restore and rejection of a logically equal snapshot. A read-only expanded search found zero exact copies among 128 physical candidates and 67 archives, including a supplemental `/root/dm-backups` scan. | The original `c17874a7…` bytes are absent from all retained `/root/dm-*` and `/var/backups/devicemonitor` database files inspected on 7 November 2026; the retained copies are the snapshot `796d28c7…` or older unrelated states. Controlled SQLite copy/`VACUUM` transformations did not reproduce the hash. No local test can recreate the lost historical bytes. | Historical evidence plus operator decision. Not a live-service test. See `verification/DM-BL-011-BYTE-RECOVERY-20261107.md`. |
+| **DM-BL-011** — historical database-byte identity | Reconstruct and compare the original `c17874a7…` bytes, or record explicit operator acceptance of the historical limitation | Logical restoration, schema/data/integrity checks and the historical transition trace pass. The corrected guard now captures DB/WAL/SHM separately. A new disposable Phase 2A rehearsal passes, including exact-byte restore and rejection of a logically equal snapshot. A read-only expanded search found zero exact copies among 128 physical candidates and 67 archives, including a supplemental `/root/dm-backups` scan. On 13 November 2026 the operator explicitly accepted the historical limitation. | The original `c17874a7…` bytes are absent from all retained `/root/dm-*` and `/var/backups/devicemonitor` database files inspected on 7 November 2026; the retained copies are the snapshot `796d28c7…` or older unrelated states. Controlled SQLite copy/`VACUUM` transformations did not reproduce the hash. No local test can recreate the lost historical bytes. This remains an accepted evidence limitation; no byte-identity claim is made. | **CLOSED** on explicit operator acceptance. See `verification/DM-BL-011-BYTE-RECOVERY-20261107.md`. |
 | **DM-BL-012** — real-host fresh install and plugin lifecycle | Run `FRESH=1` on a genuinely empty disposable OPNsense host; prove real `rc.configure_plugins`, configd, daemon autostart, menu/ACL registration and reboot persistence, or record explicit operator acceptance of the residual risk | Isolated jail `fresh` and `fresh-rollback` pass; the live 2.13.3→2.14.0 upgrade and repair lifecycle on `.23` pass; the 12 November `.23` lifecycle run passed uninstall/reinstall, one reboot, menu/ACL regeneration and operator-attested Devices/Settings rendering. | **None for closure:** the operator explicitly accepted the existing-development-host lifecycle evidence in place of a pristine VM. Historical monitoring-activation attribution remains unknown and was not an acceptance criterion. | **CLOSED** on explicit operator acceptance. |
 | **DM-BL-013** — monitoring, HA/CARP, ageing and delivery | Exercise scheduled daemon-triggered discovery, reminders/ageing including UTC timestamp consistency, daemon-generated notifications, targeted Nmap, enrichment, exact `notified_at` attribution, external-lab delivery and isolated HA failover | Two scheduled inventory scans, direct DMTEST discovery, scope-limited probes and direct loopback-helper SMTP pass. The UTC/local presence timestamp defect has isolated regressions and a rebuilt candidate. | Daemon-triggered service discovery, reminder/ageing lifecycle, daemon-generated delivery, targeted Nmap, enrichment, exact caller attribution and external delivery. CARP/failover is entirely unproven. | Phase 4A on a disposable single OPNsense VM; Phase 4B needs an isolated two-node pair. External delivery needs an approved lab endpoint. |
 | **Native Phalcon/Volt/ViewTranslator runtime** | Render the ten Device Monitor pages through the production Phalcon/Volt/ViewTranslator path for every bundled language and verify resolved output | On 7 November 2026 the installed 2.14.0 tree passed `LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`: 10 pages and 490 keys per language, zero failures. Evidence: `/root/dm-validation-2140/language-runtime-2.14.0-20261107.md`; gap analysis: `verification/LANGUAGE-ACCEPTANCE-GAP-20261107.md`. | `nl_NL` remains absent from the core GUI language selector by documented DM-BL-008a design; it renders when selected through the plugin path. Browser layout, JavaScript execution and translation quality are outside this test. | **Satisfied for the runtime matrix.** The known selector gap and human wording review remain separate, non-runtime items. |
@@ -29,17 +31,17 @@ HA services, delivery endpoints, releases and tags are not contacted or changed 
 
 ## Smallest meaningful closure procedures
 
-### DM-BL-011 — historical-byte acceptance
+### DM-BL-011 — historical-byte acceptance: CLOSED (13 November 2026)
 
 - **Technical result:** Phase 2A cannot recover the prior `c17874a7…` bytes. It proves that the
   corrected guard no longer introduces the defect. The expanded read-only recovery search is
   recorded in `verification/DM-BL-011-BYTE-RECOVERY-20261107.md`.
 - **Environment:** none. The decision is made from the existing evidence record.
 - **Backups/rollback:** not applicable.
-- **Acceptance:** a dated operator statement that the historical physical-byte limitation is
-  accepted, with the logical digest, schema, row counts and integrity evidence retained; or a newly
-  found original-byte copy that compares to `c17874a7…`.
-- **Estimated effort:** 10–15 minutes for review and acceptance once the evidence is read.
+- **Acceptance:** met on 13 November 2026 by an explicit operator statement accepting the historical
+  physical-byte limitation. Logical digest, schema, row counts and integrity evidence are retained;
+  no byte-identity claim is made.
+- **Status:** **CLOSED**; no further action.
 
 ### DM-BL-012 — real-host fresh install and plugin lifecycle
 
@@ -180,14 +182,12 @@ closes the native runtime coverage gate, but not human translation-quality or br
 
 ## Remaining approvals and dependencies
 
-1. **DM-BL-011:** operator acceptance of the historical physical-byte limitation, or a new source of
-   the original `c17874a7…` bytes.
-2. **DM-BL-012 and Phase 4A:** approval to provision and use a disposable OPNsense VM.
-3. **DM-BL-013 Phase 4B:** approval and provisioning of an isolated two-node CARP/pfsync pair.
-4. **External delivery:** approval of a lab SMTP/webhook endpoint; no production recipient.
-5. **Release publication:** after all above evidence and records are reviewed, a final release commit,
+1. **DM-BL-012 and Phase 4A:** approval to provision and use a disposable OPNsense VM.
+2. **DM-BL-013 Phase 4B:** approval and provisioning of an isolated two-node CARP/pfsync pair.
+3. **External delivery:** approval of a lab SMTP/webhook endpoint; no production recipient.
+4. **Release publication:** after all above evidence and records are reviewed, a final release commit,
    exact-SHA CI, final bundle verification and separate tag/release approval.
-6. **Issue #5:** reporter confirmation that the already-published v2.12.1 service is running and
+5. **Issue #5:** reporter confirmation that the already-published v2.12.1 service is running and
    pages load normally. No issue reply or candidate handoff is authorised now.
 
 ## Review and proposed commit scope
@@ -223,6 +223,6 @@ asserts both the exact test count and `OK`, but no exact-SHA run has yet exercis
 
 The next smallest real validation step is **Phase 3 on an approved disposable OPNsense VM**: fresh
 `FRESH=1` install with real plugin registration and a reboot persistence check. It cannot be run on
-the existing `.23` installation or without the missing VM environment. If the VM cannot be supplied,
-the only remaining closure action for DM-BL-011 is the operator's explicit historical-byte
-acceptance; no local test can resolve it.
+the existing `.23` installation or without the missing VM environment. DM-BL-011 was closed on
+13 November 2026 by explicit operator acceptance of the historical byte-evidence limitation; this
+does not make reused `.23` evidence equivalent to a pristine VM and does not close DM-BL-013.

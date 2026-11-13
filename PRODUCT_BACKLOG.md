@@ -756,7 +756,7 @@ are in `verification/DEPLOY-2.14.0-23-PLAN.md` and
 
 The first supervised status check saw a transient configd socket; manual `guard recover` passed and the wrapper now retries within a bounded window. The SMTP parser now normalises angle-bracketed addresses and ESMTP `SIZE=` values while retaining the single-recipient rule. The corrected guard keeps original, snapshot and restored database identities separate; its 35 mock/disposable-copy tests all pass, including distinguishing logically equal but physically different snapshots, rejecting normalised snapshot bytes as physical restoration, accepting original bytes, archiving WAL/SHM before replacement, capturing and restoring a real uncheckpointed WAL/SHM pair exactly, and leaving monitoring stopped on unsafe capture or restoration. This correction cannot retroactively prove the completed exercise's physical bytes. Evidence: `verification/monitoring-validation/EXECUTION-20261106.md` and `/root/dm-validation-2140/monitoring/20261106T083522Z/`.
 
-The remaining validation limits do not reopen DM-BL-009; they are separately identified. Physical DB byte identity for the completed exercise is **DM-BL-011** and remains a release blocker for an unqualified exact-restoration claim: the operation is traced and the logical state is verified, but the original bytes and their page map were never retained. The corrected guard now enforces original-byte identity for any future authorised run but cannot prove the historical bytes. Live `FRESH=1` and real OPNsense plugin registration/lifecycle were tracked as **DM-BL-012** and **closed on 12 November 2026** by explicit operator acceptance after lifecycle testing on `.23`. Full reminder/ageing/CARP and daemon-generated notification/service-discovery paths remain under **DM-BL-013**, as do the presence/service timestamp defect, exact daemon-triggered attribution of the `notified_at` migration and external delivery. No further run is authorised. Issue #5 remains **OPEN**; §9.4 is paused.
+The remaining validation limits do not reopen DM-BL-009; they are separately identified. Physical DB byte identity for the completed exercise was tracked as **DM-BL-011** and was **closed on 13 November 2026** by explicit operator acceptance of the historical evidence limitation: the operation is traced and the logical state is verified, but the original bytes and their page map were never retained, so no byte-identity claim is made. The corrected guard now enforces original-byte identity for any future authorised run but cannot prove the historical bytes. Live `FRESH=1` and real OPNsense plugin registration/lifecycle were tracked as **DM-BL-012** and **closed on 12 November 2026** by explicit operator acceptance after lifecycle testing on `.23`. Full reminder/ageing/CARP and daemon-generated notification/service-discovery paths remain under **DM-BL-013**, as do the presence/service timestamp defect, exact daemon-triggered attribution of the `notified_at` migration and external delivery. No further run is authorised. Issue #5 remains **OPEN**; §9.4 is paused.
 
 **Main integration completed (7 November 2026):** draft PR #6 was reviewed and then fast-forwarded
 with no squash, rebase or force-push. The authenticated About/Features screenshot remains accepted
@@ -849,8 +849,9 @@ are **not** a defect of the issue #5 installation result.
   is not a runtime rendering failure. Report:
   `/root/dm-validation-2140/language-runtime-2.14.0-20261107.md`.
 - A validation-closure pass on 7 November 2026 found and fixed a guard snapshot-side-effect defect,
-  passed a disposable DB/WAL/SHM rehearsal and changed publication to **NO-GO** pending
-  DM-BL-011/012/013. See `verification/VALIDATION-CLOSURE-2.14.0-20261107.md` and
+  passed a disposable DB/WAL/SHM rehearsal and changed publication to **NO-GO** pending the then-open
+  DM-BL-011/012/013 gates; DM-BL-011 and DM-BL-012 have since closed, while DM-BL-013 remains open.
+  See `verification/VALIDATION-CLOSURE-2.14.0-20261107.md` and
   `verification/RELEASE-READINESS-2.14.0-4611447-20261107.md`.
 
 **Constraints preserved by the implementation:**
@@ -866,10 +867,11 @@ are **not** a defect of the issue #5 installation result.
 live validation, authenticated About/Features/Devices-loading evidence and native runtime language
 matrix are complete, and the correction is integrated into `main`. The item remains publication
 pending because 2.14.0 is not yet published and the revised closure objective requires
-DM-BL-011/012/013 to be resolved first. Device Monitor 2.14.0 remains unpublished and v2.12.1
-remains the latest published release.
+DM-BL-011/012/013 to be resolved first; DM-BL-011 and DM-BL-012 have since closed, while DM-BL-013
+remains open. Device Monitor 2.14.0 remains unpublished and v2.12.1 remains the latest published
+release.
 
-### DM-BL-011 — historical database-byte identity for the completed §9.4 monitoring exercise: **`OPEN`**
+### DM-BL-011 — historical database-byte identity for the completed §9.4 monitoring exercise: **`CLOSED`** (13 November 2026; explicit operator acceptance of the historical evidence limitation)
 
 **Description:** the completed bounded monitoring exercise has verified logical restoration but no
 proven physical database-byte identity. The original live database was `c17874a7…`; the retained
@@ -892,14 +894,18 @@ snapshot-equivalence rejection, exact-byte restoration, configuration/record/OPN
 preservation and post-state archiving. This prevents recurrence but cannot prove the historical
 bytes.
 
-**Closure evidence:** either new evidence capable of reconstructing and comparing the original
-bytes, or explicit operator acceptance of the historical byte-identity limitation. Neither is
-currently recorded. All retained database files rechecked on 7 November are `796d28c7…` or older;
-the `/var/backups/devicemonitor/devices.db.pre-monitor-scan-20260923-070801` copy is `65e11a3b…`, not
-the 6 November original. A broader read-only search covered 128 physical database candidates and 67
+**Closure evidence:** on 13 November 2026 the operator explicitly accepted the historical
+physical-byte limitation. The closure basis is the verified logical restoration, matching logical
+digest, schema, row counts and integrity checks, together with the corrected and tested byte-preserving
+guard. This makes no historical byte-identity claim: the original `c17874a7…` bytes remain unavailable
+and the retained copies are `796d28c7…` or older unrelated states. All retained database files
+rechecked on 7 November are `796d28c7…` or older; the
+`/var/backups/devicemonitor/devices.db.pre-monitor-scan-20260923-070801` copy is `65e11a3b…`, not the
+6 November original. A broader read-only search covered 128 physical database candidates and 67
 archives; no exact copy was found, and common SQLite copy/`VACUUM`/`VACUUM INTO`/`PRAGMA optimize`
-transformations on a copy did not reproduce the hash. This item is a publication blocker under the
-revised objective and is distinct from DM-BL-009's completed `main` reconciliation.
+transformations on a copy did not reproduce the hash. This is an accepted historical evidence
+limitation, not a current recovery defect, and is distinct from DM-BL-009's completed `main`
+reconciliation.
 
 **Evidence:** `verification/monitoring-validation/EXECUTION-20261106.md`,
 `verification/VALIDATION-CLOSURE-2.14.0-20261107.md`,
@@ -963,8 +969,9 @@ evidence records an un-attributed settings write and one scan, not a confirmed a
 defect. The documented DM-BL-012 acceptance criteria are real plugin registration and a daemon that
 survives reboot with no stub claim (or explicit operator acceptance of the residual risk); no
 acceptance criterion requires historical attribution. Uncertainty alone therefore does not add a
-release blocker; release remains **NO-GO** on the separately documented DM-BL-011 and DM-BL-013
-criteria.
+release blocker; release remains **NO-GO** on the separately documented DM-BL-013 criteria. DM-BL-011
+was **CLOSED** on 13 November 2026 by explicit operator acceptance of the historical byte-evidence
+limitation, with no byte-identity claim.
 
 **Closure evidence:** a separately authorised real-host `FRESH=1` test and plugin lifecycle check
 on a disposable OPNsense VM, or explicit operator acceptance of the residual risk. The existing jail
