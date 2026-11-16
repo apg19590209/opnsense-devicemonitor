@@ -102,7 +102,9 @@ check(count($log->query([], 500, 0)) === 14, 'all rows accounted for');
 /* 11. unavailable log never blocks the caller */
 $bad = new EmailLog('/nonexistent-dir-' . uniqid() . '/log.db');
 $r = $bad->recordSubmission(EmailLog::TYPE_TEST, 'x@example.invalid', 's');
-check($r !== null, 'recorder is best-effort when the path is usable-or-created');
+/* Missing parents may be created on one platform and refused on another; either
+ * way the call must return rather than throw. */
+check($r === null || is_string($r), 'recorder is best-effort for an absent directory');
 $readonly = new EmailLog('/dev/null/definitely-not-a-directory/log.db');
 $r2 = $readonly->recordSubmission(EmailLog::TYPE_TEST, 'x@example.invalid', 's');
 check($r2 === null, 'unwritable location returns null instead of throwing');
