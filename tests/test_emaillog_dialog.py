@@ -21,9 +21,10 @@ def dialog(src):
 
 def test_structure_matches_core():
     src = VIEW.read_text(encoding='utf-8')
-    block = src[src.index('id="email-log-message-modal"') - 40:src.index('</div>', src.index('id="email-log-message-timeline"')) + 400]
+    start = src.rindex('<div', 0, src.index('id="email-log-message-modal"'))
+    block = src[start:src.index('class="modal-footer"') + 400]
     for token in ('class="modal fade"', 'class="modal-dialog modal-lg"', 'class="modal-content"',
-                  'class="modal-header"', 'class="modal-title"', 'class="modal-body"'):
+                  'class="modal-header"', 'class="modal-title"', 'class="modal-body'):
         assert token in block, token
     assert 'role="dialog"' in block, 'dialog role missing'
     assert 'aria-labelledby="email-log-message-title"' in block, 'dialog must reference its title'
@@ -34,24 +35,42 @@ def test_structure_matches_core():
 
 def test_core_scrolling_is_reused_not_duplicated():
     src = VIEW.read_text(encoding='utf-8')
-    body = src[src.index('id="email-log-message-body"'):]
-    body = body[:body.index('</pre>')]
-    assert 'max-height' not in body, 'body must not impose its own scroll height'
-    assert 'overflow' not in body, 'body must not impose its own overflow'
-    assert 'white-space:pre-wrap' in body, 'line breaks must be preserved'
-    assert 'word-break:break-word' in body, 'long lines must wrap on narrow screens'
+    css = src[src.index('<style>'):src.index('</style>')]
+    pre = css[css.index('.email-log-dialog-reading pre'):]
+    pre = pre[:pre.index('}')]
+    assert 'max-height: none' in pre, 'reading area must not fix its height'
+    assert 'overflow: visible' in pre, 'reading area must not scroll internally'
+    assert 'white-space: pre-wrap' in pre, 'line breaks must be preserved'
+    assert 'overflow-wrap: anywhere' in pre or 'word-break: break-word' in pre, 'long lines must wrap'
     if CORE_CSS.is_file():
         css = CORE_CSS.read_text(errors='ignore')
         assert '.modal-body' in css and 'overflow-y: auto' in css, 'core modal scrolling rule missing'
     print('DIALOG_SCROLLING=PASS')
 
 
+def test_padded_body_and_sections():
+    src = VIEW.read_text(encoding='utf-8')
+    assert 'email-log-dialog-body' in src, 'padded body class missing'
+    css = src[src.index('<style>'):src.index('</style>')]
+    assert 'padding: 20px' in css, 'body padding missing'
+    assert '#email-log-message-modal' in css, 'styles must be scoped to this dialog'
+    # metadata, message and timeline all sit inside the modal body
+    body = src[src.index('email-log-dialog-body'):src.index('class="modal-footer"')]
+    for part in ('email-log-message-meta', 'email-log-message-body', 'email-log-message-timeline-disclosure'):
+        assert part in body, f'{part} must be inside the modal body'
+    assert '<hr/>' in body, 'divider between metadata and message'
+    assert 'Message content' in body and 'Delivery timeline' in body, 'section headings missing'
+    assert '<details' in body and '<summary>' in body, 'timeline must use standard disclosure'
+    assert 'class="modal-footer"' in src and 'data-dismiss="modal"' in src, 'footer close button missing'
+    print('DIALOG_LAYOUT=PASS')
+
+
 def test_no_small_custom_typography():
     src = VIEW.read_text(encoding='utf-8')
-    start = src.index('id="email-log-message-modal"')
-    block = src[start:start + 3000]
-    assert 'font-size:12px' not in block, 'no undersized custom font in the dialog'
-    assert 'font-family:inherit' in block, 'body text inherits the theme font, not monospace'
+    css = src[src.index('<style>'):src.index('</style>')]
+    assert 'font-size: 12px' not in css, 'no undersized custom font'
+    assert 'font-size: inherit' in css, 'reading area inherits theme typography'
+    assert 'line-height: 1.5' in css, 'readable line spacing'
     print('DIALOG_TYPOGRAPHY=PASS')
 
 
@@ -82,6 +101,7 @@ def main():
     test_core_reference_present()
     test_structure_matches_core()
     test_core_scrolling_is_reused_not_duplicated()
+    test_padded_body_and_sections()
     test_no_small_custom_typography()
     test_plain_text_preserved()
     test_keyboard_and_focus()

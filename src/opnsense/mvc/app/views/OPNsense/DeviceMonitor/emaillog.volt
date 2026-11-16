@@ -97,6 +97,54 @@
     </div>
 </div>
 
+<style>
+    /* Scoped to this dialog only. OPNsense main.css sets .modal-body padding:0,
+     * so the padded body the design requires is supplied here. No fixed heights
+     * and no nested scrolling: core's .modal-body already scrolls. */
+    #email-log-message-modal .email-log-dialog-body {
+        padding: 20px;
+    }
+    #email-log-message-modal .email-log-dialog-meta {
+        margin-bottom: 0;
+        word-break: break-word;
+    }
+    #email-log-message-modal .email-log-dialog-meta dt {
+        font-weight: 600;
+    }
+    #email-log-message-modal .email-log-dialog-meta dd {
+        word-break: break-word;
+    }
+    #email-log-message-modal .email-log-dialog-reading {
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        background: #fbfbfb;
+        margin-bottom: 18px;
+    }
+    #email-log-message-modal .email-log-dialog-reading pre {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font-family: inherit;
+        font-size: inherit;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        max-height: none;
+        overflow: visible;
+    }
+    #email-log-message-modal #email-log-message-timeline .email-log-event {
+        padding: 6px 0;
+        border-bottom: 1px solid #eee;
+        word-break: break-word;
+    }
+    #email-log-message-modal #email-log-message-timeline .email-log-event:last-child {
+        border-bottom: 0;
+    }
+</style>
+
 {# Standard OPNsense dialog: same structure as core DialogAlias (Firewall/alias.volt). #}
 <div class="modal fade" id="email-log-message-modal" tabindex="-1" role="dialog"
      aria-labelledby="email-log-message-title">
@@ -108,19 +156,28 @@
                 </button>
                 <h4 class="modal-title" id="email-log-message-title">{{ devicemonitor_t('Message') }}</h4>
             </div>
-            <div class="modal-body">
-                <dl class="dl-horizontal" id="email-log-message-meta"></dl>
+            <div class="modal-body email-log-dialog-body">
+                <dl class="dl-horizontal email-log-dialog-meta" id="email-log-message-meta"></dl>
                 <div class="alert alert-warning" id="email-log-message-unavailable" style="display:none;">
                     {{ devicemonitor_t('Message content unavailable') }}
                 </div>
                 <div class="alert alert-warning" id="email-log-message-truncated" style="display:none;">
                     {{ devicemonitor_t('Message content truncated for display') }}
                 </div>
-                {# Plain text only: .text() fills this, so no markup or remote content executes. #}
-                <pre id="email-log-message-body"
-                     style="white-space:pre-wrap;word-break:break-word;margin:0;border:0;background:transparent;padding:0;font-family:inherit;"></pre>
                 <hr/>
-                <div id="email-log-message-timeline"></div>
+                <h4>{{ devicemonitor_t('Message content') }}</h4>
+                {# Plain text only: .text() fills this, so no markup or remote content executes. #}
+                <div class="email-log-dialog-reading">
+                    <pre id="email-log-message-body"></pre>
+                </div>
+                <h4>{{ devicemonitor_t('Delivery timeline') }}</h4>
+                <details id="email-log-message-timeline-disclosure">
+                    <summary>{{ devicemonitor_t('Show delivery events') }}</summary>
+                    <div id="email-log-message-timeline"></div>
+                </details>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">{{ devicemonitor_t('Close') }}</button>
             </div>
         </div>
     </div>
@@ -318,11 +375,24 @@
                 $('#email-log-message-unavailable').toggle(!m.content_available);
                 $('#email-log-message-unavailable').text(text.unavailable);
                 $('#email-log-message-truncated').toggle(!!m.content_truncated);
-                $('#email-log-message-timeline').empty();
+                var $timeline = $('#email-log-message-timeline').empty();
                 (m.timeline || []).forEach(function (step) {
-                    $('<div>').text(step.occurred_utc + '  ' + step.stage + ': ' + step.status +
-                        (step.detail ? ' — ' + step.detail : '')).appendTo('#email-log-message-timeline');
+                    // One readable row per event: time, stage, status, then any detail.
+                    var $row = $('<div>').addClass('email-log-event');
+                    $('<div>').text(step.occurred_utc).appendTo($row);
+                    $('<div>')
+                        .append($('<strong>').text(step.stage))
+                        .append(document.createTextNode(' — '))
+                        .append($('<span>').text(step.status))
+                        .appendTo($row);
+                    if (step.detail) { $('<div>').text(step.detail).appendTo($row); }
+                    if (step.source) {
+                        $('<div>').addClass('text-muted').text('[' + step.source + ']').appendTo($row);
+                    }
+                    $row.appendTo($timeline);
                 });
+                // Collapsed by default; only expand when there is something to show.
+                $('#email-log-message-timeline-disclosure').prop('open', false);
                 // Return focus to the control that opened the dialog on close.
                 $('#email-log-message-modal')
                     .off('hidden.bs.modal.emailfocus')
