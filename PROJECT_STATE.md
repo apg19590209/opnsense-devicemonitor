@@ -2,6 +2,23 @@
 
 ## Current state
 
+**Email log message content capture and View message action (17 November 2026).** Each logical Device
+Monitor email now retains the body the transport carried — test, new-device, service and failover via the
+handler wrappers, scan results via their own sender — stored as readable plain text (HTML stripped,
+scripts/styles/image sources discarded) and bounded at 20 KB with truncation flagged. Rows predating
+capture keep NULL and the UI reports "Message content unavailable"; nothing is reconstructed. The
+schema upgrade is versioned (`PRAGMA user_version` 1→2, additive, repeatable) and the live `.23` log
+upgraded in place with its existing rows preserved (integrity `ok`, perms 0640). A read-only
+`emaillog/message` endpoint plus a View message action render the body through `.text()` only — no
+HTML execution and no remote images. Sending behaviour, recipients, transports and return values are
+unchanged; every recording path is fail-open. A test-isolation defect was also fixed: the wrapper
+suite could write fixtures into a host's live log, so it now binds a temporary database and guards
+against leakage; 24 fixture rows it had left on `.23` were removed and the 17 real rows kept.
+Exact-head CI `43874071258` at `05fa3cd` passed; repair install `INSTALL_OK files=66 pruned=0`
+(`/var/backups/devicemonitor/install-v214.k9H9XO`). **Browser acceptance of the View message modal
+remains PENDING until the operator reloads.**
+
+
 **Email Log authenticated 403 — cause and fix (16 November 2026).** The page rendered but its data
 request returned 403. The base API controller rejects POST/PUT/DELETE without a valid `X-CSRFToken`
 (`ApiControllerBase::doAuth`), and the layout installs that header only through `$.ajaxSetup` inside
