@@ -101,25 +101,69 @@
     /* Scoped to this dialog only. OPNsense main.css sets .modal-body padding:0,
      * so the padded body the design requires is supplied here. No fixed heights
      * and no nested scrolling: core's .modal-body already scrolls. */
-    #email-log-message-modal .email-log-dialog-body {
+    /* Dialog width: aim for 800px, never closer than 16px to the viewport edge. */
+    #email-log-message-modal .modal-dialog {
+        width: 800px;
+        max-width: calc(100vw - 32px);
+        margin: 16px auto;
+    }
+    #email-log-message-modal .modal-header {
         padding: 20px;
+        /* Keep clear space between the subject and the close control. */
+        position: relative;
+        padding-right: 56px;
+    }
+    #email-log-message-modal .modal-header .modal-title {
+        word-break: break-word;
+        margin: 0;
+    }
+    #email-log-message-modal .email-log-dialog-body {
+        padding: 24px;
     }
     #email-log-message-modal .email-log-dialog-meta {
-        margin-bottom: 0;
+        margin-bottom: 24px;
         word-break: break-word;
     }
     #email-log-message-modal .email-log-dialog-meta dt {
         font-weight: 600;
+        margin-bottom: 0;
+        /* 16px gap between the label column and its value. */
+        width: 140px;
     }
     #email-log-message-modal .email-log-dialog-meta dd {
         word-break: break-word;
+        margin-bottom: 8px;
+        margin-left: 156px; /* 140px label + 16px gap */
+    }
+    #email-log-message-modal .email-log-dialog-meta dd:last-child {
+        margin-bottom: 0;
+    }
+    /* Narrow screens: stack each label above its value. */
+    @media (max-width: 767px) {
+        /* Bootstrap floats dl-horizontal labels; unset it so the label sits above
+         * its value instead of beside it. */
+        #email-log-message-modal .email-log-dialog-meta dt {
+            float: none;
+            width: auto;
+            text-align: left;
+            margin-bottom: 2px;
+        }
+        #email-log-message-modal .email-log-dialog-meta dd {
+            margin-left: 0;
+        }
+        #email-log-message-modal .modal-header {
+            padding-right: 56px;
+        }
+    }
+    #email-log-message-modal .email-log-dialog-heading {
+        margin: 0 0 12px;
     }
     #email-log-message-modal .email-log-dialog-reading {
-        padding: 12px;
+        padding: 20px;
         border: 1px solid #ddd;
         border-radius: 3px;
         background: #fbfbfb;
-        margin-bottom: 18px;
+        margin-bottom: 24px;
     }
     #email-log-message-modal .email-log-dialog-reading pre {
         margin: 0;
@@ -134,6 +178,21 @@
         word-break: break-word;
         max-height: none;
         overflow: visible;
+    }
+    #email-log-message-modal .email-log-dialog-delivery {
+        margin-top: 0;
+    }
+    #email-log-message-modal .email-log-dialog-delivery summary {
+        cursor: pointer;
+        margin-top: 0;
+    }
+    #email-log-message-modal .email-log-dialog-delivery summary h4 {
+        display: inline;
+        font-size: 14px;
+        margin: 0;
+    }
+    #email-log-message-modal .modal-footer {
+        padding: 16px 24px;
     }
     #email-log-message-modal #email-log-message-timeline .email-log-event {
         padding: 6px 0;
@@ -154,6 +213,8 @@
                 <button type="button" class="close" data-dismiss="modal" aria-label="{{ lang.query('Close')|json_encode(15) }}">
                     <span aria-hidden="true">&times;</span>
                 </button>
+                {# The subject becomes the heading; the static label is only a fallback
+                   that the script replaces before the dialog is shown. #}
                 <h4 class="modal-title" id="email-log-message-title">{{ devicemonitor_t('Message') }}</h4>
             </div>
             <div class="modal-body email-log-dialog-body">
@@ -165,14 +226,13 @@
                     {{ devicemonitor_t('Message content truncated for display') }}
                 </div>
                 <hr/>
-                <h4>{{ devicemonitor_t('Message content') }}</h4>
+                <h4 class="email-log-dialog-heading">{{ devicemonitor_t('Message content') }}</h4>
                 {# Plain text only: .text() fills this, so no markup or remote content executes. #}
                 <div class="email-log-dialog-reading">
                     <pre id="email-log-message-body"></pre>
                 </div>
-                <h4>{{ devicemonitor_t('Delivery timeline') }}</h4>
-                <details id="email-log-message-timeline-disclosure">
-                    <summary>{{ devicemonitor_t('Show delivery events') }}</summary>
+                <details id="email-log-message-timeline-disclosure" class="email-log-dialog-delivery">
+                    <summary><h4>{{ devicemonitor_t('Delivery details') }}</h4></summary>
                     <div id="email-log-message-timeline"></div>
                 </details>
             </div>
@@ -365,8 +425,10 @@
                 var m = data.message;
                 $('#email-log-message-title').text(m.subject || text.unknown);
                 var $meta = $('#email-log-message-meta').empty();
-                [['Time (UTC)', m.created_utc], ['Type', m.notification_type],
-                 ['Recipient', m.recipient], ['Node', m.node_ip + ' ' + m.node_role],
+                [['Recipient', m.recipient],
+                 ['Node', m.node_ip + (m.node_role ? ' (' + m.node_role + ')' : '')],
+                 ['Time (UTC)', m.created_utc],
+                 ['Type', m.notification_type],
                  ['Status', m.status]].forEach(function (pair) {
                     $meta.append($('<dt>').text(pair[0])).append($('<dd>').text(pair[1] || ''));
                 });

@@ -59,8 +59,14 @@ def test_padded_body_and_sections():
     for part in ('email-log-message-meta', 'email-log-message-body', 'email-log-message-timeline-disclosure'):
         assert part in body, f'{part} must be inside the modal body'
     assert '<hr/>' in body, 'divider between metadata and message'
-    assert 'Message content' in body and 'Delivery timeline' in body, 'section headings missing'
-    assert '<details' in body and '<summary>' in body, 'timeline must use standard disclosure'
+    assert 'Message content' in body and 'Delivery details' in body, 'section headings missing'
+    assert '<details' in body and '<summary>' in body, 'delivery history must use standard disclosure'
+    src_all = src
+    assert "$('#email-log-message-title').text(m.subject" in src_all, \
+        'the subject must become the dialog heading'
+    for label in ("Recipient", "Node", "Time (UTC)", "Type", "Status"):
+        assert f"['{label}'" in src_all, f'{label} missing from metadata'
+    print('DIALOG_SUBJECT_AND_META=PASS')
     assert 'class="modal-footer"' in src and 'data-dismiss="modal"' in src, 'footer close button missing'
     print('DIALOG_LAYOUT=PASS')
 
@@ -72,6 +78,31 @@ def test_no_small_custom_typography():
     assert 'font-size: inherit' in css, 'reading area inherits theme typography'
     assert 'line-height: 1.5' in css, 'readable line spacing'
     print('DIALOG_TYPOGRAPHY=PASS')
+
+
+def test_spacing_specification():
+    src = VIEW.read_text(encoding='utf-8')
+    css = src[src.index('<style>'):src.index('</style>')]
+    def block(selector):
+        i = css.index(selector)
+        return css[i:css.index('}', i)]
+    header = block('.modal-header {')
+    assert 'padding: 20px' in header, 'header needs 20px padding'
+    assert 'padding-right: 56px' in header, 'space between subject and close control'
+    assert 'padding: 24px' in block('.email-log-dialog-body {'), 'body needs 24px padding'
+    meta_dt = block('.email-log-dialog-meta dt {')
+    meta_dd = block('.email-log-dialog-meta dd {')
+    assert 'margin-bottom: 8px' in meta_dd, '8px between metadata rows'
+    assert 'margin-left: 156px' in meta_dd and 'width: 140px' in meta_dt, '16px between label and value'
+    assert 'margin-bottom: 24px' in block('.email-log-dialog-reading {'), '24px after the message'
+    assert 'padding: 20px' in block('.email-log-dialog-reading {'), 'reading area needs 20px padding'
+    footer = block('.modal-footer {')
+    assert 'padding: 16px 24px' in footer, 'footer needs 16px/24px padding'
+    dialog = block('.modal-dialog {')
+    assert 'width: 800px' in dialog and 'calc(100vw - 32px)' in dialog, '800px width with viewport clearance'
+    assert 'line-height: 1.5' in block('.email-log-dialog-reading pre'), '1.5 line spacing'
+    assert '@media (max-width: 767px)' in css, 'narrow layout must stack labels'
+    print('DIALOG_SPACING=PASS')
 
 
 def test_plain_text_preserved():
@@ -103,6 +134,7 @@ def main():
     test_core_scrolling_is_reused_not_duplicated()
     test_padded_body_and_sections()
     test_no_small_custom_typography()
+    test_spacing_specification()
     test_plain_text_preserved()
     test_keyboard_and_focus()
     print('EMAIL_LOG_DIALOG_REGRESSION=PASS')
