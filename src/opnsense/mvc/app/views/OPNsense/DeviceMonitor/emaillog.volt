@@ -1,33 +1,3 @@
-<style>
-    /* Email Log only: align the type/status dropdowns, the search field and the
-     * Export button on one baseline. Bootstrap's small select renders text on the
-     * box edge in some themes; an explicit height with vertical centring fixes the
-     * default label ("All types") and selected values ("Failed") alike. The rules
-     * are scoped to this page's controls and change no shared OPNsense style. */
-    #email-log-search,
-    #email-log-type,
-    #email-log-status,
-    #email-log-export {
-        height: 30px;
-        line-height: 1.42857143;
-        padding-top: 5px;
-        padding-bottom: 5px;
-        box-sizing: border-box;
-    }
-    #email-log-type,
-    #email-log-status {
-        /* Native selects ignore line-height in some engines; align the text box. */
-        padding-top: 0;
-        padding-bottom: 0;
-        vertical-align: middle;
-    }
-    #email-log-export {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-</style>
-
 <div class="content-box">
     <div class="content-box-main">
 
@@ -66,7 +36,8 @@
                                        placeholder="{{ devicemonitor_t('Search subject or recipient') }}">
                             </div>
                             <div class="col-sm-3">
-                                <select id="email-log-type" class="form-control input-sm">
+                                <select id="email-log-type" class="selectpicker"
+                                            data-style="btn-default btn-sm" data-width="100%">
                                     <option value="">{{ devicemonitor_t('All types') }}</option>
                                     <option value="test">{{ devicemonitor_t('Test') }}</option>
                                     <option value="new_device">{{ devicemonitor_t('New device') }}</option>
@@ -76,7 +47,8 @@
                                 </select>
                             </div>
                             <div class="col-sm-3">
-                                <select id="email-log-status" class="form-control input-sm">
+                                <select id="email-log-status" class="selectpicker"
+                                            data-style="btn-default btn-sm" data-width="100%">
                                     <option value="">{{ devicemonitor_t('All statuses') }}</option>
                                     <option value="submitted">{{ devicemonitor_t('Submitted') }}</option>
                                     <option value="queued">{{ devicemonitor_t('Queued or deferred') }}</option>
@@ -247,6 +219,10 @@
          * request before that hook exists, so the API answers 403. Defer to
          * ready so every request carries X-CSRFToken, like the other pages. */
         $(document).ready(function () {
+            /* Standard OPNsense lifecycle: enhance the selects once the layout's
+             * ready handlers have run, then load. No duplicate initialisation and
+             * no per-request refresh, because the options never change. */
+            $('#email-log-type, #email-log-status').selectpicker();
             load();
         });
     })();

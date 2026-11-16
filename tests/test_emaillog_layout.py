@@ -16,43 +16,37 @@ SHARED_CSS = [
 ]
 
 
-def rule_block(src):
-    return src[src.index('<style>'):src.index('</style>')]
-
-
-def test_style_is_scoped_to_the_email_log_controls():
+def test_no_custom_control_styling():
+    """The page must not compensate for markup with fixed heights or padding."""
     src = VIEW.read_text(encoding='utf-8')
-    css = rule_block(src)
-    for selector in ('#email-log-search', '#email-log-type', '#email-log-status', '#email-log-export'):
-        assert selector in css, f'{selector} missing from the scoped block'
-    # No bare element or shared Bootstrap selector may be restyled.
-    for bad in ('.form-control', '.input-sm', '.btn-sm', 'select {', 'input {'):
-        assert bad not in css, f'shared selector {bad} must not be restyled'
-    print('EMAIL_LOG_STYLE_SCOPED=PASS')
+    assert '<style>' not in src or 'height' not in src[src.index('<style>'):src.index('</style>')], \
+        'the page must not carry its own control-sizing CSS'
+    for bad in ('style="height', 'style="line-height', 'padding-top: 5px'):
+        assert bad not in src, f'custom control sizing present: {bad}'
+    print('EMAIL_LOG_NO_CUSTOM_CONTROL_CSS=PASS')
 
 
-def test_controls_share_one_height():
-    css = rule_block(VIEW.read_text(encoding='utf-8'))
-    block = css[css.index('#email-log-search'):]
-    assert re.search(r'height:\s*30px', block), 'one explicit height for all four controls'
-    assert 'box-sizing: border-box' in block, 'padding must not change the outer height'
-    print('EMAIL_LOG_CONTROL_HEIGHTS=PASS')
+def test_selects_use_the_framework_widget():
+    src = VIEW.read_text(encoding='utf-8')
+    for ident in ('email-log-type', 'email-log-status'):
+        block = src[src.index(f'id="{ident}"'):src.index('</select>', src.index(f'id="{ident}"'))]
+        assert 'class="selectpicker"' in block, f'{ident} must use the standard selectpicker widget'
+        assert 'form-control' not in block, f'{ident} must not mix raw form-control styling'
+        assert 'data-style="btn-default btn-sm"' in block, f'{ident} must use the shared small-button style'
+    print('EMAIL_LOG_SELECTPICKER_MARKUP=PASS')
 
 
-def test_dropdown_text_is_vertically_centred():
-    css = rule_block(VIEW.read_text(encoding='utf-8'))
-    # The second rule is the dropdown-only block (selectors then a brace block).
-    rules = re.findall(r'([^{}]+)\{([^}]*)\}', css)
-    dropdown = ''
-    for selectors, body in rules:
-        if '#email-log-type' in selectors and '#email-log-search' not in selectors:
-            dropdown = body
-    assert dropdown, 'no dropdown-specific rule found'
-    # Native selects ignore line-height in some engines; zero symmetric padding
-    # plus an explicit height is what actually centres the text.
-    assert 'padding-top: 0' in dropdown and 'padding-bottom: 0' in dropdown, dropdown
-    assert 'vertical-align: middle' in dropdown, dropdown
-    print('EMAIL_LOG_DROPDOWN_CENTRED=PASS')
+def test_initialisation_follows_the_lifecycle():
+    src = VIEW.read_text(encoding='utf-8')
+    ready_at = src.index('$(document).ready(function () {')
+    init = src.index(".selectpicker();", ready_at)
+    assert init > ready_at, 'selectpicker must be initialised after ready'
+    assert src.count(".selectpicker();") == 1, 'initialisation must not be duplicated'
+    # Options never change after load, so a per-request refresh would be noise.
+    assert ".selectpicker('refresh')" not in src, 'no per-request refresh for static options'
+    load_at = src.index('load();', ready_at)
+    assert ready_at < init < load_at, 'initialise before the first request'
+    print('EMAIL_LOG_WIDGET_LIFECYCLE=PASS')
 
 
 def test_default_and_selected_labels_present():
@@ -75,12 +69,40 @@ def test_shared_opnsense_css_untouched():
     print('OPNSENSE_SHARED_CSS_UNTOUCHED=PASS')
 
 
+def test_control_inventory_has_one_shared_cause():
+    """Every page's selects follow the framework widget, except deliberate
+    page-specific width rules under container classes."""
+    views = ROOT / 'src/opnsense/mvc/app/views/OPNsense/DeviceMonitor'
+    # Known, pre-existing exception: three plain selects on the Settings page,
+    # predating the email-log work and outside this correction's scope. They are
+    # enumerated here so the inventory stays honest rather than silent.
+    KNOWN = {
+        ('settings.volt', 'nmap_timing'),
+        ('settings.volt', 'email_method'),
+        ('settings.volt', 'smtp_encryption'),
+    }
+    offenders = []
+    for path in sorted(views.glob('*.volt')):
+        src = path.read_text(encoding='utf-8')
+        for m in re.finditer(r'<select[^>]*>', src):
+            tag = m.group(0)
+            if 'selectpicker' in tag or 'data-role' in tag:
+                continue
+            ident = re.search(r'id="([^"]+)"', tag)
+            if (path.name, ident.group(1) if ident else '') in KNOWN:
+                continue
+            offenders.append((path.name, tag))
+    assert not offenders, offenders
+    print('CONTROL_INVENTORY_CONSISTENT=PASS')
+
+
 def main():
-    test_style_is_scoped_to_the_email_log_controls()
-    test_controls_share_one_height()
-    test_dropdown_text_is_vertically_centred()
+    test_no_custom_control_styling()
+    test_selects_use_the_framework_widget()
+    test_initialisation_follows_the_lifecycle()
     test_default_and_selected_labels_present()
     test_shared_opnsense_css_untouched()
+    test_control_inventory_has_one_shared_cause()
     print('EMAIL_LOG_LAYOUT_REGRESSION=PASS')
 
 
