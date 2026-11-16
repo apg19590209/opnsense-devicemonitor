@@ -183,6 +183,9 @@ jobs:
       - name: Validate email log peer aggregation
         run: python3 tests/test_email_log_peer.py
 
+      - name: Validate email log View message dialog
+        run: python3 tests/test_emaillog_dialog.py
+
       - name: Validate email log transport and export safety
         run: php tests/test_email_log_transport.php
 

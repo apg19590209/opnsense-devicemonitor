@@ -97,25 +97,30 @@
     </div>
 </div>
 
-<div class="modal fade" id="email-log-message-modal" tabindex="-1" role="dialog">
+{# Standard OPNsense dialog: same structure as core DialogAlias (Firewall/alias.volt). #}
+<div class="modal fade" id="email-log-message-modal" tabindex="-1" role="dialog"
+     aria-labelledby="email-log-message-title">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="{{ devicemonitor_t('Close') }}">
+                <button type="button" class="close" data-dismiss="modal" aria-label="{{ lang.query('Close')|json_encode(15) }}">
                     <span aria-hidden="true">&times;</span>
                 </button>
                 <h4 class="modal-title" id="email-log-message-title">{{ devicemonitor_t('Message') }}</h4>
             </div>
             <div class="modal-body">
                 <dl class="dl-horizontal" id="email-log-message-meta"></dl>
-                <div class="alert alert-warning" id="email-log-message-unavailable" style="display:none;font-size:12px;">
+                <div class="alert alert-warning" id="email-log-message-unavailable" style="display:none;">
                     {{ devicemonitor_t('Message content unavailable') }}
                 </div>
-                <div class="alert alert-warning" id="email-log-message-truncated" style="display:none;font-size:12px;">
+                <div class="alert alert-warning" id="email-log-message-truncated" style="display:none;">
                     {{ devicemonitor_t('Message content truncated for display') }}
                 </div>
-                <pre id="email-log-message-body" style="white-space:pre-wrap;word-break:break-word;max-height:50vh;overflow:auto;font-size:12px;"></pre>
-                <div id="email-log-message-timeline" style="font-size:12px;"></div>
+                {# Plain text only: .text() fills this, so no markup or remote content executes. #}
+                <pre id="email-log-message-body"
+                     style="white-space:pre-wrap;word-break:break-word;margin:0;border:0;background:transparent;padding:0;font-family:inherit;"></pre>
+                <hr/>
+                <div id="email-log-message-timeline"></div>
             </div>
         </div>
     </div>
@@ -318,7 +323,16 @@
                     $('<div>').text(step.occurred_utc + '  ' + step.stage + ': ' + step.status +
                         (step.detail ? ' — ' + step.detail : '')).appendTo('#email-log-message-timeline');
                 });
-                $('#email-log-message-modal').modal('show');
+                // Return focus to the control that opened the dialog on close.
+                $('#email-log-message-modal')
+                    .off('hidden.bs.modal.emailfocus')
+                    .one('hidden.bs.modal.emailfocus', function () {
+                        var $opener = $('button[data-event-id]').filter(function () {
+                            return $(this).attr('data-event-id') === eventId;
+                        });
+                        if ($opener.length) { $opener.first().trigger('focus'); }
+                    })
+                    .modal('show');
             });
         }
 
