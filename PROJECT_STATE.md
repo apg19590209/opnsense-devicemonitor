@@ -2,6 +2,14 @@
 
 ## Current state
 
+**Captured-body browser acceptance — operator-confirmed PASS (17 November 2026).** Following the
+raw-JSON response fix and repair install, the operator confirmed via the supplied preview screenshot
+that the captured body renders correctly in the modal, including `<tag>`, a single `&`, quotes and the
+preserved literal `&amp;`, with line breaks intact. This closes captured-body rendering as an
+operator-attested PASS (not independent inspection). The preview record
+`210c1c39a10f9d4de5f44bacab912b20` is retained until its evidence is formally recorded.
+
+
 **Captured-message double-encoding corrected (17 November 2026).** The preview modal displayed
 `&amp;amp;` and `&amp;` where `&` and a literal `&amp;` were intended. Tracing storage → API → modal
 showed storage was already correct and the modal's `.text()` adds no escaping: the corruption was the
