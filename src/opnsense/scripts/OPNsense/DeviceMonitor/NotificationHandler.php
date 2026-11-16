@@ -6,6 +6,10 @@
 
 // Load the DeviceMonitor class
 require_once('/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php');
+// Email log records live in their own database; loading it here covers every
+// caller that sends through this handler.
+require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailLog.php');
+require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailTransport.php');
 
 class NotificationHandler
 {
@@ -156,7 +160,48 @@ class NotificationHandler
      * Send a caller-supplied Device Monitor email through the configured
      * transport without using the new-device notification queue.
      */
-    public function sendCustomEmail($subject, $html)
+    public function sendCustomEmail($subject, $html, $notificationType = null)
+    {
+        // Logging wraps the real send without changing what it returns, so a
+        // failure to record can never block or duplicate the delivery itself.
+        $log = \OPNsense\DeviceMonitor\EmailLog::instance();
+        $eventId = $log->recordSubmission(
+            $notificationType ?: \OPNsense\DeviceMonitor\EmailLog::TYPE_SERVICE,
+            (string)($this->_resolvedRecipient() ?? ''),
+            (string)$subject
+        );
+        try {
+            $result = $this->_sendCustomEmail($subject, $html);
+        } catch (\Throwable $e) {
+            $this->_logOutcome($log, $eventId, ['result' => 'failed', 'message' => $e->getMessage()]);
+            throw $e;
+        }
+        $this->_logOutcome($log, $eventId, $result);
+        return $result;
+    }
+
+    private function _logOutcome($log, $eventId, array $result)
+    {
+        if (!$eventId) {
+            return;
+        }
+        list($status, $detail) = \OPNsense\DeviceMonitor\EmailTransport::classify($result);
+        $log->recordTransportEvent($eventId, $status, $detail, null, 'transport:' . ($result['transport'] ?? '?'));
+        \OPNsense\DeviceMonitor\EmailTransport::correlatePostfix($eventId, (string)($this->_resolvedRecipient() ?? ''));
+    }
+
+    private function _resolvedRecipient()
+    {
+        try {
+            $model = new \OPNsense\DeviceMonitor\DeviceMonitor();
+            $config = $model->getConfig();
+            return (string)($config['email_to'] ?? '');
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    private function _sendCustomEmail($subject, $html)
     {
         $model = new \OPNsense\DeviceMonitor\DeviceMonitor();
         $config = $model->getConfig();
@@ -221,6 +266,27 @@ class NotificationHandler
      * UNIVERSAL EMAIL - TEST AND REAL - WITH INLINE STYLES
      */
     public function sendEmail($is_test = false)
+    {
+        // Thin logging wrapper: the original implementation and its return values
+        // are untouched; only the outcome is recorded, best-effort.
+        $log = \OPNsense\DeviceMonitor\EmailLog::instance();
+        $type = $is_test
+            ? \OPNsense\DeviceMonitor\EmailLog::TYPE_TEST
+            : \OPNsense\DeviceMonitor\EmailLog::TYPE_NEW_DEVICE;
+        $eventId = $log->recordSubmission($type, (string)($this->_resolvedRecipient() ?? ''), $is_test
+            ? 'Test - OPNsense Device Monitor'
+            : 'New device notification');
+        try {
+            $result = $this->_sendEmail($is_test);
+        } catch (\Throwable $e) {
+            $this->_logOutcome($log, $eventId, ['result' => 'failed', 'message' => $e->getMessage()]);
+            throw $e;
+        }
+        $this->_logOutcome($log, $eventId, $result);
+        return $result;
+    }
+
+    private function _sendEmail($is_test = false)
     {
         //$this->fLog("=== sendEmail START === Mode: " . ($is_test ? 'TEST' : 'REAL'), 'EMAIL');
         

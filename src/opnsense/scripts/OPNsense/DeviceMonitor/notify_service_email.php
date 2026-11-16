@@ -207,7 +207,7 @@ $html = <<<HTML
 HTML;
 
 $handler = new NotificationHandler();
-$result = $handler->sendCustomEmail($subject, $html);
+$result = $handler->sendCustomEmail($subject, $html, \OPNsense\DeviceMonitor\EmailLog::TYPE_SERVICE);
 
 echo json_encode($result) . PHP_EOL;
 

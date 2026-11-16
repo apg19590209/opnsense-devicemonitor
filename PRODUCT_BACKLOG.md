@@ -1407,6 +1407,22 @@ identity-conflict email count after the fix is **zero**, the identity/Nmap and l
 remain **UNTESTED**, D1 remains recorded, and publication stays **NO-GO**.
 
 ## Deployment verification notes
+**Device Monitor email log — feature branch `feat/dm-email-log-20261116` (16 November 2026, not merged).**
+A Local **Email Log** page records every Device Monitor email attempt in a dedicated SQLite database
+(`/var/db/devicemonitor/email_log.db`), never in `devices.db` and never in the Postfix queue. Capture
+is central where it can be: `NotificationHandler::sendCustomEmail()` and `sendEmail()` are wrapped by
+best-effort shims whose original implementations are untouched, and `notify_scan_email.php` is hooked
+separately in both transport branches. One logical email is one row; transport outcomes update it, so
+multi-step sends never duplicate records. Status distinguishes submitted, queued/deferred, relay
+accepted, failed and unknown, and the UI states that relay acceptance is not inbox receipt. Rows carry
+UTC timestamps, node identity/role and an advisory Postfix queue reference; no bodies or credentials
+are stored. Thirty-day retention is a separate action that deletes only log rows. Peer and All-nodes
+tabs are deliberately disabled: no secure peer access exists yet, and the API reports
+`peer_status.available=false`. Tests cover single-row semantics, classification, sanitisation,
+escaping, filtering, pagination bounds, retention, repeated writes, a logging-failure path and the
+absence of a body column. Candidate `dm-email-log.tar.gz` `b87952df…` (1,836,195 bytes) passed
+installer `--check` (`files=65`) and the affected suites; **nothing was installed, merged or published**.
+
 **Node email delivery end-to-end confirmed (16 November 2026, operator-confirmed PASS).** One test
 message was sent from `.252` (`[DM TEST] .252 BACKUP — 20261116T104211Z`) and one from `.253`
 (`[DM TEST] .253 MASTER — 20261116T104307Z`), each to the single authorised recipient. `.253` was

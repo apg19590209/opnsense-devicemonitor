@@ -10,7 +10,8 @@
     "configController": "/usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor",
     "apiBaseUrl": "https://localhost/api/devicemonitor",
     "apiEmailUrl": "https://localhost/api/devicemonitor/config/sendEmail",
-    "apiWebhookUrl": "https://localhost/api/devicemonitor/config/sendWebhook"
+    "apiWebhookUrl": "https://localhost/api/devicemonitor/config/sendWebhook",
+    "emailLogDb": "/var/db/devicemonitor/email_log.db"
   },
   "config": {
     "enabled": "0",

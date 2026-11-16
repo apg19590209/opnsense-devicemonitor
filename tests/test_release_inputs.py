@@ -82,7 +82,7 @@ def assert_manifest_guards(text, manifest_rows):
     # Every supported language gets a sidecar .mo; every one except en_US also gets a merged
     # core-domain catalogue. A fresh install adds one rc.conf target.
     upgrade_targets = manifest_rows + len(languages) + (len(languages) - 1)
-    assert upgrade_targets == 60, upgrade_targets
+    assert upgrade_targets == 65, upgrade_targets
 
 
 def verify(root):

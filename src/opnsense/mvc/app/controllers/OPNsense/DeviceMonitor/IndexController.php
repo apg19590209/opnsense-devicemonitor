@@ -118,6 +118,11 @@ class IndexController extends \OPNsense\Base\IndexController
         $this->view->pick('OPNsense/DeviceMonitor/scanhistory');
     }
 
+    public function emaillogAction()
+    {
+        $this->view->pick('OPNsense/DeviceMonitor/emaillog');
+    }
+
     public function changesummaryAction()
     {
         $this->view->pick('OPNsense/DeviceMonitor/changesummary');
