@@ -237,11 +237,14 @@ class EmailLog
         if (!$eventId) {
             return false;
         }
+        $db = null;
+        $inTransaction = false;
         try {
             $now = gmdate('Y-m-d H:i:s');
             $db = $this->connect();
             $this->ensureSchema($db);
             $db->exec('BEGIN IMMEDIATE');
+            $inTransaction = true;
             $ins = $db->prepare(
                 'INSERT INTO email_log_events (event_id, occurred_utc, stage, status, detail, evidence, source)
                  VALUES (:e, :o, :g, :s, :d, :ev, :src)'
@@ -268,10 +271,16 @@ class EmailLog
             $upd->bindValue(':e', $eventId, SQLITE3_TEXT);
             $upd->execute();
             $db->exec('COMMIT');
+            $inTransaction = false;
             $db->close();
             return true;
         } catch (\Throwable $e) {
-            try { $db->exec('ROLLBACK'); } catch (\Throwable $ignored) {}
+            if ($inTransaction && $db instanceof \SQLite3) {
+                try { $db->exec('ROLLBACK'); } catch (\Throwable $ignored) {}
+            }
+            if ($db instanceof \SQLite3) {
+                try { $db->close(); } catch (\Throwable $ignored) {}
+            }
             return (bool)$this->fail($e->getMessage());
         }
     }
