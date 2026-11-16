@@ -1001,7 +1001,7 @@ verbatim; this table is the current summary.
 | U9 browser-console checks | **CLOSED** — PASS for the observed workflow, operator capture and originating-conversation visual review; not independent inspection, no continuous monitoring claimed | `dm-bl-013-ui-screenshots-verified-20261115T020427Z`, manifest `13f73a82…` |
 | U10 screenshot files and hashes | **CLOSED** — four files and SHA-256 match operator expectations; content observations operator-supplied | same package, manifest `13f73a82…` |
 | Daemon-triggered CARP failover webhook, both nodes/legs | **CLOSED as demonstrated** — 4 frames (demotion `.253`/`.252`, return `.252`/`.253`), isolated capture, full restoration | P1 run 2, sealed `c6007d34…` + `ADDENDUM-1-RECONCILIATION.md` |
-| Direction-A procedure compliance | **OPEN — deviation D1.** A2 `.252 100→0` was written after A1 transferred the VIP, which `P1-PROCEDURE-REV1.md` §2.5 did not authorise. The four-frame notification result stands as evidence obtained under the deviation; the single-write A1 path remains unproven | reconciliation `PROCEDURE-COMPLIANCE.md` |
+| Direction-A procedure compliance (deviation D1) | **CLOSED — accepted test-procedure deviation, no further action** (16 November 2026). History preserved: A2 `.252 100→0` was written after A1 transferred the VIP, which `P1-PROCEDURE-REV1.md` §2.5 did not authorise. The **four-frame webhook result remains a PASS** as evidence obtained under the deviation; the single-write A1 path is recorded as unproven but no longer tracked as an obligation. The recommended advskew configuration was restored and remains operational: `.253` 0 / MASTER, `.252` 100 / BACKUP (verified 16 November 2026). No CARP change or further HA test is required | reconciliation `PROCEDURE-COMPLIANCE.md` |
 | Generic email delivery (unchanged code path) | **CLOSED — operator-confirmed PASS** (attestation, not re-tested in this cycle) | operator statement, 16 Nov 2026 |
 | Generic webhook delivery (unchanged code path) | **CLOSED — operator-confirmed PASS** (attestation, not re-tested in this cycle) | operator statement, 16 Nov 2026 |
 | Changed identity-alert behaviour (identity-conflict delivery) | **OPEN — UNVALIDATED by user decision**; never PASS, explicitly not itself a release blocker. This is the only delivery behaviour changed by the webhook-only correction; rendering/legacy-email evidence is technical only | identity/Nmap procedure addendum 2 |
@@ -1009,6 +1009,18 @@ verbatim; this table is the current summary.
 | Live ageing transitions | **OPEN — unperformed** (isolated 21/21 is not live acceptance) | ageing-isolated package |
 | Targeted Nmap / new-device alert delivery | **OPEN — unperformed** | identity/Nmap procedure REV1 |
 | Historical monitoring-activation attribution | **OPEN — UNKNOWN**, not a demonstrated defect | PROJECT_STATE event-path entry |
+
+**Deviation D1 closed as an accepted procedure deviation (16 November 2026).** The user has accepted
+D1 as a test-procedure deviation requiring no further action. This does **not** alter the P1 run-2
+result: the four-frame daemon-triggered CARP failover webhook remains a genuine **PASS**, obtained
+under a procedure deviation rather than as a clean procedural qualification. The deviation itself
+(the A2 `.252 100→0` write after A1 had already transferred the VIP) stays in the record as history,
+as does the fact that the single-write A1 path was never demonstrated; neither is an open task. The
+recommended CARP weighting was restored after the run and is currently in force — `.253` advskew 0
+as MASTER, `.252` advskew 100 as BACKUP, VIP `.254` on `.253` — confirmed on both nodes on
+16 November 2026 during the v2.14.0 HA upgrade. No CARP setting was changed for this closure and no
+further HA test is scheduled.
+
 
 **Duplicate generic delivery work removed (16 November 2026).** Earlier rows tracked "email delivery"
 and "external webhook delivery" as open, unperformed work. Both code paths are unchanged by this

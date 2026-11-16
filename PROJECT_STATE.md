@@ -34,8 +34,10 @@ harmless and that no reinstall is needed for them.
 
 **Release limitations accepted by the user; none of these tests passed.** Targeted Nmap /
 new-device delivery and live ageing transitions remain **unperformed**; the isolated ageing 21/21 result is not live acceptance. **Deviation D1** is
-retained: the four-frame CARP failover webhook result is genuine evidence obtained under a procedure
-deviation, and the single-write A1 path remains unproven. Historical monitoring-activation
+**CLOSED as an accepted test-procedure deviation needing no further action**: its history is
+preserved, the four-frame CARP failover webhook result remains a genuine PASS obtained under that
+deviation, and the single-write A1 path remains recorded as unproven but is not an open task. The
+recommended advskew configuration is restored and operational (`.253` 0/MASTER, `.252` 100/BACKUP). Historical monitoring-activation
 attribution remains **UNKNOWN** and cannot be established from existing evidence. Live identity
 acceptance remains **UNVALIDATED** under the user's standing acceptance.
 
@@ -155,7 +157,7 @@ no scan, Nmap, email or webhook occurred. Installer backup:
 `/var/backups/devicemonitor/install-v214.wH9DgM`. Evidence directory (sealed 13/13):
 `/root/dm-validation-2140/dm-bl-013-identity-event-order-install-23-20261115T222532Z/`. **Live identity acceptance remains UNVALIDATED** by user decision and is never recorded as
 PASS. Email/webhook/external delivery, live ageing, direction-A procedure compliance (D1) and the
-five-language core catalogue drift remain open. DM-BL-013 remains **OPEN**; publication **NO-GO**.
+five-language core catalogue drift remain open. *(Superseded for D1 only: deviation D1 was accepted and closed on 16 November 2026; this entry's other items stand as recorded.)* DM-BL-013 remains **OPEN**; publication **NO-GO**.
 
 
 **Ordering-fix candidate prepared (15 November 2026, not installed):**
@@ -169,7 +171,7 @@ Earlier candidates are byte-identical. **Installation of these bytes is not auth
 `.23`-only plan with stop gates and rollback is `INSTALL-AND-ROLLBACK-PLAN-23.md` in that directory.
 Live identity acceptance remains **UNVALIDATED** (user-accepted, not a release blocker); email/webhook/
 external delivery, live ageing, direction-A procedure compliance (D1) and the core catalogue drift remain
-open. **Nothing deployed**; DM-BL-013 **OPEN**; publication **NO-GO**.
+open. *(Superseded for D1 only: deviation D1 was accepted and closed on 16 November 2026; this entry's other items stand as recorded.)* **Nothing deployed**; DM-BL-013 **OPEN**; publication **NO-GO**.
 
 
 **Rotation-alert ordering defect (15 November 2026, source-only fix, not deployed):**
