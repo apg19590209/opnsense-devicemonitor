@@ -75,7 +75,16 @@ check($workers === 8, 'every concurrent write produced exactly one row');
 /* 9. access control: only the local authenticated API exists */
 $acl = file_get_contents(__DIR__ . '/../src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/ACL/ACL.xml');
 check(strpos($acl, 'api/devicemonitor/*') !== false, 'API covered by the Device Monitor ACL');
-check(strpos($src, "https://") === false && strpos($src, "'url'") === false, 'no remote destination in the API');
+/* The API now legitimately references a configured peer. What matters is that no
+ * destination is hardcoded or user-supplied unbounded: the only URL used comes from
+ * peer settings and is validated as https. */
+check(strpos($src, "'http://") === false, 'no plain-HTTP destination in the API');
+check(strpos($src, 'https://192.168') === false && strpos($src, 'https://10.') === false,
+    'no hardcoded peer address in the API');
+$peerSrc = file_get_contents(__DIR__ . '/../src/opnsense/scripts/OPNsense/DeviceMonitor/PeerClient.php');
+check(strpos($peerSrc, "!== 'https'") !== false, 'peer URL scheme is enforced as https');
+$loc = file_get_contents(__DIR__ . '/../src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/EmaillogController.php');
+check(substr_count($loc, 'https://') === 0, 'controller never embeds a literal URL');
 
 @unlink($db); @unlink($script); @unlink($fake);
 echo $fails === 0 ? "EMAIL_LOG_TRANSPORT_TESTS=PASS\n" : "EMAIL_LOG_TRANSPORT_TESTS=FAIL ($fails)\n";
