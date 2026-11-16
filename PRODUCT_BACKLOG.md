@@ -1358,6 +1358,26 @@ identity-conflict email count after the fix is **zero**, the identity/Nmap and l
 remain **UNTESTED**, D1 remains recorded, and publication stays **NO-GO**.
 
 ## Deployment verification notes
+**v2.14.0 PUBLISHED (16 November 2026).** Tag `v2.14.0` (annotated object
+`da9c3b698634f6c1a726cca97f026d9f171444f9`) targets the approved commit
+`ee38d070ae7980edbabf822b7540c9e795f7f6f6`. Release: https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.14.0; non-draft, non-prerelease. Assets:
+`dm-v2.14.0-runtime.tar.gz` 1,792,158 bytes, SHA-256
+`abab6ad7a46d2a12d9176d6752421fde88a7460395df167d096055a4e00e0207`, and `SHA256SUMS`. The published
+archive was re-downloaded and matches the approved candidate byte-for-byte; the release body equals
+the prepared notes. DM-BL-010's publication obligation is discharged — the header fix is now in a
+published release. Issue #5 received a factual reply
+(https://github.com/apg19590209/opnsense-devicemonitor/issues/5#issuecomment-6912981224) and
+remains **OPEN** pending the reporter's functional confirmation; the reply states the warnings were
+harmless and that no reinstall is needed for them.
+
+**Release limitations accepted by the user; none of these tests passed.** Daemon email delivery,
+external webhook delivery, targeted Nmap / new-device delivery and live ageing transitions remain
+**unperformed**; the isolated ageing 21/21 result is not live acceptance. **Deviation D1** is
+retained: the four-frame CARP failover webhook result is genuine evidence obtained under a procedure
+deviation, and the single-write A1 path remains unproven. Historical monitoring-activation
+attribution remains **UNKNOWN** and cannot be established from existing evidence. Live identity
+acceptance remains **UNVALIDATED** under the user's standing acceptance.
+
 **Dutch deferral installed on `.23` (16 November 2026):** candidate
 `dm-v2.14.0-runtime.tar.gz` 1,792,158 bytes, SHA-256 `c620e892a9cac0fdb126e7d64b7359a21e636e3b68d0488ac0d2c2d724abf205`,
 installed under a fail-closed guard (`--check` `files=60 core_locales=9 prunable=1`). Result:

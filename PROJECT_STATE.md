@@ -2,6 +2,27 @@
 
 ## Current state
 
+**v2.14.0 PUBLISHED (16 November 2026).** Tag `v2.14.0` (annotated object
+`da9c3b698634f6c1a726cca97f026d9f171444f9`) targets the approved commit
+`ee38d070ae7980edbabf822b7540c9e795f7f6f6`. Release: https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.14.0; non-draft, non-prerelease. Assets:
+`dm-v2.14.0-runtime.tar.gz` 1,792,158 bytes, SHA-256
+`abab6ad7a46d2a12d9176d6752421fde88a7460395df167d096055a4e00e0207`, and `SHA256SUMS`. The published
+archive was re-downloaded and matches the approved candidate byte-for-byte; the release body equals
+the prepared notes. DM-BL-010's publication obligation is discharged — the header fix is now in a
+published release. Issue #5 received a factual reply
+(https://github.com/apg19590209/opnsense-devicemonitor/issues/5#issuecomment-6912981224) and
+remains **OPEN** pending the reporter's functional confirmation; the reply states the warnings were
+harmless and that no reinstall is needed for them.
+
+**Release limitations accepted by the user; none of these tests passed.** Daemon email delivery,
+external webhook delivery, targeted Nmap / new-device delivery and live ageing transitions remain
+**unperformed**; the isolated ageing 21/21 result is not live acceptance. **Deviation D1** is
+retained: the four-frame CARP failover webhook result is genuine evidence obtained under a procedure
+deviation, and the single-write A1 path remains unproven. Historical monitoring-activation
+attribution remains **UNKNOWN** and cannot be established from existing evidence. Live identity
+acceptance remains **UNVALIDATED** under the user's standing acceptance.
+
+
 **Dutch deferral installed on `.23` (16 November 2026):** candidate
 `dm-v2.14.0-runtime.tar.gz` 1,792,158 bytes, SHA-256 `c620e892a9cac0fdb126e7d64b7359a21e636e3b68d0488ac0d2c2d724abf205`,
 installed under a fail-closed guard (`--check` `files=60 core_locales=9 prunable=1`). Result:
@@ -172,7 +193,7 @@ Branches: `main` (HEAD `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`, the Device Mo
 catalogue-header correction), `release/2.13` (HEAD `6bd122e`) and
 `fix/pruning-remediation-20261103` (HEAD `b2c74fc`, the 2.13.3 remediation). The
 `integration/dm-bl-009-reconcile-20261105` history was fast-forwarded into `main` on
-7 November 2026. The latest published GitHub release is **v2.12.1**; 2.14.0 is not yet published.
+7 November 2026. The latest published GitHub release is **v2.14.0** (published 16 November 2026); v2.12.1 was the latest before it.
 `baseline/2.12` (`d04739a`) holds the recovered pre-HA 2.12 tree;
 `feature/async-db-v2.11` (`0ad95b0`) is the historical v2.11 development branch.
 The active development checkout is `fix/dm-bl-012-uninstaller-20261112` at
@@ -262,7 +283,7 @@ matrix was separately validated on 7 November. The live run had no sparse-header
 | Phase 2A guard rehearsal | **PASS** — real DB/WAL/SHM capture, mutation detection, snapshot-equivalence rejection, exact-byte restore and post-state archive. The pass found and fixed a snapshot-side-effect defect; all 35 guard tests pass locally. The suite is now wired into the validation-only CI workflow with exact `Ran 35 tests`/`OK` assertions; that new step still needs an exact-SHA run. Evidence: `verification/monitoring-validation/PHASE2A-DISPOSABLE-20261107.md` and `/root/dm-validation-2140/phase2a-guard-20261107T123250Z/` |
 | Historical original bytes | **Not recovered — accepted limitation** — 128 physical database candidates and 67 archives were checked read-only; no `c17874a7…` copy exists in the searched evidence. A supplemental `/root/dm-backups` scan found no database candidate or `devices.db` archive member. Common SQLite copy transformations on a retained `796d28c7…` copy did not reproduce the hash. DM-BL-011 was **CLOSED** on 13 November 2026 by explicit operator acceptance of this historical evidence limitation; no byte-identity claim is made. Evidence: `verification/DM-BL-011-BYTE-RECOVERY-20261107.md` |
 | Phase 3 infrastructure | **Still requires a disposable VM** — no `kern.vmm`, `/dev/vmm`, `vm-bhyve`, disposable VM image or approved external hypervisor is recorded. One expressly authorised `.23` attempt was aborted and recovered; `.23` remains the existing integration testbed rather than a reusable fresh-install target. `.252`/`.253` remain prohibited. Exact setup/test plan: `verification/PHASE3-DISPOSABLE-OPNSENSE-VM-PLAN-20261107.md` |
-| Publication | **NO-GO — DM-BL-013 remains OPEN**; DM-BL-011 was **CLOSED** on 13 November 2026 by explicit operator acceptance of the historical byte-evidence limitation, and DM-BL-012 was **CLOSED** on 12 November 2026 by the operator-accepted `.23` lifecycle validation. DM-BL-013 needs approved external-delivery tests and the remaining unperformed delivery/ageing checks; DM-BL-010 is CLOSED (integrated, not yet published) and its publication is carried by the 2.14.0 release itself, alongside the final release controls. The consolidated plan is `verification/VALIDATION-CLOSURE-2.14.0-20261107.md` |
+| Publication | **2.14.0 PUBLISHED on 16 November 2026** (see the v2.14.0 publication entry at the top of this file). DM-BL-013 remains **OPEN** for unperformed delivery/ageing tests and deviation D1; DM-BL-011 was **CLOSED** on 13 November 2026 by explicit operator acceptance of the historical byte-evidence limitation, and DM-BL-012 was **CLOSED** on 12 November 2026 by the operator-accepted `.23` lifecycle validation. DM-BL-013 needs approved external-delivery tests and the remaining unperformed delivery/ageing checks; DM-BL-010 is CLOSED (integrated, not yet published) and its publication is carried by the 2.14.0 release itself, alongside the final release controls. The consolidated plan is `verification/VALIDATION-CLOSURE-2.14.0-20261107.md` |
 | Issue #5 | **OPEN** — the reporter confirmed successful published v2.12.1 installation and version display; service health and normal page loading remain for reporter confirmation. This is external, does not require 2.14.0 publication, and no reply has been posted |
 
 ### §9.4 residual-gap classification
