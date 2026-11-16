@@ -2,6 +2,21 @@
 
 ## Current state
 
+**`.252` outbound sendmail parity established (16 November 2026):** the OPNsense Postfix plugin
+was installed on `.252` from the supported repository (`os-postfix 1.24.1`, `postfix 3.11.7_5,1`;
+no OS upgrade or reboot needed) and configured to mirror `.253`: local submission through
+`relayhost smtp.gmail.com:587` with SASL auth, `smtpclient_security=may`, and `mynetworks` limited to
+loopback so no network-accessible relay was opened. `main.cf` renders 88 lines on both nodes and
+`sendmail` is present and accepting local submission on `.252`. Device Monitor notification settings
+were aligned to `.253` for `email_from` and `email_to` only; `email_method=sendmail`, webhooks,
+`identity_webhook_enabled`, `targeted_nmap_enabled`, `monitored_interfaces` and `enabled` were
+already identical and untouched, and `ha_notify_failover` remains unset on both nodes. No firewall
+rule, CARP setting, VIP or role changed and `.253` was read only; `.252` remains BACKUP and `.253`
+MASTER. No mail was sent and no helper invoked. Rollback: `/root/dm-252-postfix-20261116T102924Z` on
+`.252` (config.xml, Device Monitor config and install record, package inventories) plus
+`pkg remove -y os-postfix postfix`. Evidence (sealed): `/root/dm-validation-2140/dm-252-sendmail-parity-20261116T103535Z/`.
+
+
 **v2.14.0 HA upgrade completed — `.252` BACKUP then `.253` MASTER (16 November 2026):** the
 published archive (`abab6ad7…`, 1,792,158 bytes) was hash-verified on both nodes and installed with
 `INSTALL_OK version=2.14.0 files=60 core_locales=9 pruned=2 daemon_restarted=1 unchanged=45
