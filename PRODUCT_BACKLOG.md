@@ -1370,6 +1370,23 @@ identity-conflict email count after the fix is **zero**, the identity/Nmap and l
 remain **UNTESTED**, D1 remains recorded, and publication stays **NO-GO**.
 
 ## Deployment verification notes
+**v2.14.0 HA upgrade completed — `.252` BACKUP then `.253` MASTER (16 November 2026):** the
+published archive (`abab6ad7…`, 1,792,158 bytes) was hash-verified on both nodes and installed with
+`INSTALL_OK version=2.14.0 files=60 core_locales=9 pruned=2 daemon_restarted=1 unchanged=45
+repaired=0` on each (`.252` backup `install-v214.xjt4CT`, `.253` backup `install-v214.idIpzT`), with
+`RETIRED_CORE=nl_NL` on both. Precheck on each host reported `prunable=2` — the Dutch sidecar and the
+retired `notify_identity_mail.php` only. Post-install: scanner `ecd31899…`, `config.json` and
+`/conf/config.json` byte-identical to pre-state, `devices.db` integrity `ok`, daemon running, and the
+Dutch sidecar, plugin-created Dutch core catalogue and identity helper all absent. `.252` completed a
+normal standby cycle (BACKUP suppression, standby ageing 0/0) before `.253` was touched; `.253`
+completed a MASTER cycle afterwards. Final roles: **`.253` MASTER advskew 0** and **`.252` BACKUP
+advskew 100**, VIP `.254` owned by `.253`. No forced failover, CARP change, reboot, manual scan or
+notification test; monitoring, recipients and notification settings unchanged on both nodes.
+Rollback: the installer backups above plus the pre-install `config.json`, `/conf/config.xml`, install
+record and `devices.db` copies under `/root/dm-v2.14.0-pre-*` on each node. Evidence (sealed):
+`/root/dm-validation-2140/dm-v2.14.0-ha-upgrade-252-253-20261116T101536Z/`. The accepted UNVALIDATED identity limitation, D1, the four-frame webhook PASS and the
+unperformed Nmap/ageing/failover-email items are unchanged by this upgrade.
+
 **v2.14.0 PUBLISHED (16 November 2026).** Tag `v2.14.0` (annotated object
 `da9c3b698634f6c1a726cca97f026d9f171444f9`) targets the approved commit
 `ee38d070ae7980edbabf822b7540c9e795f7f6f6`. Release: https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.14.0; non-draft, non-prerelease. Assets:
