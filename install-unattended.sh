@@ -494,4 +494,5 @@ mkdir -p /var/db/devicemonitor
 chmod 644 "$INSTALLED_LIST.new"
 mv "$INSTALLED_LIST.new" "$INSTALLED_LIST"
 MUTATING=0
-printf 'INSTALL_OK version=%s files=%s core_locales=%s pruned=%s retired_core=%s backup=%s daemon_restarted=%s unchanged=%s repaired=%s\n' "$VERSION" "$count" "$CORE_LOCALES" "$PRUNED" "$RETIRED_CORE" "$BACKUP" "$WAS_RUNNING" "$UNCHANGED" "$REPAIRED"
+printf 'INSTALL_OK version=%s files=%s core_locales=%s pruned=%s backup=%s daemon_restarted=%s unchanged=%s repaired=%s\n' "$VERSION" "$count" "$CORE_LOCALES" "$PRUNED" "$BACKUP" "$WAS_RUNNING" "$UNCHANGED" "$REPAIRED"
+printf 'RETIRED_CORE=%s\n' "$RETIRED_CORE"
