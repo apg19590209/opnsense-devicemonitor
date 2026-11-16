@@ -1002,12 +1002,24 @@ verbatim; this table is the current summary.
 | U10 screenshot files and hashes | **CLOSED** — four files and SHA-256 match operator expectations; content observations operator-supplied | same package, manifest `13f73a82…` |
 | Daemon-triggered CARP failover webhook, both nodes/legs | **CLOSED as demonstrated** — 4 frames (demotion `.253`/`.252`, return `.252`/`.253`), isolated capture, full restoration | P1 run 2, sealed `c6007d34…` + `ADDENDUM-1-RECONCILIATION.md` |
 | Direction-A procedure compliance | **OPEN — deviation D1.** A2 `.252 100→0` was written after A1 transferred the VIP, which `P1-PROCEDURE-REV1.md` §2.5 did not authorise. The four-frame notification result stands as evidence obtained under the deviation; the single-write A1 path remains unproven | reconciliation `PROCEDURE-COMPLIANCE.md` |
-| Live identity acceptance | **OPEN — UNVALIDATED by user decision**, explicitly not itself a release blocker; never PASS. Rendering evidence is technical only | identity/Nmap procedure addendum 2 |
-| Email delivery (sendmail/SMTP) | **OPEN — unperformed** | — |
-| External webhook delivery | **OPEN — unperformed** | — |
+| Generic email delivery (unchanged code path) | **CLOSED — operator-confirmed PASS** (attestation, not re-tested in this cycle) | operator statement, 16 Nov 2026 |
+| Generic webhook delivery (unchanged code path) | **CLOSED — operator-confirmed PASS** (attestation, not re-tested in this cycle) | operator statement, 16 Nov 2026 |
+| Changed identity-alert behaviour (identity-conflict delivery) | **OPEN — UNVALIDATED by user decision**; never PASS, explicitly not itself a release blocker. This is the only delivery behaviour changed by the webhook-only correction; rendering/legacy-email evidence is technical only | identity/Nmap procedure addendum 2 |
+| Failover email path | **OPEN — unexercised, if applicable.** `.252` has no sendmail; failover email was never producible there, so it is tracked separately from generic email delivery | acceptance package, P1 runs |
 | Live ageing transitions | **OPEN — unperformed** (isolated 21/21 is not live acceptance) | ageing-isolated package |
 | Targeted Nmap / new-device alert delivery | **OPEN — unperformed** | identity/Nmap procedure REV1 |
 | Historical monitoring-activation attribution | **OPEN — UNKNOWN**, not a demonstrated defect | PROJECT_STATE event-path entry |
+
+**Duplicate generic delivery work removed (16 November 2026).** Earlier rows tracked "email delivery"
+and "external webhook delivery" as open, unperformed work. Both code paths are unchanged by this
+release, and the operator has confirmed that email and webhook functionality are working
+(operator-confirmed PASS, attestation only — not re-tested here). The generic entries are therefore
+closed and no duplicate delivery-validation task is carried. What remains is narrower and specific:
+the identity-alert behaviour this release actually changed (accepted UNVALIDATED limitation), the
+failover email path, which was never producible on `.252` and so is separate, plus the genuinely
+unperformed Nmap/new-device and live-ageing checks. The four-frame CARP webhook PASS and deviation D1
+above are unaffected by this consolidation.
+
 
 **Description:** the bounded §9.4 exercise completed two scheduled inventory scans, DMTEST-only
 direct service discovery and two loopback SMTP messages from directly invoked PHP helpers. It did

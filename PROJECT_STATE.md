@@ -14,13 +14,18 @@ published release. Issue #5 received a factual reply
 remains **OPEN** pending the reporter's functional confirmation; the reply states the warnings were
 harmless and that no reinstall is needed for them.
 
-**Release limitations accepted by the user; none of these tests passed.** Daemon email delivery,
-external webhook delivery, targeted Nmap / new-device delivery and live ageing transitions remain
-**unperformed**; the isolated ageing 21/21 result is not live acceptance. **Deviation D1** is
+**Release limitations accepted by the user; none of these tests passed.** Targeted Nmap /
+new-device delivery and live ageing transitions remain **unperformed**; the isolated ageing 21/21 result is not live acceptance. **Deviation D1** is
 retained: the four-frame CARP failover webhook result is genuine evidence obtained under a procedure
 deviation, and the single-write A1 path remains unproven. Historical monitoring-activation
 attribution remains **UNKNOWN** and cannot be established from existing evidence. Live identity
 acceptance remains **UNVALIDATED** under the user's standing acceptance.
+
+**Unchanged delivery paths — operator-confirmed, not re-tested:** generic email and generic webhook
+delivery are unchanged by this release and the operator has confirmed they work (attestation only).
+The only delivery behaviour this release changed is identity-conflict alerting, which is the accepted
+UNVALIDATED limitation above. Failover email is tracked separately and is **unexercised**: `.252` has
+no sendmail, so failover email was never producible there.
 
 
 **Dutch deferral installed on `.23` (16 November 2026):** candidate
