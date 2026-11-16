@@ -63,3 +63,20 @@ This file is the shared project instruction file for Codex and Cline. It supplem
 
 - The workstation-local `.clinerules/90-local-remote-access.md` was corrected on 5 November 2026 to identify `fix/pruning-remediation-20261103` and `release/2.13`. It remains untracked and must be reviewed if branch policy changes.
 - The global Cline rule `/root/Documents/Cline/Rules/custom_instructions.md` restates peak hours. `tests/price_gate.py` remains the source of truth; do not copy its hours into Codex configuration.
+
+## Precision guardrails
+
+- **State the expected edit scope** in one line before acting. Routine related files — tests,
+  manifests, bundle digests and project records — may be added when the change requires them; say
+  which and why. Stop only for a material scope change, a conflicting requirement or a new risk.
+- **Inspect actual definitions** before using an unfamiliar API, path or framework behaviour. If the
+  name, signature or contract is not visible in the inspected source, read it or record it as
+  unverified rather than assuming it.
+- **Use `SYSTEM_MAP.md` to guide targeted searches.** `git status`/`git diff` and bounded directory
+  inspection are expected for baseline protection and verification; unrestricted repository scans
+  are not a substitute for reading the relevant file.
+- **Match verification to the claim.** A linter or syntax check proves syntax only. Behavioural
+  assertions prove the cases they exercise. Fixture tests do not prove live deployment, browser
+  acceptance or peer connectivity.
+- **Review every changed file before completion.** Preserve unrelated work and justify any generated
+  file or record update rather than leaving it as an unexplained side effect.
