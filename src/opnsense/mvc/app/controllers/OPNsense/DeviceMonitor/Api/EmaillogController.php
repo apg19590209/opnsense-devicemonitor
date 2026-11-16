@@ -12,7 +12,10 @@ use OPNsense\Core\Backend;
  * combined cluster view: peer aggregation is not implemented, and the UI must
  * not present empty Peer/All views as working.
  */
-class EmailLogController extends ApiControllerBase
+/* The OPNsense router derives the filename from ucwords() of the URI segment:
+ * /api/devicemonitor/emaillog/... resolves to EmaillogController. The file and
+ * class names therefore follow that convention exactly. */
+class EmaillogController extends ApiControllerBase
 {
     private function recorder()
     {

@@ -174,6 +174,9 @@ jobs:
       - name: Validate email log transport and export safety
         run: php tests/test_email_log_transport.php
 
+      - name: Validate email log API routing contract
+        run: python3 tests/test_emaillog_routing.py
+
       - name: Validate notification wrappers keep delivery behaviour
         run: php tests/test_notification_wrappers.php
 
