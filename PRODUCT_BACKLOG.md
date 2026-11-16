@@ -1407,6 +1407,16 @@ identity-conflict email count after the fix is **zero**, the identity/Nmap and l
 remain **UNTESTED**, D1 remains recorded, and publication stays **NO-GO**.
 
 ## Deployment verification notes
+**Email Log View message — operator-confirmed PARTIAL PASS (17 November 2026).** The operator
+confirmed that the legacy-row modal opens and correctly reports "Message content unavailable"; the
+*View message* action is recorded as **PASS for legacy rows only**. **Captured-body rendering is not
+claimed** — no row with a real captured body has been viewed yet. A disposable preview row
+(`210c1c39a10f9d4de5f44bacab912b20`, type `preview`, subject `[PREVIEW ONLY] Message content rendering
+sample`) was created through the recorder only, with no sender or transport contact, to exercise
+plain-text conversion, line breaks and escaped characters; it is labelled as a preview with no
+delivery claimed and is separate from automated tests, which keep using temporary databases. Existing
+records were preserved (17 → 18 rows).
+
 **Email Log "View message" action hidden on every row (17 November 2026).** The operator saw only
 Timeline buttons. The installed template matched the PR source, so the action was deployed but
 **conditionally rendered** — `if (row.has_content)` — and every row on `.23` predates content capture,
