@@ -1,3 +1,33 @@
+<style>
+    /* Email Log only: align the type/status dropdowns, the search field and the
+     * Export button on one baseline. Bootstrap's small select renders text on the
+     * box edge in some themes; an explicit height with vertical centring fixes the
+     * default label ("All types") and selected values ("Failed") alike. The rules
+     * are scoped to this page's controls and change no shared OPNsense style. */
+    #email-log-search,
+    #email-log-type,
+    #email-log-status,
+    #email-log-export {
+        height: 30px;
+        line-height: 1.42857143;
+        padding-top: 5px;
+        padding-bottom: 5px;
+        box-sizing: border-box;
+    }
+    #email-log-type,
+    #email-log-status {
+        /* Native selects ignore line-height in some engines; align the text box. */
+        padding-top: 0;
+        padding-bottom: 0;
+        vertical-align: middle;
+    }
+    #email-log-export {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+
 <div class="content-box">
     <div class="content-box-main">
 

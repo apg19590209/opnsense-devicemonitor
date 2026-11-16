@@ -180,6 +180,9 @@ jobs:
       - name: Validate email log CSRF handling
         run: python3 tests/test_emaillog_csrf.py
 
+      - name: Validate email log control alignment
+        run: python3 tests/test_emaillog_layout.py
+
       - name: Validate notification wrappers keep delivery behaviour
         run: php tests/test_notification_wrappers.php
 
