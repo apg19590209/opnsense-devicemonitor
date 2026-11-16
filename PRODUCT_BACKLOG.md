@@ -782,7 +782,7 @@ monitoring exercise remain validated evidence, not a transfer of those residual 
 while carrying an untracked Cline installation (Decision 65 §Preservation). Repointing it needs the
 intended Cline remote and explicit authorisation; it is preserved unchanged until then.
 
-### DM-BL-010 — translation-header metadata warnings in the v2.12.1 installation output (`PO-Revision-Date`, `Last-Translator`, `Language-Team`): **`OPEN`** — integrated in `main`; publication pending
+### DM-BL-010 — translation-header metadata warnings in the v2.12.1 installation output (`PO-Revision-Date`, `Last-Translator`, `Language-Team`): **`CLOSED`** — fix integrated and validated; release tracked separately (16 November 2026)
 
 **Description:** the reporter's v2.12.1 installation log contains non-fatal translation-header
 metadata warnings for catalogue entries missing the following headers:
@@ -863,13 +863,18 @@ are **not** a defect of the issue #5 installation result.
 - Repair belongs in the catalogue/header data (or the build inputs that produce it), not in the
   published release payloads.
 
-**Status:** **`OPEN`** — the source, regression, deterministic bundle, exact-candidate Phase 1
-live validation, authenticated About/Features/Devices-loading evidence and native runtime language
-matrix are complete, and the correction is integrated into `main`. The item remains publication
-pending because 2.14.0 is not yet published and the revised closure objective requires
-DM-BL-011/012/013 to be resolved first; DM-BL-011 and DM-BL-012 have since closed, while DM-BL-013
-remains open. Device Monitor 2.14.0 remains unpublished and v2.12.1 remains the latest published
-release.
+**Status:** **`CLOSED` (implementation and validation) as of 16 November 2026.** The source
+correction, regression coverage, deterministic bundle, exact-candidate Phase 1 live validation,
+operator-supplied authenticated About/Features/Devices-loading evidence and the native runtime
+language matrix are complete, and the correction is integrated into `main` (PR #7, `e9ec5486…`,
+exact-main CI run `42359428985`). **No further coding work is required for this item**, and none is
+duplicated elsewhere in the backlog.
+
+**Publication obligation — tracked by the release tracker, not here.** Device Monitor 2.14.0 is
+**not published**; v2.12.1 remains the latest published release (tag `v2.12.1`, GitHub release
+2026-11-06). The corrected catalogues therefore reach users only when 2.14.0 is released. That
+release is gated by DM-BL-013 and the remaining release controls, not by any deficiency in this
+defect. This record makes **no claim that the fix has been published**.
 
 ### DM-BL-011 — historical database-byte identity for the completed §9.4 monitoring exercise: **`CLOSED`** (13 November 2026; explicit operator acceptance of the historical evidence limitation)
 
@@ -985,6 +990,24 @@ code-blocked because the host has no `vmm`, `/dev/vmm` or `vm-bhyve`.
 `verification/DM-BL-012-FRESH-23-ATTEMPT-20261108.md` and `PROJECT_STATE.md`.
 
 ### DM-BL-013 — full monitoring lifecycle, HA/CARP and delivery-path validation: **`OPEN`**
+
+**Subcriteria status (consolidated 16 November 2026).** Tracked here so completed work is closed
+explicitly and the unresolved obligations stay visible. Historical entries below are preserved
+verbatim; this table is the current summary.
+
+| Subcriterion | Status | Evidence |
+|---|---|---|
+| Authenticated UI rendering on both roles (U1–U8) | **CLOSED** — operator-attested PASS | UI attestation 15 Nov 2026 (`dm-bl-013-ui-attestation-20261115T011305Z`) |
+| U9 browser-console checks | **CLOSED** — PASS for the observed workflow, operator capture and originating-conversation visual review; not independent inspection, no continuous monitoring claimed | `dm-bl-013-ui-screenshots-verified-20261115T020427Z`, manifest `13f73a82…` |
+| U10 screenshot files and hashes | **CLOSED** — four files and SHA-256 match operator expectations; content observations operator-supplied | same package, manifest `13f73a82…` |
+| Daemon-triggered CARP failover webhook, both nodes/legs | **CLOSED as demonstrated** — 4 frames (demotion `.253`/`.252`, return `.252`/`.253`), isolated capture, full restoration | P1 run 2, sealed `c6007d34…` + `ADDENDUM-1-RECONCILIATION.md` |
+| Direction-A procedure compliance | **OPEN — deviation D1.** A2 `.252 100→0` was written after A1 transferred the VIP, which `P1-PROCEDURE-REV1.md` §2.5 did not authorise. The four-frame notification result stands as evidence obtained under the deviation; the single-write A1 path remains unproven | reconciliation `PROCEDURE-COMPLIANCE.md` |
+| Live identity acceptance | **OPEN — UNVALIDATED by user decision**, explicitly not itself a release blocker; never PASS. Rendering evidence is technical only | identity/Nmap procedure addendum 2 |
+| Email delivery (sendmail/SMTP) | **OPEN — unperformed** | — |
+| External webhook delivery | **OPEN — unperformed** | — |
+| Live ageing transitions | **OPEN — unperformed** (isolated 21/21 is not live acceptance) | ageing-isolated package |
+| Targeted Nmap / new-device alert delivery | **OPEN — unperformed** | identity/Nmap procedure REV1 |
+| Historical monitoring-activation attribution | **OPEN — UNKNOWN**, not a demonstrated defect | PROJECT_STATE event-path entry |
 
 **Description:** the bounded §9.4 exercise completed two scheduled inventory scans, DMTEST-only
 direct service discovery and two loopback SMTP messages from directly invoked PHP helpers. It did
