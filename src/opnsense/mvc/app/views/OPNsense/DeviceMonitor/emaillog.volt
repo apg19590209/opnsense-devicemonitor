@@ -96,6 +96,30 @@
     </div>
 </div>
 
+<div class="modal fade" id="email-log-message-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="{{ devicemonitor_t('Close') }}">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title" id="email-log-message-title">{{ devicemonitor_t('Message') }}</h4>
+            </div>
+            <div class="modal-body">
+                <dl class="dl-horizontal" id="email-log-message-meta"></dl>
+                <div class="alert alert-warning" id="email-log-message-unavailable" style="display:none;font-size:12px;">
+                    {{ devicemonitor_t('Message content unavailable') }}
+                </div>
+                <div class="alert alert-warning" id="email-log-message-truncated" style="display:none;font-size:12px;">
+                    {{ devicemonitor_t('Message content truncated for display') }}
+                </div>
+                <pre id="email-log-message-body" style="white-space:pre-wrap;word-break:break-word;max-height:50vh;overflow:auto;font-size:12px;"></pre>
+                <div id="email-log-message-timeline" style="font-size:12px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     function emailLogText() {
         return {
@@ -104,7 +128,10 @@
             role: {{ lang.query('Role')|json_encode(15) }},
             ip: {{ lang.query('Node address')|json_encode(15) }},
             unknown: {{ lang.query('Unknown')|json_encode(15) }},
-            loadFailed: {{ lang.query('Could not load the email log')|json_encode(15) }}
+            loadFailed: {{ lang.query('Could not load the email log')|json_encode(15) }},
+            viewMessage: {{ lang.query('View message')|json_encode(15) }},
+            unavailable: {{ lang.query('Message content unavailable')|json_encode(15) }},
+            truncated: {{ lang.query('Message content truncated for display')|json_encode(15) }}
         };
     }
 
@@ -163,6 +190,13 @@
                         .text(text.diagnostics)
                         .on('click', function () { $(this).closest('tr').next().toggle(); })
                         .appendTo($detail);
+                    if (row.has_content) {
+                        $('<button>').addClass('btn btn-default btn-xs')
+                            .css('margin-left', '4px')
+                            .text(text.viewMessage)
+                            .on('click', function () { openMessage(row.event_id); })
+                            .appendTo($detail);
+                    }
                     $tr.append($detail);
                     $body.append($tr);
                     var $timeline = $('<tr>').hide();
@@ -192,6 +226,42 @@
                 $('#email-log-empty').toggle(rows.length === 0);
                 $('#email-log-prev').prop('disabled', page === 1);
                 $('#email-log-next').prop('disabled', rows.length < perPage);
+            });
+        }
+
+        function openMessage(eventId) {
+            $.ajax({
+                url: '/api/devicemonitor/emaillog/message',
+                type: 'POST',
+                dataType: 'json',
+                data: { event_id: eventId }
+            }).fail(function (xhr) {
+                $('#email-log-diagnostic').show()
+                    .text(text.loadFailed + ' (HTTP ' + (xhr && xhr.status ? xhr.status : '?') + ')');
+            }).done(function (data) {
+                if (!data || data.result !== 'ok' || !data.message) {
+                    $('#email-log-diagnostic').show().text(text.loadFailed);
+                    return;
+                }
+                var m = data.message;
+                $('#email-log-message-title').text(m.subject || text.unknown);
+                var $meta = $('#email-log-message-meta').empty();
+                [['Time (UTC)', m.created_utc], ['Type', m.notification_type],
+                 ['Recipient', m.recipient], ['Node', m.node_ip + ' ' + m.node_role],
+                 ['Status', m.status]].forEach(function (pair) {
+                    $meta.append($('<dt>').text(pair[0])).append($('<dd>').text(pair[1] || ''));
+                });
+                // Body is plain text; .text() prevents any markup or remote load.
+                $('#email-log-message-body').text(m.content_available ? m.content : '');
+                $('#email-log-message-unavailable').toggle(!m.content_available);
+                $('#email-log-message-unavailable').text(text.unavailable);
+                $('#email-log-message-truncated').toggle(!!m.content_truncated);
+                $('#email-log-message-timeline').empty();
+                (m.timeline || []).forEach(function (step) {
+                    $('<div>').text(step.occurred_utc + '  ' + step.stage + ': ' + step.status +
+                        (step.detail ? ' — ' + step.detail : '')).appendTo('#email-log-message-timeline');
+                });
+                $('#email-log-message-modal').modal('show');
             });
         }
 

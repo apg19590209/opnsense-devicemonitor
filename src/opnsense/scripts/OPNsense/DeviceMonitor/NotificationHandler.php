@@ -17,6 +17,9 @@ require_once($__dmLibDir . '/EmailTransport.php');
 class NotificationHandler
 {
     private $log_file = '/var/log/devicemonitor.log';
+    /** Event id and logger for the email currently being sent (logging only). */
+    protected $_capturedEventId = null;
+    protected $_log = null;
     
     public function fLog($message, $context = 'NOTIFICATION') {
         $timestamp = date('Y-m-d H:i:s');
@@ -181,7 +184,7 @@ class NotificationHandler
                 $notificationType ?: \OPNsense\DeviceMonitor\EmailLog::TYPE_SERVICE,
                 (string)($this->_resolvedRecipient() ?? ''),
                 (string)$subject,
-                null, null, null, null, $messageId
+                null, null, null, null, $messageId, (string)$html, 'html'
             );
         } catch (\Throwable $e) {
             /* Logging setup is fail-open: the send proceeds exactly as before. */
@@ -303,9 +306,11 @@ class NotificationHandler
             : \OPNsense\DeviceMonitor\EmailLog::TYPE_NEW_DEVICE;
         $messageId = \OPNsense\DeviceMonitor\EmailLog::newMessageId((string)@gethostname());
         $subjectForLog = $this->_subjectForEmail($is_test);
+        $this->_log = $log;
         $eventId = $log === null ? null : $log->recordSubmission(
             $type, (string)($this->_resolvedRecipient() ?? ''), $subjectForLog,
             null, null, null, null, $messageId);
+        $this->_capturedEventId = $eventId;
         try {
             $result = $this->_sendEmail($is_test, $messageId);
         } catch (\Throwable $e) {
@@ -314,6 +319,14 @@ class NotificationHandler
         }
         $this->_logOutcome($log, $eventId, $result);
         return $result;
+    }
+
+    /** Attach the body to the row this instance most recently created. */
+    protected function _captureBody($subject, $html)
+    {
+        if (!empty($this->_capturedEventId) && $this->_log !== null) {
+            $this->_log->recordContent($this->_capturedEventId, $html, 'html');
+        }
     }
 
     /** The subject the transport will actually emit, for accurate logging. */
@@ -491,6 +504,10 @@ ROW;
 HTML;
         }
         
+        // Capture the body this call actually built so the log can show it. This
+        // never alters the message; a recording failure is swallowed by the logger.
+        $this->_captureBody((string)$subject, (string)$html);
+
         // Send email using the selected transport.
         $email_method = strtolower($config['email_method'] ?? 'sendmail');
         try {

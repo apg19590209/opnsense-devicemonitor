@@ -43,6 +43,7 @@ def test_all_requests_use_the_shared_helper():
     src = VIEW.read_text(encoding='utf-8')
     calls = re.findall(r"url: '(/api/devicemonitor/emaillog/\w+)'", src)
     assert set(calls) == {'/api/devicemonitor/emaillog/search',
+                          '/api/devicemonitor/emaillog/message',
                           '/api/devicemonitor/emaillog/exportcsv'}, calls
     # Both are POSTs, so both need the token installed by the shared hook.
     for url in calls:

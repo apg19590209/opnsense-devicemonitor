@@ -21,6 +21,8 @@ class EmailLog
     const BUSY_TIMEOUT_MS = 2000;
     const MAX_STRING = 255;
     const MAX_DETAIL = 500;
+    /** Bounded stored body: enough for a readable message, never unbounded. */
+    const MAX_CONTENT = 20000;
 
     const STATE_SUBMITTED = 'submitted';
     const STATE_QUEUED = 'queued';
@@ -129,6 +131,28 @@ class EmailLog
             evidence TEXT NOT NULL DEFAULT \'\',
             source TEXT NOT NULL DEFAULT \'sender\'
         )');
+        /* Versioned, idempotent upgrade. user_version records the applied schema so a
+         * later install can add columns without touching existing rows. Version 2
+         * adds the captured message content; older rows keep NULL and are shown as
+         * "Message content unavailable" rather than reconstructed. */
+        $version = (int)$db->querySingle('PRAGMA user_version');
+        if ($version < 2) {
+            $columns = [];
+            $res = $db->query('PRAGMA table_info(email_log)');
+            while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+                $columns[] = $row['name'];
+            }
+            foreach ([
+                'content_text' => 'TEXT',
+                'content_format' => "TEXT NOT NULL DEFAULT ''",
+                'content_truncated' => 'INTEGER NOT NULL DEFAULT 0',
+            ] as $name => $type) {
+                if (!in_array($name, $columns, true)) {
+                    $db->exec("ALTER TABLE email_log ADD COLUMN $name $type");
+                }
+            }
+            $db->exec('PRAGMA user_version = 2');
+        }
         $db->exec('CREATE INDEX IF NOT EXISTS idx_email_log_created ON email_log(created_utc)');
         $db->exec('CREATE INDEX IF NOT EXISTS idx_email_log_type ON email_log(notification_type)');
         $db->exec('CREATE INDEX IF NOT EXISTS idx_email_log_status ON email_log(status)');
@@ -151,6 +175,50 @@ class EmailLog
         $parts = array_map('trim', explode(',', (string)$value));
         $parts = array_values(array_filter($parts, function ($p) { return $p !== ''; }));
         return self::sanitise(implode(', ', array_slice($parts, 0, 10)));
+    }
+
+    /**
+     * Readable text from an HTML email: tags removed, entities decoded, block
+     * boundaries turned into newlines. Nothing is executed, no remote resource is
+     * fetched and attributes are discarded.
+     */
+    public static function htmlToText($html)
+    {
+        $text = (string)$html;
+        $text = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', '', $text);
+        $text = preg_replace('#<br\s*/?>#i', "\n", $text);
+        $text = preg_replace('#</(p|div|tr|h[1-6]|li|table|thead|tbody|section)>#i', "\n", $text);
+        $text = preg_replace('#</t[dh]>#i', '\t', $text);
+        $text = strip_tags($text);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = preg_replace('/[ \t]+/', ' ', $text);
+        $text = preg_replace('/\n[ \t]+/', "\n", $text);
+        $text = preg_replace('/\n{3,}/', "\n\n", $text);
+        return trim($text);
+    }
+
+    /** Bound stored content and report whether it was truncated. */
+    public static function boundContent($text)
+    {
+        $text = self::sanitiseNewlines((string)$text);
+        if (strlen($text) <= self::MAX_CONTENT) {
+            return [$text, false];
+        }
+        $cut = substr($text, 0, self::MAX_CONTENT);
+        while ($cut !== '' && (ord($cut[strlen($cut) - 1]) & 0xC0) === 0x80) {
+            $cut = substr($cut, 0, -1);
+        }
+        return [$cut, true];
+    }
+
+    /** Like sanitise() but keeps line breaks so a body stays readable. */
+    public static function sanitiseNewlines($value)
+    {
+        $value = is_string($value) ? $value : (string)$value;
+        $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value);
+        $value = str_replace("\r\n", "\n", $value);
+        $value = str_replace("\r", "\n", $value);
+        return trim($value);
     }
 
     public static function newEventId()
@@ -194,7 +262,12 @@ class EmailLog
         return ['host' => $host, 'ip' => $ip];
     }
 
-    public function recordSubmission($type, $recipient, $subject, $eventId = null, $nodeId = null, $nodeIp = null, $role = null, $messageId = null)
+    /**
+     * Record one logical email. When $body is supplied it is stored as readable
+     * text (HTML is converted, never executed); storage failure never blocks the
+     * caller because this method returns null instead of throwing.
+     */
+    public function recordSubmission($type, $recipient, $subject, $eventId = null, $nodeId = null, $nodeIp = null, $role = null, $messageId = null, $body = null, $bodyFormat = 'html')
     {
         try {
             $eventId = $eventId ?: self::newEventId();
@@ -204,8 +277,9 @@ class EmailLog
             $this->ensureSchema($db);
             $stmt = $db->prepare(
                 'INSERT INTO email_log (event_id, created_utc, updated_utc, node_id, node_ip, node_role,
-                    notification_type, recipient, subject, status, status_detail, transport, queue_id, message_id)
-                 VALUES (:e, :c, :u, :n, :ip, :r, :t, :to, :s, :st, :d, \'\', \'\', :mid)'
+                    notification_type, recipient, subject, status, status_detail, transport, queue_id, message_id,
+                    content_text, content_format, content_truncated)
+                 VALUES (:e, :c, :u, :n, :ip, :r, :t, :to, :s, :st, :d, \'\', \'\', :mid, :ct, :cf, :tr)'
             );
             $stmt->bindValue(':e', $eventId, SQLITE3_TEXT);
             $stmt->bindValue(':c', $now, SQLITE3_TEXT);
@@ -219,12 +293,57 @@ class EmailLog
             $stmt->bindValue(':st', self::STATE_SUBMITTED, SQLITE3_TEXT);
             $stmt->bindValue(':d', '', SQLITE3_TEXT);
             $stmt->bindValue(':mid', self::sanitise((string)$messageId), SQLITE3_TEXT);
+            if ($body === null) {
+                $content = null;
+                $truncated = 0;
+                $format = '';
+            } else {
+                $text = ($bodyFormat === 'text') ? self::sanitiseNewlines($body) : self::htmlToText($body);
+                list($content, $truncated) = self::boundContent($text);
+                $format = $bodyFormat === 'text' ? 'text' : 'html';
+            }
+            if ($content === null) {
+                $stmt->bindValue(':ct', null, SQLITE3_NULL);
+            } else {
+                $stmt->bindValue(':ct', $content, SQLITE3_TEXT);
+            }
+            $stmt->bindValue(':cf', $format, SQLITE3_TEXT);
+            $stmt->bindValue(':tr', $truncated ? 1 : 0, SQLITE3_INTEGER);
             $stmt->execute();
             $db->close();
             $this->diagnostic = null;
             return $eventId;
         } catch (\Throwable $e) {
             return $this->fail($e->getMessage());
+        }
+    }
+
+    /**
+     * Attach message content to an existing row. Fail-open: a storage problem
+     * returns false and never disturbs the send that already happened.
+     */
+    public function recordContent($eventId, $body, $format = 'html')
+    {
+        if (!$eventId) {
+            return false;
+        }
+        try {
+            $text = ($format === 'text') ? self::sanitiseNewlines($body) : self::htmlToText($body);
+            list($content, $truncated) = self::boundContent($text);
+            $db = $this->connect();
+            $this->ensureSchema($db);
+            $stmt = $db->prepare('UPDATE email_log SET content_text = :ct, content_format = :cf,
+                content_truncated = :tr WHERE event_id = :e AND content_text IS NULL');
+            $stmt->bindValue(':ct', $content, SQLITE3_TEXT);
+            $stmt->bindValue(':cf', $format === 'text' ? 'text' : 'html', SQLITE3_TEXT);
+            $stmt->bindValue(':tr', $truncated ? 1 : 0, SQLITE3_INTEGER);
+            $stmt->bindValue(':e', $eventId, SQLITE3_TEXT);
+            $stmt->execute();
+            $db->close();
+            return true;
+        } catch (\Throwable $e) {
+            $this->diagnostic = self::sanitise($e->getMessage(), self::MAX_DETAIL);
+            return false;
         }
     }
 
@@ -341,6 +460,27 @@ class EmailLog
         }
     }
 
+    /** One logical email with its content and timeline, for the detail view. */
+    public function messageDetail($eventId)
+    {
+        try {
+            $db = $this->connect();
+            $this->ensureSchema($db);
+            $stmt = $db->prepare('SELECT * FROM email_log WHERE event_id = :e');
+            $stmt->bindValue(':e', (string)$eventId, SQLITE3_TEXT);
+            $row = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+            $db->close();
+            if (!$row) {
+                return null;
+            }
+            $row['timeline'] = $this->timeline($row['event_id']);
+            return $row;
+        } catch (\Throwable $e) {
+            $this->fail($e->getMessage());
+            return null;
+        }
+    }
+
     /** Delete expired log rows and every event that belongs to them. */
     public function prune($days = self::RETENTION_DAYS)
     {
@@ -389,7 +529,12 @@ class EmailLog
             $rows = [];
             while ($row = $res->fetchArray(SQLITE3_ASSOC)) { $rows[] = $row; }
             $db->close();
-            foreach ($rows as &$row) { $row['timeline'] = $this->timeline($row['event_id']); }
+            foreach ($rows as &$row) {
+                $row['timeline'] = $this->timeline($row['event_id']);
+                // The list view never needs the body; keep the payload bounded.
+                $row['has_content'] = !empty($row['content_text']);
+                unset($row['content_text']);
+            }
             return $rows;
         } catch (\Throwable $e) {
             $this->fail($e->getMessage());

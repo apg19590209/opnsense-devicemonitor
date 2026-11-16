@@ -151,6 +151,12 @@ $html = <<<HTML
 </html>
 HTML;
 
+/* Attach the body the mail will actually carry. Recording is best-effort and
+ * cannot change the message or its exit code. */
+if ($__dmEvent) {
+    $__dmLog->recordContent($__dmEvent, $html, 'html');
+}
+
 $emailMethod = strtolower($config['email_method'] ?? 'sendmail');
 
 if ($emailMethod === 'smtp') {

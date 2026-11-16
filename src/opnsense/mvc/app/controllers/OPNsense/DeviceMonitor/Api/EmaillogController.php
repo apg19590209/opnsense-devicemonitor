@@ -93,6 +93,63 @@ class EmaillogController extends ApiControllerBase
         ];
     }
 
+    /**
+     * POST /api/devicemonitor/emaillog/message
+     *
+     * One message with its body, for the detail view. The body is returned as
+     * plain text; the client renders it as text and never as HTML. Rows created
+     * before content capture report content_available=false so the UI can say
+     * "Message content unavailable" instead of reconstructing anything.
+     */
+    public function messageAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed', 'message' => 'POST required'];
+        }
+        $eventId = (string)$this->request->getPost('event_id', 'string', '');
+        if ($eventId === '' || !preg_match('/^[0-9a-f]{32}$/', $eventId)) {
+            return ['result' => 'failed', 'message' => 'Invalid message reference'];
+        }
+        $log = $this->recorder();
+        $row = $log->messageDetail($eventId);
+        if ($row === null) {
+            return ['result' => 'failed', 'message' => 'Message not found in the retention window'];
+        }
+        $hasContent = !empty($row['content_text']);
+        $timeline = [];
+        foreach (($row['timeline'] ?? []) as $step) {
+            $timeline[] = [
+                'occurred_utc' => (string)($step['occurred_utc'] ?? ''),
+                'stage' => (string)($step['stage'] ?? ''),
+                'status' => (string)($step['status'] ?? ''),
+                'detail' => (string)($step['detail'] ?? ''),
+                'evidence' => (string)($step['evidence'] ?? ''),
+                'source' => (string)($step['source'] ?? ''),
+            ];
+        }
+        return [
+            'result' => 'ok',
+            'scope' => 'local',
+            'message' => [
+                'event_id' => (string)$row['event_id'],
+                'created_utc' => (string)$row['created_utc'],
+                'node_ip' => (string)$row['node_ip'],
+                'node_role' => (string)$row['node_role'],
+                'notification_type' => (string)$row['notification_type'],
+                'recipient' => (string)$row['recipient'],
+                'subject' => (string)$row['subject'],
+                'status' => (string)$row['status'],
+                'status_detail' => (string)$row['status_detail'],
+                'queue_id' => (string)$row['queue_id'],
+                'content_available' => $hasContent,
+                'content_format' => $hasContent ? (string)($row['content_format'] ?? '') : '',
+                'content_truncated' => $hasContent && !empty($row['content_truncated']),
+                'content' => $hasContent ? (string)$row['content_text'] : '',
+                'timeline' => $timeline,
+            ],
+        ];
+    }
+
     /** POST /api/devicemonitor/emaillog/exportcsv */
     public function exportcsvAction()
     {
