@@ -689,14 +689,14 @@
                     </div>
                 </div>
                 <div class="row form-group">
-                    <label class="col-md-3 control-label" for="email_log_peer_api_key">{{ devicemonitor_t('API key') }}</label>
+                    <label class="col-md-3 control-label" for="email_log_peer_api_key">{{ devicemonitor_t('Peer API key') }}</label>
                     <div class="col-md-9">
                         <input type="text" class="form-control" id="email_log_peer_api_key" autocomplete="off" />
                         <small class="text-muted">{{ devicemonitor_t('Peer user API key with read access to api/devicemonitor/emaillog/*.') }}</small>
                     </div>
                 </div>
                 <div class="row form-group">
-                    <label class="col-md-3 control-label" for="email_log_peer_api_secret">{{ devicemonitor_t('API secret') }}</label>
+                    <label class="col-md-3 control-label" for="email_log_peer_api_secret">{{ devicemonitor_t('Peer API secret') }}</label>
                     <div class="col-md-9">
                         <input type="password" class="form-control" id="email_log_peer_api_secret" autocomplete="new-password" />
                         <small class="text-muted" id="email_log_peer_secret_state"></small>
@@ -1411,8 +1411,8 @@ $().ready(function() {
             $('#email_log_peer_api_secret').val('');
             var hasSecret = d.email_log_peer_secret_set === true || d.email_log_peer_secret_set === '1';
             $('#email_log_peer_secret_state').text(hasSecret
-                ? {{ devicemonitor_t('A peer API secret is stored. Leave blank to keep it; enter a new value to replace it.')|json_encode(15) }}
-                : {{ devicemonitor_t('No peer API secret is stored.')|json_encode(15) }});
+                ? {{ lang.query('A peer API secret is stored. Leave blank to keep it; enter a new value to replace it.')|json_encode(15) }}
+                : {{ lang.query('No peer API secret is stored.')|json_encode(15) }});
             buildVlanCheckList('email-vlan-list',   d.email_vlans   || '');
             buildVlanCheckList('webhook-vlan-list', d.webhook_vlans || '');
             buildMonitoredInterfaceList(d.monitored_interfaces || '');

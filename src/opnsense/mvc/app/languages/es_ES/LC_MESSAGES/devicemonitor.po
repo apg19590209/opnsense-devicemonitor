@@ -1918,3 +1918,204 @@ msgstr "Actividades que continúan"
 
 msgid "Timezone unavailable"
 msgstr "Zona horaria no disponible"
+
+#: settings.volt
+msgid "A peer API secret is stored. Leave blank to keep it; enter a new value to replace it."
+msgstr "A peer API secret is stored. Leave blank to keep it; enter a new value to replace it."
+
+
+#: settings.volt
+msgid "Peer API secret"
+msgstr "Peer API secret"
+#: settings.volt
+msgid "Absolute https URL of the peer firewall. Plain HTTP, credentials in the URL and query strings are refused."
+msgstr "Absolute https URL of the peer firewall. Plain HTTP, credentials in the URL and query strings are refused."
+
+#: settings.volt
+msgid "All nodes"
+msgstr "All nodes"
+
+#: settings.volt
+msgid "All types"
+msgstr "All types"
+
+#: settings.volt
+msgid "Close"
+msgstr "Close"
+
+#: settings.volt
+msgid "Could not load the email log"
+msgstr "Could not load the email log"
+
+#: settings.volt
+msgid "Could not load this message"
+msgstr "Could not load this message"
+
+#: settings.volt
+msgid "Email Log"
+msgstr "Email Log"
+
+#: settings.volt
+msgid "Email Log Peers"
+msgstr "Email Log Peers"
+
+#: settings.volt
+msgid "Enable peer access"
+msgstr "Enable peer access"
+
+#: settings.volt
+msgid "Export CSV"
+msgstr "Export CSV"
+
+#: settings.volt
+msgid "Failover"
+msgstr "Failover"
+
+#: settings.volt
+msgid "Incomplete data:"
+msgstr "Incomplete data:"
+
+#: settings.volt
+msgid "Local"
+msgstr "Local"
+
+#: settings.volt
+msgid "Message"
+msgstr "Message"
+
+#: settings.volt
+msgid "Message content truncated for display"
+msgstr "Message content truncated for display"
+
+#: settings.volt
+msgid "Message content unavailable"
+msgstr "Message content unavailable"
+
+#: settings.volt
+msgid "New device"
+msgstr "New device"
+
+#: settings.volt
+msgid "No email records in the retention window."
+msgstr "No email records in the retention window."
+
+#: settings.volt
+msgid "No peer API secret is stored."
+msgstr "No peer API secret is stored."
+
+#: settings.volt
+msgid "Node address"
+msgstr "Node address"
+
+#: settings.volt
+msgid "Off by default. Combining is attempted only when this is enabled and the settings below validate."
+msgstr "Off by default. Combining is attempted only when this is enabled and the settings below validate."
+
+#: settings.volt
+msgid "Paste the certificate authority that signed the peer certificate, or leave empty to use the firewall trust store. Verification cannot be disabled."
+msgstr "Paste the certificate authority that signed the peer certificate, or leave empty to use the firewall trust store. Verification cannot be disabled."
+
+#: settings.volt
+msgid "Peer"
+msgstr "Peer"
+
+#: settings.volt
+msgid "Peer URL"
+msgstr "Peer URL"
+
+#: settings.volt
+msgid "Peer is not configured. Add secure peer settings to enable combined views."
+msgstr "Peer is not configured. Add secure peer settings to enable combined views."
+
+#: settings.volt
+msgid "Peer user API key with read access to api/devicemonitor/emaillog/*."
+msgstr "Peer user API key with read access to api/devicemonitor/emaillog/*."
+
+#: settings.volt
+msgid "Queued or deferred"
+msgstr "Queued or deferred"
+
+#: settings.volt
+msgid "Read-only peer access to the Device Monitor email log. The peer URL must use https:// and TLS is always verified. Credentials are stored on this node only and are never shown again after saving. Live access stays disabled until you enable it below."
+msgstr "Read-only peer access to the Device Monitor email log. The peer URL must use https:// and TLS is always verified. Credentials are stored on this node only and are never shown again after saving. Live access stays disabled until you enable it below."
+
+#: settings.volt
+msgid "Recipient"
+msgstr "Recipient"
+
+#: settings.volt
+msgid "Relay acceptance is not proof that the message reached the recipient inbox."
+msgstr "Relay acceptance is not proof that the message reached the recipient inbox."
+
+#: settings.volt
+msgid "Relay accepted"
+msgstr "Relay accepted"
+
+#: settings.volt
+msgid "Request timeout (seconds)"
+msgstr "Request timeout (seconds)"
+
+#: settings.volt
+msgid "Role"
+msgstr "Role"
+
+#: settings.volt
+msgid "Scan result"
+msgstr "Scan result"
+
+#: settings.volt
+msgid "Search subject or recipient"
+msgstr "Search subject or recipient"
+
+#: settings.volt
+msgid "Service alert"
+msgstr "Service alert"
+
+#: settings.volt
+msgid "Showing records from the configured peer."
+msgstr "Showing records from the configured peer."
+
+#: settings.volt
+msgid "Showing records from this node and the configured peer."
+msgstr "Showing records from this node and the configured peer."
+
+#: settings.volt
+msgid "Subject"
+msgstr "Subject"
+
+#: settings.volt
+msgid "Submitted"
+msgstr "Submitted"
+
+#: settings.volt
+msgid "Test"
+msgstr "Test"
+
+#: settings.volt
+msgid "The peer could not be read. Only local records are shown."
+msgstr "The peer could not be read. Only local records are shown."
+
+#: settings.volt
+msgid "This view shows only the email log of the local node."
+msgstr "This view shows only the email log of the local node."
+
+#: settings.volt
+msgid "Time (UTC)"
+msgstr "Time (UTC)"
+
+#: settings.volt
+msgid "Timeline"
+msgstr "Timeline"
+
+#: settings.volt
+msgid "Trusted CA (PEM)"
+msgstr "Trusted CA (PEM)"
+
+#: settings.volt
+msgid "View message"
+msgstr "View message"
+
+
+#: settings.volt
+msgid "Peer API key"
+msgstr "Peer API key"
