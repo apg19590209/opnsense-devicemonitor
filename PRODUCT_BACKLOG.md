@@ -1005,10 +1005,22 @@ verbatim; this table is the current summary.
 | Generic email delivery (unchanged code path) | **CLOSED — operator-confirmed PASS** (attestation, not re-tested in this cycle) | operator statement, 16 Nov 2026 |
 | Generic webhook delivery (unchanged code path) | **CLOSED — operator-confirmed PASS** (attestation, not re-tested in this cycle) | operator statement, 16 Nov 2026 |
 | Changed identity-alert behaviour (identity-conflict delivery) | **OPEN — UNVALIDATED by user decision**; never PASS, explicitly not itself a release blocker. This is the only delivery behaviour changed by the webhook-only correction; rendering/legacy-email evidence is technical only | identity/Nmap procedure addendum 2 |
-| Failover email path | **OPEN — unexercised, if applicable.** `.252` has no sendmail; failover email was never producible there, so it is tracked separately from generic email delivery | acceptance package, P1 runs |
+| Failover email path | **CLOSED — no operational expectation.** `ha_notify_failover` is effectively `0` on both nodes, so failover email is disabled/not configured. Recorded configuration limitation: `.252` uses `sendmail` but has no local MTA, so a demotion-leg email could not be produced; the acceptance plan expected **0** demotion emails, making this a limitation rather than a defect. `.253` is configure-and-transport-capable but delivery is **UNVERIFIED** (no evidence of an arriving email, and none is claimed) | failover-email finding, 16 Nov 2026 |
 | Live ageing transitions | **OPEN — unperformed** (isolated 21/21 is not live acceptance) | ageing-isolated package |
 | Targeted Nmap / new-device alert delivery | **OPEN — unperformed** | identity/Nmap procedure REV1 |
 | Historical monitoring-activation attribution | **OPEN — UNKNOWN**, not a demonstrated defect | PROJECT_STATE event-path entry |
+
+**Failover email resolved as a configuration classification (16 November 2026).** Read-only
+inspection of both nodes established that failover notifications (`ha_notify_failover`) are
+effectively disabled on `.252` and `.253`, so neither node has an operational failover-email
+expectation. The helper is not sendmail-bound: `sendCustomEmail()` uses the bundled Direct SMTP
+helper when `email_method=smtp`, and only falls back to local `/usr/local/sbin/sendmail` otherwise.
+`.253` (MASTER) is configured as `sendmail` with a working MTA, so it is transport-capable but its
+failover-email delivery remains **UNVERIFIED**; `.252` (BACKUP) is configured as `sendmail` with no
+local MTA, so a demotion-leg email could not be produced — the acceptance plan expected zero
+demotion emails, so that is a documented limitation, not a defect and not a webhook issue. This
+closes the tracking item; no helper was invoked, no mail sent and no setting changed.
+
 
 **Deviation D1 closed as an accepted procedure deviation (16 November 2026).** The user has accepted
 D1 as a test-procedure deviation requiring no further action. This does **not** alter the P1 run-2

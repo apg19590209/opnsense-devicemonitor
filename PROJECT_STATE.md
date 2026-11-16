@@ -32,7 +32,9 @@ published release. Issue #5 received a factual reply
 remains **OPEN** pending the reporter's functional confirmation; the reply states the warnings were
 harmless and that no reinstall is needed for them.
 
-**Release limitations accepted by the user; none of these tests passed.** Targeted Nmap /
+**Release limitations accepted by the user; none of these tests passed.** Failover email is **not an open item**: `ha_notify_failover` is effectively `0` on both nodes, so it is
+disabled/not configured; `.252` lacks a local MTA (documented limitation, zero demotion emails were
+expected) and `.253` is transport-capable with delivery **UNVERIFIED**. Targeted Nmap /
 new-device delivery and live ageing transitions remain **unperformed**; the isolated ageing 21/21 result is not live acceptance. **Deviation D1** is
 **CLOSED as an accepted test-procedure deviation needing no further action**: its history is
 preserved, the four-frame CARP failover webhook result remains a genuine PASS obtained under that
