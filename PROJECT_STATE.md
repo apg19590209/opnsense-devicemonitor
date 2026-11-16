@@ -88,8 +88,9 @@ harmless and that no reinstall is needed for them.
 
 **Release limitations accepted by the user; none of these tests passed.** Generic node email delivery is **operator-confirmed PASS on both nodes**. The failover email path is **not
 configured** (`ha_notify_failover` unset on both) and, while both nodes are now transport-capable,
-automatic failover-triggered email remains **unverified** as a separate path. Targeted Nmap /
-new-device delivery and live ageing transitions remain **unperformed**; the isolated ageing 21/21 result is not live acceptance. **Deviation D1** is
+automatic failover-triggered email remains **unverified** as a separate path. Nmap execution has succeeded on every recorded attempt; **new-device alert delivery and post-repair
+scan-result email are unexercised future coverage**, not defects (the "Failed 5/5" statuses were a
+historical missing-MTA failure, now CLOSED and repaired). Live ageing transitions remain **unperformed**; the isolated ageing 21/21 result is not live acceptance. **Deviation D1** is
 **CLOSED as an accepted test-procedure deviation needing no further action**: its history is
 preserved, the four-frame CARP failover webhook result remains a genuine PASS obtained under that
 deviation, and the single-write A1 path remains recorded as unproven but is not an open task. The

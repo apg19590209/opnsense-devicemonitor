@@ -1007,8 +1007,21 @@ verbatim; this table is the current summary.
 | Changed identity-alert behaviour (identity-conflict delivery) | **OPEN — UNVALIDATED by user decision**; never PASS, explicitly not itself a release blocker. This is the only delivery behaviour changed by the webhook-only correction; rendering/legacy-email evidence is technical only | identity/Nmap procedure addendum 2 |
 | Failover email path | **CLOSED — not configured, and now transport-capable on both nodes.** `ha_notify_failover` remains unset on `.252` and `.253`, so neither has an operational failover-email expectation. The earlier `.252` limitation (no local MTA) no longer applies: both nodes now have a working local sendmail/Postfix relay, and generic node email delivery is operator-confirmed PASS end-to-end on both. The automatic **failover-triggered** email itself remains **unverified** — no failover event was generated and the switch is off; that is a separate, unexercised path | email close-out, 16 Nov 2026 |
 | Live ageing transitions | **OPEN — unperformed** (isolated 21/21 is not live acceptance) | ageing-isolated package |
-| Targeted Nmap / new-device alert delivery | **OPEN — unperformed** | identity/Nmap procedure REV1 |
+| Targeted Nmap execution and new-device alert delivery | **OPEN — future coverage only.** Nmap execution itself has succeeded on every recorded attempt. New-device alert delivery and **post-repair scan-result email** are unexercised future coverage, not known defects | identity/Nmap procedure REV1; scan-history investigation, 16 Nov 2026 |
 | Historical monitoring-activation attribution | **OPEN — UNKNOWN**, not a demonstrated defect | PROJECT_STATE event-path entry |
+
+**"Failed 5/5" scan statuses — CLOSED (16 November 2026): historical email-transport failure.**
+The label is the scan-history email column (`email_sent=0`), not an Nmap failure. On `.252` the ten
+history rows (five for `192.168.20.27`, five for `192.168.20.181`/`.198`, all 2026-11-05 to
+2026-11-06) all recorded `success=1` with `email_sent=0` and the same error:
+`Scan email failed for <ip>: sh: /usr/local/sbin/sendmail: not found`. Both device rows have
+`nmap_scan_pending=0` and no next attempt, and no history row exists after 2026-11-07, so nothing is
+pending or retrying. The underlying cause — no local MTA on `.252` — was repaired by installing and
+configuring Postfix, and generic node email delivery is operator-confirmed PASS end-to-end.
+**Scan history is preserved unchanged.** Post-repair **scan-result email** remains *unexercised future
+coverage*, not a current defect and not a mandatory retest: no targeted scan has run on `.252` since
+the repair. Recording this closes the item; no scan, retry, resend or UI change was made.
+
 
 **Failover email resolved as a configuration classification (16 November 2026).** Read-only
 inspection of both nodes established that failover notifications (`ha_notify_failover`) are
