@@ -1394,6 +1394,18 @@ identity-conflict email count after the fix is **zero**, the identity/Nmap and l
 remain **UNTESTED**, D1 remains recorded, and publication stays **NO-GO**.
 
 ## Deployment verification notes
+**`.252` Postfix restricted to a local-only listener (16 November 2026):** the Postfix plugin's
+supported listener field (`inet_interfaces`, a model `TextField` rendered into `main.cf`) was set to
+`localhost` and persisted in `config.xml`; no generated file was hand-edited. After the required
+Postfix stop/start the only listeners are **`127.0.0.1:25` (IPv4)** and **`[::1]:25` (IPv6)**.
+`inet_protocols` remains `all`, so both stacks are served on loopback only. The outbound Gmail relay
+(`smtp.gmail.com:587`, SASL, `smtp_tls_security_level=may`), credentials, sender and Device Monitor
+settings are unchanged, `sendmail` remains available, `postfix check` is clean apart from a
+deprecation notice also present on `.253`, `.252` remains BACKUP and `.253` MASTER, and no firewall
+rule or CARP setting was touched. No test mail was submitted and no queue was flushed or deleted —
+**delivery remains UNVERIFIED**. Rollback:
+`/root/dm-252-postfix-loopback-20261116T103702Z`. Evidence (sealed): `/root/dm-validation-2140/dm-252-postfix-loopback-20261116T103730Z/`.
+
 **`.252` outbound sendmail parity established (16 November 2026):** the OPNsense Postfix plugin
 was installed on `.252` from the supported repository (`os-postfix 1.24.1`, `postfix 3.11.7_5,1`;
 no OS upgrade or reboot needed) and configured to mirror `.253`: local submission through
