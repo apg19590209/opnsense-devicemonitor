@@ -1407,6 +1407,19 @@ identity-conflict email count after the fix is **zero**, the identity/Nmap and l
 remain **UNTESTED**, D1 remains recorded, and publication stays **NO-GO**.
 
 ## Deployment verification notes
+**Email Log View message dialog — presentation pass (17 November 2026).** The dialog now follows the
+settled specification: the email subject is the heading; a compact aligned metadata block shows
+recipient, node, UTC timestamp, type and status, wrapping long values and stacking labels above values
+below 767px; 24px separates metadata, message and delivery sections; the message sits in a 20px-padded
+theme-font reading area at 1.5 line spacing with paragraph breaks preserved and no horizontal overflow;
+delivery history is collapsed under "Delivery details" and expands to one row per event; a standard
+footer Close button accompanies the header close control, with Escape dismissal and focus return from
+Bootstrap. Dialog width targets 800px and never comes within 16px of the viewport edge. Scrolling remains
+core `.modal-body` only — no fixed content heights, nested scrollbars or excess empty space. Body
+rendering is still `.text()`-only. Candidate `cec84948…` installed on `.23` with settings
+(`cecb403f…`) and all 20 email-log rows preserved, including preview `210c1c39…`; 49/49 targets verify.
+Exact-head CI `43976338471` at `317623f` passed. **Visual acceptance is pending the operator's review.**
+
 **Email log feature — `.23` installation and UI acceptance pass (17 November 2026).** Candidate
 `ae091bfa…` (source `2a50811`, CI `43972141418` success) installed with `INSTALL_OK files=68
 core_locales=9 pruned=0`; all 49 manifest targets verify. **Settings were preserved, not restored to
