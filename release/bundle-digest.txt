@@ -102,6 +102,10 @@
 #   10ff1509efce5bc109860fa9c8e645e906468cf764b02d6dcaaa1c77886efd47  1850019 bytes
 #       (the selectpicker lifecycle candidate installed on .23; superseded by the closed-state
 #        Space/Enter correction and restoration of the plugin's native-select focus proxy)
+#   2f69a69751755891578fb53a3d15f27be1200798b89a0f23ad24137d75d5ef33  1850531 bytes
+#       (the pre-close-out 2.14.0 tree; superseded by webhook-only identity alerts, the
+#        rotation-event ordering fix and the Dutch runtime deferral, which remove one helper,
+#        drop nl_NL from the payload and add release/supported-locales.sh)
 version 2.14.0
-bytes 1850531
-sha256 2f69a69751755891578fb53a3d15f27be1200798b89a0f23ad24137d75d5ef33
+bytes 1792158
+sha256 abab6ad7a46d2a12d9176d6752421fde88a7460395df167d096055a4e00e0207
