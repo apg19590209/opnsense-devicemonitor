@@ -2,6 +2,25 @@
 
 ## Current state
 
+**Email Log Clear filters, soft delete/restore, visibility filter and themed dialog header (17 November 2026).**
+Clear filters resets search, type and status, returns to page one and refreshes once while
+preserving the Local/Peer/All scope. Delete is soft only: schema version 3 adds `deleted_utc`
+additively, so message content, event id, transport status and the full timeline stay, and the
+unchanged 30-day retention still expires deleted entries. An Active/Deleted/All filter (default
+Active) is applied by one shared clause to the list, combined view, peer page and CSV export.
+Delete/Restore are POST actions behind authentication, ACL and token checks plus a
+`user-config-readonly` refusal; peer rows disable the action with an explanation and the peer
+endpoints stay read-only. Delivery events read "1 event"/"N events". The message dialog header
+reuses the framework `panel-heading` class so the theme supplies its subtle background and text
+colour in light and dark themes (Decision 72). Source `ae5dd8a`; exact-head CI `43982826593`
+passed; bundle `38f77108…` (1 980 077 bytes). Installed on `.23` with backup
+`/var/backups/devicemonitor/pre-visibility-20261116T235141Z`: four files hash-verified against the
+manifest; the live database upgraded to schema v3 with `integrity_check ok`, 20/20 rows Active,
+28 timeline events and the preview record intact; Device Monitor settings (`cecb403f…`) and
+OPNsense config (`e86a7058…`) unchanged; daemon running. **Not verified:** authenticated browser
+use of the new controls (no session available); the webhook and email configuration work stopped
+before any change (see the inspection report — no webhook destination and no `.23` SMTP credential).
+
 **Email Log one-message view, visible dialog header and literal `\t` correction (17 November 2026).**
 The View message dialog no longer opens under the fixed navigation: the overlay paints above the
 70px `.page-head`, the dialog starts below it and only `.modal-body` scrolls inside a viewport-capped
