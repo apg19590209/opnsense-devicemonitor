@@ -3226,3 +3226,56 @@ preserved under `/root/dm-validation-2140/dm-bl-013-timestamp-r2-20261112/` and
 This defect is tracked under **DM-BL-013 / ageing**. Historical monitoring-activation attribution
 remains **UNKNOWN**, not a confirmed automatic-activation defect. DM-BL-012 remains **CLOSED** on
 the explicit operator acceptance recorded on 12 November 2026.
+
+## 71. Email-log captured text is byte-faithful and the View message dialog is the single message view
+
+### Decision
+
+Captured email bodies are converted once, at the storage write, by `EmailLog::htmlToText()` (HTML)
+or `EmailLog::sanitiseNewlines()` (text), and stored as plain text. Conversion must not introduce
+escape text into the stored body:
+
+- the `</td>`/`</th>` cell separator is a real tab, never a literal backslash sequence;
+- trailing whitespace before a newline is removed, so a cell separator cannot survive as a stray
+  tab at the start of the next line;
+- CRLF and bare CR are normalised to LF before tag processing.
+
+Backslash sequences that genuinely occur in the message text are preserved, and bodies submitted
+as plain text are stored verbatim. Historical rows that already contain conversion artefacts are
+not rewritten, bulk-replaced or migrated; a global replacement of backslash sequences is
+forbidden because it cannot distinguish an artefact from genuine message text.
+
+The Email Log table offers exactly one row action, **View message**, which opens the subject,
+metadata, plain-text content and the complete delivery timeline. There is no separate Timeline
+action and no inline table expansion. The delivery timeline is presented under a **Delivery
+details** disclosure that states the recorded event count, starts collapsed on every open, exposes
+its state through `aria-expanded` (which also drives the chevron and the panel), and is replaced by
+"No delivery details recorded" when no events exist. Rows without captured content keep their
+delivery record and explain the missing body.
+
+The dialog overlay is positioned for the OPNsense layout: it paints above the fixed `.page-head`,
+starts below it, and caps its content to the viewport as a flex column so that only the body
+scrolls and the header, close control and footer remain reachable. Opening or expanding the dialog
+performs read-only lookup requests only and never sends or retries mail. Retrieval failures are
+reported in the dialog with the HTTP status or the API reason.
+
+### Reason
+
+The dialog's first presentation opened under the fixed navigation because core `.modal-dialog`
+uses a 62px top margin while `.page-head` is 70px, and the navbar (`z-index: 1030`) paints above
+`.modal` (1050) because the modal is a transformed, later document-order list item. Separately, a
+single-quoted `'\t'` in `htmlToText()` stored a literal backslash-t after every table cell, so the
+operator saw `Server:\t` and `To:\t` in the rendered message. Both defects are visible on real
+records and had to be fixed at their cause rather than hidden at render time.
+
+### Tests and evidence
+
+`tests/test_email_log_roundtrip.php` pins clean cell conversion, absence of literal backslash-t,
+raw tabs and carriage returns, preservation of genuine backslashes and plain-text bodies, and the
+JSON/render round trip. `tests/test_emaillog_dialog.py` pins header clearance, flex scrolling,
+one row action, the disclosure count and state synchronisation, the no-events statement, legacy
+content retention and dialog-level retrieval errors; it also asserts that none of the message
+lookup actions send mail. `tests/test_emaillog_message_action.py` asserts the single row action.
+Installed on `.23` on 17 November 2026 (candidate `a2702590…` volt / `b84d0ddc…` php) with the
+operator's settings and all 20 email-log rows preserved, including preview
+`210c1c39a10f9d4de5f44bacab912b20`.

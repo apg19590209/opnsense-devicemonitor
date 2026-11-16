@@ -2,6 +2,30 @@
 
 ## Current state
 
+**Email Log one-message view, visible dialog header and literal `\t` correction (17 November 2026).**
+The View message dialog no longer opens under the fixed navigation: the overlay paints above the
+70px `.page-head`, the dialog starts below it and only `.modal-body` scrolls inside a viewport-capped
+flex column, so the subject, close control and footer stay visible; long subjects wrap clear of a
+floated close control and narrow layouts stay inside the viewport. **View message is the only row
+action** — the separate Timeline button and inline timeline row are removed — and it opens
+metadata, content and the full delivery timeline for Local, Peer and All rows, with retrieval errors
+shown inside the dialog. **Delivery details** is one native-button disclosure showing the recorded
+count ("Delivery details (3 events)"), collapsed on open, with `aria-expanded`, chevron and panel
+sharing one state, keyboard activation, readable chronological event rows and "No delivery details
+recorded" (no control) when empty. Legacy rows keep their delivery record and still report the
+missing content. Opening or expanding sends no mail. The literal `\t` after Server, Time and To
+was caused by `EmailLog::htmlToText()` using a single-quoted `'\t'`; the converter now emits a real
+cell separator, drops trailing tabs before newlines and normalises CRLF. Genuine backslashes and
+plain-text bodies are untouched and no stored row was rewritten (Decision 71). Source is `514e2bb`;
+exact-head CI `43979095101` passed. Installed on `.23` with backup
+`/var/backups/devicemonitor/pre-dialog-20261116T232524Z` (predecessors `6ee1c010…` EmailLog.php,
+`5d9ab6c8…` emaillog.volt); post-install hashes match the manifest
+(`b84d0ddc…` / `a2702590…`), conversion of the test-email shape is clean on the installed code,
+settings are untouched and all 20 rows (3 with content, including preview `210c1c39…`) and 28
+timeline events are intact. **Not done:** visual browser acceptance of the new dialog, and new
+captured content containing a genuine backslash sequence (no test email was sent). **Residual:** the
+three already-stored bodies keep their historical literal `\t`; they are not migrated.
+
 **Email Log View message dialog — presentation pass (17 November 2026).** The dialog now follows the
 settled specification: the email subject is the heading; a compact aligned metadata block shows
 recipient, node, UTC timestamp, type and status, wrapping long values and stacking labels above values
