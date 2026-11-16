@@ -190,13 +190,16 @@
                         .text(text.diagnostics)
                         .on('click', function () { $(this).closest('tr').next().toggle(); })
                         .appendTo($detail);
-                    if (row.has_content) {
-                        $('<button>').addClass('btn btn-default btn-xs')
-                            .css('margin-left', '4px')
-                            .text(text.viewMessage)
-                            .on('click', function () { openMessage(row.event_id); })
-                            .appendTo($detail);
-                    }
+                    /* Always offered, even for rows recorded before capture: the modal
+                     * then explains that the content is unavailable rather than the
+                     * action disappearing without explanation. */
+                    $('<button>').addClass('btn btn-default btn-xs')
+                        .css('margin-left', '4px')
+                        .attr('data-event-id', row.event_id)
+                        .attr('aria-label', text.viewMessage)
+                        .text(text.viewMessage)
+                        .on('click', function () { openMessage(row.event_id); })
+                        .appendTo($detail);
                     $tr.append($detail);
                     $body.append($tr);
                     var $timeline = $('<tr>').hide();
