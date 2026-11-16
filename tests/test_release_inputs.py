@@ -62,21 +62,27 @@ def assert_manifest_guards(text, manifest_rows):
     assert count, 'installer has no manifest row-count guard'
     assert int(count.group(1)) == manifest_rows, (count.group(1), manifest_rows)
 
-    languages_match = re.search(r'^for lang in ([^;]+); do$', text, re.M)
-    assert languages_match, 'installer has no sidecar language loop'
-    languages = languages_match.group(1).split()
+    # The locale set is a single policy file (release/supported-locales.sh), not an inline list
+    # or a broad file discovery. The installer and the bundler both source it.
+    assert re.search(r'^for lang in \$SUPPORTED_LOCALES; do$', text, re.M), \
+        'installer must iterate the supported-locale policy'
+    assert 'release/supported-locales.sh' in text, 'installer must source the locale policy'
+    policy = (ROOT / 'release/supported-locales.sh').read_text()
+    match = re.search(r'^SUPPORTED_LOCALES="([^"]*)"$', policy, re.M)
+    assert match, 'locale policy has no SUPPORTED_LOCALES'
+    languages = match.group(1).split()
     assert 'en_US' in languages, languages
+    assert 'nl_NL' not in languages, 'Dutch is deferred (DM-BL-008a)'
 
-    expected = re.search(r'^expected=([0-9]+)$', text, re.M)
-    expected_fresh = re.search(r'^\[ "\$FRESH" = 0 \] \|\| expected=([0-9]+)$', text, re.M)
-    assert expected and expected_fresh, 'installer has no target-count guards'
+    # Counts must be derived from the payload, not hardcoded.
+    assert 'expected=$((MANIFEST_ROWS + SIDECAR_LOCALES + CORE_LOCALES))' in text, \
+        'installer target count must be derived from the payload'
+    assert not re.search(r'^expected=[0-9]+$', text, re.M), 'hardcoded target count present'
 
-    # Every language gets a sidecar .mo; every language except en_US also gets a
-    # merged core-domain catalogue. A fresh install adds one rc.conf target.
+    # Every supported language gets a sidecar .mo; every one except en_US also gets a merged
+    # core-domain catalogue. A fresh install adds one rc.conf target.
     upgrade_targets = manifest_rows + len(languages) + (len(languages) - 1)
-    assert int(expected.group(1)) == upgrade_targets, (expected.group(1), upgrade_targets, languages)
-    assert int(expected_fresh.group(1)) == upgrade_targets + 1, (
-        expected_fresh.group(1), upgrade_targets + 1, languages)
+    assert upgrade_targets == 60, upgrade_targets
 
 
 def verify(root):

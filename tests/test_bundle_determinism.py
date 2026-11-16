@@ -7,8 +7,12 @@ order to the sorted allow-list.
 
 This suite does what the review asked for: it builds the bundle in **two separate clean
 checkouts** of the tested commit, gives each checkout deliberately different file
-timestamps, and requires identical bytes. It then compares the result with the digest
-recorded in `release/bundle-digest.txt`, so the published identity cannot drift silently.
+timestamps and worktree modes, and requires identical bytes. It then compares the result
+with the digest recorded in `release/bundle-digest.txt`, so the published identity cannot
+drift silently. When the source checkout is dirty, its tracked changes are applied to two
+independent clean checkouts. Untracked files are deliberately excluded, so an untracked
+bundle input changes the digest and fails the comparison instead of slipping into a
+candidate unnoticed.
 """
 import gzip
 import os
@@ -30,17 +34,35 @@ def git(*args, cwd=ROOT):
 
 
 def make_checkout(destination, sha):
+    dirty = bool(git('status', '--porcelain'))
     subprocess.run(['git', 'clone', '--quiet', '--no-hardlinks', str(ROOT), str(destination)],
                    capture_output=True, text=True, check=True, timeout=300)
     subprocess.run(['git', '-C', str(destination), 'checkout', '--quiet', '--detach', sha],
                    capture_output=True, text=True, check=True, timeout=120)
     assert git('rev-parse', 'HEAD', cwd=destination) == sha
+    if dirty:
+        patch = subprocess.run(['git', 'diff', '--binary', sha], cwd=ROOT,
+                               capture_output=True, text=True, check=True, timeout=120)
+        applied = subprocess.run(
+            ['git', '-C', str(destination), 'apply', '--binary', '-'],
+            input=patch.stdout, capture_output=True, text=True, timeout=120)
+        assert applied.returncode == 0, (applied.stdout, applied.stderr)
 
 
 def age(tree, stamp):
     """Give every file in the checkout the same, deliberately wrong, timestamp."""
     subprocess.run(['find', str(tree), '-exec', 'touch', '-h', '-t', stamp, '{}', '+'],
                    check=True, timeout=120)
+
+
+def vary_modes(tree, restrictive):
+    """Vary worktree modes; the build must use the modes recorded in Git, not the umask."""
+    for path in tree.rglob('*'):
+        if not path.is_file() or '.git' in path.parts:
+            continue
+        executable = bool(path.stat().st_mode & 0o111)
+        path.chmod(0o700 if executable else 0o600 if restrictive
+                   else 0o775 if executable else 0o664)
 
 
 def build(tree, workdir):
@@ -85,6 +107,7 @@ def test_bundle_is_identical_from_two_checkouts():
             checkout = tmp / ('checkout%d' % index)
             make_checkout(checkout, sha)
             age(checkout, stamp)
+            vary_modes(checkout, restrictive=index == 0)
             digests.append(build(checkout, tmp / ('build%d' % index)))
         first, second = digests
         assert first == second, (

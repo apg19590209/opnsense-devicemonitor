@@ -40,11 +40,18 @@ LIST=${DM_BUNDLE_LIST:-/tmp/dm-bundle-list.txt}
 
 cd "$REPO"
 
-# 1. Manifest payload: the 42 hash-verified install targets.
+# 1. Manifest payload: the hash-verified install targets.
 awk '{print $3}' "$MANIFEST" > "$LIST"
 
-# 2. The .po catalogues the installer compiles (includes the 9 the manifest omits).
-find src -name '*.po' >> "$LIST"
+# 2. The .po catalogues the installer compiles, taken from the single supported-locale policy
+#    (release/supported-locales.sh) rather than a broad find: a retained-but-deferred translation
+#    source (nl_NL, DM-BL-008a) must never re-enter the payload by file discovery.
+. "$REPO/release/supported-locales.sh"
+for lang in $SUPPORTED_LOCALES; do
+    printf '%s\n' "src/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.po" >> "$LIST"
+done
+# The policy file itself is shipped so the installer and the bundle cannot diverge.
+printf '%s\n' release/supported-locales.sh >> "$LIST"
 
 # 3. Installer scripts, the manifest itself, the pinned-inputs file and its verifier, the
 #    catalogue merge helper, the prune helper with its legacy ownership evidence, and the
@@ -72,6 +79,15 @@ while IFS= read -r f; do
     fi
     mkdir -p "$BUILD/$(dirname "$f")"
     cp -p "$f" "$BUILD/$f"
+    mode=$(git ls-files --stage -- "$f" | awk 'NR == 1 { print $1 } END { if (NR != 1) exit 1 }')
+    case $mode in
+        100644) chmod 644 "$BUILD/$f" ;;
+        100755) chmod 755 "$BUILD/$f" ;;
+        *)
+            echo "UNSUPPORTED_GIT_MODE=$mode $f (expected 100644 or 100755)" >&2
+            exit 1
+            ;;
+    esac
 done < "$LIST"
 
 echo "staged files      : $(find "$BUILD" -type f | wc -l | tr -d ' ')"
@@ -90,8 +106,9 @@ rm -f "$OUT"
 #   * the *header encoding*, which differs between bsdtar and GNU tar (Decision 67).
 # gzip is no longer the host tool: release/bundle-gzip.py writes a fixed header (mtime 0,
 # OS 255) and a stored-block deflate stream, so the compressed bytes do not depend on whether
-# BSD gzip or GNU gzip is installed (Decision 68). File modes are
-# NOT normalised: the executable bits recorded in git must survive.
+# BSD gzip or GNU gzip is installed (Decision 68). File modes are normalised from the Git index:
+# 100644 becomes 0644 and 100755 becomes 0755. This keeps the executable bits recorded in Git
+# while making the archive independent of checkout umask and transient local permissions.
 find "$BUILD" -exec touch -h -t 202601010000.00 {} +
 
 # ---------------------------------------------------------------------------

@@ -117,7 +117,9 @@ def test_combined_defaults_and_config_loading():
         module.CONFIG_FILE = str(config_path)
         loaded = module.load_config()
 
-    assert loaded["identity_email_enabled"] is True
+    # Decision 36: the stored preference is inert, so it is not exposed to the
+    # scan logic as an effective setting.
+    assert "identity_email_enabled" not in loaded
     assert loaded["email_reminder_scan"] == 5
     assert loaded["email_reminder_service"] == 10
     assert loaded["email_reminder_identity"] == 15
@@ -248,10 +250,10 @@ def test_scan_state_change_and_reminder_refactor():
     print("INTEGRATION_STATE_CHANGE_AND_REMINDER=PASS")
 
 
-def test_identity_email_and_webhook_legs_remain_independent():
+def test_identity_alerts_are_webhook_only():
     module = load_module()
     events = [{"event_type": "IP_IDENTITY_CHANGED"}]
-    both = {
+    config = {
         "enabled": True,
         "email_enabled": True,
         "email_to": "operator@example.invalid",
@@ -261,12 +263,15 @@ def test_identity_email_and_webhook_legs_remain_independent():
         "identity_webhook_enabled": True,
     }
 
-    assert module.should_send_identity_mail(both, events) is True
-    assert module.should_send_identity_email(both, events) is True
-    assert module.should_send_identity_mail(dict(both, identity_email_enabled=False), events) is False
-    assert module.should_send_identity_email(dict(both, identity_webhook_enabled=False), events) is False
+    # Decision 36: no email leg exists, even with every email setting on.
+    assert not hasattr(module, "should_send_identity_mail")
+    assert not hasattr(module, "send_identity_mail")
+    assert module.should_send_identity_email(config, events) is True
+    assert module.should_send_identity_email(dict(config, identity_webhook_enabled=False), events) is False
+    assert module.should_send_identity_email(dict(config, webhook_enabled=False), events) is False
+    assert module.should_send_identity_email(dict(config, webhook_url=""), events) is False
 
-    print("INTEGRATION_IDENTITY_LEGS_INDEPENDENT=PASS")
+    print("INTEGRATION_IDENTITY_WEBHOOK_ONLY=PASS")
 
 
 def test_ui_controller_and_candidate_manifest_are_combined():
@@ -280,8 +285,12 @@ def test_ui_controller_and_candidate_manifest_are_combined():
     ).read_text()
     workflow = (ROOT / ".github/workflows/ci.yml").read_text()
 
+    # Decision 36: the key survives in the controller as an inert stored
+    # preference, but the Settings view no longer offers the control.
+    assert "identity_email_enabled" in controller
+    assert "identity_email_enabled" not in settings
+    assert "Also email identity conflict alerts" not in settings
     for token in (
-        "identity_email_enabled",
         "email_reminder_identity",
         "ha_carp_enabled",
         "ha_role_override",
@@ -297,8 +306,8 @@ def test_ui_controller_and_candidate_manifest_are_combined():
     manifest = MANIFEST.read_text().splitlines()
     rows = {parts[2]: parts for parts in (line.split() for line in manifest)}
     assert rows["src/opnsense/scripts/OPNsense/DeviceMonitor/notify_failover.php"][1] == "755"
-    assert rows["src/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_mail.php"][1] == "644"
-    assert len(rows) == 42, len(rows)
+    assert "src/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_mail.php" not in rows
+    assert len(rows) == 41, len(rows)
 
     print("INTEGRATION_UI_CONTROLLER_MANIFEST=PASS")
 
@@ -308,7 +317,7 @@ CASES = [
     test_carp_gate_combines_fail_open_and_override,
     test_standby_hygiene_still_ages_without_observation,
     test_scan_state_change_and_reminder_refactor,
-    test_identity_email_and_webhook_legs_remain_independent,
+    test_identity_alerts_are_webhook_only,
     test_ui_controller_and_candidate_manifest_are_combined,
 ]
 

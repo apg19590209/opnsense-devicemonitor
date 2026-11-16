@@ -457,9 +457,12 @@ class GuardTests(unittest.TestCase):
         subprocess.run([sys.executable, "-c", script, str(db_path)], check=True)
         self.assertTrue(Path(str(db_path) + "-wal").exists())
         self.assertTrue(Path(str(db_path) + "-shm").exists())
+        live_before = guard.database_assets(str(db_path))
 
         guard.create_backup(state)
         original = state["prestate"]["original_database"]
+        self.assertEqual(guard.database_assets(str(db_path)), live_before)
+        self.assertEqual(guard.database_assets(str(state["recovery_db"])), original)
         self.assertTrue(original["wal"]["present"])
         self.assertTrue(original["shm"]["present"])
         self.assertFalse(state["prestate"]["snapshot_database"]["wal"]["present"])
@@ -653,7 +656,7 @@ class GuardTests(unittest.TestCase):
             "scan": str(ROOT / "src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py"),
             "notification": str(ROOT / "src/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php"),
             "smtp": str(ROOT / "src/opnsense/scripts/OPNsense/DeviceMonitor/smtp_send.py"),
-            "identity": str(ROOT / "src/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_mail.php"),
+            "identity": str(ROOT / "src/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_email.php"),
         }
         self.assertEqual(guard.scope_check(paths, dict(guard.SCOPE_KEYS), guard.EXPECTED_TARGET_LINE), [])
 

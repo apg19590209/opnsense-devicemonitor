@@ -15,7 +15,7 @@ installer = (root / 'install-unattended.sh').read_text()
 version = re.search(r'^VERSION=([0-9.]+)$', installer, re.M).group(1)
 manifest = root / ('release/v%s-runtime.manifest' % version)
 rows = [line.split() for line in manifest.read_text().splitlines()]
-assert len(rows) == 42, len(rows)
+assert len(rows) == 41, len(rows)
 assert all(len(row) == 4 for row in rows)
 sources = [row[2] for row in rows]
 targets = [row[3] for row in rows]

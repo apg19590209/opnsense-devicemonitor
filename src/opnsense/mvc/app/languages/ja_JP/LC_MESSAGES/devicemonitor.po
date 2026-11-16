@@ -1572,24 +1572,24 @@ msgid "A CARP standby does not carry the monitored traffic, so hostwatch there u
 msgstr "CARP の待機ノードは監視対象のトラフィックを通過させないため、hostwatch は過小に報告し、活性の判定はすべて誤りになります。これを有効にすると、待機ノードは停止を捏造する代わりに、インフラストラクチャサービスの検出とサービスアラートを省略します。"
 
 #: settings.volt
-msgid "A backup override suppresses service discovery even when CARP awareness is enabled."
-msgstr "バックアップへの強制は、CARP 認識が有効でもサービス検出を抑止します。"
+msgid "Overrides Device Monitor behaviour only; does not change the firewall’s CARP role."
+msgstr "Device Monitor の動作のみを上書きします。ファイアウォールの CARP ロールは変更しません。"
 
 #: settings.volt
-msgid "Always act as backup (never observe)"
-msgstr "常にバックアップとして動作（監視しない）"
+msgid "Force BACKUP behaviour"
+msgstr "BACKUP 動作を強制"
 
 #: settings.volt
-msgid "Always act as master"
-msgstr "常にマスターとして動作"
+msgid "Force MASTER behaviour"
+msgstr "MASTER 動作を強制"
 
 #: settings.volt
 msgid "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
 msgstr "監視対象インターフェースにのみ適用されます。CARP 状態のないノードは影響を受けないため、単独のファイアウォールは観測を続けます。"
 
 #: settings.volt
-msgid "Automatic (from CARP state)"
-msgstr "自動（CARP 状態から）"
+msgid "Automatic (use CARP role)"
+msgstr "自動（CARP ロールを使用）"
 
 #: settings.volt
 msgid "Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance."
@@ -1664,8 +1664,8 @@ msgid "Send Test Webhook"
 msgstr "テスト Webhook を送信"
 
 #: settings.volt
-msgid "Service observation"
-msgstr "サービス観測"
+msgid "HA policy permission"
+msgstr "HAポリシーによる許可"
 
 #: settings.volt
 msgid "State"
@@ -1720,12 +1720,12 @@ msgstr "デバイス構成の変化と ID 競合を積極的に監視するネ�
 # ============================================
 
 #: settings.volt
-msgid "observing"
-msgstr "観測中"
+msgid "permitted"
+msgstr "許可"
 
 #: settings.volt
-msgid "suppressed"
-msgstr "抑止中"
+msgid "paused by HA policy"
+msgstr "HAポリシーにより一時停止"
 
 #: settings.volt
 msgid "unknown"
@@ -1743,9 +1743,6 @@ msgid "About Conflict Alerts"
 msgstr "競合アラートについて"
 
 #: settings.volt
-msgid "Also email identity conflict alerts"
-msgstr "ID 競合アラートをメールでも送信"
-
 #: settings.volt
 msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
 msgstr "状態が変化したときにメールを送信します。状態が変わらない場合に各カテゴリを繰り返す頻度を設定します。0 は繰り返しません。"
@@ -1781,3 +1778,143 @@ msgstr "分"
 #: infrastructureservices.volt
 msgid "Unknown"
 msgstr "不明"
+
+# ============================================
+# [devices.volt, settings.volt] Node-local HA visibility
+# ============================================
+
+#: devices.volt, settings.volt
+msgid "Node-local Device Monitor data"
+msgstr "ノードローカルの Device Monitor データ"
+
+msgid "HA role"
+msgstr "HA ロール"
+
+msgid "Node"
+msgstr "ノード"
+
+msgid "Non-HA"
+msgstr "非 HA"
+
+msgid "Unconfirmed"
+msgstr "未確認"
+
+msgid "HA status unconfirmed"
+msgstr "HA 状態は未確認です"
+
+msgid "HA status is unconfirmed because no monitored interface is selected."
+msgstr "監視対象インターフェースが選択されていないため、HA 状態は確認されていません。"
+
+msgid "HA status is unconfirmed because CARP is configured or active on this appliance, but no monitored interface is selected; monitoring-scope roles are unknown."
+msgstr "この装置では CARP が設定済みまたは有効ですが、監視対象インターフェースが選択されていないため、HA ステータスは未確認です。監視範囲のロールは不明です。"
+
+msgid "HA status is unconfirmed because the selected monitored interfaces do not resolve to local devices."
+msgstr "選択した監視対象インターフェースをローカルデバイスに解決できないため、HA 状態は確認されていません。"
+
+msgid "HA status is unconfirmed because CARP virtual IPs are configured without a detected CARP role."
+msgstr "CARP ロールが検出されていない状態で CARP 仮想 IP が設定されているため、HA 状態は確認されていません。"
+
+msgid "HA status is unconfirmed. Confirm CARP and the selected monitored interfaces."
+msgstr "HA 状態は確認されていません。CARP と選択した監視対象インターフェースを確認してください。"
+
+msgid "Displayed data belongs to this node only and is not merged from the CARP peer."
+msgstr "表示されているデータはこのノードのみに属し、CARP ピアと統合されません。"
+
+msgid "No Device Monitor activities are paused by HA gating."
+msgstr "HA ゲーティングにより一時停止される Device Monitor アクティビティはありません。"
+
+msgid "Paused on this BACKUP node"
+msgstr "この BACKUP ノードで一時停止中"
+
+msgid "Visibility priming"
+msgstr "可視性のプライミング"
+
+msgid "Service discovery"
+msgstr "サービスの検出"
+
+msgid "Service alerts"
+msgstr "サービスアラート"
+
+msgid "New device alerts"
+msgstr "新規デバイスアラート"
+
+msgid "Automatic targeted Nmap scans"
+msgstr "自動の対象 Nmap スキャン"
+
+msgid "Local inventory and identity recording, node-local ageing, and scheduled port discovery continue."
+msgstr "ローカル インベントリと ID 記録、ノードローカルの経過処理、スケジュールされたポート検出は継続します。"
+
+msgid "A paused activity is not an empty result."
+msgstr "一時停止されたアクティビティは空の結果ではありません。"
+
+msgid "HA role status is unavailable. Confirm CARP and the effective mode before relying on this view."
+msgstr "HA ロールの状態は利用できません。この表示を信頼する前に CARP と有効モードを確認してください。"
+
+msgid "HA status could not be retrieved, so the current CARP gating state is unknown."
+msgstr "HA ステータスを取得できなかったため、現在の CARP ゲーティング状態は不明です。"
+
+msgid "Device Monitor reports that observation continues while the CARP role is unknown."
+msgstr "CARP ロールが不明な間も監視が継続していることを Device Monitor が報告しています。"
+
+msgid "Last successful local scan"
+msgstr "最後に成功したローカルスキャン"
+
+msgid "No successful local scan appears in the available scan history."
+msgstr "利用可能なスキャン履歴に成功したローカルスキャンはありません。"
+
+msgid "The local scan history could not be read."
+msgstr "ローカルスキャン履歴を読み取れませんでした。"
+
+msgid "Scan history was not retrieved because the HA status request failed."
+msgstr "HA ステータス要求に失敗したため、スキャン履歴を取得できませんでした。"
+
+msgid "CARP awareness is disabled, so no activities are paused."
+msgstr "CARP 認識が無効なため、アクティビティは一時停止されません。"
+
+msgid "The detected CARP role is unavailable; the effective mode comes from the role override."
+msgstr "検出された CARP ロールを取得できません。有効なモードはロールオーバーライドから取得されます。"
+
+msgid "Show details"
+msgstr "詳細を表示"
+
+msgid "Hide details"
+msgstr "詳細を隠す"
+
+msgid "HA-paused activities"
+msgstr "HA により一時停止中のアクティビティ"
+
+msgid "Monitoring is disabled; scheduled scans and alert evaluation are not running."
+msgstr "このノードでは監視が無効です。スケジュールされたスキャンとアラート評価は実行されません。"
+
+msgid "Detected and effective roles differ."
+msgstr "検出されたロールと有効なモードが異なります。"
+
+msgid "Role override is active."
+msgstr "ロールの上書きが有効です。"
+
+msgid "No CARP configuration detected"
+msgstr "CARP 設定は検出されませんでした"
+
+msgid "HA controls that require a CARP role are disabled. Saved values are preserved; choose an explicit role override to enable them."
+msgstr "CARP ロールを必要とする HA コントロールは無効です。保存済みの値は保持されます。明示的なロールの上書きを選択すると有効になります。"
+
+msgid "Monitoring enabled"
+msgstr "監視有効"
+
+msgid "Monitoring disabled"
+msgstr "監視無効"
+
+msgid "Monitoring status unknown"
+msgstr "監視状態不明"
+
+msgid "Some activities paused"
+msgstr "一部のアクティビティは一時停止中"
+
+msgid "Paused activities"
+msgstr "一時停止中のアクティビティ"
+
+msgid "Continuing activities"
+msgstr "継続中のアクティビティ"
+
+msgid "Timezone unavailable"
+msgstr "タイムゾーンを利用できません"

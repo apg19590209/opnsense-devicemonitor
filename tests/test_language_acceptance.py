@@ -43,7 +43,8 @@ CORE_INC = Path('/usr/local/etc/inc')
 TRANSLATOR = Path('/usr/local/opnsense/mvc/app/library/OPNsense/Base/ViewTranslator.php')
 PHP = os.environ.get('PHP', 'php')
 
-LANGUAGES = ['de_DE', 'fr_FR', 'es_ES', 'it_IT', 'pt_BR', 'nl_NL', 'ru_RU', 'ja_JP', 'zh_CN']
+# Nine supported translated languages (nl_NL deferred, DM-BL-008a; not in the acceptance set).
+LANGUAGES = ['de_DE', 'fr_FR', 'es_ES', 'it_IT', 'pt_BR', 'ru_RU', 'ja_JP', 'zh_CN']
 REFERENCE = 'en_US'
 # page (URL segment under /ui/devicemonitor/) -> view template and controller variables
 PAGES = (

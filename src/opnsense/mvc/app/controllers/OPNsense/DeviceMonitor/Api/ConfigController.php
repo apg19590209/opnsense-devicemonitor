@@ -115,16 +115,35 @@ class ConfigController extends ApiControllerBase
         if (!in_array($override, ['auto', 'master', 'backup'], true)) {
             $override = 'auto';
         }
+        $overrideActive = ($override !== 'auto');
 
         /* An absent key means the setting predates the HA tab; the daemon then
          * behaves as it always has (CARP aware), which is what '1' means here. */
         $aware = !isset($config['ha_carp_enabled']) || ((string)$config['ha_carp_enabled'] === '1');
+        $monitoringEnabled = ((string)($config['enabled'] ?? '0') === '1');
 
         $interfaceDevices = [];
         $vips = [];
+        $configAvailable = true;
+        $timezoneLabel = '';
 
         try {
             $xml = @simplexml_load_file('/conf/config.xml');
+            if ($xml === false) {
+                $configAvailable = false;
+            }
+
+            if ($xml && isset($xml->system->timezone)) {
+                $configuredTimezone = trim((string)$xml->system->timezone);
+                if ($configuredTimezone !== '') {
+                    try {
+                        new \DateTimeZone($configuredTimezone);
+                        $timezoneLabel = $configuredTimezone;
+                    } catch (\Exception $e) {
+                        $timezoneLabel = '';
+                    }
+                }
+            }
 
             if ($xml && isset($xml->interfaces)) {
                 foreach ($xml->interfaces->children() as $ifName => $ifData) {
@@ -149,7 +168,7 @@ class ConfigController extends ApiControllerBase
                 }
             }
         } catch (\Exception $e) {
-            // An unreadable config.xml is a standalone node, not an error.
+            $configAvailable = false;
         }
 
         $monitored = [];
@@ -160,17 +179,36 @@ class ConfigController extends ApiControllerBase
             }
         }
 
-        $states = $this->carpStates();
+        $carp = $this->carpStates();
+        $states = $carp['states'];
 
         $seen = [];
+        $resolvedMonitoredDevices = [];
+        $unresolvedMonitoredInterfaces = [];
         foreach ($monitored as $name) {
             $device = $interfaceDevices[$name] ?? '';
-            if ($device !== '' && isset($states[$device])) {
+            if ($device === '') {
+                $unresolvedMonitoredInterfaces[] = $name;
+                continue;
+            }
+
+            $resolvedMonitoredDevices[$device] = true;
+            if (isset($states[$device])) {
                 $seen[$states[$device]] = true;
             }
         }
 
+        $monitoringScopeReady = count($monitored) > 0
+            && count($unresolvedMonitoredInterfaces) === 0;
+        $monitoringScopeReason = 'ready';
+        if (count($monitored) === 0) {
+            $monitoringScopeReason = 'no_monitored_interfaces';
+        } elseif (count($unresolvedMonitoredInterfaces) > 0) {
+            $monitoringScopeReason = 'unresolved_monitored_interfaces';
+        }
+
         $role = 'none';
+        $roleMixed = isset($seen['MASTER']) && isset($seen['BACKUP']);
         if (isset($seen['MASTER'])) {
             $role = 'MASTER';
         } elseif (isset($seen['BACKUP'])) {
@@ -185,6 +223,83 @@ class ConfigController extends ApiControllerBase
             $observing = false;
             $reason = ($override === 'backup') ? 'role override: backup' : 'CARP backup node';
         }
+
+        /* A BACKUP node pauses only the observations that need MASTER traffic.
+         * The daemon still performs the normal inventory scan, records
+         * identity evidence, drains scheduled port discovery and ages its own
+         * service state, so those must not be presented as paused. */
+        $pausedActivities = [];
+        if (!$observing) {
+            $pausedActivities = [
+                'visibility_priming',
+                'service_discovery',
+                'service_alerts',
+                'identity_alerts',
+                'new_device_alerts',
+                'targeted_nmap',
+            ];
+        }
+
+        /* The role needs both a readable ifconfig and config.xml's interface
+         * map. An unreadable config must not fall through to a false non-HA
+         * verdict merely because no monitored device could be resolved. */
+        $roleAvailable = $carp['available'] && $configAvailable;
+        $monitoringRolesKnown = $roleAvailable && $monitoringScopeReady;
+        $effectiveModeKnown = $roleAvailable || $override !== 'auto';
+        $roleUnknownObservationContinues = $aware
+            && !$effectiveModeKnown
+            && $observing
+            && !$carp['available']
+            && $configAvailable;
+        $haStatus = 'non_ha';
+        if (!$effectiveModeKnown) {
+            $haStatus = 'unavailable';
+        } elseif ($mode === 'BACKUP') {
+            $haStatus = 'backup';
+        } elseif ($mode === 'MASTER') {
+            $haStatus = 'master';
+        }
+
+        /* Appliance-wide CARP absence is independent of monitoring scope. A
+         * readable configuration with no CARP VIP plus readable ifconfig with
+         * no CARP state anywhere proves the CARP controls are irrelevant even
+         * when no monitored interface is selected. An empty selection or a
+         * failed detector alone must never make that claim. */
+        $applianceCarpState = 'unknown';
+        if ($configAvailable && $carp['available']) {
+            $applianceCarpState = (count($vips) > 0 || $carp['present'])
+                ? 'present'
+                : 'absent';
+        }
+        $applianceNonHa = ($applianceCarpState === 'absent' && !$overrideActive);
+
+        /* Monitoring-scope readiness is separate from appliance-wide CARP
+         * absence and from the role of the selected interfaces. The returned
+         * reason lets the UI explain an empty or unresolved scope without
+         * inferring anything from a failed detector or from CARP state that
+         * exists outside the monitored selection. */
+        $nonHaConfirmation = 'not_applicable';
+        if ($haStatus === 'non_ha') {
+            if ($applianceNonHa) {
+                $nonHaConfirmation = 'appliance_non_ha';
+            } elseif ((count($vips) > 0 || $carp['present']) && count($monitored) === 0) {
+                $nonHaConfirmation = 'carp_present_no_monitored_interfaces';
+            } elseif (count($vips) > 0) {
+                $nonHaConfirmation = 'carp_vip_configured';
+            } elseif ($carp['present']) {
+                $nonHaConfirmation = 'carp_runtime_present_without_detected_role';
+            } elseif (count($monitored) === 0) {
+                $nonHaConfirmation = 'no_monitored_interfaces';
+            } elseif (!$monitoringScopeReady) {
+                $nonHaConfirmation = 'unresolved_monitored_interfaces';
+            } else {
+                $nonHaConfirmation = 'confirmed';
+            }
+        }
+        $nonHaConfirmed = in_array($nonHaConfirmation, ['appliance_non_ha', 'confirmed'], true);
+        $haRelevant = !$nonHaConfirmed;
+
+        $lastScan = $this->lastSuccessfulLocalScan();
 
         $rows = [];
         foreach ($vips as $vip) {
@@ -207,6 +322,31 @@ class ConfigController extends ApiControllerBase
             'override' => $override,
             'observing' => $observing,
             'reason' => $reason,
+            'role_available' => $roleAvailable,
+            'config_available' => $configAvailable,
+            'role_mixed' => $roleMixed,
+            'carp_aware' => $aware,
+            'appliance_carp_state' => $applianceCarpState,
+            'appliance_non_ha_confirmed' => $applianceNonHa,
+            'carp_vip_count' => count($vips),
+            'carp_runtime_available' => $carp['available'],
+            'carp_runtime_present' => $carp['present'],
+            'ha_status' => $haStatus,
+            'override_active' => $overrideActive,
+            'non_ha_confirmation' => $nonHaConfirmation,
+            'non_ha_confirmed' => $nonHaConfirmed,
+            'ha_relevant' => $haRelevant,
+            'monitoring_scope_ready' => $monitoringScopeReady,
+            'monitoring_scope_reason' => $monitoringScopeReason,
+            'monitoring_roles_known' => $monitoringRolesKnown,
+            'node' => $this->nodeIdentity(),
+            'node_local' => true,
+            'monitoring_enabled' => $monitoringEnabled,
+            'paused_activities' => $pausedActivities,
+            'role_unknown_observation_continues' => $roleUnknownObservationContinues,
+            'last_scan' => $lastScan['value'],
+            'last_scan_state' => $lastScan['state'],
+            'last_scan_timezone' => $timezoneLabel,
             'monitored_interfaces' => $monitored,
             'vips' => $rows,
         ];
@@ -214,14 +354,24 @@ class ConfigController extends ApiControllerBase
 
     /**
      * Map interface device names to their CARP state from `ifconfig -a`.
-     * @return array<string,string>
+     *
+     * The availability flag is separate from an empty state map: a readable
+     * ifconfig with no CARP line is positive appliance-wide evidence, while an
+     * unreadable command must not be shown as non-HA or promoted to MASTER.
+     * `present` also records INIT and non-MASTER/BACKUP CARP lines so an
+     * appliance with CARP outside the monitored selection is not mistaken for
+     * a standalone node.
+     *
+     * @return array{states: array<string,string>, available: bool, present: bool}
      */
     private function carpStates()
     {
         $states = [];
+        $present = false;
         $output = [];
+        $status = 1;
 
-        @exec('/sbin/ifconfig -a 2>/dev/null', $output);
+        @exec('/sbin/ifconfig -a 2>/dev/null', $output, $status);
 
         $device = null;
 
@@ -237,6 +387,8 @@ class ConfigController extends ApiControllerBase
                 continue;
             }
 
+            $present = true;
+
             $fields = preg_split('/\s+/', trim($line));
             $state = strtoupper((string)($fields[1] ?? ''));
 
@@ -245,7 +397,87 @@ class ConfigController extends ApiControllerBase
             }
         }
 
-        return $states;
+        return [
+            'states' => $states,
+            'available' => ($status === 0 && count($output) > 0),
+            'present' => $present,
+        ];
+    }
+
+    /**
+     * Hostname is the node identity shown to the operator. It is deliberately
+     * limited to the node name: no address, credential or peer URL is exposed.
+     */
+    private function nodeIdentity()
+    {
+        $hostname = @gethostname();
+
+        if (!is_string($hostname) || trim($hostname) === '') {
+            $hostname = @php_uname('n');
+        }
+
+        return trim((string)$hostname);
+    }
+
+    /**
+     * Return the most recent successful scheduled daemon scan and whether the
+     * local history was available at all.
+     *
+     * monitor_daemon.py appends this exact local-time line only after the scan
+     * subprocess exits zero: ``[YYYY-MM-DD HH:MM:SS] Scan completed
+     * successfully``. Reading the existing log avoids inventing scan state and
+     * avoids changing the database for a read-only UI view. The reverse scan
+     * stops at the newest match and keeps memory bounded for a large log.
+     */
+    private function lastSuccessfulLocalScan($logFile = '/var/log/devicemonitor.log')
+    {
+        if (!is_file($logFile) || !is_readable($logFile)) {
+            return ['state' => 'unavailable', 'value' => ''];
+        }
+
+        $handle = @fopen($logFile, 'rb');
+        if ($handle === false) {
+            return ['state' => 'unavailable', 'value' => ''];
+        }
+
+        try {
+            $size = @filesize($logFile);
+            if (!is_int($size)) {
+                return ['state' => 'unavailable', 'value' => ''];
+            }
+
+            $position = $size;
+            $carry = '';
+            $chunkSize = 65536;
+            $pattern = '/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] '
+                . 'Scan completed successfully\s*$/m';
+
+            while ($position > 0) {
+                $readSize = min($chunkSize, $position);
+                $position -= $readSize;
+
+                if (@fseek($handle, $position, SEEK_SET) !== 0) {
+                    return ['state' => 'unavailable', 'value' => ''];
+                }
+
+                $data = @fread($handle, $readSize);
+                if (!is_string($data) || strlen($data) !== $readSize) {
+                    return ['state' => 'unavailable', 'value' => ''];
+                }
+
+                $buffer = $data . $carry;
+                if (preg_match_all($pattern, $buffer, $matches)) {
+                    return ['state' => 'found', 'value' => (string)end($matches[1])];
+                }
+
+                $newline = strpos($buffer, "\n");
+                $carry = ($newline === false) ? $buffer : substr($buffer, 0, $newline);
+            }
+        } finally {
+            @fclose($handle);
+        }
+
+        return ['state' => 'none', 'value' => ''];
     }
 
     private function ipv4SubnetRange($ip, $prefix)
@@ -318,7 +550,10 @@ class ConfigController extends ApiControllerBase
         $enabled = $this->request->getPost('enabled', 'string', '0');
         $email_enabled = $this->request->getPost('email_enabled', 'string', '0');
         $identity_webhook_enabled = $this->request->getPost('identity_webhook_enabled', 'string', '0');
-        $identity_email_enabled = $this->request->getPost('identity_email_enabled', 'string', '0');
+        // Decision 36: identity-conflict alerts are webhook-only. The key stays a
+        // stored preference for configuration compatibility; the Settings view no
+        // longer posts it, so an existing value is preserved rather than reset.
+        $identity_email_enabled = (string)($config['identity_email_enabled'] ?? '0');
         $service_email_enabled = $this->request->getPost('service_email_enabled', 'string', '0');
         $service_email_new = $this->request->getPost('service_email_new', 'string', '1');
         $service_email_unavailable = $this->request->getPost('service_email_unavailable', 'string', '1');
@@ -391,7 +626,7 @@ class ConfigController extends ApiControllerBase
         }
 
         if (!in_array($identity_email_enabled, ['0', '1'], true)) {
-            return ['result' => 'failed', 'message' => 'Invalid identity email enabled value'];
+            $identity_email_enabled = '0';
         }
 
         foreach ([

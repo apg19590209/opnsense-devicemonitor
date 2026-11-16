@@ -7,7 +7,7 @@
 Plugin for automatic network device monitoring in OPNsense firewall. Detects new devices on the network using the native OPNsense hostwatch database and sends email or webhook notifications.
 
 > **Version status (7 November 2026)** — the `main` source is Device Monitor **2.14.0**
-> (`release/v2.14.0-runtime.manifest`, 42 targets), combining the mainline v2.12 scan,
+> (`release/v2.14.0-runtime.manifest`, 41 targets), combining the mainline v2.12 scan,
 > alert, identity-email, reminder and configuration-visibility work with the 2.13
 > HA/CARP, O4 ageing and verified installer/pruning/rollback line. The fast-forward
 > integration is complete at `282517744260920b18c9217efd09ce738af21d70`; exact-main CI
@@ -20,7 +20,7 @@ Plugin for automatic network device monitoring in OPNsense firewall. Detects new
 > Installation section documents the guarded `install-unattended.sh --host <hostname>`
 > flow; `PROJECT_STATE.md` holds release, deployment and rollback records.
 
-> **Translations:** the interface is available in English, Czech, German, French, Spanish, Italian, Portuguese (Brazil), Dutch, Russian, Japanese and Simplified Chinese. All translations except English and Czech are machine-generated — native-speaker corrections are welcome.
+> **Translations:** the interface is available in English, Czech, German, French, Spanish, Italian, Portuguese (Brazil), Russian, Japanese and Simplified Chinese. All translations except English and Czech are machine-generated — native-speaker corrections are welcome. **Dutch (`nl_NL`) is deferred:** its translation source is retained in the repository but it is not a supported language until Dutch can be selected in OPNsense (DM-BL-008a).
 
 ---
 
@@ -120,7 +120,7 @@ The plugin automatically monitors the network and alerts you about:
 - Targeted-scan emails are state-change notifications: a scan mails only when the open-service inventory differs from the newest successful scan for that device. Unchanged scans are still recorded with `email_sent=0`.
 - Each email category can repeat an unchanged state after 0 (default, never), 5, 10, 15, 30, 45 or 60 minutes, or a custom value up to 1440.
 - A new MAC at a known address is an identity change (`IP_IDENTITY_CHANGED`), not a new device; randomised MACs always count, vendor MACs only inside `MAC_ROTATION_WINDOW_HOURS` (168 h).
-- Identity conflicts can be emailed (`identity_email_enabled`, `notify_identity_mail.php`) in addition to the webhook leg.
+- Identity-conflict alerts are webhook-only (Decision 36). The stored `identity_email_enabled` preference is kept for configuration compatibility but is inert.
 - In an HA pair the CARP verdict gates every outbound alert, so only the MASTER mails or pushes; detection, history and the database still run on both nodes.
 - `deploy/` adds a git-only deployment path: `publish-devicemonitor.sh`, the hash-gated on-box installer `deploy-devicemonitor.sh` and `verify-devicemonitor.sh`, which runs daily from `/etc/cron.d/devicemonitor-drift`.
 - The About tab badge and its "Features and Enhancements" heading now both come from `defaults.json`, so the page cannot advertise an older release.
@@ -352,7 +352,9 @@ Key changes:
 
 Previously used `service devicemonitor status` which returned exit 1, causing the stop to fail. Now uses `pkill -f monitor_daemon.py` which always works regardless of pidfile state.
 
-Also removed broken `configctl webgui restart` and `service php-fpm restart` calls — these are either not available or unnecessary on OPNsense 26.x.
+The uninstaller now invalidates the active menu and ACL caches under `/var/lib/php/tmp` and no
+longer calls the unsupported `service php-fpm restart`. It retains the supported `configctl webgui
+restart` action defined by the installed OPNsense configuration.
 
 ---
 

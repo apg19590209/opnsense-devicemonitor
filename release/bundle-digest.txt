@@ -43,6 +43,69 @@
 #   5149bfd41e5842a144a9d1280c008511f20f3783932eca9beb1f48fca6173f5f  1725593 bytes
 #       (the DM-BL-009 main-integration candidate; superseded for the forthcoming 2.14.0
 #        release by the DM-BL-010 catalogue-header repair and its regenerated input pin)
+#   90afa55dd826c0dc3be8a23902b809baa465e25191dc372dc6cc2ef4e57fc243  1729177 bytes
+#       (the DM-BL-012 fresh-install candidate; superseded by the uninstaller repair that
+#        corrected the menu-cache path and removed the unsupported php-fpm restart)
+#   0af921ceb27623785cdc5c7afbf917cd0981410cf2d54acf5bf373632266961b  1730713 bytes
+#       (the first uninstaller-repair candidate; superseded by the review hardening that
+#        rejects non-canonical isolated roots and escaping recorded catalogue targets)
+#   e5ac897488af412639be0d5458d4100185348080eef37b9e0c8abea5ee19d302  1731225 bytes
+#       (the review-hardened uninstaller-repair candidate; superseded by the active ACL-cache
+#        correction and fail-closed path guards in the uninstaller regression suite)
+#   772a6660e0ca5c6b7455e2751b0c404a1f25a4e1aaafc44167525d657eb6d299  1731225 bytes
+#       (the reviewed menu-cache/php-fpm repair candidate validated on .23; superseded by the
+#        residual cleanup for devicemonitor_locale.inc and actions_devicemonitor_update.conf)
+#   3675c7271ad3bbd3a04c325c9f7b03bfea80a19e6ff913c2c3114b78eaa46891  1731225 bytes
+#       (the residual uninstaller-cleanup candidate validated on .23; superseded by the UTC
+#        presence/service timestamp correction)
+#   21594061cf70dead4792abedcd29e1ea32e50ed2eb1c9e8ab489dceea931da26  1733785 bytes
+#       (transient timestamp-fix build made before the installer's release-input checksum pin
+#        was refreshed; never copied out as a candidate or deployed)
+#   19f7583aedede057fc8c61db77705f6d490864a18072ff9b0d27f6ae61f60da8  1733785 bytes
+#       (the UTC presence/service timestamp repair; superseded by the DST-aware review build)
+#   b5ffae79c4a7117e001a2c343487854ec588225f33c2088c7549ed9abc86124e  1734809 bytes
+#       (the first DST-aware review build; superseded by the fall-back cutoff correction)
+#   ecaecb04814af41479e1b6e614b05a63de9676158870d749ab51b63d5eee87df  1735321 bytes
+#       (the installed UTC presence/service timestamp candidate; superseded by the HA role
+#        visibility and shared status-refresh implementation)
+#   2dab13858648651d82c56ab73bcdb08ed60710022bdcabc47524ff4af4fac4e8  1783454 bytes
+#       (the first HA role-visibility candidate; superseded by the removed duplicate Settings
+#        loader, superseded-response protection and explicit automatic-Nmap wording)
+#   709288cd4984c640c7d33a623db6f71a7f7fde6119153ba7ed4f3833e5a078a9  1784478 bytes
+#       (the first reviewed HA role-visibility candidate; superseded by the unavailable-state
+#        correction that separates missing/unreadable scan history, backend detector failure
+#        and API fetch failure, and reports observation policy only when backend-confirmed)
+#   e789fb96b07370ee0d101094ecc4da05cd4636ef4558fd3b533a7742c112e516  1794206 bytes
+#       (the first unavailable-state correction; superseded by plain-language observation
+#        wording and explicit narrow-screen wrapping after the pre-commit review)
+#   f51f1adf7a1f5303ff37f837123502f6ae1dc1d7711b1c33491cc90812f570bd  1794206 bytes
+#       (the reviewed HA role-visibility candidate; superseded by the actual daemon scan-log
+#        format, bounded reverse history lookup and fail-open correction after review)
+#   e7dcb7f88ec8f98ca4455542f2106416e2447740c95c818ff2cfdd31d4ef3124  1795230 bytes
+#       (the HA role-visibility candidate installed on .23; superseded by the compact notice,
+#        automatic non-HA relevance, timezone-labelled scan history and final review corrections)
+#   a35b16bba9efd6f5da4ce58d5f54dee228590f4b5124cf1a5510341a4c98e6c8  1827998 bytes
+#       (the first final HA-notice build; superseded by Git-index mode normalisation, which removed
+#        checkout-umask and transient-permission dependence from the archive identity)
+#   2d2c0a884ef169a4f9609a84f2860918bd7fc8432dfb23be52c4b9d6f35d8874  1827998 bytes
+#       (the final HA-notice candidate installed on .23; superseded by the explicit
+#        unconfirmed non-HA rendering and live-response regression)
+#   2b742a4b316ca88d7688db0aaf3a7d75a793d8afbf2b01340361ee75f8a6c18c  1842339 bytes
+#       (intermediate unconfirmed non-HA build made before the installer's inline manifest
+#        and release-input pins were refreshed; never copied out as the candidate)
+#   97ac0283b108f0cc1ecccd2177340740849dd9c622a08a12917b810dc4ec3ace  1842339 bytes
+#       (the reviewed live non-HA candidate; superseded by the appliance-wide CARP proof
+#        separated from monitoring-scope readiness)
+#   c2405fccc43c1c1d6a44d4cdd9af0c5d2927778e42b9e3ecfa0c375eefcaf7d4  1850019 bytes
+#       (the appliance-wide CARP proof candidate installed on .23; superseded by explicit
+#        selectpicker initialisation and asynchronous value/disabled-state refresh)
+#   10ff1509efce5bc109860fa9c8e645e906468cf764b02d6dcaaa1c77886efd47  1850019 bytes
+#       (the selectpicker lifecycle candidate installed on .23; superseded by the closed-state
+#        Space/Enter correction and restoration of the plugin's native-select focus proxy)
+#   2f69a69751755891578fb53a3d15f27be1200798b89a0f23ad24137d75d5ef33  1850531 bytes
+#       (the pre-close-out 2.14.0 tree; superseded by webhook-only identity alerts, the
+#        rotation-event ordering fix and the Dutch runtime deferral, which remove one helper,
+#        drop nl_NL from the payload and add release/supported-locales.sh)
 version 2.14.0
-bytes 1729177
-sha256 90afa55dd826c0dc3be8a23902b809baa465e25191dc372dc6cc2ef4e57fc243
+bytes 1792158
+sha256 abab6ad7a46d2a12d9176d6752421fde88a7460395df167d096055a4e00e0207

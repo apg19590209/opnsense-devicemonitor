@@ -1594,24 +1594,24 @@ msgid "A CARP standby does not carry the monitored traffic, so hostwatch there u
 msgstr "A CARP standby does not carry the monitored traffic, so hostwatch there under-reports and every liveness verdict would be wrong. With this enabled a standby node skips infrastructure-service discovery and service alerts instead of inventing outages."
 
 #: settings.volt
-msgid "A backup override suppresses service discovery even when CARP awareness is enabled."
-msgstr "A backup override suppresses service discovery even when CARP awareness is enabled."
+msgid "Overrides Device Monitor behaviour only; does not change the firewall’s CARP role."
+msgstr "Overrides Device Monitor behaviour only; does not change the firewall’s CARP role."
 
 #: settings.volt
-msgid "Always act as backup (never observe)"
-msgstr "Always act as backup (never observe)"
+msgid "Force BACKUP behaviour"
+msgstr "Force BACKUP behaviour"
 
 #: settings.volt
-msgid "Always act as master"
-msgstr "Always act as master"
+msgid "Force MASTER behaviour"
+msgstr "Force MASTER behaviour"
 
 #: settings.volt
 msgid "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
 msgstr "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
 
 #: settings.volt
-msgid "Automatic (from CARP state)"
-msgstr "Automatic (from CARP state)"
+msgid "Automatic (use CARP role)"
+msgstr "Automatic (use CARP role)"
 
 #: settings.volt
 msgid "Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance."
@@ -1686,8 +1686,8 @@ msgid "Send Test Webhook"
 msgstr "Send Test Webhook"
 
 #: settings.volt
-msgid "Service observation"
-msgstr "Service observation"
+msgid "HA policy permission"
+msgstr "HA policy permission"
 
 #: settings.volt
 msgid "State"
@@ -1706,12 +1706,12 @@ msgstr "Virtual IP"
 # ============================================
 
 #: settings.volt
-msgid "observing"
-msgstr "observing"
+msgid "permitted"
+msgstr "permitted"
 
 #: settings.volt
-msgid "suppressed"
-msgstr "suppressed"
+msgid "paused by HA policy"
+msgstr "paused by HA policy"
 
 #: settings.volt
 msgid "unknown"
@@ -1722,9 +1722,6 @@ msgid "Unknown"
 msgstr "Unknown"
 
 #: settings.volt
-msgid "Also email identity conflict alerts"
-msgstr "Also email identity conflict alerts"
-
 #: settings.volt
 msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
 msgstr "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
@@ -1756,3 +1753,143 @@ msgstr "Service outages"
 #: settings.volt
 msgid "minutes"
 msgstr "minutes"
+
+# ============================================
+# [devices.volt, settings.volt] Node-local HA visibility
+# ============================================
+
+#: devices.volt, settings.volt
+msgid "Node-local Device Monitor data"
+msgstr "Node-local Device Monitor data"
+
+msgid "HA role"
+msgstr "HA role"
+
+msgid "Node"
+msgstr "Node"
+
+msgid "Non-HA"
+msgstr "Non-HA"
+
+msgid "Unconfirmed"
+msgstr "Unconfirmed"
+
+msgid "HA status unconfirmed"
+msgstr "HA status unconfirmed"
+
+msgid "HA status is unconfirmed because no monitored interface is selected."
+msgstr "HA status is unconfirmed because no monitored interface is selected."
+
+msgid "HA status is unconfirmed because CARP is configured or active on this appliance, but no monitored interface is selected; monitoring-scope roles are unknown."
+msgstr "HA status is unconfirmed because CARP is configured or active on this appliance, but no monitored interface is selected; monitoring-scope roles are unknown."
+
+msgid "HA status is unconfirmed because the selected monitored interfaces do not resolve to local devices."
+msgstr "HA status is unconfirmed because the selected monitored interfaces do not resolve to local devices."
+
+msgid "HA status is unconfirmed because CARP virtual IPs are configured without a detected CARP role."
+msgstr "HA status is unconfirmed because CARP virtual IPs are configured without a detected CARP role."
+
+msgid "HA status is unconfirmed. Confirm CARP and the selected monitored interfaces."
+msgstr "HA status is unconfirmed. Confirm CARP and the selected monitored interfaces."
+
+msgid "Displayed data belongs to this node only and is not merged from the CARP peer."
+msgstr "Displayed data belongs to this node only and is not merged from the CARP peer."
+
+msgid "No Device Monitor activities are paused by HA gating."
+msgstr "No Device Monitor activities are paused by HA gating."
+
+msgid "Paused on this BACKUP node"
+msgstr "Paused on this BACKUP node"
+
+msgid "Visibility priming"
+msgstr "Visibility priming"
+
+msgid "Service discovery"
+msgstr "Service discovery"
+
+msgid "Service alerts"
+msgstr "Service alerts"
+
+msgid "New device alerts"
+msgstr "New device alerts"
+
+msgid "Automatic targeted Nmap scans"
+msgstr "Automatic targeted Nmap scans"
+
+msgid "Local inventory and identity recording, node-local ageing, and scheduled port discovery continue."
+msgstr "Local inventory and identity recording, node-local ageing, and scheduled port discovery continue."
+
+msgid "A paused activity is not an empty result."
+msgstr "A paused activity is not an empty result."
+
+msgid "HA role status is unavailable. Confirm CARP and the effective mode before relying on this view."
+msgstr "HA role status is unavailable. Confirm CARP and the effective mode before relying on this view."
+
+msgid "HA status could not be retrieved, so the current CARP gating state is unknown."
+msgstr "HA status could not be retrieved, so the current CARP gating state is unknown."
+
+msgid "Device Monitor reports that observation continues while the CARP role is unknown."
+msgstr "Device Monitor reports that observation continues while the CARP role is unknown."
+
+msgid "Last successful local scan"
+msgstr "Last successful local scan"
+
+msgid "No successful local scan appears in the available scan history."
+msgstr "No successful local scan appears in the available scan history."
+
+msgid "The local scan history could not be read."
+msgstr "The local scan history could not be read."
+
+msgid "Scan history was not retrieved because the HA status request failed."
+msgstr "Scan history was not retrieved because the HA status request failed."
+
+msgid "CARP awareness is disabled, so no activities are paused."
+msgstr "CARP awareness is disabled, so no activities are paused."
+
+msgid "The detected CARP role is unavailable; the effective mode comes from the role override."
+msgstr "The detected CARP role is unavailable; the effective mode comes from the role override."
+
+msgid "Show details"
+msgstr "Show details"
+
+msgid "Hide details"
+msgstr "Hide details"
+
+msgid "HA-paused activities"
+msgstr "HA-paused activities"
+
+msgid "Monitoring is disabled; scheduled scans and alert evaluation are not running."
+msgstr "Monitoring is disabled; scheduled scans and alert evaluation are not running."
+
+msgid "Detected and effective roles differ."
+msgstr "Detected and effective roles differ."
+
+msgid "Role override is active."
+msgstr "Role override is active."
+
+msgid "No CARP configuration detected"
+msgstr "No CARP configuration detected"
+
+msgid "HA controls that require a CARP role are disabled. Saved values are preserved; choose an explicit role override to enable them."
+msgstr "HA controls that require a CARP role are disabled. Saved values are preserved; choose an explicit role override to enable them."
+
+msgid "Monitoring enabled"
+msgstr "Monitoring enabled"
+
+msgid "Monitoring disabled"
+msgstr "Monitoring disabled"
+
+msgid "Monitoring status unknown"
+msgstr "Monitoring status unknown"
+
+msgid "Some activities paused"
+msgstr "Some activities paused"
+
+msgid "Paused activities"
+msgstr "Paused activities"
+
+msgid "Continuing activities"
+msgstr "Continuing activities"
+
+msgid "Timezone unavailable"
+msgstr "Timezone unavailable"

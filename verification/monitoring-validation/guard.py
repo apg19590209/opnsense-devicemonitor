@@ -209,9 +209,12 @@ SMTP_SOURCE_CHECKS = (
     ),
 )
 
+# Decision 36: identity-conflict alerts are webhook-only. The identity helper
+# must keep filtering to high-severity IP/MAC conflicts and dispatch through the
+# webhook transport; the stored identity_email_enabled key is inert.
 IDENTITY_SOURCE_CHECK = (
-    "identity email is gated by identity_email_enabled",
-    r"identity_email_enabled",
+    "identity alerts keep the high-severity IP/MAC filter",
+    r"\$severity !== 'high' \|\| !in_array\(\$type, \$allowedTypes, true\)",
 )
 
 
@@ -1169,7 +1172,10 @@ def create_backup(state: dict[str, Any]) -> None:
         state["recovery_db"], "device_identity_events", "notified_at"
     )
 
-    sqlite_backup(state["db"], state["backup_db"])
+    with tempfile.TemporaryDirectory(prefix="dm-guard-snapshot-") as directory:
+        snapshot_source = str(Path(directory) / "devices.db")
+        copy_database_assets(state["recovery_db"], snapshot_source)
+        sqlite_backup(snapshot_source, state["backup_db"])
     snapshot_database = database_assets(state["backup_db"])
     if not snapshot_database["db"]["present"]:
         raise GuardError("consistent SQLite fallback snapshot is missing")
@@ -1602,7 +1608,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     scope_parser.add_argument(
         "--identity-source",
-        default=str(Path(__file__).resolve().parents[2] / "src/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_mail.php"),
+        default=str(Path(__file__).resolve().parents[2] / "src/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_email.php"),
     )
     scope_parser.set_defaults(handler=scope_check_command)
 

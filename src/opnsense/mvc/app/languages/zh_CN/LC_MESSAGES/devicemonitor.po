@@ -1572,24 +1572,24 @@ msgid "A CARP standby does not carry the monitored traffic, so hostwatch there u
 msgstr "CARP 备用节点不承载受监控的流量，因此 hostwatch 在此处的数据偏少，任何活性判定都会出错。启用后，备用节点会跳过基础设施服务发现和服务告警，而不是凭空报告故障。"
 
 #: settings.volt
-msgid "A backup override suppresses service discovery even when CARP awareness is enabled."
-msgstr "即使启用了 CARP 感知，强制为备用角色也会抑制服务发现。"
+msgid "Overrides Device Monitor behaviour only; does not change the firewall’s CARP role."
+msgstr "仅覆盖 Device Monitor 的行为；不会更改防火墙的 CARP 角色。"
 
 #: settings.volt
-msgid "Always act as backup (never observe)"
-msgstr "始终作为备用节点（从不观测）"
+msgid "Force BACKUP behaviour"
+msgstr "强制 BACKUP 行为"
 
 #: settings.volt
-msgid "Always act as master"
-msgstr "始终作为主节点"
+msgid "Force MASTER behaviour"
+msgstr "强制 MASTER 行为"
 
 #: settings.volt
 msgid "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
 msgstr "仅适用于受监控的接口。没有 CARP 状态的节点不受影响，因此独立防火墙会继续观测。"
 
 #: settings.volt
-msgid "Automatic (from CARP state)"
-msgstr "自动（依据 CARP 状态）"
+msgid "Automatic (use CARP role)"
+msgstr "自动（使用 CARP 角色）"
 
 #: settings.volt
 msgid "Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance."
@@ -1664,8 +1664,8 @@ msgid "Send Test Webhook"
 msgstr "发送测试 Webhook"
 
 #: settings.volt
-msgid "Service observation"
-msgstr "服务观测"
+msgid "HA policy permission"
+msgstr "HA 策略许可"
 
 #: settings.volt
 msgid "State"
@@ -1720,12 +1720,12 @@ msgstr "选择要主动监控设备构成变化和身份冲突的网络接口。
 # ============================================
 
 #: settings.volt
-msgid "observing"
-msgstr "观测中"
+msgid "permitted"
+msgstr "允许"
 
 #: settings.volt
-msgid "suppressed"
-msgstr "已抑制"
+msgid "paused by HA policy"
+msgstr "因 HA 策略暂停"
 
 #: settings.volt
 msgid "unknown"
@@ -1743,9 +1743,6 @@ msgid "About Conflict Alerts"
 msgstr "关于冲突警报"
 
 #: settings.volt
-msgid "Also email identity conflict alerts"
-msgstr "同时通过电子邮件发送身份冲突警报"
-
 #: settings.volt
 msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
 msgstr "状态变化时发送电子邮件。设置状态未变化时各类别的重复间隔。0 表示从不重复。"
@@ -1781,3 +1778,143 @@ msgstr "分钟"
 #: infrastructureservices.volt
 msgid "Unknown"
 msgstr "未知"
+
+# ============================================
+# [devices.volt, settings.volt] Node-local HA visibility
+# ============================================
+
+#: devices.volt, settings.volt
+msgid "Node-local Device Monitor data"
+msgstr "节点本地 Device Monitor 数据"
+
+msgid "HA role"
+msgstr "HA 角色"
+
+msgid "Node"
+msgstr "节点"
+
+msgid "Non-HA"
+msgstr "非 HA"
+
+msgid "Unconfirmed"
+msgstr "未确认"
+
+msgid "HA status unconfirmed"
+msgstr "HA 状态未确认"
+
+msgid "HA status is unconfirmed because no monitored interface is selected."
+msgstr "由于未选择任何监控接口，HA 状态尚未确认。"
+
+msgid "HA status is unconfirmed because CARP is configured or active on this appliance, but no monitored interface is selected; monitoring-scope roles are unknown."
+msgstr "此设备已配置或启用 CARP，但未选择任何受监控接口，因此 HA 状态尚未确认；监控范围内的角色未知。"
+
+msgid "HA status is unconfirmed because the selected monitored interfaces do not resolve to local devices."
+msgstr "由于所选监控接口无法解析为本地设备，HA 状态尚未确认。"
+
+msgid "HA status is unconfirmed because CARP virtual IPs are configured without a detected CARP role."
+msgstr "由于已配置 CARP 虚拟 IP 但未检测到 CARP 角色，HA 状态尚未确认。"
+
+msgid "HA status is unconfirmed. Confirm CARP and the selected monitored interfaces."
+msgstr "HA 状态尚未确认。请检查 CARP 和所选监控接口。"
+
+msgid "Displayed data belongs to this node only and is not merged from the CARP peer."
+msgstr "显示的数据仅属于此节点，不与 CARP 对端合并。"
+
+msgid "No Device Monitor activities are paused by HA gating."
+msgstr "HA 门控不会暂停任何 Device Monitor 活动。"
+
+msgid "Paused on this BACKUP node"
+msgstr "在此 BACKUP 节点上暂停"
+
+msgid "Visibility priming"
+msgstr "可见性预热"
+
+msgid "Service discovery"
+msgstr "服务发现"
+
+msgid "Service alerts"
+msgstr "服务警报"
+
+msgid "New device alerts"
+msgstr "新设备警报"
+
+msgid "Automatic targeted Nmap scans"
+msgstr "自动定向 Nmap 扫描"
+
+msgid "Local inventory and identity recording, node-local ageing, and scheduled port discovery continue."
+msgstr "本地清单与身份记录、节点本地老化以及计划端口发现将继续。"
+
+msgid "A paused activity is not an empty result."
+msgstr "暂停的活动不是空结果。"
+
+msgid "HA role status is unavailable. Confirm CARP and the effective mode before relying on this view."
+msgstr "HA 角色状态不可用。依赖此视图前，请确认 CARP 和有效模式。"
+
+msgid "HA status could not be retrieved, so the current CARP gating state is unknown."
+msgstr "无法获取 HA 状态，因此当前 CARP 门控状态未知。"
+
+msgid "Device Monitor reports that observation continues while the CARP role is unknown."
+msgstr "Device Monitor 报告在 CARP 角色未知时观测仍在继续。"
+
+msgid "Last successful local scan"
+msgstr "上次成功的本地扫描"
+
+msgid "No successful local scan appears in the available scan history."
+msgstr "可用扫描历史中没有成功的本地扫描。"
+
+msgid "The local scan history could not be read."
+msgstr "无法读取本地扫描历史。"
+
+msgid "Scan history was not retrieved because the HA status request failed."
+msgstr "由于 HA 状态请求失败，未获取扫描历史。"
+
+msgid "CARP awareness is disabled, so no activities are paused."
+msgstr "CARP 感知已禁用，因此不会暂停任何活动。"
+
+msgid "The detected CARP role is unavailable; the effective mode comes from the role override."
+msgstr "检测到的 CARP 角色不可用；有效模式来自角色覆盖。"
+
+msgid "Show details"
+msgstr "显示详细信息"
+
+msgid "Hide details"
+msgstr "隐藏详细信息"
+
+msgid "HA-paused activities"
+msgstr "HA 暂停的活动"
+
+msgid "Monitoring is disabled; scheduled scans and alert evaluation are not running."
+msgstr "此节点已禁用监控；计划扫描和警报评估不会运行。"
+
+msgid "Detected and effective roles differ."
+msgstr "检测到的角色与生效模式不同。"
+
+msgid "Role override is active."
+msgstr "角色覆盖已启用。"
+
+msgid "No CARP configuration detected"
+msgstr "未检测到 CARP 配置"
+
+msgid "HA controls that require a CARP role are disabled. Saved values are preserved; choose an explicit role override to enable them."
+msgstr "需要 CARP 角色的 HA 控件已禁用。已保存的值会保留；选择明确角色覆盖即可启用这些控件。"
+
+msgid "Monitoring enabled"
+msgstr "监控已启用"
+
+msgid "Monitoring disabled"
+msgstr "监控已禁用"
+
+msgid "Monitoring status unknown"
+msgstr "监控状态未知"
+
+msgid "Some activities paused"
+msgstr "部分活动已暂停"
+
+msgid "Paused activities"
+msgstr "已暂停的活动"
+
+msgid "Continuing activities"
+msgstr "继续的活动"
+
+msgid "Timezone unavailable"
+msgstr "时区不可用"

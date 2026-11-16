@@ -287,7 +287,7 @@ def test_gnu_option_grammar_accepts_the_build():
         assert done.returncode == 0, (done.stdout, done.stderr)
         assert 'tar implementation: gnu' in done.stdout, done.stdout
         assert 'TAR_FORMAT=canonical-ustar members=1' in done.stdout, done.stdout
-        assert 'TAR_CANONICALISED members=60' in done.stdout, done.stdout
+        assert 'TAR_CANONICALISED members=59' in done.stdout, done.stdout
         digest = re.search(r'^bundle sha256: ([0-9a-f]{64})$', done.stdout, re.M)
         assert digest, done.stdout
         recorded = re.search(r'^sha256 ([0-9a-f]{64})$',

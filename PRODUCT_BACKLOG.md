@@ -81,6 +81,11 @@ eleven-catalogue payload and all 372 HTML-context view call sites route through
 non-upstream change; `python3 tests/test_language_acceptance.py --strict` is the gate for that
 case. This closure changes no installer, manifest, catalogue, release-note or Makefile content.
 
+**Latest 2.14.0 runtime confirmation:** the production-engine run on the installed tree reports
+`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`; the sole gap is this
+same `nl_NL` selector omission. All nine languages render 10 pages and 490 keys. See
+`verification/LANGUAGE-ACCEPTANCE-GAP-20261107.md`.
+
 ### DM-BL-008b — JavaScript strings receive HTML entities: **`CLOSED`**
 
 **Description:** Stop HTML-escaped text from reaching JavaScript string contexts.
@@ -751,7 +756,7 @@ are in `verification/DEPLOY-2.14.0-23-PLAN.md` and
 
 The first supervised status check saw a transient configd socket; manual `guard recover` passed and the wrapper now retries within a bounded window. The SMTP parser now normalises angle-bracketed addresses and ESMTP `SIZE=` values while retaining the single-recipient rule. The corrected guard keeps original, snapshot and restored database identities separate; its 35 mock/disposable-copy tests all pass, including distinguishing logically equal but physically different snapshots, rejecting normalised snapshot bytes as physical restoration, accepting original bytes, archiving WAL/SHM before replacement, capturing and restoring a real uncheckpointed WAL/SHM pair exactly, and leaving monitoring stopped on unsafe capture or restoration. This correction cannot retroactively prove the completed exercise's physical bytes. Evidence: `verification/monitoring-validation/EXECUTION-20261106.md` and `/root/dm-validation-2140/monitoring/20261106T083522Z/`.
 
-The remaining validation limits do not reopen DM-BL-009; they are separately identified. Physical DB byte identity for the completed exercise is **DM-BL-011** and remains a release blocker for an unqualified exact-restoration claim: the operation is traced and the logical state is verified, but the original bytes and their page map were never retained. The corrected guard now enforces original-byte identity for any future authorised run but cannot prove the historical bytes. Live `FRESH=1` and real OPNsense plugin registration/lifecycle are **DM-BL-012**; the disposable jail proves the call boundary but is not a real-host pass. Full reminder/ageing/CARP and daemon-generated notification/service-discovery paths are **DM-BL-013**, as are exact daemon-triggered attribution of the `notified_at` migration and external delivery. No further run is authorised. Issue #5 remains **OPEN**; §9.4 is paused.
+The remaining validation limits do not reopen DM-BL-009; they are separately identified. Physical DB byte identity for the completed exercise was tracked as **DM-BL-011** and was **closed on 13 November 2026** by explicit operator acceptance of the historical evidence limitation: the operation is traced and the logical state is verified, but the original bytes and their page map were never retained, so no byte-identity claim is made. The corrected guard now enforces original-byte identity for any future authorised run but cannot prove the historical bytes. Live `FRESH=1` and real OPNsense plugin registration/lifecycle were tracked as **DM-BL-012** and **closed on 12 November 2026** by explicit operator acceptance after lifecycle testing on `.23`. Full reminder/ageing/CARP and daemon-generated notification/service-discovery paths remain under **DM-BL-013**, as do the presence/service timestamp defect, exact daemon-triggered attribution of the `notified_at` migration and external delivery. No further run is authorised. Issue #5 remains **OPEN**; §9.4 is paused.
 
 **Main integration completed (7 November 2026):** draft PR #6 was reviewed and then fast-forwarded
 with no squash, rebase or force-push. The authenticated About/Features screenshot remains accepted
@@ -768,7 +773,8 @@ so review item H1b is closed.
 **Closure criterion (met):** the chosen `main` path was executed by fast-forwarding the exact
 reviewed head into `main` and validating the resulting SHA. Live `FRESH=1`, real
 `rc.configure_plugins` registration and full reminder/ageing/CARP/lifecycle behaviour were not
-claimed as part of this reconciliation item; they remain open as DM-BL-012 and DM-BL-013. The
+claimed as part of this reconciliation item. DM-BL-012 was later closed by explicit operator
+acceptance; DM-BL-013 remains open. The
 isolated fresh-install scenarios, the live successful-install rollback and the bounded two-cycle
 monitoring exercise remain validated evidence, not a transfer of those residual gates.
 
@@ -776,7 +782,7 @@ monitoring exercise remain validated evidence, not a transfer of those residual 
 while carrying an untracked Cline installation (Decision 65 §Preservation). Repointing it needs the
 intended Cline remote and explicit authorisation; it is preserved unchanged until then.
 
-### DM-BL-010 — translation-header metadata warnings in the v2.12.1 installation output (`PO-Revision-Date`, `Last-Translator`, `Language-Team`): **`OPEN`** — implemented in an unpublished 2.14.0 candidate
+### DM-BL-010 — translation-header metadata warnings in the v2.12.1 installation output (`PO-Revision-Date`, `Last-Translator`, `Language-Team`): **`OPEN`** — integrated in `main`; publication pending
 
 **Description:** the reporter's v2.12.1 installation log contains non-fatal translation-header
 metadata warnings for catalogue entries missing the following headers:
@@ -794,6 +800,8 @@ are **not** a defect of the issue #5 installation result.
 - GitHub issue #5 — **OPEN** (installation result recorded 7 November 2026)
 - Investigation: `verification/ISSUE-5-V2.12-MANIFEST-20261106.md`, section *Reporter result (7 November 2026)*
 - Verification: `verification/DM-BL-010-CATALOGUE-HEADERS-20261107.md`
+- Phase 1 evidence: `verification/PHASE1-EXACT-CANDIDATE-23-20261107.md`
+- Release-readiness record: `verification/RELEASE-READINESS-2.14.0-4611447-20261107.md`
 - DM-BL-009 — **CLOSED** (main reconciliation completed 7 November 2026)
 
 **Implementation state (7 November 2026):**
@@ -816,9 +824,35 @@ are **not** a defect of the issue #5 installation result.
   `90afa55dd826c0dc3be8a23902b809baa465e25191dc372dc6cc2ef4e57fc243`.
 - The previous main-integration candidate (1,725,593 bytes, SHA-256 `5149bfd4…`) and its evidence
   remain preserved as superseded, not deleted or overwritten.
-- This candidate is on `fix/dm-bl-010-catalogue-warnings-20261107`; it is not merged to `main` and
-  is not in any published release. The live `.23` installation and published v2.12.1 assets are
-  unchanged.
+- PR #7 integrated the candidate into `main` at
+  `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`; exact-main CI run `42359428985` passed. It is not in
+  any published release; published v2.12.1 assets remain unchanged.
+- The reviewed documentation candidate is
+  `4611447089e2482a0c6af7a1844e9f6fa16c84d1` (tree
+  `e3d551967fcd673cefd9031448c0e1791db2a2ab`), one docs-only commit ahead of `main`. Its CI run
+  `42368818807` passed and reproduced the unchanged 1,729,177-byte / `90afa55d…` archive.
+- The exact candidate was installed once on `.23` as a same-version repair:
+  `INSTALL_OK version=2.14.0 files=63 core_locales=10 pruned=0 backup=/var/backups/devicemonitor/install-v214.Uwwqu1 daemon_restarted=1 unchanged=63 repaired=0`.
+  All 42 manifest rows and 63 targets passed, current core catalogues merged warning-free, nine
+  available pristine translations were preserved, `nl_NL` remained plugin-only as expected, and
+  configuration plus logical/physical database bytes were unchanged. Services remained healthy and
+  monitoring/notifications remained disabled. Operator-supplied authenticated evidence received
+  7 November 2026 (Australia/Sydney) shows Device Monitor `v2.14.0` and
+  `v2.14.0 Features and Enhancements` in the About screenshot; the operator confirms Devices loads
+  without error. No exact observation time was recorded.
+- Because all 63 installed targets were already byte-identical, this live run did not exercise a
+  sparse-header repair delta. That case remains covered by the regression and jail evidence.
+- The GitHub Actions native language runtime matrix remains skipped because that runner lacks the
+  required assets. A separate local production-engine run on the installed 2.14.0 tree passed on
+  7 November 2026: `LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`, with 10
+  pages and 490 keys per language. The `nl_NL` GUI-selector absence remains the documented gap; it
+  is not a runtime rendering failure. Report:
+  `/root/dm-validation-2140/language-runtime-2.14.0-20261107.md`.
+- A validation-closure pass on 7 November 2026 found and fixed a guard snapshot-side-effect defect,
+  passed a disposable DB/WAL/SHM rehearsal and changed publication to **NO-GO** pending the then-open
+  DM-BL-011/012/013 gates; DM-BL-011 and DM-BL-012 have since closed, while DM-BL-013 remains open.
+  See `verification/VALIDATION-CLOSURE-2.14.0-20261107.md` and
+  `verification/RELEASE-READINESS-2.14.0-4611447-20261107.md`.
 
 **Constraints preserved by the implementation:**
 
@@ -829,12 +863,15 @@ are **not** a defect of the issue #5 installation result.
 - Repair belongs in the catalogue/header data (or the build inputs that produce it), not in the
   published release payloads.
 
-**Status:** **`OPEN`** — recorded from reporter-supplied output on 7 November 2026. The source,
-regression coverage, regenerated pins and reproducible candidate are ready for review, but the item
-stays open until the candidate is integrated and published under separate authorisation. Device
-Monitor 2.14.0 remains unpublished and v2.12.1 remains the latest published release.
+**Status:** **`OPEN`** — the source, regression, deterministic bundle, exact-candidate Phase 1
+live validation, authenticated About/Features/Devices-loading evidence and native runtime language
+matrix are complete, and the correction is integrated into `main`. The item remains publication
+pending because 2.14.0 is not yet published and the revised closure objective requires
+DM-BL-011/012/013 to be resolved first; DM-BL-011 and DM-BL-012 have since closed, while DM-BL-013
+remains open. Device Monitor 2.14.0 remains unpublished and v2.12.1 remains the latest published
+release.
 
-### DM-BL-011 — historical database-byte identity for the completed §9.4 monitoring exercise: **`OPEN`**
+### DM-BL-011 — historical database-byte identity for the completed §9.4 monitoring exercise: **`CLOSED`** (13 November 2026; explicit operator acceptance of the historical evidence limitation)
 
 **Description:** the completed bounded monitoring exercise has verified logical restoration but no
 proven physical database-byte identity. The original live database was `c17874a7…`; the retained
@@ -846,17 +883,37 @@ therefore unproven and no unqualified exact-restoration claim may be made.
 **Guard status:** the guard was corrected to stop and verify writers before capture, preserve the
 original database/WAL/SHM bytes separately from the SQLite fallback, archive the post-state
 database, and compare restored bytes/metadata/schema/data/integrity against the original recovery
-copy. The 35 mock/disposable-copy guard tests pass. This prevents recurrence but cannot prove the
-historical bytes.
+copy. A disposable Phase 2A rehearsal on 7 November found that the fallback snapshot was being taken
+from the live WAL-mode database and could checkpoint/remove its sidecars; the guard now snapshots a
+disposable copy of the exact recovery assets instead. The strengthened WAL/SHM regression and all
+35 guard tests pass locally and have now been added to the validation-only CI workflow with an exact
+`Ran 35 tests`/`OK` assertion; `tests/test_ci_config.py` pins that wiring. The workflow change is not
+yet exercised by an exact-SHA run, so execution in CI remains unproven until that run is recorded. The
+rehearsal also passes separate DB/WAL/SHM capture, mutation detection,
+snapshot-equivalence rejection, exact-byte restoration, configuration/record/OPNsense/core-locale
+preservation and post-state archiving. This prevents recurrence but cannot prove the historical
+bytes.
 
-**Closure evidence:** either new evidence capable of reconstructing and comparing the original
-bytes, or explicit operator acceptance of the historical byte-identity limitation. Neither is
-currently recorded. The limitation is distinct from DM-BL-009's completed `main` reconciliation.
+**Closure evidence:** on 13 November 2026 the operator explicitly accepted the historical
+physical-byte limitation. The closure basis is the verified logical restoration, matching logical
+digest, schema, row counts and integrity checks, together with the corrected and tested byte-preserving
+guard. This makes no historical byte-identity claim: the original `c17874a7…` bytes remain unavailable
+and the retained copies are `796d28c7…` or older unrelated states. All retained database files
+rechecked on 7 November are `796d28c7…` or older; the
+`/var/backups/devicemonitor/devices.db.pre-monitor-scan-20260923-070801` copy is `65e11a3b…`, not the
+6 November original. A broader read-only search covered 128 physical database candidates and 67
+archives; no exact copy was found, and common SQLite copy/`VACUUM`/`VACUUM INTO`/`PRAGMA optimize`
+transformations on a copy did not reproduce the hash. This is an accepted historical evidence
+limitation, not a current recovery defect, and is distinct from DM-BL-009's completed `main`
+reconciliation.
 
-**Evidence:** `verification/monitoring-validation/EXECUTION-20261106.md` and
-`/root/dm-validation-2140/monitoring/20261106T083522Z/`.
+**Evidence:** `verification/monitoring-validation/EXECUTION-20261106.md`,
+`verification/VALIDATION-CLOSURE-2.14.0-20261107.md`,
+`verification/DM-BL-011-BYTE-RECOVERY-20261107.md`,
+`/root/dm-validation-2140/monitoring/20261106T083522Z/` and
+`/root/dm-validation-2140/phase2a-guard-20261107T123250Z/`.
 
-### DM-BL-012 — real-host 2.14.0 `FRESH=1` and OPNsense plugin lifecycle validation: **`OPEN`**
+### DM-BL-012 — real-host 2.14.0 `FRESH=1` and OPNsense plugin lifecycle validation: **`CLOSED`** (12 November 2026; operator-accepted `.23` lifecycle)
 
 **Description:** the isolated FreeBSD-jail `fresh` and `fresh-rollback` scenarios passed against the
 unchanged 2.14.0 bundle, but their `configd`, `rc.configure_plugins` and `pgrep` stubs prove only
@@ -868,12 +925,64 @@ The normal 2.13.3 → 2.14.0 upgrade on `.23` and its live successful-install ro
 and are not this item. The outstanding work is specifically the **real-host fresh-install path and
 real plugin lifecycle**.
 
-**Closure evidence:** a separately authorised real-host `FRESH=1` test and plugin lifecycle check,
-or explicit operator acceptance of the residual risk. The existing jail evidence must not be
-described as equivalent.
+**Attempt on 8 November 2026 — aborted; DM-BL-012 was subsequently CLOSED on 12 November 2026.**
+An expressly authorised uninstall and
+fresh install of the exact 1,729,177-byte candidate on `.23` passed `CHECK_OK` and `INSTALL_OK`
+(64 targets, 10 core locales), and independently passed the 64-target manifest, 11 plugin plus 10
+core catalogue recomputation, real plugin/configd/daemon registration and initial disabled-default
+checks. Before the planned reboot, a configuration save (not issued by the validation command
+stream; the authenticated GUI request origin was not logged) set `enabled=1` and
+`monitored_interfaces=lan`. The daemon immediately ran one scan and probed `.252`/`.253` for
+services. Email and webhook remained disabled. The daemon was stopped, the state was preserved and
+the verified pre-test recovery restored `config.json` `027594eb…`, database `796d28c7…`, 63 targets
+and `enabled=0`. The attempt therefore did not test reboot persistence or authenticated UI pages
+and does not close this item. Two uninstaller defects were also confirmed: it clears the obsolete
+`/tmp/opnsense_menu_cache.xml` instead of `/var/lib/php/tmp/opnsense_menu_cache.xml`, and it calls a
+non-existent `php-fpm` rc service. See
+`verification/DM-BL-012-FRESH-23-ATTEMPT-20261108.md` and the evidence root
+`/root/dm-validation-2140/dm-bl-012-fresh-20261107T202736Z/`.
+
+**Lifecycle closure on `.23` (12 November 2026): CLOSED.** The operator explicitly superseded the
+disposable-VM environment gate and authorised uninstall, reinstall, necessary service actions and
+one reboot on the existing development host `.23`, replacing VM snapshots with verified backups and
+an executable recovery procedure. That is the documented alternative — explicit operator acceptance
+of the residual risk — and it is not a pristine-VM validation. The lifecycle run used candidate
+`772a6660…` for the menu-cache/php-fpm repair and candidate `3675c7271ad3bbd3a04c325c9f7b03bfea80a19e6ff913c2c3114b78eaa46891`
+(1,731,225 bytes) for the residual cleanup. Across the two candidate runs, normal uninstall (exit
+0, no `php-fpm`, correct active menu/ACL cache paths), fresh-state reinstall (`CHECK_OK …
+predecessor=fresh files=64`, `INSTALL_OK … files=64 core_locales=10`), real plugin registration,
+configd and daemon start, 64/64 manifest targets, SQLite integrity, corrected menu-cache
+regeneration with all seven Device Monitor entries, and operator attestation that the authenticated
+Devices and Settings pages display correctly passed. The `772a6660…` run included the one reboot
+with unchanged config/database and `Monitoring DISABLED` at boot; the `3675c7271…` run repeated
+uninstall/reinstall and did not repeat the reboot. The 12 November residual repair removed
+`/usr/local/etc/inc/devicemonitor_locale.inc` and
+`actions_devicemonitor_update.conf` on normal uninstall and proved all 42 payload targets are
+removed while unrelated files, configuration and data are preserved. Evidence:
+`/root/dm-validation-2140/dm-bl-012-live-23-20261112T191143/` and
+`/root/dm-validation-2140/dm-bl-012-residuals-20261112T194900/`.
+The latest candidate's uninstall and reinstall were **directly tested**. Reboot persistence is
+**reused** from the preceding `772a6660…` candidate: the only delta is uninstall cleanup
+(`uninstall.sh` and its tests), which does not alter installed payload, rc wiring, daemon start or
+reboot behaviour. Historical monitoring-activation attribution remains **UNKNOWN**: the 8 November
+evidence records an un-attributed settings write and one scan, not a confirmed automatic-activation
+defect. The documented DM-BL-012 acceptance criteria are real plugin registration and a daemon that
+survives reboot with no stub claim (or explicit operator acceptance of the residual risk); no
+acceptance criterion requires historical attribution. Uncertainty alone therefore does not add a
+release blocker; release remains **NO-GO** on the separately documented DM-BL-013 criteria. DM-BL-011
+was **CLOSED** on 13 November 2026 by explicit operator acceptance of the historical byte-evidence
+limitation, with no byte-identity claim.
+
+**Closure evidence:** a separately authorised real-host `FRESH=1` test and plugin lifecycle check
+on a disposable OPNsense VM, or explicit operator acceptance of the residual risk. The existing jail
+evidence must not be described as equivalent. The explicit-acceptance alternative was exercised on
+12 November 2026 and is recorded above. The phase had been environment-blocked rather than
+code-blocked because the host has no `vmm`, `/dev/vmm` or `vm-bhyve`.
 
 **Evidence:** `verification/FRESH-INSTALL-JAIL-2.14.0-20261106.md`,
-`verification/INSTALLER-JAIL-2.14.0-20261106.md`, and `PROJECT_STATE.md`.
+`verification/INSTALLER-JAIL-2.14.0-20261106.md`, `verification/VALIDATION-CLOSURE-2.14.0-20261107.md`,
+`verification/PHASE3-DISPOSABLE-OPNSENSE-VM-PLAN-20261107.md`,
+`verification/DM-BL-012-FRESH-23-ATTEMPT-20261108.md` and `PROJECT_STATE.md`.
 
 ### DM-BL-013 — full monitoring lifecycle, HA/CARP and delivery-path validation: **`OPEN`**
 
@@ -883,13 +992,485 @@ not exercise scheduled daemon-triggered service discovery, full reminder/ageing/
 daemon-generated notification delivery, exact daemon attribution of the `notified_at` migration,
 external SMTP/webhook/AdGuard/Pi-hole delivery or targeted Nmap delivery.
 
-**Closure evidence:** separately authorised live tests covering the relevant paths, or explicit
-operator acceptance of the residual risk. No further live execution is currently authorised.
+The ageing scope now also includes the confirmed UTC/local `devices.last_seen` inconsistency from
+2.14.0 development on 12 November 2026. The defect arose because service verification wrote local
+wall time while hostwatch and the freshness/retirement readers used UTC. The candidate now writes
+canonical UTC and reads legacy mixed values conservatively without a production database rewrite.
+Historical monitoring-activation attribution remains **UNKNOWN** and is not a confirmed
+automatic-activation defect. Replacement candidate: 1,735,321 bytes, SHA-256
+`ecaecb04814af41479e1b6e614b05a63de9676158870d749ab51b63d5eee87df`; current evidence at
+`/root/dm-validation-2140/dm-bl-013-timestamp-r3-20261112/`, with the preceding review and
+investigation preserved under `/root/dm-validation-2140/dm-bl-013-timestamp-r2-20261112/` and
+`/root/dm-validation-2140/dm-bl-013-timestamp-20261112/`.
 
-**Evidence:** `verification/monitoring-validation/EXECUTION-20261106.md` and
-`verification/monitoring-validation/PREFLIGHT-20261106.md`.
+The timestamp candidate was installed on production CARP BACKUP `.252` on 13 November 2026
+(08:14:54–08:15:06 AEDT). The reviewed installer exited 0 after verifying 63 targets, SQLite
+integrity passed, the Device Monitor configuration was unchanged and the node remained BACKUP while
+`.253` remained MASTER. Two normal 300-second cycles completed at approximately 08:20 and 08:25
+AEDT; 23 rows received new canonical UTC `last_seen` values, 21 during the observation window.
+MASTER-only visibility, discovery, identity/new-device alerting, targeted Nmap and notification
+delivery remain unexercised. Evidence:
+`/root/dm-validation-2140/dm-bl-013-prod-252-install-20261112T211341Z/`, sealed at
+`63d740365b2be61e4c0fe9a6c8688d3a33269f85a13ea1d886f4a5c37c0d2315`.
+
+HA-role visibility is a later source candidate, installed on testbed `.23` on 13 November 2026 but
+not on production: 1,795,230 bytes, SHA-256
+`e7dcb7f88ec8f98ca4455542f2106416e2447740c95c818ff2cfdd31d4ef3124`. It reuses the
+existing `getcarpstatus` API for Devices and Settings, distinguishes detected role from effective
+mode, names the exact BACKUP-gated activities, leaves manual scans and scheduled port discovery out
+of that list, and clears stale status on refresh failure. The reviewed correction parses the actual
+daemon scan-log format with a bounded reverse lookup, distinguishes missing history from unreadable
+history and API fetch failure, and reports observation continuation only for the confirmed detector-
+failure state. The checked-in validation is local to `.23` source and does not exercise browser
+rendering or a live CARP role change; the available host lacked a browser, so the agent captured no
+screenshots. An operator-supplied isolated-fixture review on 13 November 2026 reported clear MASTER
+and BACKUP notices, distinct fetch-failure and backend-unavailable messages, correct wrapping for
+German Settings and English Devices at narrow widths, and a simulated MASTER-to-BACKUP transition
+ending in the correct BACKUP view. That is fixture-only operator attestation, not live CARP,
+production rendering or full-matrix acceptance. The earlier HA builds `2dab1385…`, `709288cd…`,
+`e789fb96…` and `f51f1adf…` and all earlier evidence remain preserved.
+
+The `.23` installation returned `INSTALL_OK … files=63 … pruned=0
+backup=/var/backups/devicemonitor/install-v214.lulG0h daemon_restarted=1 unchanged=36 repaired=0`;
+all 63 installed rows verified, configuration (`027594eb…`), database (`796d28c7…`) and OPNsense
+configuration (`e86a7058…`) were unchanged, monitoring stayed disabled and no reboot or CARP change
+occurred. Evidence: `/root/dm-validation-2140/dm-bl-013-ha-deploy-23-20261112T234608Z/`.
+
+A later uncommitted compact-summary revision adds the collapsed Show details/Hide details notice, the read-only monitoring-enabled state, separate HA-pause summary and role/unavailable warnings. It is source-only and is not part of the installed `e7dcb7f8…3124` candidate.
+
+A further source-only automatic-relevance revision makes HA content conditional on a positive
+non-HA result from the existing detector: readable `ifconfig` and `/conf/config.xml`, at least one
+resolved monitored interface, no CARP VIP, no CARP state on monitored devices and no explicit role
+override. Confirmed non-HA hides HA-specific notice content but retains node identity, monitoring
+state and the expanded last successful scan. The HA / CARP tab remains accessible, explains that no
+CARP configuration was detected, disables CARP awareness and failover notification without changing
+saved values, and leaves the role override editable. Unknown detector/API states retain warnings and
+never become non-HA. CARP awareness disabled remains distinct from detected role/effective mode.
+Focused API/UI, non-HA, integration, catalogue, CI, fixture and diff checks passed. The updated
+fixture is sealed at `/root/dm-validation-2140/dm-bl-013-ha-relevance-fixture-20261113T004225Z/`
+(373,094 bytes, SHA-256 `687cc9f2…fbe5`). Language acceptance remains price-gated and browser visual
+acceptance of this revision is pending. This revision is not installed; DM-BL-013 remains **OPEN**
+and historical monitoring-activation attribution remains **UNKNOWN**.
+
+A further source-only review correction addresses the browser findings against the compact-line
+fixture. Confirmed non-HA expanded details now hide the detected/effective role facts and use the
+node-local ownership wording rather than a CARP-peer statement; last-scan information remains. The
+Settings HA / CARP row is now `HA policy permission` with `permitted` / `paused by HA policy` values,
+distinguishing policy permission from actual monitoring activity. The fixture's role-fact leakage
+came from `display:flex` overriding its `hidden` attribute; an explicit `[hidden]` rule now prevents
+that, and the fixture tabs wrap at narrow widths. The real Settings CSS was inspected and left
+unchanged because the clipping was fixture-only; the live view uses Bootstrap `nav-tabs` without that
+fixture overflow rule. Affected checks pass. Updated fixture archive: 374,294 bytes, SHA-256
+`40b2e6b3548b0d664665fa5021989ac660d9613bd72d99c8f741b23facff450b`; the prior `7376a65a…acbab`
+archive is preserved. Language acceptance remains price-gated, browser acceptance remains pending,
+and this revision is not installed. DM-BL-013 remains **OPEN** and historical activation
+attribution remains **UNKNOWN**.
+
+A subsequent source-only compact-line revision removes the repeated collapsed content: the notice now
+shows `node · role · Monitoring enabled` on one line (the role is omitted for confirmed non-HA), adds
+the short `Some activities paused` indicator for BACKUP, and keeps unavailable/override warnings
+visible while collapsed. Expanded details contain detected/effective roles, local-data ownership,
+paused/continuing activities and the last scan once each; the duplicate monitoring note and generic
+`No activities paused` text were removed. The API supplies a timezone label only from a valid
+configured OPNsense timezone and the UI otherwise says `Timezone unavailable`. PHP/JS, translation,
+CI, catalogue, fixture, inline-script and diff checks passed. The fixture was resealed after inline
+JavaScript syntax validation was added to its static checker: 373,818 bytes, SHA-256
+`7376a65a3a0640496926461fdbb76272421c9839ed9e6d630e0aac77d91acbab`. Only the checker and recorded
+log changed; the fixture HTML remains `9dfa112d…a18fa`. The previous `c34d3414…1c88` archive is
+preserved under `.../preserved-c34d3414/`. Language acceptance remains price-gated and browser
+acceptance of this revision is pending. The revision is not installed; DM-BL-013 remains **OPEN**
+and historical monitoring-activation attribution remains **UNKNOWN**.
+
+The operator supplied a screenshot review of the R5 isolated fixture (`374,294` bytes, SHA-256
+`40b2e6b3548b0d664665fa5021989ac660d9613bd72d99c8f741b23facff450b`) on 13 November 2026. The
+sampled review passed for compact and expanded MASTER and BACKUP, confirmed non-HA with monitoring
+disabled, an active role override, narrow-screen tab wrapping and the simulated
+MASTER-to-fetch-failure transition. These are operator attestations of isolated simulated states,
+not agent-observed browser results. No exact observation timestamp was supplied and none is
+inferred. The review does not establish the full state matrix, keyboard acceptance, live CARP, a
+live role change, production rendering, MASTER-only operation or delivery paths.
+
+The final source-only candidate was rebuilt twice with separate stage, output and allow-list paths
+and produced byte-identical results: 1,827,998 bytes, SHA-256
+`2d2c0a884ef169a4f9609a84f2860918bd7fc8432dfb23be52c4b9d6f35d8874`, 60 archive members. Review
+found the first final build still depended on checkout umask and a transient `0600` manifest
+permission; the builder now normalises `0644`/`0755` from the Git index and the determinism test
+varies both timestamps and worktree modes. The regenerated runtime manifest plus release-input pins
+verify against the current sources. Evidence:
+`/root/dm-validation-2140/dm-bl-013-final-20261113T013258Z/`. The superseded installed `.23`
+payload `e7dcb7f8…3124` and all earlier candidates and evidence remain preserved. This final
+candidate is not installed. The premium price gate deferred language acceptance at finalisation;
+no bypass was used. DM-BL-013 remains **OPEN**, and historical monitoring-activation attribution
+remains **UNKNOWN**.
+
+The superseding reviewed keyboard candidate was
+`2f69a69751755891578fb53a3d15f27be1200798b89a0f23ad24137d75d5ef33` (1,850,531 bytes). It was
+deployed to `.23` with a clean preflight and a fresh installer backup. All 63
+installed hashes matched, SQLite integrity remained `ok`, and the configuration, database and
+`/conf/config.xml` stayed byte-identical. The saved role override remained `auto`, monitoring and
+notification gates remained disabled, and the services stayed healthy; no reboot occurred. The
+operator subsequently confirmed, without an observation timestamp being recorded, that Space and
+Enter open the deployed dropdown, Escape closes it, and `Automatic (use CARP role)` remains
+selected.
+This closes only the dropdown keyboard acceptance check. DM-BL-013 remains **OPEN** for production
+MASTER, HA-transition and delivery-path validation, and historical monitoring-activation attribution
+remains **UNKNOWN**.
+
+**Production HA transition run (14 November 2026, webhook-only, controlled):** an operator-authorised
+run on the live CARP pair `.253` (MASTER) / `.252` (BACKUP), running the installed `2f69a697…`
+candidate, exercised the plan's control, demotion, return and stable-cycle legs with notifications
+redirected to a node-local capture listener (`http://192.168.20.253:18013/`) and `email_enabled=0`.
+**Reconciled counts (addendum 1, after a read-only audit of the captured frames):** control **0**
+frames; demotion **exactly 1** frame, from `.252` (`role MASTER`, `observing true`, 16:06:20 AEDT);
+return **exactly 1** frame, from `.252` (`role BACKUP`, 16:11:14 AEDT), with **no `.253` frame**; stable
+cycle **0** frames over fresh 300 s cycles on both nodes. The whole run produced **2** frames, so the
+return-leg “two frames, one from each node” criterion and the “three frames total” expectation are
+**NOT MET**; the one-frame demotion criterion, stable-cycle suppression, control case, settings
+isolation and byte-identical restore are **MET**. Email remains **NOT EXERCISED**.
+
+The sealed `ACCEPTANCE-REPORT.md` previously recorded “return: exactly 2 frames (both from `.252`)”,
+an internal inconsistency; it is preserved unmodified and corrected by
+`ADDENDUM-1-RECONCILIATION.md` (new manifest), which also restates the accepted frames and their
+payloads.
+
+**Cause of the missing `.253` frame (facts):** the sampler reads only `carp:` lines once per 300 s
+cycle (`parse_carp_roles` `:3472`, `detect_carp_role` `:3509`, called from `:9499`); the transition
+is `read_carp_role()` (`:3633`) versus the fresh sample, and the notification gate is
+`config['ha_notify_failover'] and previous_carp_role` (`:9546`). `carp_set_status.php disable` set
+`net.inet.carp.allow=0`, so `.253` had no CARP state for 16:06:07–16:09:40; no cycle ran in that
+window, so the persisted `carp_role` stayed `MASTER`; `enable` made `.253` MASTER again within one
+second (`BACKUP → MASTER (preempting)`), so its next cycle saw no change. Classification:
+**unsuitable test method plus an incorrect acceptance expectation**, not a demonstrated
+implementation defect. Open hypotheses (not defects): the empty-`previous` first-observation guard
+may suppress `.253`'s first real failover after a fresh install; whether any failover mechanism can
+produce a `.253` demotion notification is untested; the payload has no effective `previous` field.
+
+**Transition count (corrected):** only **one** operator-authorised transition and return was executed
+(`carp_set_status.php disable` 16:06:07 / `enable` 16:09:36). Three **additional, unintended** CARP
+handover pairs occurred before it during recovery and diagnosis — 15:45/15:48 (OPNsense CARP event
+hook re-applied demotion during the restore attempts), 15:50:59/15:51:01 (the
+`carp_set_status.php maintenance` toggle itself), and 15:58:57/15:59:00 (re-adding the VIP alias).
+The plan's `ifconfig … carp demote 1` variant is rejected by this build (`carp: bad value`) and a
+transient `sysctl net.inet.carp.demotion=1` did not hand over in 8 minutes.
+
+**No-production-delivery evidence:** during every window in which notification gates were active the
+effective `webhook_url` was the node-local capture URL (`ntfy.sh` count 0 in each config) and
+`email_enabled` was `0`; the 15:45–15:59 handovers therefore occurred with the first test settings in
+force, not with production destinations configured. Limits: `.253` never entered the failover send
+path so its own skip is not directly logged; no listener was armed on `.252` during 15:28–15:54; the
+carrier side cannot be inspected. No production delivery is claimed on the basis of configuration
+isolation alone.
+
+**configd blocker on `.253` — diagnosed, withdrawn as a node fault (15 November 2026):** a P1
+execution on 14 November 2026 stopped before any CARP transition because the executor's settings
+apply call used `vip.configure`, which configd reported as missing. Read-only diagnosis established
+the action is registered as **`interface vip configure`** (`actions_interface.conf:238`, topic
+`interface` + section `vip.configure`); the stock Virtual IPs page applies it via
+`VipSettingsController::reconfigureAction()` → `Backend::configdRun('interface vip configure')`
+(`Interface/vip.volt:109` → `/api/interfaces/vip_settings/reconfigure`). `configd actions` lists it
+on both nodes (564 / 551 actions); the audit records `not found for user root`, never
+`action denied`; package `opnsense 26.7.8_2`, `configd.py`, `configd_ctl.py`, `processhandler.py`,
+`Backend.php`, `VipSettingsController.php`, `reconfigure_vips.php`, `configd.conf` and
+`actions_interface.conf` are byte-identical on `.253` and `.252`. The earlier "configd
+registration/startup issue on `.253`" is **withdrawn**; the cause was the executor's own action
+name. Nothing executed: the audit shows only `not found` for `vip.configure`, `system.list`,
+`interfaces.list`, `unbound.start` and the other invented names, with no `action allowed` line for
+them; no config, CARP state or service changed. The run's XML comparison also had a defect (it never
+excluded `/opnsense/revision`); re-running with a corrected order-preserving comparator confirms both
+configs unchanged apart from documented metadata, and **restoration is confirmed**. Correct exclusion
+totals are 128 (`.253`) / 109 (`.252`), not 130 / 111. No remedy was implemented. Proposed minimal
+remedy: use the page's Apply path (or `configctl interface vip configure` inside an authorised
+window), then re-approve P1. Evidence:
+`/root/dm-validation-2140/dm-bl-013-configd-diagnosis-20261115T0815Z/ROOT-CAUSE-REPORT.md`.
+
+**P1 run 2 — CARP failover webhook proven on both nodes; direction-A procedure deviation
+(15 November 2026):** re-executed with the corrected apply action `interface vip configure`. **Four
+frames, one per node per leg:** demotion `.253` BACKUP at `2026-11-14T23:59:57Z`
+(`2026-11-15T10:59:57+11:00` AEDT) and `.252` MASTER at `2026-11-15T00:00:02Z`
+(`11:00:02+11:00`); return `.252` BACKUP at `2026-11-15T00:09:50Z` (`11:09:50+11:00`) and `.253`
+MASTER at `2026-11-15T00:10:28Z` (`11:10:28+11:00`); stable window 0 further frames. The `.253`
+return-leg frame that the 14 November disabled-CARP method could never produce is now **proven**.
+The B1 tie (`0/0`) transferred nothing and was not treated as a transfer; settled ownership was
+assessed only after both final values were effective and settled inside the 30 s operational limit.
+Restoration verified: saved `advskew` `0`/`100`, `.253` MASTER / `.252` BACKUP, VIP `.254` on
+`.253`, tunables `1/1/0/240/0`, boot and daemons unchanged, `config.json` byte-identical,
+`/conf/config.xml` ordered-equivalent apart from documented metadata (0 VIP differences), listener
+removed, mail queue read-only empty on `.253` / no MTA on `.252`.
+
+**Procedure deviation D1 (recorded, not excused):** the executed direction A continued with the A2
+write (`.252 advskew 100 → 0`) **after** A1 had already transferred the VIP (`.252` became MASTER at
+`2026-11-15T10:59:28+11:00`, six seconds before A2 was saved). The procedure in force
+(`P1-PROCEDURE-REV1.md` §2.5, sealed `cb714841…`) authorises A2 only in the "A1 does not transfer"
+branch; after an A1 transfer it requires a **single revert of `.253` to `0`** before a §2.3.1 settle
+check. Continuing past A1 was **not authorised**. The four-frame notification evidence stands (it is
+genuine, isolated and correctly attributed), but the run is recorded as **notification acceptance
+met by evidence obtained under a procedure deviation**, not as a clean procedural qualification; the
+single-write A1 variant remains unproven. No stop condition was hit and restoration is unaffected.
+Frame payload `timestamp` fields are node-local AEDT without an offset
+(`scan_network.py:3667`), while the listener recorded UTC; both zones are recorded in the
+reconciliation. Notification acceptance and procedure compliance are recorded separately: the former is met by evidence, the latter is not met for direction A.
+
+Email delivery remains **NOT EXERCISED**; identity/new-device alerts, targeted Nmap, ageing,
+external delivery and authenticated UI checks remain outstanding. A bounded plan for those is at
+`/root/dm-validation-2140/dm-bl-013-p1-run2-reconciliation-20261115T0026Z/REMAINING-CRITERIA-PLAN.md`.
+
+Evidence: run report (sealed `c6007d34…`) plus addendum `RUN-REPORT-ADDENDUM-1.md`, and the
+reconciliation package `/root/dm-validation-2140/dm-bl-013-p1-run2-reconciliation-20261115T0026Z/`
+(`PROCEDURE-COMPLIANCE.md`, `evidence/CARP-AND-FRAME-TIMELINE.md`).
+
+**Read-only acceptance checks (15 November 2026):** roles/health revalidated without a swap —
+`.253` was MASTER (advskew 0, VIP, `allow/preempt/demotion 1/1/0`) and `.252` BACKUP (advskew 100)
+at `2026-11-15T00:33:41Z` / `2026-11-15T11:33:41+11:00`, both daemons healthy and both GUIs
+returning 200 on their own addresses. **UI checks are PENDING**: both APIs redirect to the login
+page (302), so an authenticated operator session is required; exact steps and the per-node
+acceptance grid are in
+`/root/dm-validation-2140/dm-bl-013-readonly-checks-20261115T003341Z/UI-CHECK-PROCEDURE.md`. No
+operator result is claimed until returned. **Ageing census (read-only)**: thresholds
+`SERVICE_UNKNOWN_AFTER_DAYS=7` and `SERVICE_RETIRE_AFTER_DAYS=30`; at
+`2026-11-15T00:34Z`, `.253` had 76 available / 50 unavailable / 0 unknown and `.252` 71 / 28 /
+11 unknown; exact implementation SQL found **0** rows that would age and **0** retirement
+candidates on either node, with 57/54 fresh hosts so retirement was not refused. Current state is
+consistent with the code, including standby ageing on `.252`; boundary-crossing transitions remain
+**UNTESTED** live (no row crossed either boundary, `.253` has no historic `unknown` history, and the
+`.252` 11 `unknown` rows predate this pass with mixed provenance). Unit tests cover the boundary
+paths but are not counted as live acceptance. Evidence:
+`/root/dm-validation-2140/dm-bl-013-readonly-checks-20261115T003341Z/` (`AGEING-CENSUS.md`,
+`ROLES-HEALTH.md`, `UI-CHECK-PROCEDURE.md`, JSON census files).
+
+**Isolated ageing validation (15 November 2026, disposable copies only):** the installed
+`scan_network.py` (`cd82a60c…`) was exercised against consistent SQLite snapshots of both nodes
+(taken with the online backup API from `mode=ro` connections; `integrity_check ok`), with every
+path constant rebound to `work/`, `sqlite3.connect`/`builtins.open` guarded, outbound helpers
+raised-on-call (blocked-call counter `[]`), and a fixed test-only `now` injected — the system clock
+and installed files were not changed. **21/21 cases passed on each node**: `unavailable` > 7 d →
+`unknown` with `miss_count=0` and exactly one history-only `SERVICE_CHANGED` event; host > 30 d
+retired with its held alert removed; the no-fresh-host refusal guard (ageing still applied);
+rows without a `devices` record retained; exact-threshold equality **not** aged/retired (strict
+`<`) with ±1 s boundaries correct; DST cut-off picks the earlier UTC value, ambiguous wall time has
+two fold candidates; the ageing core has no MASTER/BACKUP branch and the standby wrapper applies
+the same logic. **Labelled isolated integration validation, not live daemon acceptance** — the
+function was called directly with an injected clock; no daemon cycle produced these transitions,
+and the `.253` baseline case aged 23 pre-existing rows only because the fixed clock was 12 h ahead
+of the snapshot (under real time those rows are inside the window; live census showed 0 candidates).
+Unit-test coverage remains separate and is not counted as acceptance. Authenticated UI checks stay
+pending operator evidence. Evidence:
+`/root/dm-validation-2140/dm-bl-013-ageing-isolated-20261115T003817Z/ISOLATED-AGEING-VALIDATION.md`
+(sealed `a425b893…`).
+
+**Operator UI attestation — Devices and HA/CARP Settings (15 November 2026):** the operator
+supplied screenshots (described, not delivered as files) showing both nodes rendering Devices and
+the HA/CARP Settings page with correct **detected and effective roles** (`.253` MASTER, `.252`
+BACKUP), **CARP awareness enabled**, **Automatic** override, `.253` **monitoring permitted** and
+`.252` **activities paused by HA policy**; device counts `.253` 75 total / 39 online and `.252` 63
+total / 39 online. These are recorded as **PASS** for page rendering, detected/effective roles,
+awareness, override, monitoring state and counts. **U9 is now PASS for the observed workflow
+(15 November 2026)**: operator browser-console capture, visually reviewed in the originating
+ChatGPT conversation, with Errors and Warnings enabled and no text filter, showed **no visible
+console messages** on `.253` Devices (MASTER), `.253` Settings -> HA/CARP (MASTER/MASTER,
+permitted), `.252` Devices (BACKUP, activities paused) and `.252` Settings -> HA/CARP
+(BACKUP/BACKUP, paused by HA policy); Settings reload returns to Monitoring, so HA/CARP was opened
+after the reload and the populated status table captured without another reload. This is
+**operator-attested, not independent inspection**, and covers those four visits as observed — not
+continuous browsing or monitoring; Info/Debug-level messages were outside the filter scope and no
+console transcript, console image or browser/version detail was retained. **U10 is now PASS
+(15 November 2026)**: the four operator-named originals
+match all four recorded SHA-256 expectations, with packaged, extracted and archived copies
+internally consistent and PNG dimensions consistent with the mapped page types, and the operator
+supplied the per-file content observations (`010729` .253 Devices: MASTER, monitoring enabled,
+75/39; `010753` .253 Settings: Automatic, MASTER/MASTER, permitted, VIP MASTER; `010832` .252
+Devices: BACKUP, activities paused, 63/39; `010851` .252 Settings: Automatic, BACKUP/BACKUP, paused
+by HA policy, VIP BACKUP). U10 is therefore **operator-content-attested, not independently
+inspected**: this close-out used shell/text tools only and no image viewer or OCR is available, so
+no visual or content confirmation was performed by the agent; page-to-file mapping is likewise the
+operator's statement. New sealed package:
+`/root/dm-validation-2140/dm-bl-013-ui-screenshots-verified-20261115T020427Z/` (12/12 files,
+0 problems; manifest `13f73a82…`), including `U9-CONSOLE-CHECKS-OPERATOR.md` and
+`CONTENT-OBSERVATIONS-OPERATOR.md`. The earlier attestation seal (`f4f88156…`) and supplement seal
+(`3aaf083f…`) verify unchanged. Recorded as an observation only: `.252` shows **Failed 5/5** scan statuses — the last
+six scheduled cycles on `.252` all logged `Scan completed successfully`, so the label is not a
+scheduled-cycle outcome; a log search found a plausible shape-match from 2026-11-06 targeted Nmap
+scans `permanently failed after 5 attempts`, but the attribution is a **hypothesis** and the cause is
+**unverified**. No scan was run and no setting changed. Evidence:
+`/root/dm-validation-2140/dm-bl-013-ui-attestation-20261115T011305Z/` (`OPERATOR-ATTESTATION.md`,
+`UI-ACCEPTANCE-CORRECTED.md`).
+
+**Next bounded work (not executed):** (P1) a precondition test that leaves `.253` with a readable
+`carp:` line while the peer holds the VIP, to prove the `.253` notification leg — requires new
+authorisation because it changes CARP state; (P2) a documentation-only correction to the plan stating
+that removing CARP on `.253` makes it unobserving; (P3) review of the empty-`previous` guard (no code
+change authorised). Identity/new-device alerts, targeted Nmap, ageing, external email/webhook
+delivery and authenticated Devices/Settings UI checks on both roles also remain outstanding.
+
+Evidence: `/root/dm-validation-2140/dm-bl-013-transition-exec-20261114T041703Z/ACCEPTANCE-REPORT.md`
+(sealed) and its `ADDENDUM-1-RECONCILIATION.md` (read-only audit; addendum manifest
+`b404e9c9…b1ec`, 82/82 files; node copy of the frame log `sha256 e43be493…32437`), plus the
+preserved backups `/root/dm-bl-013-pretest/` on both nodes.
+
+**Closure evidence:** separately authorised tests on a disposable single OPNsense VM for the
+single-host paths and an isolated two-node CARP/pfsync pair for HA; external delivery requires a
+separately approved lab endpoint, or explicit operator acceptance of the residual risk. No further
+live execution is authorised by the HA-visibility task. This is a publication blocker under the revised objective.
+Single-host success will not prove HA, and HA success will not prove an external provider path.
+
+**Evidence:** `verification/monitoring-validation/EXECUTION-20261106.md`,
+`verification/monitoring-validation/PREFLIGHT-20261106.md` and
+`verification/VALIDATION-CLOSURE-2.14.0-20261107.md`.
+
+**Source-only correction — identity-conflict alerts restored to webhook-only (15 November 2026):**
+commit `a12ede8` had re-added an identity-conflict email leg without a recorded decision,
+contradicting `DECISIONS.md` 36. Option A withdrew it: `should_send_identity_mail()`,
+`send_identity_mail()` and `notify_identity_mail.php` are removed; the "Also email identity
+conflict alerts" checkbox, its JS load/save wiring and the catalogue strings exclusive to it are
+removed; `identity_email_enabled` remains a stored preference that `ConfigController` preserves
+untouched; the identity webhook keeps its gates, high-severity filter, HA suppression and
+`notified_at`-on-success-only semantics. New-device email/webhook, scan-result email and targeted
+Nmap were deliberately left unchanged; Nmap's dependence on `email_enabled`/`email_to` is
+implementation coupling, not a recorded requirement, and is documented separately in the
+identity/Nmap procedure. Manifest drops from 42 to 41 rows and the installer guards, pinned inputs
+and runtime-manifest digests were regenerated with the shipped tooling. `install-unattended.sh
+--check` on `.23` reports `CHECK_OK … files=62 … prunable=1` with the prune plan naming only
+`notify_identity_mail.php`, so upgrades and repair installs retire the helper through the existing
+Decision 61/62 record-diff rule with no new mechanism. **Nothing is deployed**: expected
+identity-conflict email count after the fix is **zero**, the identity/Nmap and live-ageing criteria
+remain **UNTESTED**, D1 remains recorded, and publication stays **NO-GO**.
 
 ## Deployment verification notes
+**Dutch deferral installed on `.23` (16 November 2026):** candidate
+`dm-v2.14.0-runtime.tar.gz` 1,792,158 bytes, SHA-256 `c620e892a9cac0fdb126e7d64b7359a21e636e3b68d0488ac0d2c2d724abf205`,
+installed under a fail-closed guard (`--check` `files=60 core_locales=9 prunable=1`). Result:
+`INSTALL_OK version=2.14.0 files=60 core_locales=9 pruned=1 retired_core=1 unchanged=60 repaired=0
+daemon_restarted=1`; installer backup `/var/backups/devicemonitor/install-v214.ozDITV`. Both Dutch
+runtime artefacts are gone (sidecar pruned, plugin-created core catalogue retired with a rollback copy);
+all 41 manifest targets and the ten shipped sidecar catalogues verify; `config.json` (`027594eb…`) and
+`/conf/config.xml` (`e86a7058…`) are byte-identical; monitoring and every channel remain disabled;
+`devices.db` integrity `ok`. Residual `/usr/local/opnsense/mvc/app/languages/nl_NL/LC_MESSAGES/` holds
+four pre-existing manual `.pre-*` backups from earlier work, not runtime artefacts. The release
+language requirement is corrected to ten shipped locales / eight translated runtime languages, the CI
+runtime matrix no longer includes `nl_NL`, and historical nine-language results are preserved as
+history. Live identity acceptance remains **UNVALIDATED**; D1 preserved; DM-BL-013 **OPEN**;
+publication **NO-GO**. Evidence: `/root/dm-validation-2140/dm-bl-013-dutch-deferral-install-23-20261116T083540Z/` (sealed 12/12).
+
+**Dutch deferral implemented in source/package (16 November 2026; candidate built, NOT installed):**
+`release/supported-locales.sh` is now the single shipped-locale policy (`en_US cs_CZ de_DE fr_FR es_ES
+it_IT pt_BR ru_RU ja_JP zh_CN`; `nl_NL` excluded) and is sourced by both `install-unattended.sh` and
+`release/build-bundle.sh`, which no longer uses `find src -name '*.po'`. The Dutch `.po` is retained
+unchanged in the repository as deferred source (`e3e09a11…`). Installer target counts are derived from
+the payload (41 rows + 10 sidecars + 9 core catalogues = **60**, 61 fresh) instead of hardcoded.
+Upgrade/repair retirement: the sidecar is removed by the existing Decision 61/62 prune
+(`prunable=1`); the plugin-created core catalogue is retired only when `core-locale/<lang>.state`
+records `pristine=absent` **and** the file still matches the recorded installed digest — otherwise it
+is retained and reported (`NOTICE: retained core catalogue …`). Package-owned or independently
+modified `OPNsense.mo` files are never deleted. New `tests/test_dutch_deferral.py` (11 cases) covers
+policy, source retention, no-discovery, derived counts, manifest absence and fresh/upgrade/repair
+behaviour including both retention paths. Language acceptance over the eight supported translated
+languages now reports `LANGUAGE_ACCEPTANCE=PASS languages=8 gaps=0 engine=runtime failures=0`
+(Dutch rendering remains technical evidence only). Candidate: `/root/dm-backups/dm-bl-013-dutch-deferral-candidate-20261116T083000Z/dm-v2.14.0-runtime.tar.gz`,
+1,792,158 bytes, SHA-256 `c620e892a9cac0fdb126e7d64b7359a21e636e3b68d0488ac0d2c2d724abf205`,
+59 members, deterministic rebuild identical; `--check` on `.23` reports
+`files=60 core_locales=9 prunable=1`. Nothing deployed; DM-BL-013 remains **OPEN**; publication
+**NO-GO**; D1 preserved; live identity acceptance remains **UNVALIDATED**.
+
+**Dutch disposition superseded by governing operator intent (16 November 2026, documentation only):**
+the user has confirmed the governing requirement — **the Dutch plugin translation must not become
+available until Dutch is selectable in OPNsense**, and successful catalogue rendering does not satisfy
+that condition. The recorded history is preserved unchanged: DM-BL-008a remains **closed as dropped
+(on withdrawal) for the current release** on 28 September 2026 (commit `c93085d`), and the entry's
+"the `nl_NL` catalogue stays in the eleven-catalogue payload" scope note is superseded by this
+intent. It is **not** re-recorded as "closed by platform dependency". Read together with the O2/W2
+records in `verification/locales/deferrals.md`, the current delivery contradicts the intent.
+
+*Discrepancy (exact).* Dutch is still delivered: `install-unattended.sh:153` lists `nl_NL` in the
+compile loop and installs `/usr/local/opnsense/mvc/app/languages/nl_NL/LC_MESSAGES/devicemonitor.mo`;
+because OPNsense ships no Dutch core catalogue (`nl_NL` is not in `get_locale_list()`,
+`/usr/local/etc/inc/system.inc:255-285`), `install-unattended.sh:163-172` runs
+`merge-opnsense-catalog.sh --plugin-only` and installs
+`/usr/local/share/locale/nl_NL/LC_MESSAGES/OPNsense.mo` (installed `555e23b8…`,
+`pkg which` → not owned). `/var/backups/devicemonitor/core-locale/nl_NL.state` records
+`pristine=absent`, so the core file is plugin-created and safe to delete. The archive carries the
+catalogue through `src/**/*.po` in the bundle allow-list, not through a manifest row.
+
+*Retained evidence, not support.* The `nl_NL` runtime result (10/10 pages, 528 keys, 0 failures,
+`LANGUAGE_ACCEPTANCE=PASS languages=1 gaps=1 failures=0`) is **technical rendering evidence only**.
+**Release language requirement (corrected 16 November 2026 by operator decision).** The release
+ships **ten locales** (`en_US cs_CZ de_DE fr_FR es_ES it_IT pt_BR ru_RU ja_JP zh_CN`) and requires
+**eight translated languages** to render through the production
+Phalcon/Volt/ViewTranslator path — `de_DE fr_FR es_ES it_IT pt_BR ru_RU ja_JP zh_CN` — with
+`en_US` as the reference set and `cs_CZ` installed and checked as part of the shipped ten.
+**Dutch (`nl_NL`) is source-only and deferred under DM-BL-008a**: it is not shipped, not selectable,
+not a release language, and its rendering evidence remains technical only. The earlier "nine-language"
+wording described the set that included Dutch and is superseded; historical runs that reported nine
+languages remain valid history of that period.
+
+*Smallest next fix (documented, not executed).* Remove `nl_NL` from the installer locale list and
+from the bundle's catalogue set so it is neither compiled nor installed; keep the `.po` in the
+repository as deferred source; keep the `--plugin-only` merge fallback for genuinely core-less
+locales; and let the existing install machinery delete the plugin-created core file on upgrade
+(`pristine=absent`), while **never** touching package-owned `OPNsense.mo` files. Documentation now
+states Dutch as deferred. Re-open only if OPNsense core offers `nl_NL`.
+
+**Core-catalogue "drift" corrected in the records — expected core-domain wording (16 November 2026,
+documentation only):** the seven reported entries are message ids carried by both the plugin and the
+OPNsense core catalogues with different wording; Decision 35's core-first merge preserves the core wording
+by design, so they are **expected core-domain wording differences**, not missing translations or
+unresolved product drift. `de_DE State`→`Zustand`, `es_ES Language`→`Lenguaje`, `es_ES Virtual IP`→`Virtual IP`,
+`ru_RU Unknown`→`Неизвестный`, `ru_RU Virtual IP`→`Виртуальный IP-адрес`, `ru_RU minutes`→`мин`,
+`ja_JP State`→`ステート`, `zh_CN Virtual IP`→`虚拟IP` in the core (`lang.query()`) domain; the sidecar
+(`devicemonitor_t()`) domain keeps the plugin values. Canonical invocation
+`python3 tests/test_language_acceptance.py --engine runtime --views <abs source views>` (default
+`--installed-po /usr/local/opnsense/mvc/app/languages`) returns
+`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`, with the seven as warnings. The
+earlier fatal classification came from pointing `--installed-po` at the source tree, which ships no
+compiled `.mo`, so plugin coverage was unknown. These seven are **removed from the release-blocker list**
+under Decision 35. `--strict` findings remain supplemental diagnostics; `nl_NL` selectability and any
+other language defect are **not waived**. Evidence (sealed): `/root/dm-validation-2140/dm-bl-013-catalogue-drift-correction-20261116T072923Z/CORRECTION-ADDENDUM.md`. No catalogue
+edit, package regeneration, installation, commit, push or publication.
+
+**Ordering-fix candidate installed on `.23` (16 November 2026):**
+`dm-v2.14.0-runtime.tar.gz` 1,841,827 bytes, SHA-256 `93c673d9fe87b767fb809593ad366bb4e09d82fd507607216c27f57db5810ad6`, installed under full
+preflight and the single conditional guard; `--check` reported `files=62 prunable=0` before and
+installation returned `INSTALL_OK version=2.14.0 files=62 core_locales=10 pruned=0
+unchanged=61 repaired=0 daemon_restarted=1`. All 41 manifest targets hash-match; the installed
+scanner is `ecd31899abb6365960d48c8b347c27e217f8d0641512e062b715ee208d3d7090`; the retired
+identity-email helper remains absent and is absent from the new 64-line install record.
+`config.json` (`027594eb…`) and `/conf/config.xml` (`e86a7058…`) are byte-identical; monitoring
+stayed disabled and every channel stayed off; `devices.db` and the hostwatch DB both passed
+`integrity_check` and row counts were unchanged (26 devices / 2 identity events / 0 Nmap history);
+no scan, Nmap, email or webhook occurred. Installer backup:
+`/var/backups/devicemonitor/install-v214.wH9DgM`. Evidence directory (sealed 13/13):
+`/root/dm-validation-2140/dm-bl-013-identity-event-order-install-23-20261115T222532Z/`. **Live identity acceptance remains UNVALIDATED** by user decision and is never recorded as
+PASS. Email/webhook/external delivery, live ageing, direction-A procedure compliance (D1) and the
+five-language core catalogue drift remain open. DM-BL-013 remains **OPEN**; publication **NO-GO**.
+
+**Ordering-fix candidate prepared (15 November 2026, not installed):**
+`/root/dm-backups/dm-bl-013-identity-event-order-candidate-20261115T111500Z/dm-v2.14.0-runtime.tar.gz`
+— 1,841,827 bytes, SHA-256 `93c673d9fe87b767fb809593ad366bb4e09d82fd507607216c27f57db5810ad6`,
+59 members, 41 manifest rows, deterministic rebuild identical, installed scanner would be
+`ecd31899…`. Regression extended with a `full_scan`-level case that delivers the cycle's own
+rotation event and fails against a late-snapshot copy of the scanner (verified). `--check` on `.23`:
+`files=62 prunable=0` (the identity-email helper is already absent), which is the expected result.
+Earlier candidates are byte-identical. **Installation of these bytes is not authorised**; the
+`.23`-only plan with stop gates and rollback is `INSTALL-AND-ROLLBACK-PLAN-23.md` in that directory.
+Live identity acceptance remains **UNVALIDATED** (user-accepted, not a release blocker); email/webhook/
+external delivery, live ageing, direction-A procedure compliance (D1) and the core catalogue drift remain
+open. **Nothing deployed**; DM-BL-013 **OPEN**; publication **NO-GO**.
+
+**Rotation-alert ordering defect (15 November 2026, source-only fix, not deployed):**
+`identity_event_start_id` — the high-water mark `get_new_high_identity_events()` filters on — was
+read **after** the device loop (`scan_network.py`), so the high-severity `IP_IDENTITY_CHANGED` event
+that `detect_mac_rotation()` records inside that loop was never eligible for notification. Rotation
+events were therefore permanently silent-to-alert, while still being recorded. **Correction to the
+earlier finding:** the rotation path was never silent — it records a high-severity event; what was
+broken was alert selection. **Affected versions (source evidence):** `v2.12.1` (rotation call at
+`:9182`, snapshot at `:9224`) and the 2.14.0 line, including the installed `cd82a60c…`;
+`v2.13`/`v2.13.2` contain the snapshot but no rotation classifier, so they are not affected.
+Fix: take the snapshot before any producer runs; `tests/test_identity_event_capture_order.py`
+reproduces the defect and pins no-replay, dedupe, severity filtering and the producer ordering.
+**Live identity acceptance remains UNVALIDATED** and is recorded as not a release blocker; that
+decision stands. Evidence wording corrected: an empty `mailq` and the absence of a mail process at
+inspection time do **not** prove no transient email attempt occurred; the zero-identity-email
+claim rests on the structural absence of the email leg, with external email delivery **UNTESTED**.
+**Nothing is deployed**, and D1 remains recorded.
+
 
 ### 2.13.3 live upgrade lifecycle on `.23` — **`CLOSED`** (5 November 2026)
 

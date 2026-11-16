@@ -31,6 +31,9 @@ on:
       # DM-BL-009 reconciliation (5 November 2026). Push-only, like the remediation branch:
       # the eventual pull request is against `main`, whose existing rules already apply.
       - integration/dm-bl-009-reconcile-20261105
+      # DM-BL-012 uninstaller repair (12 November 2026). Push-only; the eventual pull request
+      # targets `main`, so the base-branch rules above already cover it.
+      - fix/dm-bl-012-uninstaller-20261112
   pull_request:
     branches:
       - v2.5-development
@@ -62,6 +65,22 @@ jobs:
             xargs -0 -n1 python3 -m py_compile
           python3 -m py_compile release/normalize-bundle-tar.py
           python3 -m py_compile release/bundle-gzip.py
+          python3 -m py_compile verification/monitoring-validation/guard.py
+          python3 -m py_compile verification/monitoring-validation/test_guard.py
+
+      # The monitoring guard is verification code, not part of the runtime archive. It must
+      # nevertheless run on every validation job: a skipped or shrunken suite must not pass as
+      # an unexplained skip. The exact summary and OK lines are asserted below.
+      - name: Validate monitoring guard safety (DM-BL-011)
+        run: |
+          set -eu
+          python3 verification/monitoring-validation/test_guard.py > /tmp/dm-guard-tests.log 2>&1 || {
+            cat /tmp/dm-guard-tests.log
+            exit 1
+          }
+          cat /tmp/dm-guard-tests.log
+          grep -q '^Ran 35 tests in ' /tmp/dm-guard-tests.log
+          grep -q '^OK$' /tmp/dm-guard-tests.log
 
       - name: Validate opt-in port discovery
         run: python3 tests/test_port_discovery.py
@@ -121,10 +140,21 @@ jobs:
         run: python3 tests/test_non_ha_operation.py
 
       # Reconciliation guard: the combined 2.14.0 candidate must keep both the
-      # v2.12 scan/alert, reminder, identity-email and fail-open work and the
-      # 2.13 CARP, standby-ageing and verified-installer functionality.
+      # v2.12 scan/alert, reminder and fail-open work and the 2.13 CARP,
+      # standby-ageing and verified-installer functionality.
       - name: Validate DM-BL-009 reconciliation
         run: python3 tests/test_integration_reconciliation.py
+
+      # Decision 36: identity-conflict alerts are webhook-only; the stored
+      # identity_email_enabled preference is inert and notified_at only advances
+      # on a successful webhook delivery.
+      - name: Validate identity webhook-only delivery (Decision 36)
+        run: python3 tests/test_identity_webhook_only.py
+
+      # Identity events produced earlier in a cycle (including rotation-classified ones)
+      # must reach notification selection; the start-id snapshot precedes the producers.
+      - name: Validate identity event capture order
+        run: python3 tests/test_identity_event_capture_order.py
 
       # v2.11 HA safety: the WAN/uplink must never be selectable as a monitored segment.
       - name: Validate monitored interface selection (v2.11)
@@ -223,6 +253,9 @@ jobs:
           sh -n release/build-bundle.sh
           sh -n release/merge-opnsense-catalog.sh
 
+      - name: Validate the uninstaller in an isolated root
+        run: python3 tests/test_uninstaller.py
+
       # The bundle is what a firewall actually installs: build it and verify the pinned
       # inputs from inside the staged tree exactly as install-unattended.sh does. The digest
       # is asserted here too (Decision 67): run #41609297193 passed this step with a 20-byte
@@ -306,7 +339,9 @@ jobs:
           fi
 
           available=''
-          for lang in de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN; do
+          # Shipped translated runtime set (release/supported-locales.sh): nl_NL is deferred
+          # under DM-BL-008a and is neither shipped nor in this matrix.
+          for lang in de_DE fr_FR es_ES it_IT pt_BR ru_RU ja_JP zh_CN; do
             if [ -f "/usr/local/share/locale/${lang}/LC_MESSAGES/OPNsense.mo" ]; then
               available="${available:+${available},}${lang}"
             else
@@ -1084,6 +1119,12 @@ jobs:
         run: |
           set -eu
           python3 tests/test_service_alert_processing.py
+
+      - name: Validate HA role visibility
+        run: |
+          set -eu
+          php tests/test_ha_role_visibility.php
+          node tests/test_ha_role_visibility.js
 
       - name: Validate physical-device API
         run: |

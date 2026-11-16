@@ -1572,24 +1572,24 @@ msgid "A CARP standby does not carry the monitored traffic, so hostwatch there u
 msgstr "Um nó em espera CARP não transporta o tráfego monitorado, então o hostwatch informa menos e qualquer veredito de disponibilidade estaria errado. Com esta opção ativada, um nó em espera ignora a descoberta de serviços de infraestrutura e os alertas de serviço em vez de inventar indisponibilidades."
 
 #: settings.volt
-msgid "A backup override suppresses service discovery even when CARP awareness is enabled."
-msgstr "A substituição para reserva suprime a descoberta de serviços mesmo com a detecção de CARP ativada."
+msgid "Overrides Device Monitor behaviour only; does not change the firewall’s CARP role."
+msgstr "Altera apenas o comportamento do Device Monitor; não altera o papel CARP do firewall."
 
 #: settings.volt
-msgid "Always act as backup (never observe)"
-msgstr "Atuar sempre como reserva (nunca monitorar)"
+msgid "Force BACKUP behaviour"
+msgstr "Forçar comportamento BACKUP"
 
 #: settings.volt
-msgid "Always act as master"
-msgstr "Atuar sempre como mestre"
+msgid "Force MASTER behaviour"
+msgstr "Forçar comportamento MASTER"
 
 #: settings.volt
 msgid "Applies to the monitored interfaces only. A node with no CARP state is unaffected, so a standalone firewall keeps observing."
 msgstr "Aplica-se apenas às interfaces monitoradas. Um nó sem estado CARP não é afetado, portanto um firewall autônomo continua observando."
 
 #: settings.volt
-msgid "Automatic (from CARP state)"
-msgstr "Automático (a partir do estado CARP)"
+msgid "Automatic (use CARP role)"
+msgstr "Automático (usar papel CARP)"
 
 #: settings.volt
 msgid "Automatic reads the CARP state from ifconfig. Use an explicit role when the monitored interfaces carry no CARP address of their own, or to pin a node during maintenance."
@@ -1664,8 +1664,8 @@ msgid "Send Test Webhook"
 msgstr "Enviar webhook de teste"
 
 #: settings.volt
-msgid "Service observation"
-msgstr "Observação de serviços"
+msgid "HA policy permission"
+msgstr "Permissão da política de HA"
 
 #: settings.volt
 msgid "State"
@@ -1720,12 +1720,12 @@ msgstr "Selecione as interfaces de rede que devem ser monitoradas ativamente par
 # ============================================
 
 #: settings.volt
-msgid "observing"
-msgstr "observando"
+msgid "permitted"
+msgstr "permitido"
 
 #: settings.volt
-msgid "suppressed"
-msgstr "suprimida"
+msgid "paused by HA policy"
+msgstr "pausado pela política de HA"
 
 #: settings.volt
 msgid "unknown"
@@ -1743,9 +1743,6 @@ msgid "About Conflict Alerts"
 msgstr "Sobre alertas de conflito"
 
 #: settings.volt
-msgid "Also email identity conflict alerts"
-msgstr "Também enviar por e-mail alertas de conflito de identidade"
-
 #: settings.volt
 msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
 msgstr "Os e-mails são enviados quando o estado muda. Defina com que frequência cada categoria é repetida enquanto o estado não muda. 0 nunca repete."
@@ -1781,3 +1778,143 @@ msgstr "minutos"
 #: infrastructureservices.volt
 msgid "Unknown"
 msgstr "Desconhecido"
+
+# ============================================
+# [devices.volt, settings.volt] Node-local HA visibility
+# ============================================
+
+#: devices.volt, settings.volt
+msgid "Node-local Device Monitor data"
+msgstr "Dados locais do Device Monitor neste nó"
+
+msgid "HA role"
+msgstr "Função HA"
+
+msgid "Node"
+msgstr "Nó"
+
+msgid "Non-HA"
+msgstr "Não HA"
+
+msgid "Unconfirmed"
+msgstr "Não confirmado"
+
+msgid "HA status unconfirmed"
+msgstr "Status de HA não confirmado"
+
+msgid "HA status is unconfirmed because no monitored interface is selected."
+msgstr "O status de HA não foi confirmado porque nenhuma interface monitorada está selecionada."
+
+msgid "HA status is unconfirmed because CARP is configured or active on this appliance, but no monitored interface is selected; monitoring-scope roles are unknown."
+msgstr "O status de HA não foi confirmado porque o CARP está configurado ou ativo neste dispositivo, mas nenhuma interface monitorada está selecionada; as funções do escopo de monitoramento são desconhecidas."
+
+msgid "HA status is unconfirmed because the selected monitored interfaces do not resolve to local devices."
+msgstr "O status de HA não foi confirmado porque as interfaces monitoradas selecionadas não correspondem a dispositivos locais."
+
+msgid "HA status is unconfirmed because CARP virtual IPs are configured without a detected CARP role."
+msgstr "O status de HA não foi confirmado porque há IPs virtuais CARP configurados sem uma função CARP detectada."
+
+msgid "HA status is unconfirmed. Confirm CARP and the selected monitored interfaces."
+msgstr "O status de HA não foi confirmado. Verifique o CARP e as interfaces monitoradas selecionadas."
+
+msgid "Displayed data belongs to this node only and is not merged from the CARP peer."
+msgstr "Os dados exibidos pertencem somente a este nó e não são mesclados com o par CARP."
+
+msgid "No Device Monitor activities are paused by HA gating."
+msgstr "Nenhuma atividade do Device Monitor está pausada pela seleção de HA."
+
+msgid "Paused on this BACKUP node"
+msgstr "Pausado neste nó BACKUP"
+
+msgid "Visibility priming"
+msgstr "Preparação de visibilidade"
+
+msgid "Service discovery"
+msgstr "Descoberta de serviços"
+
+msgid "Service alerts"
+msgstr "Alertas de serviço"
+
+msgid "New device alerts"
+msgstr "Alertas de novo dispositivo"
+
+msgid "Automatic targeted Nmap scans"
+msgstr "Varreduras Nmap direcionadas automáticas"
+
+msgid "Local inventory and identity recording, node-local ageing, and scheduled port discovery continue."
+msgstr "O inventário local e o registro de identidades, o envelhecimento local do nó e a descoberta programada de portas continuam."
+
+msgid "A paused activity is not an empty result."
+msgstr "Uma atividade pausada não é um resultado vazio."
+
+msgid "HA role status is unavailable. Confirm CARP and the effective mode before relying on this view."
+msgstr "O status da função HA não está disponível. Confirme o CARP e o modo efetivo antes de confiar nesta visualização."
+
+msgid "HA status could not be retrieved, so the current CARP gating state is unknown."
+msgstr "Não foi possível obter o status de HA; o estado atual do controle CARP é desconhecido."
+
+msgid "Device Monitor reports that observation continues while the CARP role is unknown."
+msgstr "O Device Monitor informa que a observação continua enquanto a função CARP é desconhecida."
+
+msgid "Last successful local scan"
+msgstr "Última varredura local bem-sucedida"
+
+msgid "No successful local scan appears in the available scan history."
+msgstr "Nenhuma varredura local bem-sucedida aparece no histórico de varreduras disponível."
+
+msgid "The local scan history could not be read."
+msgstr "Não foi possível ler o histórico de varreduras local."
+
+msgid "Scan history was not retrieved because the HA status request failed."
+msgstr "O histórico de varreduras não foi obtido porque a solicitação de status de HA falhou."
+
+msgid "CARP awareness is disabled, so no activities are paused."
+msgstr "A detecção de CARP está desativada, portanto nenhuma atividade fica pausada."
+
+msgid "The detected CARP role is unavailable; the effective mode comes from the role override."
+msgstr "A função CARP detectada não está disponível; o modo efetivo vem da substituição de função."
+
+msgid "Show details"
+msgstr "Mostrar detalhes"
+
+msgid "Hide details"
+msgstr "Ocultar detalhes"
+
+msgid "HA-paused activities"
+msgstr "Atividades pausadas pelo HA"
+
+msgid "Monitoring is disabled; scheduled scans and alert evaluation are not running."
+msgstr "O monitoramento está desativado neste nó; verificações agendadas e avaliação de alertas não estão em execução."
+
+msgid "Detected and effective roles differ."
+msgstr "A função detectada e o modo efetivo são diferentes."
+
+msgid "Role override is active."
+msgstr "A substituição de função está ativa."
+
+msgid "No CARP configuration detected"
+msgstr "Nenhuma configuração CARP detectada"
+
+msgid "HA controls that require a CARP role are disabled. Saved values are preserved; choose an explicit role override to enable them."
+msgstr "Os controles de HA que exigem uma função CARP estão desativados. Os valores salvos são preservados; escolha uma substituição de função explícita para ativá-los."
+
+msgid "Monitoring enabled"
+msgstr "Monitoramento ativado"
+
+msgid "Monitoring disabled"
+msgstr "Monitoramento desativado"
+
+msgid "Monitoring status unknown"
+msgstr "Status do monitoramento desconhecido"
+
+msgid "Some activities paused"
+msgstr "Algumas atividades estão pausadas"
+
+msgid "Paused activities"
+msgstr "Atividades pausadas"
+
+msgid "Continuing activities"
+msgstr "Atividades que continuam"
+
+msgid "Timezone unavailable"
+msgstr "Fuso horário indisponível"

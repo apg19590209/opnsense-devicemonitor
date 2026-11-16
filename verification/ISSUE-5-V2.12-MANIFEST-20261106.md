@@ -334,9 +334,9 @@ Issue #5 remained OPEN after the comment. GitHub reported one comment, updated
 
 | Warning class | Assessment | Disposition |
 |---|---|---|
-| Translation-header metadata warnings | Non-fatal; did not prevent installation | No reinstall required; reproduced and corrected in an unpublished 2.14.0 candidate; [DM-BL-010](../../PRODUCT_BACKLOG.md) remains **OPEN** |
+| Translation-header metadata warnings | Non-fatal; did not prevent installation | No reinstall required; reproduced and corrected in 2.14.0, now integrated into `main` and validated on `.23`; [DM-BL-010](../../PRODUCT_BACKLOG.md) remains **OPEN** only for publication |
 
-### DM-BL-010 investigation and unpublished candidate (7 November 2026)
+### DM-BL-010 investigation and 2.14.0 candidate (7 November 2026)
 
 - **Reproduced exactly:** the pre-repair `msgunfmt` → `msgcat` → `msgfmt --check` sequence exits `0`
   but reports `warning: header field 'PO-Revision-Date' missing in header`, followed by the same
@@ -361,10 +361,11 @@ Issue #5 remained OPEN after the comment. GitHub reported one comment, updated
   retained the modified one, and the injected failure restored all 63 targets, the record, data,
   configuration and 19 core-locale state/pristine files. Existing live-predecessor and fresh
   scenarios also pass against the same candidate.
-- **Not published:** the fix is a development-branch candidate on
-  `fix/dm-bl-010-catalogue-warnings-20261107`, not merged to `main` and not in any release. The
-  live `.23` installation, published v2.12.1 tag/assets and all existing tags are unchanged. This
-  section does not claim that an updated release is available.
+- **Integrated but not published:** the fix is integrated into `main` at
+  `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`; exact-main CI passed and the exact candidate also
+  passed the separately authorised Phase 1 same-version repair on `.23`. It is not in any release.
+  Published v2.12.1 tag/assets and all existing tags are unchanged. This section does not claim
+  that an updated release is available.
 
 ### Unposted acknowledgement draft (prepared, NOT posted)
 
@@ -770,13 +771,17 @@ verification and follow-up boundaries, not outstanding tag/release actions.
    and the installation log ends with `INSTALL_OK` with `daemon_restarted=1`. Functional
    confirmation (service running, pages loading normally) is still **pending**; issue #5 remains
    **OPEN** and no acknowledgement has been posted. Warning cleanup is tracked as DM-BL-010: the
-   warnings have been reproduced and corrected in an unpublished 2.14.0 candidate, with the
-   published v2.12.1 predecessor covered by the ten-case local upgrade matrix and a disposable-jail
-   upgrade from the actual published payload.
+   warnings have been reproduced and corrected in a 2.14.0 candidate now integrated into `main` at
+   `e9ec5486a8cc9e87e3b6d3cf6098f26ed15e1370`. The published v2.12.1 predecessor is covered by the
+   ten-case local upgrade matrix and a disposable-jail upgrade from the actual published payload.
+   The exact candidate also passed the separately authorised Phase 1 repair/acceptance run on
+   `.23`; 2.14.0 remains unpublished.
 3. Any live deployment or host-level validation remains separately gated and is not part of this
    investigation. The jail proves installer paths with stubs, not real OPNsense plugin
    registration, configd interaction, daemon lifecycle or live `FRESH=1`; the CI runtime rendering
-   matrix was explicitly skipped for missing runner assets.
+   matrix was explicitly skipped for missing runner assets. A separate authorised Phase 1 repair
+   later ran the exact candidate on `.23`; see
+   `verification/PHASE1-EXACT-CANDIDATE-23-20261107.md`.
 4. The live locale fingerprint does not hash every file under
    `/usr/local/share/locale/*/LC_MESSAGES/`; whole-tree live catalogue continuity is not claimed.
 5. DM-BL-009 has since been closed by the separate 2.14.0 main integration; issue #5 remains
@@ -796,10 +801,10 @@ investigation proposal.
 * Acknowledgement to the reporter: prepared as a draft in this record, **not posted**. No issue
   comment, release edit, tag or asset change has been made.
 * Translation-header metadata warning cleanup (PO-Revision-Date, Last-Translator, Language-Team):
-  tracked separately as **DM-BL-010**, **OPEN**. The three warnings were reproduced exactly and a
-  correction is present in the unpublished 2.14.0 candidate, whose regression, ten-case predecessor
-  matrix, reproducible bundle and published-v2.12.1 jail upgrade pass. It is not merged or
-  published; no v2.12.1 or other published asset was modified.
+  tracked separately as **DM-BL-010**, **OPEN** only for publication. The three warnings were
+  reproduced exactly; the correction is integrated into `main` at `e9ec5486…`, its regression,
+  ten-case predecessor matrix, reproducible bundle and published-v2.12.1 jail upgrade pass, and the
+  exact candidate passed Phase 1 on `.23`. No v2.12.1 or other published asset was modified.
 * DM-BL-009: **CLOSED** (2.14.0 main integration completed 7 November 2026).
 * §9.4: paused, not executed.
 * Published v2.12.1: annotated tag object `349dc0932aebaa148a59b60cedf046a8a8414a88` (unsigned)

@@ -1235,6 +1235,18 @@ but no view posts it any more, so the stored value settles to `"0"` on the next 
 "email" — `should_send_identity_email()` and `notify_identity_email.php` — were retained because the helper's path
 is part of the installer manifest; they are naming residuals, not behaviour.
 
+### Implementation correction (15 November 2026)
+
+Commit `a12ede8` (1 November 2026) re-introduced an identity-conflict email leg
+(`should_send_identity_mail()`, `send_identity_mail()`, `notify_identity_mail.php` and an
+"Also email identity conflict alerts" checkbox) without a recorded decision, which contradicted this
+decision and its amendment. That leg has been withdrawn to restore this decision: identity-conflict
+alerts are webhook-only, the helper is removed from the runtime manifest and is retired by the normal
+install-record prune, and `identity_email_enabled` remains a stored preference that `ConfigController`
+preserves without acting on it. Identity email counts in identity acceptance tests are therefore
+**zero**; `notified_at` advances only when the webhook leg reports a successful send. Re-introducing an
+identity email channel still requires its own recorded decision, as stated above.
+
 ## 37. Nmap scan-history writes are deferred to a single asynchronous writer thread
 
 ### Decision
@@ -3142,3 +3154,75 @@ cause, the fixture design and the results: `BUNDLE_BUILD_SAFETY=PASS cases=8`,
 `BUNDLE_REPRODUCIBILITY=PASS cases=9`, `BUNDLE_DETERMINISM=PASS cases=4`, unchanged identity
 `7f389248…` / 1 656 468 bytes and no change under `release/`. Real GNU-tar execution remains a
 remote-CI requirement: this appliance has no GNU tar and no Linux environment.
+
+## 70. Presence and service-ageing timestamps are UTC, with conservative legacy reads
+
+### Decision
+
+`devices.last_seen`, service `first_detected`/`last_verified`/`last_checked`, Nmap evidence times
+used for service inventory, and the service-discovery scheduler timestamp are written as naive UTC
+text in `YYYY-MM-DD HH:MM:SS` form. Service verification accepts an aware datetime and converts it
+to UTC before writing; the production call sites pass `datetime.now(UTC)` through the shared
+`utc_timestamp()` helper.
+
+Readers that compare these values (`is_recently_seen()`, service ageing/retirement,
+`nmap_evidence_is_current()`, the service-discovery gate, scan-reminder age and MAC-rotation age)
+use the same canonical format. Existing unqualified rows are not migrated, shifted or bulk
+rewritten. For a value of unknown domain, the reader evaluates both UTC and the host's local
+interpretation and uses the age closest to the current instant. Legacy local wall time is
+interpreted with the timezone rules in force on that date, loaded from `/etc/localtime`; an
+ambiguous fall-back value contributes one age for each fold. Service ageing uses the earlier of
+the UTC and local cutoffs, so a record is not aged or retired merely because its old timezone is
+unknown.
+
+### Reason
+
+Hostwatch supplies UTC while releases from v2.12 onward also wrote local wall time from service
+verification and the full-scan fallback into `devices.last_seen` and the service fields. On an AEDT
+host a local value is eleven hours ahead of the UTC freshness check, so the nominal 15-minute
+freshness window can remain true for about 11 hours 15 minutes after the real sighting. The old
+retirement query used a local cutoff: a Hostwatch-only UTC `last_seen` therefore appeared eleven
+hours older and could cross the 30-day boundary up to eleven hours early, subject to the hourly
+pass, while a service-refreshed local value compared local-to-local. Service `last_checked`/
+`last_verified` ageing was also local-to-local before canonical UTC writes made the reader
+conversion necessary.
+
+### Affected releases
+
+The defective service-presence writer (`touch_device_last_seen()` called by
+`upsert_device_service()`) is present in `v2.12`, `v2.12.1`, `v2.13.1`, `v2.13.2` and the 2.14.0
+line. `v2.13` has no service-presence writer, and releases before `v2.12` predate that path.
+Older local/local comparisons retain their historical behaviour until this fix is installed.
+
+### Data compatibility
+
+No production database is modified by this decision. New writes use UTC. Existing local-looking
+values may remain lexically ahead of UTC by up to the host's offset, so forward-only writers may
+refuse to advance that address until the old value is passed; this is conservative and does not
+delete or rewind data. A later explicit migration, if ever required, must inventory both domains
+and be separately authorised.
+
+The conservative residual is bounded but cannot be eliminated without a stored domain tag. Age
+readers can under-age an ambiguous legacy row by up to the host's UTC offset, plus one hour at a
+fall-back fold. Destructive ageing can be delayed by the same offset. On `.23` at UTC+11, a legacy
+local row can remain at the 7-day or 30-day boundary for up to eleven hours longer, with one
+additional hourly scheduler interval before the transition is observed. Canonical UTC rows are
+exact at UTC+11 because the UTC cutoff is earlier; on a negative-offset host the dual-domain cutoff
+can conservatively delay those rows by the absolute offset. The same dual-domain rule necessarily
+applies to newly written UTC values because the database text has no per-row domain marker.
+
+### Tests and evidence
+
+`tests/test_service_ageing.py` covers an AEST/AEDT-style UTC+11 verification and an equivalent UTC
+verification, historical Sydney DST start and ambiguous fall-back interpretation, a New York
+cutoff crossing DST, the exact 7-day and 30-day boundaries, a legacy local record that must survive
+until both interpretations are stale, and past-delay rows that must still expire. The source
+tree's existing manifest and release-input pins are regenerated whenever the runtime changes. The
+durable timestamp investigation capture is under
+`/root/dm-validation-2140/dm-bl-013-timestamp-r3-20261112/`, with the preceding review and capture
+preserved under `/root/dm-validation-2140/dm-bl-013-timestamp-r2-20261112/` and
+`/root/dm-validation-2140/dm-bl-013-timestamp-20261112/`.
+
+This defect is tracked under **DM-BL-013 / ageing**. Historical monitoring-activation attribution
+remains **UNKNOWN**, not a confirmed automatic-activation defect. DM-BL-012 remains **CLOSED** on
+the explicit operator acceptance recorded on 12 November 2026.
