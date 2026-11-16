@@ -13,6 +13,7 @@ function check($c, $m) { global $fails; if ($c) { echo "  PASS $m\n"; } else { $
 /* Load NotificationHandler with its model/require path satisfied by thin stubs so
  * the real class body runs unmodified. */
 $tmpDb = tempnam(sys_get_temp_dir(), 'dmwrap'); unlink($tmpDb);
+$log = null; // bound to $tmpDb after the handler is loaded
 $stubs = tempnam(sys_get_temp_dir(), 'dmstub'); unlink($stubs);
 
 /* The handler loads the model from DM_MODEL_PATH; point it at a stub file. */
@@ -25,6 +26,11 @@ file_put_contents($modelStub, '<?php namespace OPNsense\\DeviceMonitor; class De
 putenv('DM_MODEL_PATH=' . $modelStub);
 putenv('DM_LIB_DIR=' . realpath(__DIR__ . '/../src/opnsense/scripts/OPNsense/DeviceMonitor'));
 require_once __DIR__ . '/../src/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php';
+
+/* Bind the recorder to a temporary database BEFORE any wrapper runs, so this
+ * suite can never write fixture rows into a host's real email log. */
+$log = new OPNsense\DeviceMonitor\EmailLog($tmpDb);
+OPNsense\DeviceMonitor\EmailLog::setInstance($log);
 
 class TestableHandler extends NotificationHandler {
     public $calls = 0;
@@ -101,6 +107,14 @@ check(strpos($scan, 'correlatePostfix') === false, 'scan helper has no send-path
 /* Real subjects, not placeholders. */
 check(preg_match("/OPNsense: .* new device\(s\) detected/", $src) === 1, 'new-device subject is the emitted one');
 check(strpos($src, 'New device notification') === false, 'placeholder new-device label is gone');
+
+/* Guard: this suite must never have written to the host's live log. */
+$live = '/var/db/devicemonitor/email_log.db';
+if (is_file($live)) {
+    $n = (new SQLite3($live, SQLITE3_OPEN_READONLY))->querySingle(
+        "SELECT COUNT(*) FROM email_log WHERE subject IN ('Subj','S','Timeline','concurrent 0')");
+    check($n === 0, 'no fixture rows leaked into the live email log');
+}
 
 @unlink($tmpDb);
 @unlink($modelStub);
