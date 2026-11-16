@@ -38,7 +38,7 @@ $tsrc = file_get_contents(__DIR__ . '/../src/opnsense/scripts/OPNsense/DeviceMon
 check(strpos($tsrc, "preg_match('/deferred/i'") === false, 'the inverted preg_match idiom is gone');
 
 /* 4. CSV formula neutralisation */
-$src = file_get_contents(__DIR__ . '/../src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/EmailLogController.php');
+$src = file_get_contents(__DIR__ . '/../src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/EmaillogController.php');
 check(strpos($src, "strpos(\"=+-@") !== false, 'CSV neutralises formula leading characters');
 /* 5. no double encoding of API values */
 check(strpos($src, 'htmlspecialchars((string)$row[') === false, 'API returns raw values (single escaping at render)');
