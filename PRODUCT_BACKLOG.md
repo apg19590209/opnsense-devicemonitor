@@ -1407,6 +1407,22 @@ identity-conflict email count after the fix is **zero**, the identity/Nmap and l
 remain **UNTESTED**, D1 remains recorded, and publication stays **NO-GO**.
 
 ## Deployment verification notes
+**Email log feature — testbed install and API-routing repair (16 November 2026).** First install of
+the PR #9 candidate was **PARTIAL**: target files installed (`files=66`), but the API returned
+`404 {"errorMessage":"Endpoint not found"}`. Cause was proven from the installed dispatcher:
+`OPNsense\Mvc\Router::parsePath` derives the controller filename with
+`str_replace('_','',ucwords($segment,'_')) . 'Controller'`, so `/api/devicemonitor/emaillog/...`
+resolves to `EmaillogController`, while the plugin shipped `EmailLogController`. The UI page route was
+unaffected. Fixed plugin-side by renaming the file and class to `EmaillogController` (no core routing
+or authentication change) and adding `tests/test_emaillog_routing.py`, which encodes the dispatcher
+contract and checks every API controller is reachable from its URI segment. The repair install
+reported `INSTALL_OK files=66 core_locales=9 pruned=1` (the stale controller was pruned), all 47
+targets verify, `config.json` remained `027594eb…`, `email_log.db` integrity `ok` with the **29
+existing rows preserved** at mode 0640, and `/api/devicemonitor/emaillog/search` now returns **302**
+(login redirect, matching `config/get`). **Authenticated response shape, grant/deny and browser
+rendering remain untested** — no credentials or browser are available in this environment. Rollback:
+`/var/backups/devicemonitor/install-v214.9ARNwU` and `/var/backups/devicemonitor/install-v214.bToX7q`.
+
 **Device Monitor email log — feature branch `feat/dm-email-log-20261116` (16 November 2026, not merged).**
 A Local **Email Log** page records every Device Monitor email attempt in a dedicated SQLite database
 (`/var/db/devicemonitor/email_log.db`), never in `devices.db` and never in the Postfix queue. Capture
