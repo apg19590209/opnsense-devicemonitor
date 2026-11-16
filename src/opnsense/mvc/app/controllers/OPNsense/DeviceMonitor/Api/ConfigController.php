@@ -550,7 +550,10 @@ class ConfigController extends ApiControllerBase
         $enabled = $this->request->getPost('enabled', 'string', '0');
         $email_enabled = $this->request->getPost('email_enabled', 'string', '0');
         $identity_webhook_enabled = $this->request->getPost('identity_webhook_enabled', 'string', '0');
-        $identity_email_enabled = $this->request->getPost('identity_email_enabled', 'string', '0');
+        // Decision 36: identity-conflict alerts are webhook-only. The key stays a
+        // stored preference for configuration compatibility; the Settings view no
+        // longer posts it, so an existing value is preserved rather than reset.
+        $identity_email_enabled = (string)($config['identity_email_enabled'] ?? '0');
         $service_email_enabled = $this->request->getPost('service_email_enabled', 'string', '0');
         $service_email_new = $this->request->getPost('service_email_new', 'string', '1');
         $service_email_unavailable = $this->request->getPost('service_email_unavailable', 'string', '1');
@@ -623,7 +626,7 @@ class ConfigController extends ApiControllerBase
         }
 
         if (!in_array($identity_email_enabled, ['0', '1'], true)) {
-            return ['result' => 'failed', 'message' => 'Invalid identity email enabled value'];
+            $identity_email_enabled = '0';
         }
 
         foreach ([

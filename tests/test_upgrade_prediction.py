@@ -20,7 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LIVE_DEFAULTS = Path('/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json')
-LANGUAGES = ['en_US', 'cs_CZ', 'de_DE', 'fr_FR', 'es_ES', 'it_IT', 'pt_BR', 'nl_NL', 'ru_RU',
+LANGUAGES = ['en_US', 'cs_CZ', 'de_DE', 'fr_FR', 'es_ES', 'it_IT', 'pt_BR', 'ru_RU',
              'ja_JP', 'zh_CN']
 MERGE = ROOT / 'release/merge-opnsense-catalog.sh'
 

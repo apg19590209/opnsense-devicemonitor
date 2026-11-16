@@ -40,11 +40,18 @@ LIST=${DM_BUNDLE_LIST:-/tmp/dm-bundle-list.txt}
 
 cd "$REPO"
 
-# 1. Manifest payload: the 42 hash-verified install targets.
+# 1. Manifest payload: the hash-verified install targets.
 awk '{print $3}' "$MANIFEST" > "$LIST"
 
-# 2. The .po catalogues the installer compiles (includes the 9 the manifest omits).
-find src -name '*.po' >> "$LIST"
+# 2. The .po catalogues the installer compiles, taken from the single supported-locale policy
+#    (release/supported-locales.sh) rather than a broad find: a retained-but-deferred translation
+#    source (nl_NL, DM-BL-008a) must never re-enter the payload by file discovery.
+. "$REPO/release/supported-locales.sh"
+for lang in $SUPPORTED_LOCALES; do
+    printf '%s\n' "src/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.po" >> "$LIST"
+done
+# The policy file itself is shipped so the installer and the bundle cannot diverge.
+printf '%s\n' release/supported-locales.sh >> "$LIST"
 
 # 3. Installer scripts, the manifest itself, the pinned-inputs file and its verifier, the
 #    catalogue merge helper, the prune helper with its legacy ownership evidence, and the

@@ -1722,9 +1722,6 @@ msgid "Unknown"
 msgstr "Unknown"
 
 #: settings.volt
-msgid "Also email identity conflict alerts"
-msgstr "Also email identity conflict alerts"
-
 #: settings.volt
 msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
 msgstr "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."

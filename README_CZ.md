@@ -50,7 +50,7 @@ Plugin automaticky sleduje síť a upozorňuje na:
 - E-maily z cílených skenů jsou upozornění na změnu stavu: sken odešle zprávu jen tehdy, když se inventář otevřených služeb liší od posledního úspěšného skenu daného zařízení. Nezměněné skeny se ukládají s `email_sent=0`.
 - Každá e-mailová kategorie může opakovat nezměněný stav po 0 (výchozí, nikdy), 5, 10, 15, 30, 45 nebo 60 minutách, případně po vlastní hodnotě do 1440.
 - Nová MAC na známé adrese je změna identity (`IP_IDENTITY_CHANGED`), ne nové zařízení; randomizované MAC se počítají vždy, vendor MAC jen v rámci `MAC_ROTATION_WINDOW_HOURS` (168 h).
-- Konflikty identity lze posílat e-mailem (`identity_email_enabled`, `notify_identity_mail.php`) vedle webhook větve.
+- Konflikty identity se oznamují pouze webhookem (rozhodnutí 36). Uložená předvolba `identity_email_enabled` zůstává kvůli kompatibilitě konfigurace, ale je neúčinná.
 - V HA páru rozhoduje verdikt CARP o všech odchozích upozorněních, takže mailuje nebo odesílá jen MASTER; detekce, historie a databáze běží na obou uzlech.
 - `deploy/` přidává nasazení pouze z gitu: `publish-devicemonitor.sh`, hashovaný instalátor na zařízení `deploy-devicemonitor.sh` a `verify-devicemonitor.sh`, který běží denně z `/etc/cron.d/devicemonitor-drift`.
 - Odznak verze na kartě About i nadpis „Features and Enhancements“ nyní pocházejí z `defaults.json`, takže stránka nemůže inzerovat starší vydání.

@@ -209,9 +209,12 @@ SMTP_SOURCE_CHECKS = (
     ),
 )
 
+# Decision 36: identity-conflict alerts are webhook-only. The identity helper
+# must keep filtering to high-severity IP/MAC conflicts and dispatch through the
+# webhook transport; the stored identity_email_enabled key is inert.
 IDENTITY_SOURCE_CHECK = (
-    "identity email is gated by identity_email_enabled",
-    r"identity_email_enabled",
+    "identity alerts keep the high-severity IP/MAC filter",
+    r"\$severity !== 'high' \|\| !in_array\(\$type, \$allowedTypes, true\)",
 )
 
 
@@ -1605,7 +1608,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     scope_parser.add_argument(
         "--identity-source",
-        default=str(Path(__file__).resolve().parents[2] / "src/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_mail.php"),
+        default=str(Path(__file__).resolve().parents[2] / "src/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_email.php"),
     )
     scope_parser.set_defaults(handler=scope_check_command)
 

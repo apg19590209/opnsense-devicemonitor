@@ -1743,9 +1743,6 @@ msgid "About Conflict Alerts"
 msgstr "关于冲突警报"
 
 #: settings.volt
-msgid "Also email identity conflict alerts"
-msgstr "同时通过电子邮件发送身份冲突警报"
-
 #: settings.volt
 msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
 msgstr "状态变化时发送电子邮件。设置状态未变化时各类别的重复间隔。0 表示从不重复。"

@@ -790,10 +790,22 @@ Displays the installed Device Monitor version and descriptive information. **Rea
 
 ### 14.7 Language and translations
 
-Device Monitor ships eleven catalogues (`en_US`, `cs_CZ`, `de_DE`, `fr_FR`, `es_ES`, `it_IT`,
-`pt_BR`, `nl_NL`, `ru_RU`, `ja_JP`, `zh_CN`). The GUI language itself is chosen in
-**System → Settings → General → Language**; `nl_NL` is not offered by that list, so the Dutch
-pages render but cannot be selected through the GUI.
+Device Monitor ships ten supported catalogues (`en_US`, `cs_CZ`, `de_DE`, `fr_FR`, `es_ES`,
+`it_IT`, `pt_BR`, `ru_RU`, `ja_JP`, `zh_CN`). The GUI language is chosen in
+**System → Settings → General → Language**, and every one of those ten is offered there.
+
+**Dutch (`nl_NL`) is deferred, not supported.** OPNsense core's language list does not offer
+Dutch, so a Dutch catalogue cannot be reached through the normal language setting. The Dutch
+translation source is retained in the repository as development material; it is not part of the
+supported language set and is not to be described as available. Two consequences follow from the
+current packaging, which the next release correction will remove:
+
+- the installer still compiles and installs a Dutch Device Monitor catalogue, and
+- because OPNsense ships no Dutch core catalogue, the installer currently creates
+  `/usr/local/share/locale/nl_NL/LC_MESSAGES/OPNsense.mo`.
+
+Neither makes Dutch selectable. Do not rely on Dutch for any supported-language statement until
+OPNsense core offers `nl_NL` (re-open condition: DM-BL-008a).
 
 Translations reach a page through two paths, and the installer prepares both:
 

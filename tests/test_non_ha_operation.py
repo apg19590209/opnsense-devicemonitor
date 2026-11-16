@@ -252,7 +252,7 @@ def run_full_scan(ifconfig_text, device="vtnet0"):
         "service_alerts": [],
         "email": [],
         "webhook": [],
-        "identity_mail": [],
+        "identity_webhook": [],
         "external": [],
     }
     messages = []
@@ -352,12 +352,10 @@ def run_full_scan(ifconfig_text, device="vtnet0"):
         )
         module.get_new_high_identity_events = lambda conn, start: []
         module.get_pending_high_identity_reminders = lambda conn, cfg: []
-        module.should_send_identity_mail = lambda cfg, events: True
-        module.should_send_identity_email = lambda cfg, events: False
-        module.send_identity_mail = (
-            lambda events: calls["identity_mail"].append(events) is None
+        module.should_send_identity_email = lambda cfg, events: True
+        module.send_identity_email = (
+            lambda events: calls["identity_webhook"].append(events) is None
         )
-        module.send_identity_email = lambda events: False
         module.run_scheduled_service_discovery = (
             lambda *args, **kwargs: calls["discovery"].append(args) or []
         )
@@ -398,7 +396,7 @@ def test_single_node_full_scan_still_alerts():
     assert calls["prime"], "visibility priming skipped without CARP"
     assert calls["discovery"], "service discovery skipped without CARP"
     assert calls["service_alerts"], "service alerts skipped without CARP"
-    assert calls["identity_mail"], "identity mail skipped without CARP"
+    assert calls["identity_webhook"], "identity webhook skipped without CARP"
     assert len(calls["email"]) == 1, calls["email"]
     assert calls["email"][0][0]["mac"] == "aa:bb:cc:dd:ee:01", calls["email"]
     assert not calls["external"], calls["external"]
@@ -426,7 +424,7 @@ def test_backup_control_suppresses_the_same_scan():
     assert not calls["prime"], "priming ran on a CARP backup node"
     assert not calls["discovery"], "discovery ran on a CARP backup node"
     assert not calls["service_alerts"], "service alerts ran on a CARP backup"
-    assert not calls["identity_mail"], "identity mail sent from a CARP backup"
+    assert not calls["identity_webhook"], "identity webhook sent from a CARP backup"
     assert not calls["email"], f"new-device email sent from a backup: {calls}"
     assert "not announced" in log_text, log_text
 

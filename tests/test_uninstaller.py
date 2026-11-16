@@ -286,7 +286,7 @@ def test_every_manifest_target_is_removed():
             assert re.fullmatch(r'[0-9a-f]{64}', digest), digest
             box.write(target, 'payload for %s\n' % source, mode=int(mode, 8))
             targets.append(target)
-        assert len(targets) == 42, targets
+        assert len(targets) == len(PLUGIN_MANIFEST.read_text().splitlines()), targets
 
         done = box.run()
 

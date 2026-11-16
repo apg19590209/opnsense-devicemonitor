@@ -43,11 +43,11 @@ VERIFIER=release/verify-release-inputs.sh
 # file inline here, and the inputs file pins the manifest, the prune helper, the legacy
 # ownership evidence and the catalogue merge helper. A tampered helper can therefore never
 # decide which files get removed.
-MANIFEST_SHA=a09d5b0a5f072a185bbc9b3917b07b97088f489e8fe67bc132d97b365ba2b7a8
-RELEASE_INPUTS_SHA=5a3d68ed4b08f5541603a0b0ec23d72bb0280e929d84b9cbd41eef7a7754518d
+MANIFEST_SHA=4e5a3309aeab9903935d5d9b1e29c6f124a266dab26991603a931585cbe6eef8
+RELEASE_INPUTS_SHA=f11ba86f738d1ca1da2f45b03c9a149729b2fe772b4384be6631c4eb7a4ef477
 VERIFIER_SHA=68b93f2a08f0808b67b6bd2ca76dca33a6cc5c159de4b61353b721eaefbb583d
 [ -f "$MANIFEST" ] && [ ! -L "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = "$MANIFEST_SHA" ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
-[ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 42 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
+[ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 41 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
 [ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = "$VERSION" ] || { echo 'ABORT: source version' >&2; exit 1; }
 [ -f "$VERIFIER" ] && [ ! -L "$VERIFIER" ] && [ "$(sha256 -q "$VERIFIER")" = "$VERIFIER_SHA" ] || { echo 'ABORT: verifier digest' >&2; exit 1; }
 [ -f "$RELEASE_INPUTS" ] && [ ! -L "$RELEASE_INPUTS" ] && [ "$(sha256 -q "$RELEASE_INPUTS")" = "$RELEASE_INPUTS_SHA" ] || { echo 'ABORT: release inputs digest' >&2; exit 1; }
@@ -149,19 +149,22 @@ while read -r hash mode source target; do
 done < "$MANIFEST"
 # DM-BL-008c: number of core-domain catalogues staged by the loop below (used by the guards
 # and by the CHECK_OK/INSTALL_OK report).
+. "$SCRIPT_DIR/release/supported-locales.sh"
 CORE_LOCALES=0
-for lang in en_US cs_CZ de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN; do
+SIDECAR_LOCALES=0
+for lang in $SUPPORTED_LOCALES; do
     pofile=src/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.po
     modir=$STAGE/${lang}/LC_MESSAGES
     mkdir -p "$modir"
     output=$modir/devicemonitor.mo
     msgfmt --check -o "$output" "$pofile" >/dev/null || { echo "ABORT: gettext $lang" >&2; exit 1; }
     printf '%s %s %s %s\n' "$(sha256 -q "$output")" 644 "$output" "/usr/local/opnsense/mvc/app/languages/${lang}/LC_MESSAGES/devicemonitor.mo" >> "$STAGE/items"
+    SIDECAR_LOCALES=$((SIDECAR_LOCALES + 1))
     # DM-BL-008c: the inline-script strings resolve through the core domain
     # (ControllerRoot::setLang -> ViewTranslator over /usr/local/share/locale), so the plugin
     # keys are merged into <core>/<locale>/LC_MESSAGES/OPNsense.mo with a core-first msgcat.
-    # A locale whose core catalogue is absent (nl_NL on the current release) is not an error:
-    # it receives the plugin catalogue alone, which is the state the testbed already renders.
+    # A locale whose core catalogue is absent is not an error: it receives the plugin
+    # catalogue alone. (Dutch is no longer in the supported set; see release/supported-locales.sh.)
     # en_US is the reference language, so no core catalogue is created for it.
     if [ "$lang" = en_US ]; then continue; fi
     core=/usr/local/share/locale/${lang}/LC_MESSAGES/OPNsense.mo
@@ -215,10 +218,12 @@ while read -r hash mode source target; do
     id=$((id + 1))
 done < "$STAGE/items"
 count=$id
-# 42 manifest rows + 11 sidecar catalogues + one merged core-domain catalogue per locale that
-# can host one (all but en_US); a fresh install adds rc.conf.
-expected=63
-[ "$FRESH" = 0 ] || expected=64
+# Manifest rows + one sidecar catalogue per supported locale + one merged core-domain catalogue
+# per supported locale that can host one (all but en_US); a fresh install adds rc.conf.
+# Derived from the actual payload so the guard cannot drift from release/supported-locales.sh.
+MANIFEST_ROWS=$(wc -l < "$MANIFEST" | tr -d ' ')
+expected=$((MANIFEST_ROWS + SIDECAR_LOCALES + CORE_LOCALES))
+[ "$FRESH" = 0 ] || expected=$((expected + 1))
 [ "$count" = "$expected" ] || { echo 'ABORT: target count' >&2; exit 1; }
 [ "$NMAP_MISSING" = 0 ] || printf 'NOTICE: nmap is not installed; a real installation runs pkg install -y nmap\n'
 # The target set this run installs: the manifest rows plus every generated catalogue and, on
@@ -383,6 +388,47 @@ if [ -f "$BACKUP/prune" ]; then
     [ -n "$PRUNED" ] || { echo 'ABORT: prune accounting' >&2; exit 1; }
     printf 'PRUNED=%s\n' "$PRUNED"
 fi
+# DM-BL-008a: Dutch is deferred. A locale removed from the supported set must not keep the
+# core-domain catalogue this installer once created for it. The generic prune only covers the
+# plugin namespace, so that file is retired here, and only when ownership is proven:
+#   * pristine=absent means the installer recorded "no core catalogue existed" before it wrote one;
+#   * the file must still equal the digests this installer wrote (no core package, OPNsense
+#     update or operator edit has touched it).
+# Anything else is retained and reported; a package-owned or independently modified catalogue is
+# never deleted or replaced.
+RETIRED_CORE=0
+for state in $(ls "$CORE_LOCALE_STATE"/*.state 2>/dev/null); do
+    [ -f "$state" ] || continue
+    lang=$(basename "$state" .state)
+    case " $SUPPORTED_LOCALES " in
+        *" $lang "*) continue;;
+    esac
+    [ "$(sed -n 's/^pristine=//p' "$state")" = absent ] || { printf 'NOTICE: retained core catalogue %s (pristine recorded)\n' "$lang" >&2; continue; }
+    target=$(sed -n 's/^target=//p' "$state")
+    case "$target" in
+        /usr/local/share/locale/"$lang"/LC_MESSAGES/OPNsense.mo) :;;
+        *) printf 'NOTICE: retained core catalogue state %s (unexpected target %s)\n' "$lang" "$target" >&2; continue;;
+    esac
+    if [ ! -e "$target" ]; then
+        printf 'NOTICE: core catalogue already absent for deferred locale %s\n' "$lang" >&2
+        continue
+    fi
+    recorded=$(sed -n 's/^installed=//p' "$state")
+    current=$(sha256 -q "$target")
+    if [ -n "$recorded" ] && [ "$current" = "$recorded" ]; then
+        # Back the file into the install rollback directory before removing it, so rollback
+        # restores the exact bytes the deferred locale had.
+        cp -p "$target" "$BACKUP/retired-$lang-OPNsense.mo" || { echo 'ABORT: backup deferred core catalogue' >&2; exit 1; }
+        [ "$(sha256 -q "$BACKUP/retired-$lang-OPNsense.mo")" = "$current" ] || { echo 'ABORT: deferred core catalogue backup' >&2; exit 1; }
+        rm -f "$target"
+        [ ! -e "$target" ] || { echo 'ABORT: deferred core catalogue removal' >&2; exit 1; }
+        printf 'RETIRED_CORE=%s\n' "$lang"
+        RETIRED_CORE=$((RETIRED_CORE + 1))
+    else
+        printf 'NOTICE: retained core catalogue for deferred locale %s (modified since install; not ours to delete)\n' "$lang" >&2
+    fi
+done
+printf 'RETIRED_CORE_TOTAL=%s\n' "$RETIRED_CORE"
 if [ ! -e /etc/rc.d/devicemonitor ]; then
     ln -s /usr/local/etc/rc.d/devicemonitor /etc/rc.d/devicemonitor
     RC_LINK_CREATED=1
@@ -448,4 +494,4 @@ mkdir -p /var/db/devicemonitor
 chmod 644 "$INSTALLED_LIST.new"
 mv "$INSTALLED_LIST.new" "$INSTALLED_LIST"
 MUTATING=0
-printf 'INSTALL_OK version=%s files=%s core_locales=%s pruned=%s backup=%s daemon_restarted=%s unchanged=%s repaired=%s\n' "$VERSION" "$count" "$CORE_LOCALES" "$PRUNED" "$BACKUP" "$WAS_RUNNING" "$UNCHANGED" "$REPAIRED"
+printf 'INSTALL_OK version=%s files=%s core_locales=%s pruned=%s retired_core=%s backup=%s daemon_restarted=%s unchanged=%s repaired=%s\n' "$VERSION" "$count" "$CORE_LOCALES" "$PRUNED" "$RETIRED_CORE" "$BACKUP" "$WAS_RUNNING" "$UNCHANGED" "$REPAIRED"

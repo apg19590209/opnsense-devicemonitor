@@ -656,7 +656,7 @@ class GuardTests(unittest.TestCase):
             "scan": str(ROOT / "src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py"),
             "notification": str(ROOT / "src/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php"),
             "smtp": str(ROOT / "src/opnsense/scripts/OPNsense/DeviceMonitor/smtp_send.py"),
-            "identity": str(ROOT / "src/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_mail.php"),
+            "identity": str(ROOT / "src/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_email.php"),
         }
         self.assertEqual(guard.scope_check(paths, dict(guard.SCOPE_KEYS), guard.EXPECTED_TARGET_LINE), [])
 

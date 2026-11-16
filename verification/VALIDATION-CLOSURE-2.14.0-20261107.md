@@ -167,6 +167,30 @@ yet exercised the new step. The final release record must cite that exact run af
 acceptance distinction are recorded in `verification/LANGUAGE-ACCEPTANCE-GAP-20261107.md`. This
 closes the native runtime coverage gate, but not human translation-quality or browser-layout review.
 
+**Canonical invocation and the `--installed-po` rule (16 November 2026).** Run the matrix as
+
+```
+python3 tests/test_language_acceptance.py --engine runtime \
+  --views "$PWD/src/opnsense/mvc/app/views/OPNsense/DeviceMonitor"
+```
+
+leaving `--installed-po` at its default `/usr/local/opnsense/mvc/app/languages`. That directory holds
+each locale's compiled `<locale>/LC_MESSAGES/devicemonitor.mo`, which is how the harness knows which
+strings the deployed sidecar domain resolves. Pointing `--installed-po` at the **source tree** is
+incorrect: it ships only `.po` files, `plugin_mo()` falls back to a flat legacy `.mo` that does not
+exist, plugin coverage becomes unknown, and expected core-domain differences escalate from warnings to
+fatal. The canonical run re-confirmed on 16 November 2026 reports
+`LANGUAGE_ACCEPTANCE=PASS languages=9 gaps=1 engine=runtime failures=0`.
+
+**Accepted core-domain wording differences (Decision 35).** Seven message ids across five locales are
+carried by both the plugin and the OPNsense core catalogues with different wording; the core-first merge
+preserves the core wording by design. They are expected behaviour, not missing translations, and are
+removed from the release-blocker list: `de_DE State`, `es_ES Language`, `es_ES Virtual IP`,
+`ru_RU Unknown`, `ru_RU Virtual IP`, `ru_RU minutes`, `ja_JP State`, `zh_CN Virtual IP` (eight
+locale/message pairs; values per locale are tabulated in the correction addendum). `--strict` findings remain supplemental diagnostics; `nl_NL` selectability
+and any other language defect are not waived. Evidence (sealed):
+`/root/dm-validation-2140/dm-bl-013-catalogue-drift-correction-20261116T103354Z/CORRECTION-ADDENDUM.md`.
+
 ### Retention and environment findings
 
 - No retained `devices.db*` file in the expanded roots matches `c17874a7…`; 128 physical candidates

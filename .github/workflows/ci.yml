@@ -140,10 +140,21 @@ jobs:
         run: python3 tests/test_non_ha_operation.py
 
       # Reconciliation guard: the combined 2.14.0 candidate must keep both the
-      # v2.12 scan/alert, reminder, identity-email and fail-open work and the
-      # 2.13 CARP, standby-ageing and verified-installer functionality.
+      # v2.12 scan/alert, reminder and fail-open work and the 2.13 CARP,
+      # standby-ageing and verified-installer functionality.
       - name: Validate DM-BL-009 reconciliation
         run: python3 tests/test_integration_reconciliation.py
+
+      # Decision 36: identity-conflict alerts are webhook-only; the stored
+      # identity_email_enabled preference is inert and notified_at only advances
+      # on a successful webhook delivery.
+      - name: Validate identity webhook-only delivery (Decision 36)
+        run: python3 tests/test_identity_webhook_only.py
+
+      # Identity events produced earlier in a cycle (including rotation-classified ones)
+      # must reach notification selection; the start-id snapshot precedes the producers.
+      - name: Validate identity event capture order
+        run: python3 tests/test_identity_event_capture_order.py
 
       # v2.11 HA safety: the WAN/uplink must never be selectable as a monitored segment.
       - name: Validate monitored interface selection (v2.11)
@@ -328,7 +339,9 @@ jobs:
           fi
 
           available=''
-          for lang in de_DE fr_FR es_ES it_IT pt_BR nl_NL ru_RU ja_JP zh_CN; do
+          # Shipped translated runtime set (release/supported-locales.sh): nl_NL is deferred
+          # under DM-BL-008a and is neither shipped nor in this matrix.
+          for lang in de_DE fr_FR es_ES it_IT pt_BR ru_RU ja_JP zh_CN; do
             if [ -f "/usr/local/share/locale/${lang}/LC_MESSAGES/OPNsense.mo" ]; then
               available="${available:+${available},}${lang}"
             else

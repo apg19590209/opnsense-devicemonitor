@@ -1743,9 +1743,6 @@ msgid "About Conflict Alerts"
 msgstr "Over conflictmeldingen"
 
 #: settings.volt
-msgid "Also email identity conflict alerts"
-msgstr "Identiteitsconflictwarschuwingen ook per e-mail verzenden"
-
 #: settings.volt
 msgid "Emails are sent when the state changes. Set how often each category is repeated while the state has not changed. 0 never repeats."
 msgstr "E-mails worden verzonden wanneer de status verandert. Stel in hoe vaak elke categorie wordt herhaald zolang de status niet is gewijzigd. 0 herhaalt nooit."

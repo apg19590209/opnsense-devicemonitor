@@ -1235,6 +1235,18 @@ but no view posts it any more, so the stored value settles to `"0"` on the next 
 "email" — `should_send_identity_email()` and `notify_identity_email.php` — were retained because the helper's path
 is part of the installer manifest; they are naming residuals, not behaviour.
 
+### Implementation correction (15 November 2026)
+
+Commit `a12ede8` (1 November 2026) re-introduced an identity-conflict email leg
+(`should_send_identity_mail()`, `send_identity_mail()`, `notify_identity_mail.php` and an
+"Also email identity conflict alerts" checkbox) without a recorded decision, which contradicted this
+decision and its amendment. That leg has been withdrawn to restore this decision: identity-conflict
+alerts are webhook-only, the helper is removed from the runtime manifest and is retired by the normal
+install-record prune, and `identity_email_enabled` remains a stored preference that `ConfigController`
+preserves without acting on it. Identity email counts in identity acceptance tests are therefore
+**zero**; `notified_at` advances only when the webhook leg reports a successful send. Re-introducing an
+identity email channel still requires its own recorded decision, as stated above.
+
 ## 37. Nmap scan-history writes are deferred to a single asynchronous writer thread
 
 ### Decision
