@@ -2,6 +2,19 @@
 
 ## Current state
 
+**Email Log "View message" action hidden on every row (17 November 2026).** The operator saw only
+Timeline buttons. The installed template matched the PR source, so the action was deployed but
+**conditionally rendered** — `if (row.has_content)` — and every row on `.23` predates content capture,
+so the condition was never true. The action is now rendered for **every** row; a row without captured
+content opens the modal and reports "Message content unavailable" instead of the button vanishing. The
+button carries a per-row identifier and an accessible label. Regression coverage asserts the action is
+present for content and legacy rows and that the unavailable state is reachable; the installed
+template was re-checked after deployment (no gate, action emitted per row). Exact-head CI
+`43875310588` at `89a378d` passed; repair install `INSTALL_OK files=66 pruned=0`
+(`/var/backups/devicemonitor/install-v214.x2f2sg`), 17 records preserved, schema v2. **Browser
+acceptance remains PENDING until the operator reloads.**
+
+
 **Email log message content capture and View message action (17 November 2026).** Each logical Device
 Monitor email now retains the body the transport carried — test, new-device, service and failover via the
 handler wrappers, scan results via their own sender — stored as readable plain text (HTML stripped,
