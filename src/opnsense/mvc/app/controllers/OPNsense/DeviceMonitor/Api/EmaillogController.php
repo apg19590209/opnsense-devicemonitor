@@ -127,7 +127,12 @@ class EmaillogController extends ApiControllerBase
                 'source' => (string)($step['source'] ?? ''),
             ];
         }
-        return [
+        /* The framework HTML-escapes array responses unless they are marked safe,
+         * which turned "&" into "&amp;" and "&amp;" into "&amp;amp;" inside the
+         * JSON. The body is plain text and the client renders it with .text(), so
+         * it must be delivered raw: exactly one escaping step, at render time. */
+        $this->response->setContentType('application/json', 'UTF-8');
+        $this->response->setContent([
             'result' => 'ok',
             'scope' => 'local',
             'message' => [
@@ -147,7 +152,8 @@ class EmaillogController extends ApiControllerBase
                 'content' => $hasContent ? (string)$row['content_text'] : '',
                 'timeline' => $timeline,
             ],
-        ];
+        ], true);
+        return;
     }
 
     /** POST /api/devicemonitor/emaillog/exportcsv */

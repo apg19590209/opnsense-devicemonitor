@@ -177,6 +177,9 @@ jobs:
       - name: Validate email log View message action
         run: python3 tests/test_emaillog_message_action.py
 
+      - name: Validate email log content round trip
+        run: php tests/test_email_log_roundtrip.php
+
       - name: Validate email log transport and export safety
         run: php tests/test_email_log_transport.php
 
