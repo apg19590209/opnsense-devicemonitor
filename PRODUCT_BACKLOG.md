@@ -1407,6 +1407,20 @@ identity-conflict email count after the fix is **zero**, the identity/Nmap and l
 remain **UNTESTED**, D1 remains recorded, and publication stays **NO-GO**.
 
 ## Deployment verification notes
+**Email Log authenticated 403 — cause and fix (16 November 2026).** The page rendered but its data
+request returned 403. The base API controller rejects POST/PUT/DELETE without a valid `X-CSRFToken`
+(`ApiControllerBase::doAuth`), and the layout installs that header only through `$.ajaxSetup` inside
+`$(document).ready` (`layouts/default.volt`). The Email Log view fired its first request synchronously
+during script evaluation, before that hook existed, so the POST was unprotected and refused. The ACL
+pattern (`api/devicemonitor/*`) matches the URI and was not the cause. Fixed by starting the request
+from the ready handler; search, timeline and CSV export all share the same mechanism, with CSRF
+neither disabled nor bypassed and no extra privileges. New `tests/test_emaillog_csrf.py` verifies the
+layout hook ordering, that no request precedes ready, that both API calls use the shared mechanism,
+and that the controller keeps the protected base class. Exact-head CI `43868646092` at `77de347`
+passed; the repair install reported `INSTALL_OK files=66 pruned=0` with all 29 email-log rows and
+`config.json` `027594eb…` unchanged. **Browser acceptance remains PENDING until the operator reloads
+the page successfully**; no functional API or visual claim is made yet.
+
 **Email log feature — testbed install and API-routing repair (16 November 2026).** First install of
 the PR #9 candidate was **PARTIAL**: target files installed (`files=66`), but the API returned
 `404 {"errorMessage":"Endpoint not found"}`. Cause was proven from the installed dispatcher:
