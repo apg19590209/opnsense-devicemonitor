@@ -37,7 +37,8 @@ def test_one_row_action():
     row_at = src.index('rows.forEach(function (row) {')
     end_at = src.index("$('#email-log-empty')", row_at)
     loop = src[row_at:end_at]
-    assert loop.count("<button>')") == 1, 'a second row button would duplicate the view'
+    assert loop.count("<button>')") == 2, 'View message plus one Delete/Restore control per row'
+    assert "data-action" in loop, 'the second control is the visibility action'
     assert 'text.diagnostics' not in src, 'the separate Timeline action must be gone'
     assert "closest('tr').next()" not in src, 'no inline timeline row remains'
     assert 'text.viewMessage' in loop and 'openMessage(row.event_id' in loop

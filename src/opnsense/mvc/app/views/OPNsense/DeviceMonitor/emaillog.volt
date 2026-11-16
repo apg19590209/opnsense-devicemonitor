@@ -30,11 +30,20 @@
                         <div class="alert alert-info" id="email-log-scope-note" style="font-size:12px;"></div>
                         <div class="alert alert-warning" id="email-log-partial" style="display:none;font-size:12px;"></div>
                         <div class="alert alert-warning" id="email-log-diagnostic" style="display:none;font-size:12px;"></div>
+                        <div class="text-muted" id="email-log-remote-note" style="display:none;font-size:12px;"></div>
 
                         <div class="row" style="margin-bottom:10px;">
-                            <div class="col-sm-4">
+                            <div class="col-sm-3">
                                 <input type="text" id="email-log-search" class="form-control input-sm"
                                        placeholder="{{ devicemonitor_t('Search subject or recipient') }}">
+                            </div>
+                            <div class="col-sm-2">
+                                <select id="email-log-visibility" class="selectpicker"
+                                            data-style="btn-default btn-sm" data-width="100%">
+                                    <option value="active" selected>{{ devicemonitor_t('Active') }}</option>
+                                    <option value="deleted">{{ devicemonitor_t('Deleted') }}</option>
+                                    <option value="all">{{ devicemonitor_t('All entries') }}</option>
+                                </select>
                             </div>
                             <div class="col-sm-3">
                                 <select id="email-log-type" class="selectpicker"
@@ -47,7 +56,7 @@
                                     <option value="service">{{ devicemonitor_t('Service alert') }}</option>
                                 </select>
                             </div>
-                            <div class="col-sm-3">
+                            <div class="col-sm-2">
                                 <select id="email-log-status" class="selectpicker"
                                             data-style="btn-default btn-sm" data-width="100%">
                                     <option value="">{{ devicemonitor_t('All statuses') }}</option>
@@ -61,6 +70,9 @@
                             <div class="col-sm-2">
                                 <button id="email-log-export" class="btn btn-default btn-sm">
                                     <i class="fa fa-download"></i> {{ devicemonitor_t('Export CSV') }}
+                                </button>
+                                <button id="email-log-clear" type="button" class="btn btn-link btn-sm">
+                                    {{ devicemonitor_t('Clear filters') }}
                                 </button>
                             </div>
                         </div>
@@ -279,7 +291,10 @@
      aria-labelledby="email-log-message-title">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <div class="modal-header">
+            {# panel-header styling only: the installed .panel-default > .panel-heading
+               rule supplies the theme's subtle header background and its paired text
+               colour in both the light and dark themes. Scoped padding stays below. #}
+            <div class="modal-header panel-heading">
                 <button type="button" class="close" data-dismiss="modal" aria-label="{{ lang.query('Close')|json_encode(15) }}">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -332,6 +347,29 @@
     </div>
 </div>
 
+{# Standard OPNsense confirmation dialog (same structure as core modal confirmations). #}
+<div class="modal fade" id="email-log-delete-modal" tabindex="-1" role="dialog"
+     aria-labelledby="email-log-delete-title">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header panel-heading">
+                <button type="button" class="close" data-dismiss="modal"
+                        aria-label="{{ lang.query('Close')|json_encode(15) }}">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title" id="email-log-delete-title">{{ devicemonitor_t('Delete entry') }}</h4>
+            </div>
+            <div class="modal-body" style="padding:24px;">
+                <p id="email-log-delete-text"></p>
+            </div>
+            <div class="modal-footer" style="padding:16px 24px;">
+                <button type="button" class="btn btn-default" data-dismiss="modal">{{ devicemonitor_t('Cancel') }}</button>
+                <button type="button" class="btn btn-danger" id="email-log-delete-confirm">{{ devicemonitor_t('Delete') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     function emailLogText() {
         return {
@@ -350,9 +388,19 @@
             allNodes: {{ lang.query('Showing records from this node and the configured peer.')|json_encode(15) }},
             partialData: {{ lang.query('Incomplete data:')|json_encode(15) }},
             viewFailed: {{ lang.query('Could not load this message')|json_encode(15) }},
-            events: {{ lang.query('events')|json_encode(15) }},
+            eventSingular: {{ lang.query('event')|json_encode(15) }},
+            eventPlural: {{ lang.query('events')|json_encode(15) }},
             noDelivery: {{ lang.query('No delivery details recorded')|json_encode(15) }},
-            queueId: {{ lang.query('Queue ID')|json_encode(15) }}
+            queueId: {{ lang.query('Queue ID')|json_encode(15) }},
+            delete: {{ lang.query('Delete')|json_encode(15) }},
+            restore: {{ lang.query('Restore')|json_encode(15) }},
+            remoteLocked: {{ lang.query('This entry belongs to the configured peer; delete and restore are available only on the node that owns it.')|json_encode(15) }},
+            confirmDelete: {{ lang.query('Remove this entry from the active log? Its message and delivery history will be retained under the existing retention policy.')|json_encode(15) }},
+            confirmRestore: {{ lang.query('Return this entry to the active log?')|json_encode(15) }},
+            deleteTitle: {{ lang.query('Delete entry')|json_encode(15) }},
+            restoreTitle: {{ lang.query('Restore entry')|json_encode(15) }},
+            changeFailed: {{ lang.query('The entry could not be changed')|json_encode(15) }},
+            changed: {{ lang.query('Entry updated')|json_encode(15) }}
         };
     }
 
@@ -366,6 +414,14 @@
         }
 
         var scope = 'local';
+
+        /* Remote rows are read-only from this node. The note follows the scope and
+         * the visibility: Local + All entries can carry peer rows when a peer is
+         * configured, so a disabled action there is never left unexplained. */
+        function refreshRemoteNote() {
+            var mayCarryPeer = scope !== 'local' || $('#email-log-visibility').val() === 'all';
+            $('#email-log-remote-note').toggle(mayCarryPeer).text(mayCarryPeer ? text.remoteLocked : '');
+        }
 
         function setScopeNote(data) {
             var $note = $('#email-log-scope-note');
@@ -405,7 +461,8 @@
                     per_page: perPage,
                     type: $('#email-log-type').val(),
                     status: $('#email-log-status').val(),
-                    search: $('#email-log-search').val()
+                    search: $('#email-log-search').val(),
+                    visibility: $('#email-log-visibility').val()
                 }
             }).fail(function (xhr) {
                 // A failed request must be visible, never an empty table.
@@ -419,6 +476,7 @@
                     $('#email-log-diagnostic').show().text(text.loadFailed);
                     return;
                 }
+                refreshRemoteNote();
                 if (scope !== 'local') {
                     setScopeNote(data);
                 } else {
@@ -461,6 +519,27 @@
                         .text(text.viewMessage)
                         .on('click', function () { openMessage(row.event_id, row.scope === 'peer'); })
                         .appendTo($detail);
+                    /* Delete/Restore act on this node's database only. A remote row is
+                     * shown with the action disabled and the reason attached, because no
+                     * secure cross-node mutation capability is configured. */
+                    var remote = row.scope === 'peer';
+                    var deleted = (row.deleted_utc || '') !== '';
+                    var $change = $('<button>').addClass('btn btn-default btn-xs')
+                        .css('margin-left', '4px')
+                        .attr('data-event-id', row.event_id)
+                        .attr('data-action', deleted ? 'restore' : 'delete')
+                        .prop('disabled', remote)
+                        .text(deleted ? text.restore : text.delete)
+                        .on('click', function () {
+                            confirmVisibility(row.event_id, !deleted);
+                        });
+                    if (remote) {
+                        /* A disabled control is not announced by assistive technology,
+                         * so the explanation travels on the control and again in the
+                         * dialog: the peer's log is read-only from this node. */
+                        $change.attr('title', text.remoteLocked).attr('aria-describedby', 'email-log-remote-note');
+                    }
+                    $change.appendTo($detail);
                     $tr.append($detail);
                     $body.append($tr);
                 });
@@ -479,8 +558,9 @@
         }
 
         function setTimelineCount(count) {
+            var label = count === 1 ? text.eventSingular : text.eventPlural;
             $('#email-log-message-timeline-count').text(
-                count > 0 ? '(' + count + ' ' + text.events + ')' : ''
+                count > 0 ? '(' + count + ' ' + label + ')' : ''
             );
         }
 
@@ -585,15 +665,88 @@
             });
         }
 
-        $('#email-log-type, #email-log-status').on('change', function () { page = 1; load(); });
+        $('#email-log-type, #email-log-status, #email-log-visibility').on('change', function () { page = 1; load(); });
         $('#email-log-search').on('input', function () { page = 1; load(); });
+
+        /* Clear filters resets search, type and status to their defaults, returns to
+         * page one and refreshes once. The Local/Peer/All scope and the Active/
+         * Deleted/All visibility choice are deliberately left as they are. */
+        $('#email-log-clear').on('click', function () {
+            $('#email-log-search').val('');
+            $('#email-log-type').val('');
+            $('#email-log-status').val('');
+            $('#email-log-type, #email-log-status').selectpicker('refresh');
+            page = 1;
+            load();
+        });
+
+        var $pendingDelete = null;
+
+        /* The standard confirmation step for every visibility change. Delete uses
+         * the policy wording the operator approved; restore states plainly that the
+         * entry returns to the active log. */
+        function confirmVisibility(eventId, deleted) {
+            $pendingDelete = { eventId: eventId, deleted: !!deleted };
+            $('#email-log-delete-title').text(deleted ? text.deleteTitle : text.restoreTitle);
+            $('#email-log-delete-text').text(deleted ? text.confirmDelete : text.confirmRestore);
+            $('#email-log-delete-confirm')
+                .toggleClass('btn-danger', deleted)
+                .toggleClass('btn-primary', !deleted)
+                .text(deleted ? text.delete : text.restore);
+            $('#email-log-delete-modal')
+                .one('hidden.bs.modal.emailfocus', function () {
+                    var $opener = $('button[data-event-id]').filter(function () {
+                        return $(this).attr('data-event-id') === eventId;
+                    });
+                    if ($opener.length) { $opener.first().trigger('focus'); }
+                })
+                .modal('show');
+        }
+
+        $('#email-log-delete-confirm').on('click', function () {
+            var pending = $pendingDelete;
+            $pendingDelete = null;
+            $('#email-log-delete-modal').modal('hide');
+            if (pending) { changeVisibility(pending.eventId, pending.deleted); }
+        });
+
+        /* Soft delete/restore only: the server changes the visibility marker and
+         * leaves the body, event id, status and timeline intact. Postfix queues,
+         * mailboxes and delivery behaviour are never touched. */
+        function changeVisibility(eventId, deleted) {
+            $.ajax({
+                url: deleted
+                    ? '/api/devicemonitor/emaillog/delete'
+                    : '/api/devicemonitor/emaillog/restore',
+                type: 'POST',
+                dataType: 'json',
+                data: { event_id: eventId }
+            }).fail(function (xhr) {
+                $('#email-log-diagnostic').show().text(text.changeFailed +
+                    ' (HTTP ' + (xhr && xhr.status ? xhr.status : '?') + ')');
+            }).done(function (data) {
+                if (!data || data.result !== 'ok') {
+                    $('#email-log-diagnostic').show().text(text.changeFailed +
+                        (data && data.message ? ': ' + data.message : ''));
+                    return;
+                }
+                $('#email-log-diagnostic').hide();
+                load();
+            });
+        }
         $('#email-log-prev').on('click', function () { if (page > 1) { page--; load(); } });
         $('#email-log-next').on('click', function () { page++; load(); });
         $('#email-log-export').on('click', function () {
             $.ajax({
                 url: '/api/devicemonitor/emaillog/exportcsv',
                 type: 'POST',
-                dataType: 'json'
+                dataType: 'json',
+                data: {
+                    type: $('#email-log-type').val(),
+                    status: $('#email-log-status').val(),
+                    search: $('#email-log-search').val(),
+                    visibility: $('#email-log-visibility').val()
+                }
             }).done(function (data) {
                 if (data.result !== 'ok') { return; }
                 var blob = new Blob([data.csv], { type: 'text/csv;charset=utf-8' });

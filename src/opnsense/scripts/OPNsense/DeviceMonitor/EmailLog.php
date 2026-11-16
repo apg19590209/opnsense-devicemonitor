@@ -37,6 +37,13 @@ class EmailLog
     const TYPE_SERVICE = 'service';
     const TYPE_IDENTITY = 'identity';
 
+    /* Visibility values the log query and CSV export accept. 'active' is the
+     * default so a deleted entry disappears from the normal view without ever
+     * being removed from storage. */
+    const VISIBILITY_ACTIVE = 'active';
+    const VISIBILITY_DELETED = 'deleted';
+    const VISIBILITY_ALL = 'all';
+
     private $dbFile;
     private $diagnostic = null;
 
@@ -152,6 +159,23 @@ class EmailLog
                 }
             }
             $db->exec('PRAGMA user_version = 2');
+            $version = 2;
+        }
+        /* Version 3 adds soft deletion. The column defaults to 0, so every existing
+         * and newly captured entry stays visible until an operator deletes it. The
+         * upgrade only adds the column when it is absent, so it is repeatable and
+         * never touches stored rows. */
+        if ($version < 3) {
+            $columns = [];
+            $res = $db->query('PRAGMA table_info(email_log)');
+            while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+                $columns[] = $row['name'];
+            }
+            if (!in_array('deleted_utc', $columns, true)) {
+                $db->exec("ALTER TABLE email_log ADD COLUMN deleted_utc TEXT NOT NULL DEFAULT ''");
+            }
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_email_log_visibility ON email_log(deleted_utc)');
+            $db->exec('PRAGMA user_version = 3');
         }
         $db->exec('CREATE INDEX IF NOT EXISTS idx_email_log_created ON email_log(created_utc)');
         $db->exec('CREATE INDEX IF NOT EXISTS idx_email_log_type ON email_log(notification_type)');
@@ -506,10 +530,12 @@ class EmailLog
         }
     }
 
-    public function query(array $filters = [], $limit = 50, $offset = 0)
+    /**
+     * WHERE clause shared by the list query and the CSV export, so search, type,
+     * status and visibility always bound the same set of rows.
+     */
+    private function filterClause(array $filters)
     {
-        $limit = max(1, min(500, (int)$limit));
-        $offset = max(0, (int)$offset);
         $where = [];
         $args = [];
         if (!empty($filters['type'])) { $where[] = 'notification_type = :t'; $args[':t'] = $filters['type']; }
@@ -518,6 +544,96 @@ class EmailLog
             $where[] = '(subject LIKE :q ESCAPE \'\\\' OR recipient LIKE :q ESCAPE \'\\\')';
             $args[':q'] = '%' . str_replace(['%', '_', '\\'], ['\%', '\_', '\\\\'], $filters['search']) . '%';
         }
+        $visibility = (string)($filters['visibility'] ?? self::VISIBILITY_ACTIVE);
+        if ($visibility === self::VISIBILITY_DELETED) {
+            $where[] = "deleted_utc <> ''";
+        } elseif ($visibility !== self::VISIBILITY_ALL) {
+            $where[] = "deleted_utc = ''";
+        }
+        return [$where, $args];
+    }
+
+    /**
+     * Every row matching the filters, newest first, for the CSV export. The caller
+     * bounds the result; the same filterClause keeps export and list consistent.
+     */
+    public function exportRows(array $filters = [], $limit = 500)
+    {
+        $limit = max(1, min(500, (int)$limit));
+        list($where, $args) = $this->filterClause($filters);
+        $sql = 'SELECT * FROM email_log';
+        if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
+        $sql .= ' ORDER BY created_utc DESC, id DESC LIMIT :l';
+        try {
+            $db = $this->connect();
+            $this->ensureSchema($db);
+            $stmt = $db->prepare($sql);
+            foreach ($args as $k => $v) { $stmt->bindValue($k, $v, SQLITE3_TEXT); }
+            $stmt->bindValue(':l', $limit, SQLITE3_INTEGER);
+            $res = $stmt->execute();
+            $rows = [];
+            while ($row = $res->fetchArray(SQLITE3_ASSOC)) { $rows[] = $row; }
+            $db->close();
+            return $rows;
+        } catch (\Throwable $e) {
+            $this->fail($e->getMessage());
+            return [];
+        }
+    }
+
+    /** Soft-delete one entry: only the visibility marker changes. */
+    public function markDeleted($eventId)
+    {
+        return $this->setVisibility($eventId, true);
+    }
+
+    /** Restore a soft-deleted entry to the active log. */
+    public function restore($eventId)
+    {
+        return $this->setVisibility($eventId, false);
+    }
+
+    /**
+     * Set or clear the visibility marker. Message content, the event id, the
+     * transport status and the complete timeline are never touched, and the
+     * 30-day retention policy is unchanged: a deleted entry still expires with
+     * its retained rows exactly as an active one does.
+     */
+    private function setVisibility($eventId, $deleted)
+    {
+        $eventId = (string)$eventId;
+        if (!preg_match('/^[0-9a-f]{32}$/', $eventId)) {
+            $this->fail('Invalid message reference');
+            return null;
+        }
+        try {
+            $db = $this->connect();
+            $this->ensureSchema($db);
+            $stmt = $db->prepare('UPDATE email_log SET deleted_utc = :d, updated_utc = :u
+                WHERE event_id = :e AND deleted_utc ' . ($deleted ? '= \'\'' : '<> \'\''));
+            $stmt->bindValue(':d', $deleted ? gmdate('Y-m-d H:i:s') : '', SQLITE3_TEXT);
+            $stmt->bindValue(':u', gmdate('Y-m-d H:i:s'), SQLITE3_TEXT);
+            $stmt->bindValue(':e', $eventId, SQLITE3_TEXT);
+            $stmt->execute();
+            $changed = $db->changes();
+            $db->close();
+            if ($changed < 1) {
+                $this->fail($deleted ? 'Entry is already deleted or no longer retained'
+                    : 'Entry is not deleted or no longer retained');
+                return null;
+            }
+            return true;
+        } catch (\Throwable $e) {
+            $this->fail($e->getMessage());
+            return null;
+        }
+    }
+
+    public function query(array $filters = [], $limit = 50, $offset = 0)
+    {
+        $limit = max(1, min(500, (int)$limit));
+        $offset = max(0, (int)$offset);
+        list($where, $args) = $this->filterClause($filters);
         $sql = 'SELECT * FROM email_log';
         if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
         $sql .= ' ORDER BY created_utc DESC, id DESC LIMIT :l OFFSET :o';

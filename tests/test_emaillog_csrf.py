@@ -30,12 +30,13 @@ def test_layout_installs_the_csrf_hook_before_use():
 def test_no_request_is_fired_outside_ready():
     src = VIEW.read_text(encoding='utf-8')
     ready_at = src.index('$(document).ready(function () {')
-    # Every bare statement invoking load() must come after the ready handler.
-    for match in re.finditer(r'^\s*load\(\);\s*$', src, re.M):
-        assert match.start() > ready_at, 'load() invoked before the CSRF hook exists'
-    # The only such invocation is the deferred one.
-    bare = re.findall(r'^\s*load\(\);\s*$', src, re.M)
-    assert len(bare) == 1, bare
+    # No request may be issued from top-level script code, which runs before the
+    # layout's ready hook exists; handlers bound in the body run only on events,
+    # and the initial request still waits for ready explicitly.
+    assert not re.search(r'^load\(\);', src, re.M), 'unconditional load() at script top level'
+    initial = src.index('$(document).ready(function () {')
+    assert src.index('load();', initial) > initial, 'the initial request waits for ready'
+    assert 'email-log-clear' in src, 'handler-bound refreshes come from controls'
     print('EMAIL_LOG_NO_EARLY_REQUEST=PASS')
 
 
@@ -49,11 +50,14 @@ def test_all_requests_use_the_shared_helper():
         '/api/devicemonitor/emaillog/message',
         '/api/devicemonitor/emaillog/peermessageview',
         '/api/devicemonitor/emaillog/exportcsv',
+        '/api/devicemonitor/emaillog/delete',
+        '/api/devicemonitor/emaillog/restore',
     }
     for endpoint in endpoints:
         assert endpoint in src, f'{endpoint} missing from the page'
     posts = src.count("type: 'POST'")
-    assert posts == 3, f'expected 3 ajax POSTs (search/combined share one), found {posts}'
+    # search/combined share one call path, export one, and delete/restore one.
+    assert posts == 4, f'expected 4 ajax POSTs (search/combined share one), found {posts}'
     code = '\n'.join(ln for ln in src.splitlines() if not ln.strip().startswith(('*', '/*', '//', '<!--')))
     assert 'setRequestHeader' not in code, 'the page must not hand-roll token handling'
     assert 'csrf_token' not in code, 'the page must not read the token directly'

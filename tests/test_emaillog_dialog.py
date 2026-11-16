@@ -24,7 +24,7 @@ def test_structure_matches_core():
     start = src.rindex('<div', 0, src.index('id="email-log-message-modal"'))
     block = src[start:src.index('class="modal-footer"') + 400]
     for token in ('class="modal fade"', 'class="modal-dialog modal-lg"', 'class="modal-content"',
-                  'class="modal-header"', 'class="modal-title"', 'class="modal-body'):
+                  'class="modal-header', 'class="modal-title"', 'class="modal-body'):
         assert token in block, token
     assert 'role="dialog"' in block, 'dialog role missing'
     assert 'aria-labelledby="email-log-message-title"' in block, 'dialog must reference its title'
@@ -180,8 +180,10 @@ def test_delivery_disclosure_pattern():
     assert "$('#email-log-message-timeline-disclosure').on('click'" in src, 'click activates'
     assert 'setTimelineExpanded(false)' in src, 'each open starts collapsed'
     assert 'id="email-log-message-timeline-count"' in src, 'event count placeholder present'
-    assert "count + ' ' + text.events" in src and "'(' + count" in js, \
-        'the count is rendered in the heading, e.g. (3 events)'
+    assert "'(' + count + ' ' + label + ')'" in js, 'the count is rendered in the heading, e.g. (3 events)'
+    assert "count === 1 ? text.eventSingular : text.eventPlural" in js, \
+        'one event is singular, several are plural'
+    assert "lang.query('event')" in src and "lang.query('events')" in src, 'both labels are translated'
     assert "devicemonitor_t('Delivery details')" in src, 'heading text is the translated Delivery details'
     assert 'noDelivery' in src and 'No delivery details recorded' in src, 'empty wording translated'
     assert 'id="email-log-message-no-delivery"' in src and 'hidden' in \
@@ -202,8 +204,10 @@ def test_one_row_action_opens_everything():
     src = VIEW.read_text(encoding='utf-8')
     start = src.index('rows.forEach(function (row) {')
     loop = src[start:src.index("$('#email-log-empty')", start)]
-    assert loop.count("addClass(") == 1, \
-        'exactly one button per row: a second row action would duplicate the view'
+    assert loop.count("$('<button>')") == 2, \
+        'View message plus exactly one Delete/Restore control per row'
+    assert loop.count("openMessage(") == 1, 'only View message opens the dialog'
+    assert "data-action" in loop and 'confirmVisibility' in loop, 'Delete/Restore is its own action'
     assert 'text.diagnostics' not in loop and "'Timeline'" not in loop, 'no separate Timeline action'
     assert "<tr>').hide()" not in loop and 'closest(\'tr\').next()' not in loop, \
         'no inline table timeline expansion'
@@ -215,6 +219,43 @@ def test_one_row_action_opens_everything():
     for part in ('email-log-message-meta', 'email-log-message-body', 'email-log-message-timeline', 'm.timeline'):
         assert part in dlg, f'{part} missing from the dialog'
     print('DIALOG_ONE_MESSAGE_VIEW=PASS')
+
+
+def test_clear_filters_and_visibility():
+    src = VIEW.read_text(encoding='utf-8')
+    assert 'id="email-log-clear"' in src, 'Clear filters button missing'
+    clear_at = src.index("$('#email-log-clear').on('click'")
+    body = src[clear_at:src.index('});', clear_at) + 3]
+    for control in ('#email-log-search', '#email-log-type', '#email-log-status'):
+        assert control in body and ".val('')" in body, f'{control} must be reset'
+    assert 'page = 1' in body, 'pagination returns to page one'
+    assert body.count('load()') == 1, 'exactly one refresh'
+    assert 'email-log-visibility' not in body, 'the visibility choice is not a search filter'
+    assert "scope =" not in body, 'the Local/Peer/All scope is preserved'
+    vis = src[src.index('id="email-log-visibility"'):]
+    vis = vis[:vis.index('</select>')]
+    assert 'value="active" selected' in vis and 'value="deleted"' in vis and 'value="all"' in vis, \
+        'Active/Deleted/All visibility with Active as the default'
+    assert "visibility: $('#email-log-visibility').val()" in src, 'filters carry the visibility'
+    print('DIALOG_CLEAR_AND_VISIBILITY=PASS')
+
+
+def test_soft_delete_controls():
+    src = VIEW.read_text(encoding='utf-8')
+    confirm = ("Remove this entry from the active log? Its message and delivery history will be "
+               "retained under the existing retention policy.")
+    assert confirm in src, 'the approved confirmation wording must be shown verbatim'
+    assert 'email-log-delete-modal' in src and 'modal fade' in src, 'standard confirmation dialog'
+    assert "data-dismiss=\"modal\"" in src[src.index('email-log-delete-modal'):], 'confirmation can be cancelled'
+    assert ".prop('disabled', remote)" in src, 'remote rows disable delete/restore'
+    assert 'remoteLocked' in src and 'aria-describedby' in src, 'remote explanation reaches assistive tech'
+    assert "'/api/devicemonitor/emaillog/delete'" in src and "'/api/devicemonitor/emaillog/restore'" in src
+    assert 'changeVisibility' in src and 'confirmVisibility' in src
+    code = '\n'.join(ln for ln in src.splitlines()
+                     if not ln.strip().startswith(('*', '/*', '//', '<!--', '{#')))
+    for forbidden in ('postfix', 'postsuper', 'postqueue', '/mail', 'mailq'):
+        assert forbidden not in code.lower(), f'the page must not touch {forbidden}'
+    print('DIALOG_SOFT_DELETE=PASS')
 
 
 def test_retrieval_errors_and_no_send():
@@ -251,6 +292,32 @@ def test_legacy_rows_keep_delivery():
     print('DIALOG_LEGACY_CONTENT=PASS')
 
 
+def test_header_reuses_the_panel_header_style():
+    """The subject header takes the theme's panel-header background, not a colour."""
+    src = VIEW.read_text(encoding='utf-8')
+    start = src.index('id="email-log-message-modal"')
+    dialog = src[src.rindex('<div', 0, start):]
+    header = dialog[dialog.index('class="modal-header'):]
+    header = header[:header.index('>')]
+    assert 'panel-heading' in header, 'header must reuse the framework panel-header class'
+    css = src[src.index('<style>'):src.index('</style>')]
+    assert 'background' not in css[css.index('.modal-header {'):css.index('}', css.index('.modal-header {'))], \
+        'no page-local header background'
+    assert 'linear-gradient' not in css and 'rgba(0, 0, 0, 0.0' not in css, 'no gradients or hand-mixed colours'
+    if CORE_CSS.is_file():
+        light = CORE_CSS.read_text(errors='ignore')
+        assert '.panel-default > .panel-heading {' in light and 'background-color: #f5f5f5' in light, \
+            'light theme panel-header rule missing'
+        dark = Path('/usr/local/opnsense/www/themes/opnsense-dark/build/css/main.css')
+        if dark.is_file():
+            d = dark.read_text(errors='ignore')
+            block = d[d.index('.panel-default > .panel-heading {'):]
+            block = block[:block.index('}')]
+            assert 'background-color: rgb(' in block and 'color:' in block, \
+                'dark theme must supply its own header background and paired text colour'
+    print('DIALOG_HEADER_THEME=PASS')
+
+
 def test_plain_text_preserved():
     src = VIEW.read_text(encoding='utf-8')
     assert "$('#email-log-message-body').text(" in src, 'body must be rendered as text'
@@ -279,9 +346,12 @@ def main():
     test_structure_matches_core()
     test_core_scrolling_is_reused_not_duplicated()
     test_padded_body_and_sections()
+    test_header_reuses_the_panel_header_style()
     test_header_clears_fixed_navigation()
     test_delivery_disclosure_pattern()
     test_one_row_action_opens_everything()
+    test_clear_filters_and_visibility()
+    test_soft_delete_controls()
     test_retrieval_errors_and_no_send()
     test_legacy_rows_keep_delivery()
     test_no_small_custom_typography()

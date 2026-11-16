@@ -149,6 +149,7 @@ class PeerClient
             'type' => (string)($filters['type'] ?? ''),
             'status' => (string)($filters['status'] ?? ''),
             'search' => (string)($filters['search'] ?? ''),
+            'visibility' => (string)($filters['visibility'] ?? 'active'),
         ]);
         if (!$result['available']) {
             return $result;

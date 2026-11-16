@@ -3279,3 +3279,45 @@ lookup actions send mail. `tests/test_emaillog_message_action.py` asserts the si
 Installed on `.23` on 17 November 2026 (candidate `a2702590…` volt / `b84d0ddc…` php) with the
 operator's settings and all 20 email-log rows preserved, including preview
 `210c1c39a10f9d4de5f44bacab912b20`.
+
+## 72. Email-log entries are soft-deleted, visibility-bounded and peer rows are read-only
+
+### Decision
+
+The Email Log list offers Clear filters (resetting search, type and status, page one, a single
+refresh) without changing the Local/Peer/All scope or the visibility choice.
+
+Deleting an entry is **soft**: the recorder sets a `deleted_utc` marker (schema version 3, added
+additively when absent). The message content, event id, transport status and every timeline event
+remain in storage, and the normal 30-day retention policy is unchanged — a deleted entry expires
+with its retained rows exactly like an active one. It is not an archive. Restore clears the marker.
+Repeated or conflicting operations are refused with a message.
+
+The Active / Deleted / All visibility filter defaults to Active and is applied by the same shared
+filter clause in the list query, the combined view, the peer page and the CSV export, so search,
+type, status, visibility and pagination always bound the same set. An unknown visibility value
+falls back to Active.
+
+Delete and Restore are POST actions behind the framework's authentication, page ACL
+(`api/devicemonitor/*`) and per-request token check, plus an explicit refusal for users holding
+`user-config-readonly`; a read-only account or API key cannot change an entry. Remote (peer) rows
+are never mutated from this node: the actions are disabled with an explanation, because no secure
+cross-node mutation capability exists. The peer endpoints remain read-only. No mutation touches
+Postfix queues, mailboxes or delivery behaviour.
+
+### Reason
+
+Operators need to remove an entry from the working view without losing the evidence needed to
+investigate a delivery, and without the UI implying that deleted entries are kept indefinitely.
+Applying one visibility clause to every read path prevents a count, page or export from
+disagreeing with the list.
+
+### Tests and evidence
+
+`tests/test_email_log_visibility.php` covers delete/restore persistence, retention of content,
+status and timeline, every visibility/search/type/status combination, filtered pagination without
+overlap, repeated and invalid operations, pruning of deleted entries under the unchanged policy,
+and the additive repeatable upgrade. `tests/test_emaillog_visibility_api.py` covers visibility on
+every read path, the closed value set, the write gate ordering, the read-only peer endpoints,
+no mail is touched, and remote rows staying disabled. `tests/test_emaillog_dialog.py` covers Clear
+filters, the visibility control, the confirmation wording and the event-count pluralisation.

@@ -75,9 +75,11 @@ $oldLog = new OPNsense\DeviceMonitor\EmailLog($old);
 $legacy = $oldLog->messageDetail('legacy1');
 check($legacy !== null && $legacy['subject'] === 'old', 'existing row preserved through upgrade');
 check(array_key_exists('content_text', $legacy) && $legacy['content_text'] === null, 'upgrade added content column with NULL');
-check((new SQLite3($old))->querySingle('PRAGMA user_version') == 2, 'schema version recorded');
+check((new SQLite3($old))->querySingle('PRAGMA user_version') == 3, 'schema version recorded');
 $oldLog->messageDetail('legacy1');
-check((new SQLite3($old))->querySingle('PRAGMA user_version') == 2, 'upgrade is repeatable');
+check((new SQLite3($old))->querySingle('PRAGMA user_version') == 3, 'upgrade is repeatable');
+check(array_key_exists('deleted_utc', $legacy) && $legacy['deleted_utc'] === '', 'upgrade added the visibility column with existing rows active');
+check((new SQLite3($old))->querySingle("SELECT COUNT(*) FROM pragma_table_info('email_log') WHERE name='deleted_utc'") == 1, 'visibility column added exactly once');
 
 /* 8. no credential columns exist */
 $cols = [];

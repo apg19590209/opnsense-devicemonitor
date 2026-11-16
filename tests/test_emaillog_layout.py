@@ -44,7 +44,13 @@ def test_initialisation_follows_the_lifecycle():
     neither double-initialise nor refresh static options per request."""
     src = VIEW.read_text(encoding='utf-8')
     assert ".selectpicker();" not in src, 'explicit initialisation would duplicate the plugin hook'
-    assert ".selectpicker('refresh')" not in src, 'options are static; no per-request refresh'
+    # Options are static, so a refresh is only legitimate when Clear filters resets
+    # the value programmatically; no per-request refresh belongs in load().
+    load_body = src[src.index('function load()'):src.index('function setScopeNote')]
+    assert ".selectpicker('refresh')" not in load_body, 'no per-request refresh in load()'
+    clear_at = src.index("$('#email-log-clear').on('click'")
+    clear_body = src[clear_at:clear_at + 600]
+    assert ".selectpicker('refresh')" in clear_body, 'Clear filters must repaint the reset selects'
     ready_at = src.index('$(document).ready(function () {')
     load_at = src.index('load();', ready_at)
     assert load_at > ready_at, 'the first request must still wait for ready (CSRF hook)'

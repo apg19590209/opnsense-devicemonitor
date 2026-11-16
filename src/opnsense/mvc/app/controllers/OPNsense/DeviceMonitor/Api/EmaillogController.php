@@ -23,6 +23,34 @@ class EmaillogController extends ApiControllerBase
         return \OPNsense\DeviceMonitor\EmailLog::instance();
     }
 
+    /**
+     * Visibility selector shared by every read path. Anything other than the two
+     * explicit values falls back to the active log, so a mistyped request can
+     * never widen or hide more than the default view.
+     */
+    private function visibilityFilter()
+    {
+        $value = (string)$this->request->getPost('visibility', 'string', 'active');
+        return in_array($value, ['active', 'deleted', 'all'], true) ? $value : 'active';
+    }
+
+    /**
+     * Write gate for delete/restore. The framework base class already enforces
+     * authentication, the page ACL (api/devicemonitor/*) and the per-request token
+     * check on POST. On top of that, a user carrying user-config-readonly is
+     * refused, so a read-only account or read-only API key can never change a log
+     * entry.
+     */
+    private function requireWriteAccess()
+    {
+        try {
+            $this->throwReadOnly();
+        } catch (\Throwable $e) {
+            return false;
+        }
+        return true;
+    }
+
     private function nodeFacts()
     {
         require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailLog.php');
@@ -46,6 +74,7 @@ class EmaillogController extends ApiControllerBase
             'type' => (string)$this->request->getPost('type', 'string', ''),
             'status' => (string)$this->request->getPost('status', 'string', ''),
             'search' => (string)$this->request->getPost('search', 'string', ''),
+            'visibility' => $this->visibilityFilter(),
         ];
         $log = $this->recorder();
         $rows = $log->query($filters, $perPage, ($page - 1) * $perPage);
@@ -54,13 +83,14 @@ class EmaillogController extends ApiControllerBase
         // escaped exactly once at render time. Encoding here would double-escape.
         $fields = ['event_id', 'created_utc', 'updated_utc', 'node_id', 'node_ip', 'node_role',
             'notification_type', 'recipient', 'subject', 'status', 'status_detail', 'transport',
-            'queue_id', 'message_id'];
+            'queue_id', 'message_id', 'deleted_utc'];
         $safe = [];
         foreach ($rows as $row) {
             $clean = [];
             foreach ($fields as $field) {
                 $clean[$field] = (string)($row[$field] ?? '');
             }
+            $clean['scope'] = 'local';
             $timeline = [];
             foreach (($row['timeline'] ?? []) as $step) {
                 $timeline[] = [
@@ -198,6 +228,7 @@ class EmaillogController extends ApiControllerBase
             'type' => (string)$this->request->getPost('type', 'string', ''),
             'status' => (string)$this->request->getPost('status', 'string', ''),
             'search' => (string)$this->request->getPost('search', 'string', ''),
+            'visibility' => $this->visibilityFilter(),
         ];
         $log = $this->recorder();
         $localRows = $log->query($filters, \OPNsense\DeviceMonitor\EmailLogAggregate::MAX_PAGE, 0);
@@ -221,6 +252,10 @@ class EmaillogController extends ApiControllerBase
             }
         }
 
+        foreach ($localRows as &$localRow) {
+            $localRow['scope'] = 'local';
+        }
+        unset($localRow);
         $combined = \OPNsense\DeviceMonitor\EmailLogAggregate::combine(
             $localRows, $peer, $localTag, $peerTag, $perPage, ($page - 1) * $perPage
         );
@@ -255,11 +290,13 @@ class EmaillogController extends ApiControllerBase
             'type' => (string)$this->request->getPost('type', 'string', ''),
             'status' => (string)$this->request->getPost('status', 'string', ''),
             'search' => (string)$this->request->getPost('search', 'string', ''),
+            'visibility' => $this->visibilityFilter(),
         ];
         $log = $this->recorder();
         $rows = $log->query($filters, $perPage, ($page - 1) * $perPage);
         $fields = ['event_id', 'created_utc', 'updated_utc', 'node_id', 'node_ip', 'node_role',
-            'notification_type', 'recipient', 'subject', 'status', 'status_detail', 'queue_id', 'has_content'];
+            'notification_type', 'recipient', 'subject', 'status', 'status_detail', 'queue_id',
+            'deleted_utc', 'has_content'];
         $safe = [];
         foreach ($rows as $row) {
             $clean = [];
@@ -358,6 +395,47 @@ class EmaillogController extends ApiControllerBase
         return;
     }
 
+    /**
+     * POST /api/devicemonitor/emaillog/delete
+     *
+     * Soft deletion of one local entry: only the visibility marker is set; the
+     * captured body, event id, transport status and timeline events are left in
+     * place, and the 30-day retention policy is unchanged. Remote (peer) rows are
+     * never mutated here: this node cannot write another node's database and no
+     * secure cross-node mutation capability exists.
+     */
+    public function deleteAction()
+    {
+        return $this->setVisibilityAction(true);
+    }
+
+    /** POST /api/devicemonitor/emaillog/restore */
+    public function restoreAction()
+    {
+        return $this->setVisibilityAction(false);
+    }
+
+    private function setVisibilityAction($deleted)
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed', 'message' => 'POST required'];
+        }
+        if (!$this->requireWriteAccess()) {
+            $this->response->setStatusCode(403, 'Forbidden');
+            return ['result' => 'forbidden', 'message' => 'Write access is required to change the email log.'];
+        }
+        $eventId = (string)$this->request->getPost('event_id', 'string', '');
+        if ($eventId === '' || !preg_match('/^[0-9a-f]{32}$/', $eventId)) {
+            return ['result' => 'failed', 'message' => 'Invalid message reference'];
+        }
+        $log = $this->recorder();
+        $result = $deleted ? $log->markDeleted($eventId) : $log->restore($eventId);
+        if ($result !== true) {
+            return ['result' => 'failed', 'message' => $log->lastDiagnostic() ?: 'No change'];
+        }
+        return ['result' => 'ok', 'deleted' => (bool)$deleted, 'event_id' => $eventId];
+    }
+
     /** POST /api/devicemonitor/emaillog/exportcsv */
     public function exportcsvAction()
     {
@@ -365,7 +443,14 @@ class EmaillogController extends ApiControllerBase
             return ['result' => 'failed', 'message' => 'POST required'];
         }
         $log = $this->recorder();
-        $rows = $log->query([], 200, 0);
+        /* Same filters and visibility as the list: Active exports the active log,
+         * Deleted the deleted set and All both. */
+        $rows = $log->exportRows([
+            'type' => (string)$this->request->getPost('type', 'string', ''),
+            'status' => (string)$this->request->getPost('status', 'string', ''),
+            'search' => (string)$this->request->getPost('search', 'string', ''),
+            'visibility' => $this->visibilityFilter(),
+        ], 200);
         $header = ['created_utc', 'node_ip', 'node_role', 'notification_type', 'recipient', 'subject', 'status', 'status_detail', 'queue_id'];
         $lines = [implode(',', $header)];
         // Neutralise spreadsheet formula injection: a leading = + - @ (or tab/CR) is
