@@ -58,6 +58,12 @@
     "sidecar_translation_enabled": "1",
     "ha_carp_enabled": "1",
     "ha_role_override": "auto",
-    "ha_notify_failover": "0"
+    "ha_notify_failover": "0",
+    "email_log_peer_enabled": "0",
+    "email_log_peer_url": "",
+    "email_log_peer_api_key": "",
+    "email_log_peer_api_secret": "",
+    "email_log_peer_ca_pem": "",
+    "email_log_peer_timeout": "8"
   }
 }

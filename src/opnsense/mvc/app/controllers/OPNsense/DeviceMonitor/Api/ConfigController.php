@@ -15,7 +15,11 @@ class ConfigController extends ApiControllerBase
     public function getAction()
     {
         $model = new DeviceMonitor();
-        return $model->getConfig();
+        $config = $model->getConfig();
+        /* The peer secret is write-only: expose only whether one is stored. */
+        $config['email_log_peer_secret_set'] = !empty($config['email_log_peer_api_secret']) ? '1' : '0';
+        unset($config['email_log_peer_api_secret']);
+        return $config;
     }
 
     public function getversionAction()
@@ -605,6 +609,12 @@ class ConfigController extends ApiControllerBase
         $scan_interval = $this->request->getPost('scan_interval', 'int', 300);
         $email_vlans = $this->request->getPost('email_vlans', 'string', '');
         $webhook_vlans = $this->request->getPost('webhook_vlans', 'string', '');
+        $peer_enabled = $this->request->getPost('email_log_peer_enabled', 'string', '0');
+        $peer_url = trim($this->request->getPost('email_log_peer_url', 'string', ''));
+        $peer_api_key = trim($this->request->getPost('email_log_peer_api_key', 'string', ''));
+        $peer_api_secret = $this->request->getPost('email_log_peer_api_secret', 'string', '');
+        $peer_ca_pem = (string)$this->request->getPost('email_log_peer_ca_pem', 'string', '');
+        $peer_timeout = (int)$this->request->getPost('email_log_peer_timeout', 'int', 8);
         $monitored_interfaces_raw = trim($this->request->getPost('monitored_interfaces', 'string', ''));
 
         $targeted_nmap_enabled = $this->request->getPost('targeted_nmap_enabled', 'string', '1');
@@ -896,6 +906,35 @@ class ConfigController extends ApiControllerBase
         $config['scan_interval'] = (int)$scan_interval;
         $config['email_vlans'] = $email_vlans;
         $config['webhook_vlans'] = $webhook_vlans;
+
+        /* Peer settings: the URL must be https and the secret is write-only. An
+         * empty secret field keeps whatever is stored; the value is never returned. */
+        if ($peer_enabled !== '0' && $peer_enabled !== '1') {
+            return ['result' => 'failed', 'message' => 'Invalid peer enabled value'];
+        }
+        if ($peer_url !== '') {
+            $parts = parse_url($peer_url);
+            if (!is_array($parts) || !isset($parts['scheme'], $parts['host'])
+                || strtolower($parts['scheme']) !== 'https'
+                || isset($parts['user']) || isset($parts['pass'])
+                || isset($parts['query']) || isset($parts['fragment'])) {
+                return ['result' => 'failed', 'message' => 'Peer URL must be an absolute https:// URL without credentials, query or fragment'];
+            }
+        }
+        if ($peer_timeout < 2 || $peer_timeout > 30) {
+            return ['result' => 'failed', 'message' => 'Peer timeout must be between 2 and 30 seconds'];
+        }
+        if ($peer_ca_pem !== '' && strpos($peer_ca_pem, 'BEGIN CERTIFICATE') === false) {
+            return ['result' => 'failed', 'message' => 'Peer CA must be PEM certificate content'];
+        }
+        $config['email_log_peer_enabled'] = $peer_enabled;
+        $config['email_log_peer_url'] = $peer_url;
+        $config['email_log_peer_api_key'] = $peer_api_key;
+        $config['email_log_peer_ca_pem'] = $peer_ca_pem;
+        $config['email_log_peer_timeout'] = (string)$peer_timeout;
+        if ($peer_api_secret !== '') {
+            $config['email_log_peer_api_secret'] = $peer_api_secret;
+        }
         $config['monitored_interfaces'] = implode(',', $monitored_interfaces);
         $config['targeted_nmap_enabled'] = $targeted_nmap_enabled;
         $config['nmap_top_ports'] = $nmap_top_ports;

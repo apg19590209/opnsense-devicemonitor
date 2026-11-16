@@ -156,6 +156,208 @@ class EmaillogController extends ApiControllerBase
         return;
     }
 
+    /**
+     * POST /api/devicemonitor/emaillog/peerpage
+     *
+     * Read-only page of this node's log, offered to an authenticated peer. It
+     * returns the same bounded row shape as the local search, without bodies, so a
+     * peer can aggregate without pulling content it does not need.
+     */
+    /** Peer settings from config.json, with secrets kept server-side. */
+    private function peerSettings()
+    {
+        $model = new \OPNsense\DeviceMonitor\DeviceMonitor();
+        $config = $model->getConfig();
+        return [
+            'enabled' => (string)($config['email_log_peer_enabled'] ?? '0') === '1',
+            'url' => (string)($config['email_log_peer_url'] ?? ''),
+            'api_key' => (string)($config['email_log_peer_api_key'] ?? ''),
+            'api_secret' => (string)($config['email_log_peer_api_secret'] ?? ''),
+            'ca_pem' => (string)($config['email_log_peer_ca_pem'] ?? ''),
+            'timeout' => (int)($config['email_log_peer_timeout'] ?? 8),
+        ];
+    }
+
+    /**
+     * POST /api/devicemonitor/emaillog/combined
+     *
+     * Local rows plus, when securely configured, the peer's rows for the same
+     * filters. Sorting and pagination apply to the combined set. A peer failure
+     * yields partial=true with the reason; the local half is always returned.
+     */
+    public function combinedAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed', 'message' => 'POST required'];
+        }
+        require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailLogAggregate.php');
+        require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/PeerClient.php');
+        $page = max(1, (int)$this->request->getPost('page', 'int', 1));
+        $perPage = max(10, min(200, (int)$this->request->getPost('per_page', 'int', 50)));
+        $filters = [
+            'type' => (string)$this->request->getPost('type', 'string', ''),
+            'status' => (string)$this->request->getPost('status', 'string', ''),
+            'search' => (string)$this->request->getPost('search', 'string', ''),
+        ];
+        $log = $this->recorder();
+        $localRows = $log->query($filters, \OPNsense\DeviceMonitor\EmailLogAggregate::MAX_PAGE, 0);
+
+        $localFacts = $this->nodeFacts();
+        $localTag = \OPNsense\DeviceMonitor\EmailLogAggregate::nodeTag(
+            ['host' => $localFacts['node_id'], 'ip' => $localFacts['node_ip'], 'role' => $localFacts['role']],
+            'local'
+        );
+
+        $settings = $this->peerSettings();
+        $peer = null;
+        $peerTag = ['scope' => 'peer', 'node_id' => '', 'node_ip' => '', 'role' => ''];
+        if ($settings['enabled']) {
+            $errors = \OPNsense\DeviceMonitor\PeerClient::validate($settings);
+            if (!empty($errors)) {
+                $peer = ['available' => false, 'reason' => implode(' ', $errors)];
+            } else {
+                $client = new \OPNsense\DeviceMonitor\PeerClient($settings);
+                $peer = $client->search($filters, \OPNsense\DeviceMonitor\EmailLogAggregate::MAX_PAGE, 0);
+            }
+        }
+
+        $combined = \OPNsense\DeviceMonitor\EmailLogAggregate::combine(
+            $localRows, $peer, $localTag, $peerTag, $perPage, ($page - 1) * $perPage
+        );
+
+        $this->response->setContentType('application/json', 'UTF-8');
+        $this->response->setContent([
+            'result' => 'ok',
+            'page' => $page,
+            'per_page' => $perPage,
+            'rows' => $combined['rows'],
+            'total' => $combined['total'],
+            'partial' => $combined['partial'],
+            'peer' => $combined['peer'],
+            'peer_enabled' => $settings['enabled'],
+            'local_node' => $localTag,
+        ], true);
+        return;
+    }
+
+    /** POST /api/devicemonitor/emaillog/peerpage
+     *
+     * Read-only page of this node's log, offered to an authenticated peer.
+     */
+    public function peerpageAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed', 'message' => 'POST required'];
+        }
+        $page = max(1, (int)$this->request->getPost('page', 'int', 1));
+        $perPage = max(10, min(200, (int)$this->request->getPost('per_page', 'int', 50)));
+        $filters = [
+            'type' => (string)$this->request->getPost('type', 'string', ''),
+            'status' => (string)$this->request->getPost('status', 'string', ''),
+            'search' => (string)$this->request->getPost('search', 'string', ''),
+        ];
+        $log = $this->recorder();
+        $rows = $log->query($filters, $perPage, ($page - 1) * $perPage);
+        $fields = ['event_id', 'created_utc', 'updated_utc', 'node_id', 'node_ip', 'node_role',
+            'notification_type', 'recipient', 'subject', 'status', 'status_detail', 'queue_id', 'has_content'];
+        $safe = [];
+        foreach ($rows as $row) {
+            $clean = [];
+            foreach ($fields as $field) {
+                $clean[$field] = $row[$field] ?? '';
+            }
+            $safe[] = $clean;
+        }
+        $this->response->setContentType('application/json', 'UTF-8');
+        $this->response->setContent([
+            'result' => 'ok',
+            'node' => $this->nodeFacts(),
+            'rows' => $safe,
+            'scope' => 'local',
+        ], true);
+        return;
+    }
+
+    /** POST /api/devicemonitor/emaillog/peermessage */
+    public function peermessageAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed', 'message' => 'POST required'];
+        }
+        $eventId = (string)$this->request->getPost('event_id', 'string', '');
+        if ($eventId === '' || !preg_match('/^[0-9a-f]{32}$/', $eventId)) {
+            return ['result' => 'failed', 'message' => 'Invalid message reference'];
+        }
+        $log = $this->recorder();
+        $row = $log->messageDetail($eventId);
+        if ($row === null) {
+            return ['result' => 'failed', 'message' => 'Message not found in the retention window'];
+        }
+        $hasContent = !empty($row['content_text']);
+        $timeline = [];
+        foreach (($row['timeline'] ?? []) as $step) {
+            $timeline[] = [
+                'occurred_utc' => (string)($step['occurred_utc'] ?? ''),
+                'stage' => (string)($step['stage'] ?? ''),
+                'status' => (string)($step['status'] ?? ''),
+                'detail' => (string)($step['detail'] ?? ''),
+                'source' => (string)($step['source'] ?? ''),
+            ];
+        }
+        $this->response->setContentType('application/json', 'UTF-8');
+        $this->response->setContent([
+            'result' => 'ok',
+            'scope' => 'local',
+            'message' => [
+                'event_id' => (string)$row['event_id'],
+                'created_utc' => (string)$row['created_utc'],
+                'node_id' => (string)$row['node_id'],
+                'node_ip' => (string)$row['node_ip'],
+                'node_role' => (string)$row['node_role'],
+                'notification_type' => (string)$row['notification_type'],
+                'recipient' => (string)$row['recipient'],
+                'subject' => (string)$row['subject'],
+                'status' => (string)$row['status'],
+                'status_detail' => (string)$row['status_detail'],
+                'content_available' => $hasContent,
+                'content' => $hasContent ? (string)$row['content_text'] : '',
+                'content_truncated' => $hasContent && !empty($row['content_truncated']),
+                'timeline' => $timeline,
+            ],
+        ], true);
+        return;
+    }
+
+    /** POST /api/devicemonitor/emaillog/peermessageview - fetch from the peer on demand. */
+    public function peermessageviewAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed', 'message' => 'POST required'];
+        }
+        require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/PeerClient.php');
+        $settings = $this->peerSettings();
+        if (!$settings['enabled']) {
+            return ['result' => 'failed', 'message' => 'Peer is not enabled.'];
+        }
+        $errors = \OPNsense\DeviceMonitor\PeerClient::validate($settings);
+        if (!empty($errors)) {
+            return ['result' => 'failed', 'message' => implode(' ', $errors)];
+        }
+        $eventId = (string)$this->request->getPost('event_id', 'string', '');
+        $client = new \OPNsense\DeviceMonitor\PeerClient($settings);
+        $result = $client->message($eventId);
+        if (!$result['available']) {
+            return ['result' => 'failed', 'message' => $result['reason']];
+        }
+        $this->response->setContentType('application/json', 'UTF-8');
+        $this->response->setContent([
+            'result' => 'ok',
+            'scope' => 'peer',
+            'message' => $result['message'],
+        ], true);
+        return;
+    }
+
     /** POST /api/devicemonitor/emaillog/exportcsv */
     public function exportcsvAction()
     {

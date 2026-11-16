@@ -41,15 +41,20 @@ def test_no_request_is_fired_outside_ready():
 
 def test_all_requests_use_the_shared_helper():
     src = VIEW.read_text(encoding='utf-8')
-    calls = re.findall(r"url: '(/api/devicemonitor/emaillog/\w+)'", src)
-    assert set(calls) == {'/api/devicemonitor/emaillog/search',
-                          '/api/devicemonitor/emaillog/message',
-                          '/api/devicemonitor/emaillog/exportcsv'}, calls
-    # Both are POSTs, so both need the token installed by the shared hook.
-    for url in calls:
-        block = src[src.index(url):src.index(url) + 400]
-        assert "type: 'POST'" in block, f'{url} is not a POST'
-    code = '\n'.join(ln for ln in src.splitlines() if not ln.strip().startswith(('*', '/*', '//')))
+    # Every endpoint the page can call must be a POST issued through $.ajax, so the
+    # layout's shared X-CSRFToken hook applies to all of them.
+    endpoints = {
+        '/api/devicemonitor/emaillog/search',
+        '/api/devicemonitor/emaillog/combined',
+        '/api/devicemonitor/emaillog/message',
+        '/api/devicemonitor/emaillog/peermessageview',
+        '/api/devicemonitor/emaillog/exportcsv',
+    }
+    for endpoint in endpoints:
+        assert endpoint in src, f'{endpoint} missing from the page'
+    posts = src.count("type: 'POST'")
+    assert posts == 3, f'expected 3 ajax POSTs (search/combined share one), found {posts}'
+    code = '\n'.join(ln for ln in src.splitlines() if not ln.strip().startswith(('*', '/*', '//', '<!--')))
     assert 'setRequestHeader' not in code, 'the page must not hand-roll token handling'
     assert 'csrf_token' not in code, 'the page must not read the token directly'
     print('EMAIL_LOG_SHARED_HELPER=PASS')

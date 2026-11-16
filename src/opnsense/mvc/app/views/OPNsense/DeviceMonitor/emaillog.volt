@@ -15,19 +15,20 @@
                     <li role="presentation" class="active">
                         <a href="#email-log-local" role="tab" data-toggle="tab">{{ devicemonitor_t('Local') }}</a>
                     </li>
-                    <li role="presentation" class="disabled" title="{{ devicemonitor_t('Peer aggregation is not implemented yet') }}">
-                        <a href="#email-log-peer" role="tab" aria-disabled="true">{{ devicemonitor_t('Peer') }}</a>
+                    <li role="presentation">
+                        <a href="#email-log-table" id="email-log-tab-peer" role="tab" data-toggle="tab"
+                           data-scope="peer">{{ devicemonitor_t('Peer') }}</a>
                     </li>
-                    <li role="presentation" class="disabled" title="{{ devicemonitor_t('Peer aggregation is not implemented yet') }}">
-                        <a href="#email-log-all" role="tab" aria-disabled="true">{{ devicemonitor_t('All nodes') }}</a>
+                    <li role="presentation">
+                        <a href="#email-log-table" id="email-log-tab-all" role="tab" data-toggle="tab"
+                           data-scope="all">{{ devicemonitor_t('All nodes') }}</a>
                     </li>
                 </ul>
 
                 <div class="tab-content" style="padding-top:12px;">
                     <div role="tabpanel" class="tab-pane active" id="email-log-local">
-                        <div class="alert alert-info" id="email-log-scope-note" style="font-size:12px;">
-                            {{ devicemonitor_t('This view shows only the email log of the local node. Peer aggregation is not available in this release.') }}
-                        </div>
+                        <div class="alert alert-info" id="email-log-scope-note" style="font-size:12px;"></div>
+                        <div class="alert alert-warning" id="email-log-partial" style="display:none;font-size:12px;"></div>
                         <div class="alert alert-warning" id="email-log-diagnostic" style="display:none;font-size:12px;"></div>
 
                         <div class="row" style="margin-bottom:10px;">
@@ -131,7 +132,14 @@
             loadFailed: {{ lang.query('Could not load the email log')|json_encode(15) }},
             viewMessage: {{ lang.query('View message')|json_encode(15) }},
             unavailable: {{ lang.query('Message content unavailable')|json_encode(15) }},
-            truncated: {{ lang.query('Message content truncated for display')|json_encode(15) }}
+            truncated: {{ lang.query('Message content truncated for display')|json_encode(15) }},
+            localOnly: {{ lang.query('This view shows only the email log of the local node.')|json_encode(15) }},
+            peerNotConfigured: {{ lang.query('Peer is not configured. Add secure peer settings to enable combined views.')|json_encode(15) }},
+            peerUnavailable: {{ lang.query('The peer could not be read. Only local records are shown.')|json_encode(15) }},
+            peerOnly: {{ lang.query('Showing records from the configured peer.')|json_encode(15) }},
+            allNodes: {{ lang.query('Showing records from this node and the configured peer.')|json_encode(15) }},
+            partialData: {{ lang.query('Incomplete data:')|json_encode(15) }},
+            viewFailed: {{ lang.query('Could not load this message')|json_encode(15) }}
         };
     }
 
@@ -144,9 +152,39 @@
             return $('<div>').text(value === undefined || value === null ? '' : value).html();
         }
 
+        var scope = 'local';
+
+        function setScopeNote(data) {
+            var $note = $('#email-log-scope-note');
+            var $partial = $('#email-log-partial').hide();
+            if (scope === 'local') {
+                $note.text(text.localOnly);
+                return;
+            }
+            if (scope === 'peer') {
+                if (data.peer_enabled === false) {
+                    $note.text(text.peerNotConfigured);
+                } else if (data.peer && data.peer.status === 'unavailable') {
+                    $note.text(text.peerUnavailable);
+                    $partial.show().text(data.peer.reason || text.peerUnavailable);
+                } else {
+                    $note.text(text.peerOnly);
+                }
+                return;
+            }
+            // All nodes: the local half is always shown, the peer half may be missing.
+            $note.text(text.allNodes);
+            if (data.partial) {
+                $partial.show().text(text.partialData + ' ' + (data.peer && data.peer.reason ? data.peer.reason : ''));
+            }
+        }
+
         function load() {
+            var url = scope === 'local'
+                ? '/api/devicemonitor/emaillog/search'
+                : '/api/devicemonitor/emaillog/combined';
             $.ajax({
-                url: '/api/devicemonitor/emaillog/search',
+                url: url,
                 type: 'POST',
                 dataType: 'json',
                 data: {
@@ -168,10 +206,24 @@
                     $('#email-log-diagnostic').show().text(text.loadFailed);
                     return;
                 }
-                var rows = data.rows || [];
+                if (scope !== 'local') {
+                    setScopeNote(data);
+                } else {
+                    $('#email-log-partial').hide();
+                    $('#email-log-scope-note').text(text.localOnly);
+                }
+                var allRows = data.rows || [];
+                var rows = allRows.filter(function (r) {
+                    if (scope === 'peer') { return r.scope === 'peer'; }
+                    return true;
+                });
                 var $body = $('#email-log-rows').empty();
-                $('#email-log-node').text((data.node.node_id || '') + ' ' + (data.node.node_ip || '') +
-                    (data.node.role ? ' (' + data.node.role + ')' : ''));
+                if (scope === 'local' && data.node) {
+                    $('#email-log-node').text((data.node.node_id || '') + ' ' + (data.node.node_ip || '') +
+                        (data.node.role ? ' (' + data.node.role + ')' : ''));
+                } else {
+                    $('#email-log-node').text(data.local_node ? (data.local_node.node_id || '') : '');
+                }
                 if (data.logging_diagnostic) {
                     $('#email-log-diagnostic').show().text(data.logging_diagnostic);
                 } else {
@@ -232,9 +284,11 @@
             });
         }
 
-        function openMessage(eventId) {
+        function openMessage(eventId, fromPeer) {
             $.ajax({
-                url: '/api/devicemonitor/emaillog/message',
+                url: fromPeer
+                    ? '/api/devicemonitor/emaillog/peermessageview'
+                    : '/api/devicemonitor/emaillog/message',
                 type: 'POST',
                 dataType: 'json',
                 data: { event_id: eventId }
@@ -243,7 +297,7 @@
                     .text(text.loadFailed + ' (HTTP ' + (xhr && xhr.status ? xhr.status : '?') + ')');
             }).done(function (data) {
                 if (!data || data.result !== 'ok' || !data.message) {
-                    $('#email-log-diagnostic').show().text(text.loadFailed);
+                    $('#email-log-diagnostic').show().text(fromPeer ? text.viewFailed : text.loadFailed);
                     return;
                 }
                 var m = data.message;
