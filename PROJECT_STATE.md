@@ -2,6 +2,21 @@
 
 ## Current state
 
+**Captured-message double-encoding corrected (17 November 2026).** The preview modal displayed
+`&amp;amp;` and `&amp;` where `&` and a literal `&amp;` were intended. Tracing storage → API → modal
+showed storage was already correct and the modal's `.text()` adds no escaping: the corruption was the
+framework's `safe_output=false` path, which runs `htmlspecialchars()` over the JSON array response.
+The message endpoint now calls `setContent(..., true)`, matching core controllers, so the body is
+delivered as raw JSON text and exactly one escaping step remains at render time. Conversion, storage,
+JSON delivery and render are pinned by an exact round-trip regression using the preview body; the
+literal `&amp;` is preserved, scripts and image sources remain stripped, and the old unsafe path is
+asserted to still alter the text so the test would catch a regression. Exact-head CI `43877601000` at
+`f6e95ee` passed; repair install `INSTALL_OK files=66 pruned=0`
+(`/var/backups/devicemonitor/install-v214.l85Sl8`), 18 records preserved including the preview. Modal
+opening and line breaks are recorded as **observed PASS**; special-character rendering was **FAILED**
+before this correction and is pending the operator's re-check.
+
+
 **Email Log View message — operator-confirmed PARTIAL PASS (17 November 2026).** The operator
 confirmed that the legacy-row modal opens and correctly reports "Message content unavailable"; the
 *View message* action is recorded as **PASS for legacy rows only**. **Captured-body rendering is not
