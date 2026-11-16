@@ -184,15 +184,18 @@ class EmailLog
      */
     public static function htmlToText($html)
     {
-        $text = (string)$html;
+        $text = str_replace(["\r\n", "\r"], "\n", (string)$html);
         $text = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', '', $text);
         $text = preg_replace('#<br\s*/?>#i', "\n", $text);
+        /* Table cells become one line each. Single-quoted '\t' here used to store
+         * a literal backslash-t in every recorded HTML body; a tab is the intended
+         * separator, and the whitespace passes below then collapse it. */
+        $text = preg_replace('#</t[dh]>#i', "\t", $text);
         $text = preg_replace('#</(p|div|tr|h[1-6]|li|table|thead|tbody|section)>#i', "\n", $text);
-        $text = preg_replace('#</t[dh]>#i', '\t', $text);
         $text = strip_tags($text);
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $text = preg_replace('/[ \t]+/', ' ', $text);
-        $text = preg_replace('/\n[ \t]+/', "\n", $text);
+        $text = preg_replace('/[ ]*\n[ \t]*/', "\n", $text);
         $text = preg_replace('/\n{3,}/', "\n\n", $text);
         return trim($text);
     }

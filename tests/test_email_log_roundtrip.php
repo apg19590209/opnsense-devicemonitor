@@ -61,6 +61,31 @@ $ctrl = file_get_contents(__DIR__ . '/../src/opnsense/mvc/app/controllers/OPNsen
 check(preg_match('/setContent\(\[.*?\],\s*true\);/s', $ctrl) === 1, 'message endpoint marks the payload safe');
 check(strpos($ctrl, 'SafeReturnValue') === false, 'no invented response type');
 
+/* 7. the stored body never carries literal escape text from HTML conversion
+ * (a single-quoted '\t' in htmlToText stored a backslash-t after Server, Time
+ * and To in every recorded table cell) */
+$table = '<p>Test Email</p><table>'
+       . '<tr><td>Server:</td><td>OPNsense.internal</td></tr>'
+       . '<tr><td>Time:</td><td>2026-11-17 08:52:21</td></tr>'
+       . '<tr><td>To:</td><td>apg@example.invalid</td></tr></table>';
+$converted = EmailLog::htmlToText($table);
+check(strpos($converted, '\\t') === false, 'conversion stores no literal backslash-t');
+check(strpos($converted, "\t") === false, 'no raw tab is kept in the readable text');
+check(strpos($converted, "Test Email\nServer: OPNsense.internal\nTime: 2026-11-17 08:52:21\nTo: apg@example.invalid") === 0,
+    'each table cell becomes one clean line');
+check(strpos($converted, "\r") === false, 'carriage returns are normalised away');
+
+/* 8. genuine message text keeps its own characters, including a typed \t */
+$typed = '<pre>C:\temp\test and a typed \t sequence</pre>';
+$typedText = EmailLog::htmlToText($typed);
+check(strpos($typedText, 'C:\temp\test and a typed \t sequence') !== false,
+    'literal backslash sequences already in the message are not rewritten');
+
+/* 9. text bodies are stored as delivered, without reinterpretation */
+$txt = "Server:\t genuine";
+$idTxt = $log->recordSubmission(EmailLog::TYPE_TEST, 'a@example.invalid', 'Typed', null, null, null, null, null, $txt, 'text');
+check($log->messageDetail($idTxt)['content_text'] === $txt, 'plain-text bodies are never rewritten');
+
 @unlink($db);
 echo $fails === 0 ? "EMAIL_LOG_ROUNDTRIP_TESTS=PASS\n" : "EMAIL_LOG_ROUNDTRIP_TESTS=FAIL ($fails)\n";
 exit($fails === 0 ? 0 : 1);

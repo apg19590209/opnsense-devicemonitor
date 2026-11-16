@@ -100,12 +100,36 @@
 <style>
     /* Scoped to this dialog only. OPNsense main.css sets .modal-body padding:0,
      * so the padded body the design requires is supplied here. No fixed heights
-     * and no nested scrolling: core's .modal-body already scrolls. */
+     * on the content: the dialog itself is capped to the viewport below the fixed
+     * navigation and only .modal-body scrolls, so header and footer stay put. */
+    /* Core main.css gives .modal-dialog margin-top 62px while the fixed page head
+     * (.page-head, 70px) sits above the overlay: the 1050 z-index loses to the
+     * navbar's 1030 because document-order list items are painted before the
+     * transformed .modal. Lift the overlay above the head and position the dialog
+     * from the top of the remaining viewport. */
+    #email-log-message-modal {
+        z-index: 1200;
+    }
     /* Dialog width: aim for 800px, never closer than 16px to the viewport edge. */
     #email-log-message-modal .modal-dialog {
         width: 800px;
         max-width: calc(100vw - 32px);
-        margin: 16px auto;
+        margin: 86px auto 16px;
+        max-height: calc(100vh - 102px);
+    }
+    #email-log-message-modal .modal-content {
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 102px);
+    }
+    #email-log-message-modal .modal-header,
+    #email-log-message-modal .modal-footer {
+        flex: none; /* header and footer keep their height; the body scrolls */
+    }
+    #email-log-message-modal .modal-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
     }
     #email-log-message-modal .modal-header {
         padding: 20px;
@@ -113,8 +137,16 @@
         position: relative;
         padding-right: 56px;
     }
+    /* Float the close control so a long subject only wraps inside the remaining
+     * width; matching header padding-right keeps the subject clear of it. */
+    #email-log-message-modal .modal-header .close {
+        float: right;
+        margin: 0;
+        line-height: 1;
+    }
     #email-log-message-modal .modal-header .modal-title {
         word-break: break-word;
+        overflow-wrap: anywhere;
         margin: 0;
     }
     #email-log-message-modal .email-log-dialog-body {
@@ -154,6 +186,13 @@
         #email-log-message-modal .modal-header {
             padding-right: 56px;
         }
+        #email-log-message-modal .modal-dialog {
+            margin: 70px auto 16px;
+            max-height: calc(100vh - 86px);
+        }
+        #email-log-message-modal .modal-content {
+            max-height: calc(100vh - 86px);
+        }
     }
     #email-log-message-modal .email-log-dialog-heading {
         margin: 0 0 12px;
@@ -179,17 +218,48 @@
         max-height: none;
         overflow: visible;
     }
-    #email-log-message-modal .email-log-dialog-delivery {
-        margin-top: 0;
-    }
-    #email-log-message-modal .email-log-dialog-delivery summary {
+    /* Standard disclosure control: normal body text, a chevron that rotates when
+     * expanded, and the framework focus ring on the native button. */
+    #email-log-message-modal .email-log-dialog-disclosure {
+        display: block;
+        width: 100%;
+        padding: 12px 0;
+        border: 0;
+        border-top: 1px solid #e5e5e5;
+        background: transparent;
+        color: inherit;
+        font-size: inherit;
+        line-height: inherit;
+        text-align: left;
         cursor: pointer;
-        margin-top: 0;
     }
-    #email-log-message-modal .email-log-dialog-delivery summary h4 {
-        display: inline;
-        font-size: 14px;
-        margin: 0;
+    #email-log-message-modal .email-log-dialog-disclosure .glyphicon {
+        margin-right: 6px;
+        transition: transform 0.15s ease-in-out;
+    }
+    #email-log-message-modal .email-log-dialog-disclosure[aria-expanded="true"] .glyphicon {
+        transform: rotate(90deg);
+    }
+    #email-log-message-modal .email-log-dialog-disclosure-count {
+        color: #777;
+    }
+    #email-log-message-modal .email-log-dialog-no-delivery {
+        padding-top: 12px;
+        border-top: 1px solid #e5e5e5;
+    }
+    #email-log-message-modal .email-log-dialog-timeline-extra {
+        margin-top: 12px;
+    }
+    /* Legacy rows: the delivery record is still readable when the body is not. */
+    #email-log-message-modal .email-log-dialog-reading.is-unavailable {
+        display: none;
+    }
+    #email-log-message-modal .email-log-dialog-timeline {
+        margin-top: 4px;
+    }
+    #email-log-message-modal .email-log-dialog-timeline .text-muted,
+    #email-log-message-modal .email-log-dialog-timeline .email-log-event-time {
+        margin-bottom: 2px;
     }
     #email-log-message-modal .modal-footer {
         padding: 16px 24px;
@@ -218,6 +288,7 @@
                 <h4 class="modal-title" id="email-log-message-title">{{ devicemonitor_t('Message') }}</h4>
             </div>
             <div class="modal-body email-log-dialog-body">
+                <div class="alert alert-warning" id="email-log-message-error" style="display:none;" role="alert"></div>
                 <dl class="dl-horizontal email-log-dialog-meta" id="email-log-message-meta"></dl>
                 <div class="alert alert-warning" id="email-log-message-unavailable" style="display:none;">
                     {{ devicemonitor_t('Message content unavailable') }}
@@ -231,10 +302,28 @@
                 <div class="email-log-dialog-reading">
                     <pre id="email-log-message-body"></pre>
                 </div>
-                <details id="email-log-message-timeline-disclosure" class="email-log-dialog-delivery">
-                    <summary><h4>{{ devicemonitor_t('Delivery details') }}</h4></summary>
-                    <div id="email-log-message-timeline"></div>
-                </details>
+                <div id="email-log-message-delivery">
+                    {# Native button disclosure, as used on the Devices page: keyboard
+                       activation comes from the button itself and aria-expanded carries
+                       the state. The chevron points right when collapsed and the label
+                       carries the recorded event count. #}
+                    <button type="button" id="email-log-message-timeline-disclosure"
+                            class="email-log-dialog-disclosure"
+                            aria-expanded="false" aria-controls="email-log-message-timeline-panel">
+                        <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+                        <span id="email-log-message-timeline-label">{{ devicemonitor_t('Delivery details') }}</span>
+                        <span id="email-log-message-timeline-count" class="email-log-dialog-disclosure-count"></span>
+                    </button>
+                    <div id="email-log-message-timeline-panel" class="email-log-dialog-timeline" hidden>
+                        <div id="email-log-message-timeline"></div>
+                        <div id="email-log-message-timeline-extra" class="email-log-dialog-timeline-extra"></div>
+                    </div>
+                </div>
+                {# Without recorded events there is no expansion control at all. #}
+                <div id="email-log-message-no-delivery" hidden>
+                    <div class="email-log-dialog-no-delivery"><strong>{{ devicemonitor_t('Delivery details') }}</strong></div>
+                    <div class="text-muted" id="email-log-message-no-delivery-text"></div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">{{ devicemonitor_t('Close') }}</button>
@@ -247,7 +336,6 @@
     function emailLogText() {
         return {
             relayAcceptedNotice: {{ lang.query('Relay acceptance is not proof that the message reached the recipient inbox.')|json_encode(15) }},
-            diagnostics: {{ lang.query('Timeline')|json_encode(15) }},
             role: {{ lang.query('Role')|json_encode(15) }},
             ip: {{ lang.query('Node address')|json_encode(15) }},
             unknown: {{ lang.query('Unknown')|json_encode(15) }},
@@ -261,7 +349,10 @@
             peerOnly: {{ lang.query('Showing records from the configured peer.')|json_encode(15) }},
             allNodes: {{ lang.query('Showing records from this node and the configured peer.')|json_encode(15) }},
             partialData: {{ lang.query('Incomplete data:')|json_encode(15) }},
-            viewFailed: {{ lang.query('Could not load this message')|json_encode(15) }}
+            viewFailed: {{ lang.query('Could not load this message')|json_encode(15) }},
+            events: {{ lang.query('events')|json_encode(15) }},
+            noDelivery: {{ lang.query('No delivery details recorded')|json_encode(15) }},
+            queueId: {{ lang.query('Queue ID')|json_encode(15) }}
         };
     }
 
@@ -360,45 +451,18 @@
                     $tr.append($('<td>').text(row.subject));
                     $tr.append($('<td>').text(row.status));
                     var $detail = $('<td>');
+                    /* The single row action. Metadata, message content and the full
+                     * delivery timeline all open in the dialog. It is always offered,
+                     * even for rows recorded before capture: the dialog then explains
+                     * that the content is unavailable and still lists the delivery. */
                     $('<button>').addClass('btn btn-default btn-xs')
-                        .text(text.diagnostics)
-                        .on('click', function () { $(this).closest('tr').next().toggle(); })
-                        .appendTo($detail);
-                    /* Always offered, even for rows recorded before capture: the modal
-                     * then explains that the content is unavailable rather than the
-                     * action disappearing without explanation. */
-                    $('<button>').addClass('btn btn-default btn-xs')
-                        .css('margin-left', '4px')
                         .attr('data-event-id', row.event_id)
                         .attr('aria-label', text.viewMessage)
                         .text(text.viewMessage)
-                        .on('click', function () { openMessage(row.event_id); })
+                        .on('click', function () { openMessage(row.event_id, row.scope === 'peer'); })
                         .appendTo($detail);
                     $tr.append($detail);
                     $body.append($tr);
-                    var $timeline = $('<tr>').hide();
-                    var $cell = $('<td>').attr('colspan', 7).css('font-size', '12px');
-                    var steps = row.timeline || [];
-                    if (steps.length === 0) {
-                        $cell.append($('<div>').addClass('text-muted').text(text.unknown));
-                    }
-                    steps.forEach(function (step) {
-                        var $line = $('<div>');
-                        $line.append($('<span>').css('font-family', 'monospace').text(step.occurred_utc + '  '));
-                        $line.append($('<strong>').text(step.stage + ': '));
-                        $line.append($('<span>').text(step.status));
-                        if (step.detail) { $line.append(document.createTextNode(' — ' + step.detail)); }
-                        if (step.source) {
-                            $line.append($('<span>').addClass('text-muted').text(' [' + step.source + ']'));
-                        }
-                        $cell.append($line);
-                    });
-                    if (row.status === 'accepted') {
-                        $cell.append($('<div>').addClass('text-muted').text(text.relayAcceptedNotice));
-                    }
-                    $cell.append($('<div>').text('Queue ID: ' + (row.queue_id || text.unknown)));
-                    $timeline.append($cell);
-                    $body.append($timeline);
                 });
                 $('#email-log-empty').toggle(rows.length === 0);
                 $('#email-log-prev').prop('disabled', page === 1);
@@ -406,7 +470,46 @@
             });
         }
 
+        /* Label and chevron follow aria-expanded, so the control's state, its
+         * accessible state and its appearance can never disagree. */
+        function setTimelineExpanded(expanded) {
+            var on = !!expanded;
+            $('#email-log-message-timeline-disclosure').attr('aria-expanded', on ? 'true' : 'false');
+            $('#email-log-message-timeline-panel').prop('hidden', !on);
+        }
+
+        function setTimelineCount(count) {
+            $('#email-log-message-timeline-count').text(
+                count > 0 ? '(' + count + ' ' + text.events + ')' : ''
+            );
+        }
+
+        $('#email-log-message-timeline-disclosure').on('click', function () {
+            setTimelineExpanded($(this).attr('aria-expanded') !== 'true');
+        });
+
+        /* Retrieval errors are reported in the dialog itself with a retrievable
+         * message. Opening it never sends or retries mail: every request below is
+         * a read-only POST to a lookup action. */
+        function showMessageError(reason) {
+            $('#email-log-message-error').show().text(reason);
+            $('#email-log-message-modal')
+                .off('hidden.bs.modal.emailfocus')
+                .one('hidden.bs.modal.emailfocus', restoreOpenerFocus)
+                .modal('show');
+        }
+
+        var $openEventId = null;
+
+        function restoreOpenerFocus() {
+            var $opener = $('button[data-event-id]').filter(function () {
+                return $(this).attr('data-event-id') === $openEventId;
+            });
+            if ($opener.length) { $opener.first().trigger('focus'); }
+        }
+
         function openMessage(eventId, fromPeer) {
+            $openEventId = eventId;
             $.ajax({
                 url: fromPeer
                     ? '/api/devicemonitor/emaillog/peermessageview'
@@ -415,14 +518,17 @@
                 dataType: 'json',
                 data: { event_id: eventId }
             }).fail(function (xhr) {
-                $('#email-log-diagnostic').show()
-                    .text(text.loadFailed + ' (HTTP ' + (xhr && xhr.status ? xhr.status : '?') + ')');
+                // The failure belongs where the operator is looking: in the dialog.
+                showMessageError((fromPeer ? text.viewFailed : text.loadFailed) +
+                    ' (HTTP ' + (xhr && xhr.status ? xhr.status : '?') + ')');
             }).done(function (data) {
                 if (!data || data.result !== 'ok' || !data.message) {
-                    $('#email-log-diagnostic').show().text(fromPeer ? text.viewFailed : text.loadFailed);
+                    showMessageError((fromPeer ? text.viewFailed : text.loadFailed) +
+                        (data && data.message ? ': ' + data.message : ''));
                     return;
                 }
                 var m = data.message;
+                $('#email-log-message-error').hide().text('');
                 $('#email-log-message-title').text(m.subject || text.unknown);
                 var $meta = $('#email-log-message-meta').empty();
                 [['Recipient', m.recipient],
@@ -433,37 +539,48 @@
                     $meta.append($('<dt>').text(pair[0])).append($('<dd>').text(pair[1] || ''));
                 });
                 // Body is plain text; .text() prevents any markup or remote load.
+                // Legacy rows without captured content keep their delivery record:
+                // only the empty reading area is hidden, behind the explanation.
                 $('#email-log-message-body').text(m.content_available ? m.content : '');
-                $('#email-log-message-unavailable').toggle(!m.content_available);
+                $('#email-log-message-unavailable').prop('hidden', !!m.content_available);
                 $('#email-log-message-unavailable').text(text.unavailable);
+                $('#email-log-message-truncated').prop('hidden', true);
+                $('.email-log-dialog-reading').toggleClass('is-unavailable', !m.content_available);
                 $('#email-log-message-truncated').toggle(!!m.content_truncated);
+                var steps = m.timeline || [];
                 var $timeline = $('#email-log-message-timeline').empty();
-                (m.timeline || []).forEach(function (step) {
-                    // One readable row per event: time, stage, status, then any detail.
+                steps.forEach(function (step) {
+                    // One readable row per event, in the recorded (chronological) order:
+                    // time, stage and status, then any diagnostic detail and source.
                     var $row = $('<div>').addClass('email-log-event');
-                    $('<div>').text(step.occurred_utc).appendTo($row);
+                    $('<div>').addClass('email-log-event-time').text(step.occurred_utc).appendTo($row);
                     $('<div>')
                         .append($('<strong>').text(step.stage))
                         .append(document.createTextNode(' — '))
                         .append($('<span>').text(step.status))
                         .appendTo($row);
-                    if (step.detail) { $('<div>').text(step.detail).appendTo($row); }
+                    if (step.detail) { $('<div>').addClass('email-log-event-detail').text(step.detail).appendTo($row); }
                     if (step.source) {
                         $('<div>').addClass('text-muted').text('[' + step.source + ']').appendTo($row);
                     }
                     $row.appendTo($timeline);
                 });
-                // Collapsed by default; only expand when there is something to show.
-                $('#email-log-message-timeline-disclosure').prop('open', false);
+                var $extra = $('#email-log-message-timeline-extra').empty();
+                if (m.status === 'accepted') {
+                    $extra.append($('<div>').addClass('text-muted').text(text.relayAcceptedNotice));
+                }
+                $extra.append($('<div>').text(text.queueId + ': ' + (m.queue_id || text.unknown)));
+                // No recorded events: a plain statement instead of an expansion control.
+                $('#email-log-message-delivery').prop('hidden', steps.length === 0);
+                $('#email-log-message-no-delivery').prop('hidden', steps.length > 0);
+                $('#email-log-message-no-delivery-text').text(text.noDelivery);
+                setTimelineCount(steps.length);
+                // Collapsed by default on every open, with an accurate state.
+                setTimelineExpanded(false);
                 // Return focus to the control that opened the dialog on close.
                 $('#email-log-message-modal')
                     .off('hidden.bs.modal.emailfocus')
-                    .one('hidden.bs.modal.emailfocus', function () {
-                        var $opener = $('button[data-event-id]').filter(function () {
-                            return $(this).attr('data-event-id') === eventId;
-                        });
-                        if ($opener.length) { $opener.first().trigger('focus'); }
-                    })
+                    .one('hidden.bs.modal.emailfocus', restoreOpenerFocus)
                     .modal('show');
             });
         }

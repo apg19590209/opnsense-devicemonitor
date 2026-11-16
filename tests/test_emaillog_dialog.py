@@ -59,8 +59,8 @@ def test_padded_body_and_sections():
     for part in ('email-log-message-meta', 'email-log-message-body', 'email-log-message-timeline-disclosure'):
         assert part in body, f'{part} must be inside the modal body'
     assert '<hr/>' in body, 'divider between metadata and message'
-    assert 'Message content' in body and 'Delivery details' in body, 'section headings missing'
-    assert '<details' in body and '<summary>' in body, 'delivery history must use standard disclosure'
+    assert 'Message content' in body and "devicemonitor_t('Delivery details')" in body, 'section headings missing'
+    assert 'email-log-message-timeline-disclosure' in body, 'delivery disclosure missing'
     src_all = src
     assert "$('#email-log-message-title').text(m.subject" in src_all, \
         'the subject must become the dialog heading'
@@ -96,13 +96,159 @@ def test_spacing_specification():
     assert 'margin-left: 156px' in meta_dd and 'width: 140px' in meta_dt, '16px between label and value'
     assert 'margin-bottom: 24px' in block('.email-log-dialog-reading {'), '24px after the message'
     assert 'padding: 20px' in block('.email-log-dialog-reading {'), 'reading area needs 20px padding'
-    footer = block('.modal-footer {')
+    i = css.rindex('#email-log-message-modal .modal-footer {')
+    footer = css[i:css.index('}', i)]
     assert 'padding: 16px 24px' in footer, 'footer needs 16px/24px padding'
     dialog = block('.modal-dialog {')
     assert 'width: 800px' in dialog and 'calc(100vw - 32px)' in dialog, '800px width with viewport clearance'
     assert 'line-height: 1.5' in block('.email-log-dialog-reading pre'), '1.5 line spacing'
     assert '@media (max-width: 767px)' in css, 'narrow layout must stack labels'
     print('DIALOG_SPACING=PASS')
+
+
+def test_header_clears_fixed_navigation():
+    src = VIEW.read_text(encoding='utf-8')
+    css = src[src.index('<style>'):src.index('</style>')]
+    def block(selector):
+        i = css.index(selector)
+        return css[i:css.index('}', i)]
+    # The overlay must paint above the fixed page head. Core main.css gives the
+    # navbar z-index 1030 and .modal 1050, but the navbar is a document-order list
+    # item painted before the transformed .modal, so it wins at equal origin.
+    assert re.search(r'#email-log-message-modal \{\s*z-index:\s*1200;', css), \
+        'dialog overlay must sit above the fixed navigation'
+    if CORE_CSS.is_file():
+        core = CORE_CSS.read_text(errors='ignore')
+        assert '.navbar-fixed-top' in core and 'z-index: 1030' in core, 'navbar stacking input changed'
+        assert 'margin: 62px 10px 10px 10px' in core, 'core dialog margin changed'
+    dialog = block('.modal-dialog {')
+    margin_top = int(re.search(r'margin: (\d+)px auto', dialog).group(1))
+    head_height = 70
+    assert margin_top >= head_height + 16, 'dialog must start below the 70px head plus clearance'
+    assert 'calc(100vh - 102px)' in dialog, 'dialog height capped to the viewport below the head'
+    content = block('.modal-content {')
+    assert 'display: flex' in content and 'flex-direction: column' in content, \
+        'content must lay out header/body/footer as a column'
+    assert 'calc(100vh - 102px)' in content, 'content capped to the remaining viewport'
+    body = block('.modal-body {')
+    assert 'overflow-y: auto' in body and 'min-height: 0' in body, 'only the body scrolls'
+    assert not re.search(r'(^|[;{\s])height:', body), 'body must not fix its height'
+    grouping = css[css.index('modal-header,\n    #email-log-message-modal .modal-footer {'):]
+    assert 'flex: none' in grouping[:grouping.index('}')], 'header and footer stay fixed while the body scrolls'
+    close = block('.modal-header .close {')
+    assert 'float: right' in close, 'close control floats clear of a wrapping subject'
+    header = block('.modal-header {')
+    assert 'padding-right: 56px' in header, 'subject keeps clear of the close control'
+    assert 'overflow-wrap: anywhere' in block('.modal-header .modal-title {'), 'long subjects wrap'
+    assert 'max-width: calc(100vw - 32px)' in dialog, 'narrow viewport clearance'
+    narrow = css[css.index('@media (max-width: 767px)'):]
+    assert 'calc(100vh - 86px)' in narrow, 'narrow viewport height cap'
+    print('DIALOG_HEADER_VISIBLE=PASS')
+
+
+def test_delivery_disclosure_pattern():
+    src = VIEW.read_text(encoding='utf-8')
+    start = src.index('id="email-log-message-timeline-disclosure"')
+    block = src[start:src.index('id="email-log-message-timeline"', start)]
+    tag_start = src.rindex('<button', 0, start)
+    tag = src[tag_start:src.index('>', start) + 1]
+    assert 'type="button"' in tag, 'disclosure must be a real button'
+    assert 'aria-expanded="false"' in tag, 'collapsed state exposed'
+    assert 'aria-controls="email-log-message-timeline-panel"' in tag, 'button names what it expands'
+    assert 'glyphicon-chevron-right' in block, 'chevron indicator present'
+    assert '<details' not in block and '<summary' not in block, 'summary is not the established pattern'
+    panel = src[src.index('id="email-log-message-timeline-panel"') - 30:]
+    panel_tag = src[src.rindex('<div', 0, src.index('id="email-log-message-timeline-panel"')):]
+    panel_tag = panel_tag[:panel_tag.index('>') + 1]
+    assert 'hidden' in panel_tag, 'expanded content starts hidden'
+    css = src[src.index('<style>'):src.index('</style>')]
+    disc = css[css.index('.email-log-dialog-disclosure {'):]
+    disc = disc[:disc.index('}')]
+    assert 'font-size: inherit' in disc, 'normal-size text, not a small label'
+    assert 'cursor: pointer' in disc, 'the whole heading is clickable'
+    assert 'width: 100%' in disc, 'the whole heading row is the target'
+    assert not re.search(r'font-size:\s*1[0-2]px', disc), 'no undersized label'
+    assert 'transform: rotate(90deg)' in css, 'chevron reflects expanded state'
+    js = src[src.index('function setTimelineExpanded'):src.index('function openMessage')]
+    assert "attr('aria-expanded'" in js, 'activated state is reflected in aria-expanded'
+    assert ".prop('hidden', !on)" in js, 'panel visibility follows the state'
+    # The label and chevron are driven from the same state, never set independently.
+    assert "text(on ?" not in js and "hideDelivery" not in js, \
+        'the heading text is stable; only the state drives the chevron'
+    assert 'aria-expanded="true"] .glyphicon' in css and 'rotate(90deg)' in css, \
+        'the chevron follows aria-expanded in CSS'
+    assert "$('#email-log-message-timeline-disclosure').on('click'" in src, 'click activates'
+    assert 'setTimelineExpanded(false)' in src, 'each open starts collapsed'
+    assert 'id="email-log-message-timeline-count"' in src, 'event count placeholder present'
+    assert "count + ' ' + text.events" in src and "'(' + count" in js, \
+        'the count is rendered in the heading, e.g. (3 events)'
+    assert "devicemonitor_t('Delivery details')" in src, 'heading text is the translated Delivery details'
+    assert 'noDelivery' in src and 'No delivery details recorded' in src, 'empty wording translated'
+    assert 'id="email-log-message-no-delivery"' in src and 'hidden' in \
+        src[src.index('id="email-log-message-no-delivery"'):src.index('id="email-log-message-no-delivery"') + 160], \
+        'the no-events statement starts hidden'
+    assert "$('#email-log-message-delivery').prop('hidden', steps.length === 0)" in src, \
+        'no expansion control when there are no events'
+    assert "$('#email-log-message-no-delivery').prop('hidden', steps.length > 0)" in src, \
+        'the empty statement replaces the control'
+    assert 'steps.forEach' in src, 'one row per event'
+    for part in ('email-log-event-time', 'step.stage', 'step.status', 'step.detail', 'step.source'):
+        assert part in src, f'event row misses {part}'
+    assert 'steps.forEach' in src and 'forEach' in src, 'events keep the recorded order'
+    print('DIALOG_DISCLOSURE=PASS')
+
+
+def test_one_row_action_opens_everything():
+    src = VIEW.read_text(encoding='utf-8')
+    start = src.index('rows.forEach(function (row) {')
+    loop = src[start:src.index("$('#email-log-empty')", start)]
+    assert loop.count("addClass(") == 1, \
+        'exactly one button per row: a second row action would duplicate the view'
+    assert 'text.diagnostics' not in loop and "'Timeline'" not in loop, 'no separate Timeline action'
+    assert "<tr>').hide()" not in loop and 'closest(\'tr\').next()' not in loop, \
+        'no inline table timeline expansion'
+    assert 'openMessage(row.event_id, row.scope === \'peer\')' in loop, \
+        'peer rows must retrieve from the peer'
+    assert 'text.viewMessage' in loop, 'the single action is View message'
+    # metadata, content and the full timeline all come from one lookup in the dialog
+    dlg = src[src.index('function openMessage'):]
+    for part in ('email-log-message-meta', 'email-log-message-body', 'email-log-message-timeline', 'm.timeline'):
+        assert part in dlg, f'{part} missing from the dialog'
+    print('DIALOG_ONE_MESSAGE_VIEW=PASS')
+
+
+def test_retrieval_errors_and_no_send():
+    src = VIEW.read_text(encoding='utf-8')
+    open_at = src.index('function openMessage')
+    err_at = src.index('function showMessageError')
+    dlg = src[min(open_at, err_at):]
+    assert 'id="email-log-message-error"' in src and 'role="alert"' in src, 'dialog error surface missing'
+    assert 'showMessageError' in dlg and "' (HTTP '" in dlg, \
+        'HTTP failures are reported in the dialog'
+    assert "data && data.message ? ': ' + data.message" in dlg, \
+        'the API reason is shown, not only a generic failure'
+    for forbidden in ('/notify', 'sendemail', 'testemail', 'sendmail'):
+        assert forbidden not in dlg.lower(), f'opening the dialog must not invoke {forbidden}'
+    ctrl = (ROOT / 'src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/EmaillogController.php').read_text()
+    for action in ('messageAction', 'peermessageAction', 'peermessageviewAction'):
+        block = ctrl[ctrl.index(f'function {action}('):]
+        block = block[:block.index('\n    }\n')]
+        for forbidden in ('EmailTransport', 'mail(', 'NotificationHandler', 'sendCustomEmail'):
+            assert forbidden not in block, f'{action} must be read-only'
+    print('DIALOG_NO_SEND=PASS')
+
+
+def test_legacy_rows_keep_delivery():
+    src = VIEW.read_text(encoding='utf-8')
+    dlg = src[src.index('function openMessage'):]
+    started = dlg.index("$('#email-log-message-unavailable')")
+    block = dlg[started:started + 400]
+    assert "prop('hidden', !!m.content_available)" in block, 'legacy rows show the explanation'
+    assert 'is-unavailable' in block and 'is-unavailable' in src[:src.index('function emailLogText')], \
+        'the empty reading area is hidden rather than left as an empty box'
+    assert "m.timeline" in dlg, 'the delivery record is read for legacy rows too'
+    assert "'.email-log-dialog-reading'" in block, 'reading area toggled, not removed'
+    print('DIALOG_LEGACY_CONTENT=PASS')
 
 
 def test_plain_text_preserved():
@@ -133,6 +279,11 @@ def main():
     test_structure_matches_core()
     test_core_scrolling_is_reused_not_duplicated()
     test_padded_body_and_sections()
+    test_header_clears_fixed_navigation()
+    test_delivery_disclosure_pattern()
+    test_one_row_action_opens_everything()
+    test_retrieval_errors_and_no_send()
+    test_legacy_rows_keep_delivery()
     test_no_small_custom_typography()
     test_spacing_specification()
     test_plain_text_preserved()
