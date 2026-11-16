@@ -212,6 +212,12 @@
                 URL.revokeObjectURL(link.href);
             });
         });
-        load();
+        /* The layout installs its CSRF header hook inside $(document).ready
+         * ($.ajaxSetup). Firing load() synchronously here would send the first
+         * request before that hook exists, so the API answers 403. Defer to
+         * ready so every request carries X-CSRFToken, like the other pages. */
+        $(document).ready(function () {
+            load();
+        });
     })();
 </script>

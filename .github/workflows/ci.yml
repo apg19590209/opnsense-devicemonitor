@@ -177,6 +177,9 @@ jobs:
       - name: Validate email log API routing contract
         run: python3 tests/test_emaillog_routing.py
 
+      - name: Validate email log CSRF handling
+        run: python3 tests/test_emaillog_csrf.py
+
       - name: Validate notification wrappers keep delivery behaviour
         run: php tests/test_notification_wrappers.php
 
