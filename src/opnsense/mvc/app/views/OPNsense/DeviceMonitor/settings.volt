@@ -164,7 +164,7 @@
                         <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Timing Template') }}" data-content="{{ devicemonitor_t('Nmap timing template. T4 is the default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                     </div>
                     <div class="col-md-9">
-                        <select id="nmap_timing" class="form-control" style="max-width:180px;">
+                        <select id="nmap_timing" class="selectpicker" data-style="btn-default" data-width="180px">
                             <option value="0">T0</option>
                             <option value="1">T1</option>
                             <option value="2">T2</option>
@@ -330,7 +330,7 @@
                             </button>
                         </div>
                         <div class="col-md-9">
-                            <select id="email_method" class="form-control" style="max-width:400px;">
+                            <select id="email_method" class="selectpicker" data-style="btn-default" data-width="400px">
                                 <option value="sendmail">{{ devicemonitor_t('Local Sendmail / Postfix') }}</option>
                                 <option value="smtp">{{ devicemonitor_t('Direct SMTP (built into Device Monitor)') }}</option>
                             </select>
@@ -365,7 +365,7 @@
                                 <label>{{ devicemonitor_t('Encryption') }}:</label>
                             </div>
                             <div class="col-xs-12 col-md-9">
-                                <select id="smtp_encryption" class="form-control" style="width:180px;">
+                                <select id="smtp_encryption" class="selectpicker" data-style="btn-default" data-width="180px">
                                     <option value="starttls">STARTTLS</option>
                                     <option value="ssl">SSL/TLS</option>
                                     <option value="none">{{ devicemonitor_t('None') }}</option>
@@ -1305,6 +1305,7 @@ $().ready(function() {
                     ? d.nmap_timing
                     : 4
             );
+            $('#nmap_timing').selectpicker('refresh');
             $('#nmap_host_timeout').val(d.nmap_host_timeout||45);
             $('#nmap_version_detection').prop(
                 'checked',
@@ -1337,10 +1338,12 @@ $().ready(function() {
             });
             $('#email_from').val(d.email_from||'devicemonitor@opnsense.local');
             $('#email_method').val(d.email_method||'sendmail');
+            $('#email_method').selectpicker('refresh');
             $('#smtp_host').val(d.smtp_host||'');
             $('#smtp_port').val(d.smtp_port||587);
             var smtpEncryptionDefault = (parseInt($('#smtp_port').val(), 10) === 25) ? 'none' : 'starttls';
             $('#smtp_encryption').val(d.smtp_encryption||smtpEncryptionDefault);
+            $('#smtp_encryption').selectpicker('refresh');
             $('#smtp_username').val(d.smtp_username||'');
             $('#smtp_password').val(d.smtp_password||'');
             $('#webhook_enabled').prop('checked', d.webhook_enabled==='1');

@@ -219,10 +219,10 @@
          * request before that hook exists, so the API answers 403. Defer to
          * ready so every request carries X-CSRFToken, like the other pages. */
         $(document).ready(function () {
-            /* Standard OPNsense lifecycle: enhance the selects once the layout's
-             * ready handlers have run, then load. No duplicate initialisation and
-             * no per-request refresh, because the options never change. */
-            $('#email-log-type, #email-log-status').selectpicker();
+            /* bootstrap-select auto-initialises every .selectpicker on window
+             * load, so no explicit init here: doing so would double-initialise.
+             * The options never change, so no per-request refresh is needed
+             * either; only the initial request waits for the ready handler. */
             load();
         });
     })();

@@ -37,15 +37,14 @@ def test_selects_use_the_framework_widget():
 
 
 def test_initialisation_follows_the_lifecycle():
+    """bootstrap-select auto-initialises .selectpicker on window load; a page must
+    neither double-initialise nor refresh static options per request."""
     src = VIEW.read_text(encoding='utf-8')
+    assert ".selectpicker();" not in src, 'explicit initialisation would duplicate the plugin hook'
+    assert ".selectpicker('refresh')" not in src, 'options are static; no per-request refresh'
     ready_at = src.index('$(document).ready(function () {')
-    init = src.index(".selectpicker();", ready_at)
-    assert init > ready_at, 'selectpicker must be initialised after ready'
-    assert src.count(".selectpicker();") == 1, 'initialisation must not be duplicated'
-    # Options never change after load, so a per-request refresh would be noise.
-    assert ".selectpicker('refresh')" not in src, 'no per-request refresh for static options'
     load_at = src.index('load();', ready_at)
-    assert ready_at < init < load_at, 'initialise before the first request'
+    assert load_at > ready_at, 'the first request must still wait for ready (CSRF hook)'
     print('EMAIL_LOG_WIDGET_LIFECYCLE=PASS')
 
 
@@ -73,23 +72,12 @@ def test_control_inventory_has_one_shared_cause():
     """Every page's selects follow the framework widget, except deliberate
     page-specific width rules under container classes."""
     views = ROOT / 'src/opnsense/mvc/app/views/OPNsense/DeviceMonitor'
-    # Known, pre-existing exception: three plain selects on the Settings page,
-    # predating the email-log work and outside this correction's scope. They are
-    # enumerated here so the inventory stays honest rather than silent.
-    KNOWN = {
-        ('settings.volt', 'nmap_timing'),
-        ('settings.volt', 'email_method'),
-        ('settings.volt', 'smtp_encryption'),
-    }
     offenders = []
     for path in sorted(views.glob('*.volt')):
         src = path.read_text(encoding='utf-8')
         for m in re.finditer(r'<select[^>]*>', src):
             tag = m.group(0)
             if 'selectpicker' in tag or 'data-role' in tag:
-                continue
-            ident = re.search(r'id="([^"]+)"', tag)
-            if (path.name, ident.group(1) if ident else '') in KNOWN:
                 continue
             offenders.append((path.name, tag))
     assert not offenders, offenders

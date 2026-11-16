@@ -183,6 +183,9 @@ jobs:
       - name: Validate email log control alignment
         run: python3 tests/test_emaillog_layout.py
 
+      - name: Validate settings control round-trip
+        run: python3 tests/test_settings_control_roundtrip.py
+
       - name: Validate notification wrappers keep delivery behaviour
         run: php tests/test_notification_wrappers.php
 

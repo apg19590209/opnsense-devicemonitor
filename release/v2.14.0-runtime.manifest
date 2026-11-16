@@ -22,7 +22,7 @@ b7aa5631344ea410326d18f6fc07a52e0a43ddf0a1e160c6c91f2f5326003d0c 644 src/opnsens
 997bdad955f390a060bb05c26dd4e4e8268d59e8df252b1b59fce8fe19f49861 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/physicaldevices.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/physicaldevices.volt
 5fd95a8c91e8a6155ea4e5e4ebf67acf89be8b9dbf25b77110bc65af072f6856 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/scanhistory.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/scanhistory.volt
 35f50befb3e57d8e2c3e382ea4851af3259b88f6dc474de19cc56b8b53efa3ed 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/service_widget.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/service_widget.volt
-d1e182e1e743efc29c05f8288aeb95a4e2e651b825b99f234ec4b89478ede39e 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt
+d599434cd21132c5556b8f36182ddfffe778da7138a606514c8de21461cd7f39 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt
 d5c92bc843ebf00b9680881f6878e894042fff0e49b2ca13ff56ce68f2c24965 644 src/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php
 312ee0e8c1d1449f569052147eaa1fbfeefefae9315b220a8d1746fdd125fd2d 755 src/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/daemon_status.sh
 2a76d04806b02b1c11aa987be7ba752399b17c6045ed85c73e65eb016dd60707 755 src/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/monitor_daemon.py
@@ -42,6 +42,6 @@ de88c9de7ee13534e4a89060019e4bedfe1950e74f564df1dc6a3ac004eef9b2 755 src/opnsens
 9c1a52caf8faefc5cd276ba8286efb98dd50f358ad3121b423c24e6862ac5804 644 src/opnsense/scripts/OPNsense/DeviceMonitor/EmailLog.php /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailLog.php
 a1793d54db17f8ae9756510d2d08e035979000a43c7611fa424c5eb5afc619d1 644 src/opnsense/scripts/OPNsense/DeviceMonitor/EmailTransport.php /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailTransport.php
 1954f3b97ba08ad656e95a2e8d9bd40bfef24ea558172a5b8e8da8c575e85775 644 src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/EmaillogController.php /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/EmaillogController.php
-96e6d99114847aa261c3822281238f60cbedd77ed6475348478845e52b730391 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/emaillog.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/emaillog.volt
+88bd6a4ca00352a334a6075fba61de06d9839308e92f0204bb0a613a90acea99 644 src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/emaillog.volt /usr/local/opnsense/mvc/app/views/OPNsense/DeviceMonitor/emaillog.volt
 21a39ed0ebd8e6aba5fc1860090fa051c95c00562a7b662e00fa0b863a7c1280 644 src/opnsense/scripts/OPNsense/DeviceMonitor/prune_email_log.php /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/prune_email_log.php
 ca4bd6e57eb4d2a06c1d37891de304ef3155bad0e06767f252d076765b117f21 644 src/opnsense/scripts/OPNsense/DeviceMonitor/observe_email_log.php /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/observe_email_log.php
