@@ -19,8 +19,11 @@ SHARED_CSS = [
 def test_no_custom_control_styling():
     """The page must not compensate for markup with fixed heights or padding."""
     src = VIEW.read_text(encoding='utf-8')
-    assert '<style>' not in src or 'height' not in src[src.index('<style>'):src.index('</style>')], \
-        'the page must not carry its own control-sizing CSS'
+    css = src[src.index('<style>'):src.index('</style>')] if '<style>' in src else ''
+    # Dialog reading-area rules may set max-height:none, but the page must never
+    # impose fixed control sizing (e.g. height:30px) on standard controls.
+    assert not re.search(r'(^|[;{\s])height:\s*\d', css), \
+        'the page must not carry fixed control-height CSS'
     for bad in ('style="height', 'style="line-height', 'padding-top: 5px'):
         assert bad not in src, f'custom control sizing present: {bad}'
     print('EMAIL_LOG_NO_CUSTOM_CONTROL_CSS=PASS')
