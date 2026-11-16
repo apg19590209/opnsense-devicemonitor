@@ -47,24 +47,30 @@ class EmailLogController extends ApiControllerBase
         $log = $this->recorder();
         $rows = $log->query($filters, $perPage, ($page - 1) * $perPage);
 
-        // Escape everything before it reaches the browser; the view renders text.
+        // Values are returned raw: the view inserts them with text() so they are
+        // escaped exactly once at render time. Encoding here would double-escape.
+        $fields = ['event_id', 'created_utc', 'updated_utc', 'node_id', 'node_ip', 'node_role',
+            'notification_type', 'recipient', 'subject', 'status', 'status_detail', 'transport',
+            'queue_id', 'message_id'];
         $safe = [];
         foreach ($rows as $row) {
-            $safe[] = [
-                'event_id' => htmlspecialchars((string)$row['event_id'], ENT_QUOTES, 'UTF-8'),
-                'created_utc' => htmlspecialchars((string)$row['created_utc'], ENT_QUOTES, 'UTF-8'),
-                'updated_utc' => htmlspecialchars((string)$row['updated_utc'], ENT_QUOTES, 'UTF-8'),
-                'node_id' => htmlspecialchars((string)$row['node_id'], ENT_QUOTES, 'UTF-8'),
-                'node_ip' => htmlspecialchars((string)$row['node_ip'], ENT_QUOTES, 'UTF-8'),
-                'node_role' => htmlspecialchars((string)$row['node_role'], ENT_QUOTES, 'UTF-8'),
-                'notification_type' => htmlspecialchars((string)$row['notification_type'], ENT_QUOTES, 'UTF-8'),
-                'recipient' => htmlspecialchars((string)$row['recipient'], ENT_QUOTES, 'UTF-8'),
-                'subject' => htmlspecialchars((string)$row['subject'], ENT_QUOTES, 'UTF-8'),
-                'status' => htmlspecialchars((string)$row['status'], ENT_QUOTES, 'UTF-8'),
-                'status_detail' => htmlspecialchars((string)$row['status_detail'], ENT_QUOTES, 'UTF-8'),
-                'queue_id' => htmlspecialchars((string)$row['queue_id'], ENT_QUOTES, 'UTF-8'),
-                'evidence' => htmlspecialchars((string)$row['evidence'], ENT_QUOTES, 'UTF-8'),
-            ];
+            $clean = [];
+            foreach ($fields as $field) {
+                $clean[$field] = (string)($row[$field] ?? '');
+            }
+            $timeline = [];
+            foreach (($row['timeline'] ?? []) as $step) {
+                $timeline[] = [
+                    'occurred_utc' => (string)($step['occurred_utc'] ?? ''),
+                    'stage' => (string)($step['stage'] ?? ''),
+                    'status' => (string)($step['status'] ?? ''),
+                    'detail' => (string)($step['detail'] ?? ''),
+                    'evidence' => (string)($step['evidence'] ?? ''),
+                    'source' => (string)($step['source'] ?? ''),
+                ];
+            }
+            $clean['timeline'] = $timeline;
+            $safe[] = $clean;
         }
 
         return [
@@ -94,7 +100,15 @@ class EmailLogController extends ApiControllerBase
         $rows = $log->query([], 200, 0);
         $header = ['created_utc', 'node_ip', 'node_role', 'notification_type', 'recipient', 'subject', 'status', 'status_detail', 'queue_id'];
         $lines = [implode(',', $header)];
-        $csv = function ($v) { return '"' . str_replace('"', '""', (string)$v) . '"'; };
+        // Neutralise spreadsheet formula injection: a leading = + - @ (or tab/CR) is
+        // prefixed with a single quote so the cell is treated as text.
+        $csv = function ($v) {
+            $value = (string)$v;
+            if ($value !== '' && strpos("=+-@\t\r", $value[0]) !== false) {
+                $value = "'" . $value;
+            }
+            return '"' . str_replace('"', '""', $value) . '"';
+        };
         foreach ($rows as $row) {
             $lines[] = implode(',', [
                 $csv($row['created_utc']), $csv($row['node_ip']), $csv($row['node_role']),

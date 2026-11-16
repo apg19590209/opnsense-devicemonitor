@@ -156,6 +156,27 @@ jobs:
       - name: Validate identity event capture order
         run: python3 tests/test_identity_event_capture_order.py
 
+      # Email log: real wrapper behaviour, trusted queue paths and export safety. The
+      # runners need PHP's SQLite extension; it is installed here so the suite can
+      # exercise the recorder against a real database.
+      - name: Ensure PHP SQLite support
+        run: |
+          set -eu
+          if ! php -m | grep -qi '^sqlite3$'; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq php-sqlite3
+          fi
+          php -m | grep -qi '^sqlite3$' || { echo 'PHP sqlite3 extension unavailable'; exit 1; }
+
+      - name: Validate email log recorder
+        run: php tests/test_email_log.php
+
+      - name: Validate email log transport and export safety
+        run: php tests/test_email_log_transport.php
+
+      - name: Validate notification wrappers keep delivery behaviour
+        run: php tests/test_notification_wrappers.php
+
       # v2.11 HA safety: the WAN/uplink must never be selectable as a monitored segment.
       - name: Validate monitored interface selection (v2.11)
         run: python3 tests/test_monitored_interfaces.py

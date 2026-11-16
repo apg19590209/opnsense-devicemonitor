@@ -31,6 +31,30 @@ class EmailTransport
         return [EmailLog::STATE_UNKNOWN, $message !== '' ? $message : 'No transport evidence'];
     }
 
+    /**
+     * Installed OPNsense paths for the Postfix queue tools. Overridable through a
+     * single trusted constant so tests can substitute a fake binary; the default is
+     * the path verified on the known nodes, with the base-system path as fallback.
+     */
+    public static $postqueueCandidates = [
+        '/usr/local/sbin/postqueue',
+        '/usr/sbin/postqueue',
+    ];
+    public static $postcatCandidates = [
+        '/usr/local/sbin/postcat',
+        '/usr/sbin/postcat',
+    ];
+
+    public static function trustedBinary(array $candidates)
+    {
+        foreach ($candidates as $path) {
+            if (is_string($path) && $path !== '' && @is_executable($path)) {
+                return $path;
+            }
+        }
+        return null;
+    }
+
     /** Run a command with a hard timeout; never blocks a send indefinitely. */
     private static function runBounded(array $cmd, $timeout = 5)
     {
@@ -63,6 +87,40 @@ class EmailTransport
         return [$out, null];
     }
 
+    /** True only for an exact `Message-ID: <value>` header line. */
+    public static function headerCarriesMessageId($content, $messageId)
+    {
+        if (!is_string($content) || $messageId === '') {
+            return false;
+        }
+        foreach (preg_split('/\r?\n/', $content) as $line) {
+            if (preg_match('/^Message-ID:\s*<([^>]+)>\s*$/i', $line, $m)) {
+                if ($m[1] === $messageId) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Derive the queue stage from the queue file's disposition record block. Only
+     * an explicit deferred status counts; absence of evidence is plain queued.
+     */
+    public static function queueStage($content)
+    {
+        if (!is_string($content)) {
+            return 'queued';
+        }
+        foreach (preg_split('/\r?\n/', $content) as $line) {
+            // Postfix writes queue disposition lines as e.g. "deferred ...".
+            if (preg_match('/^\s*deferred\b/i', $line)) {
+                return 'deferred';
+            }
+        }
+        return 'queued';
+    }
+
     /**
      * Find the queue entry for a message by proven identity.
      *
@@ -75,7 +133,12 @@ class EmailTransport
         if ($messageId === '') {
             return [null, 'no message id recorded'];
         }
-        list($listing, $error) = self::runBounded(['/usr/sbin/postqueue', '-p'], 5);
+        $postqueue = self::trustedBinary(self::$postqueueCandidates);
+        $postcat = self::trustedBinary(self::$postcatCandidates);
+        if ($postqueue === null || $postcat === null) {
+            return [null, 'Postfix queue tools not found at a trusted path'];
+        }
+        list($listing, $error) = self::runBounded([$postqueue, '-p'], 5);
         if ($listing === null) {
             return [null, 'postqueue unavailable: ' . $error];
         }
@@ -86,9 +149,9 @@ class EmailTransport
             }
         }
         foreach (array_slice($queueIds, 0, 50) as $qid) {
-            list($content, $err) = self::runBounded(['/usr/sbin/postcat', '-q', '-h', $qid], 5);
+            list($content, $err) = self::runBounded([$postcat, '-q', '-h', $qid], 5);
             if ($content === null) { continue; }
-            if (strpos($content, $messageId) !== false) {
+            if (self::headerCarriesMessageId($content, $messageId)) {
                 return [$qid, null];
             }
         }
@@ -120,12 +183,9 @@ class EmailTransport
                 'Queue entry not observable; delivery state unknown', $reason, 'observer', null, null, 'observation');
             return;
         }
-        list($content, $err) = self::runBounded(['/usr/sbin/postcat', '-q', '-h', $queueId], 5);
-        $stage = 'queued';
-        $detail = 'Present in Postfix queue';
-        if (is_string($content) && preg_match('/deferred/i', $content) !== false) {
-            $stage = 'deferred';
-        }
-        $log->recordTransportEvent($eventId, EmailLog::STATE_QUEUED, $detail, 'postcat header match', 'observer', $queueId, null, $stage);
+        list($content, $err) = self::runBounded([self::trustedBinary(self::$postcatCandidates), '-q', '-h', $queueId], 5);
+        $stage = self::queueStage((string)$content);
+        $log->recordTransportEvent($eventId, EmailLog::STATE_QUEUED, 'Present in Postfix queue',
+            'postcat header match', 'observer', $queueId, null, $stage);
     }
 }

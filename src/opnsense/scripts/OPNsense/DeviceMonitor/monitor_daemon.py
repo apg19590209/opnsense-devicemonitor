@@ -163,21 +163,49 @@ def run_due_port_discovery():
 # Email-log maintenance cadence: hourly retention plus observation of queued mail.
 # Kept deliberately slow and bounded so it cannot interfere with scanning.
 MAIL_MAINTENANCE_INTERVAL = 3600
+# Hard ceiling for one maintenance pass, so it cannot delay scheduled scans.
+MAIL_MAINTENANCE_BUDGET = 20
 PHP_MAINTENANCE = '/usr/local/bin/php'
 SCRIPT_DIR_MAINT = '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor'
 
 
 def run_mail_maintenance():
-    """Run retention and out-of-band observation. Best-effort; never raises."""
-    for script in ('prune_email_log.php', 'observe_email_log.php'):
-        try:
-            subprocess.run(
-                [PHP_MAINTENANCE, SCRIPT_DIR_MAINT + '/' + script],
-                capture_output=True, text=True, timeout=60
-            )
-        except Exception:
-            # Email-log maintenance must never disturb the monitoring loop.
-            pass
+    """Run retention and out-of-band observation within one total budget.
+
+    The whole maintenance pass is bounded so it can never stall the monitoring
+    loop: it starts both helpers, waits at most MAIL_MAINTENANCE_BUDGET seconds in
+    total, then terminates anything still running.
+    """
+    procs = []
+    try:
+        for script in ('prune_email_log.php', 'observe_email_log.php'):
+            try:
+                procs.append(subprocess.Popen(
+                    [PHP_MAINTENANCE, SCRIPT_DIR_MAINT + '/' + script],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                ))
+            except Exception:
+                pass
+        deadline = time.time() + MAIL_MAINTENANCE_BUDGET
+        for proc in procs:
+            remaining = max(0.1, deadline - time.time())
+            try:
+                proc.wait(timeout=remaining)
+            except subprocess.TimeoutExpired:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+            except Exception:
+                pass
+    finally:
+        for proc in procs:
+            try:
+                if proc.poll() is None:
+                    proc.kill()
+                proc.wait(timeout=5)
+            except Exception:
+                pass
 
 
 def main():

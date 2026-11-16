@@ -51,6 +51,23 @@ class EmailLog
         return $defaults['paths']['emailLogDb'] ?? '/var/db/devicemonitor/email_log.db';
     }
 
+    private static $instance = null;
+
+    /** Shared instance used by the senders; tests may replace it by construction. */
+    public static function instance()
+    {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    /** Test seam: install a recorder bound to a specific database. */
+    public static function setInstance($log)
+    {
+        self::$instance = $log;
+    }
+
     public function lastDiagnostic()
     {
         return $this->diagnostic;
@@ -69,6 +86,14 @@ class EmailLog
             @mkdir($dir, 0750, true);
         }
         $db = new \SQLite3($this->dbFile);
+        // Restrictive permissions on the database and its WAL/SHM siblings; the
+        // log holds administrative subject and recipient data.
+        @chmod($this->dbFile, 0640);
+        foreach (['-wal', '-shm'] as $suffix) {
+            if (file_exists($this->dbFile . $suffix)) {
+                @chmod($this->dbFile . $suffix, 0640);
+            }
+        }
         $db->busyTimeout(self::BUSY_TIMEOUT_MS);
         $db->exec('PRAGMA journal_mode = WAL');
         $db->exec('PRAGMA synchronous = NORMAL');

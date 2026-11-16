@@ -101,7 +101,8 @@
             diagnostics: {{ lang.query('Timeline')|json_encode(15) }},
             role: {{ lang.query('Role')|json_encode(15) }},
             ip: {{ lang.query('Node address')|json_encode(15) }},
-            unknown: {{ lang.query('Unknown')|json_encode(15) }}
+            unknown: {{ lang.query('Unknown')|json_encode(15) }},
+            loadFailed: {{ lang.query('Could not load the email log')|json_encode(15) }}
         };
     }
 
@@ -126,7 +127,18 @@
                     status: $('#email-log-status').val(),
                     search: $('#email-log-search').val()
                 }
+            }).fail(function (xhr) {
+                // A failed request must be visible, never an empty table.
+                $('#email-log-empty').hide();
+                $('#email-log-diagnostic')
+                    .show()
+                    .text(text.loadFailed + ' (HTTP ' + (xhr && xhr.status ? xhr.status : '?') + ')');
             }).done(function (data) {
+                if (!data || data.result !== 'ok') {
+                    $('#email-log-empty').hide();
+                    $('#email-log-diagnostic').show().text(text.loadFailed);
+                    return;
+                }
                 var rows = data.rows || [];
                 var $body = $('#email-log-rows').empty();
                 $('#email-log-node').text((data.node.node_id || '') + ' ' + (data.node.node_ip || '') +

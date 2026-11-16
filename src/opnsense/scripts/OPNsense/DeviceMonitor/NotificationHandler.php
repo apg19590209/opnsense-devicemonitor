@@ -4,12 +4,15 @@
  * Path: /usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php
  */
 
-// Load the DeviceMonitor class
-require_once('/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php');
+// Load the DeviceMonitor class. DM_MODEL_PATH is a test seam only; production
+// always resolves the installed model.
+$__dmModelPath = getenv('DM_MODEL_PATH') ?: '/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/DeviceMonitor.php';
+require_once($__dmModelPath);
 // Email log records live in their own database; loading it here covers every
 // caller that sends through this handler.
-require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailLog.php');
-require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailTransport.php');
+$__dmLibDir = getenv('DM_LIB_DIR') ?: '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor';
+require_once($__dmLibDir . '/EmailLog.php');
+require_once($__dmLibDir . '/EmailTransport.php');
 
 class NotificationHandler
 {
@@ -168,14 +171,23 @@ class NotificationHandler
     {
         // Logging wraps the real send without changing what it returns, so a
         // failure to record can never block or duplicate the delivery itself.
-        $log = \OPNsense\DeviceMonitor\EmailLog::instance();
-        $messageId = \OPNsense\DeviceMonitor\EmailLog::newMessageId((string)@gethostname());
-        $eventId = $log->recordSubmission(
-            $notificationType ?: \OPNsense\DeviceMonitor\EmailLog::TYPE_SERVICE,
-            (string)($this->_resolvedRecipient() ?? ''),
-            (string)$subject,
-            null, null, null, null, $messageId
-        );
+        $log = null;
+        $eventId = null;
+        $messageId = null;
+        try {
+            $log = \OPNsense\DeviceMonitor\EmailLog::instance();
+            $messageId = \OPNsense\DeviceMonitor\EmailLog::newMessageId((string)@gethostname());
+            $eventId = $log->recordSubmission(
+                $notificationType ?: \OPNsense\DeviceMonitor\EmailLog::TYPE_SERVICE,
+                (string)($this->_resolvedRecipient() ?? ''),
+                (string)$subject,
+                null, null, null, null, $messageId
+            );
+        } catch (\Throwable $e) {
+            /* Logging setup is fail-open: the send proceeds exactly as before. */
+            $log = null;
+            $eventId = null;
+        }
         try {
             $result = $this->_sendCustomEmail($subject, $html, $messageId);
         } catch (\Throwable $e) {
@@ -188,12 +200,16 @@ class NotificationHandler
 
     private function _logOutcome($log, $eventId, array $result)
     {
-        if (!$eventId) {
+        if (!$log || !$eventId) {
             return;
         }
-        list($status, $detail) = \OPNsense\DeviceMonitor\EmailTransport::classify($result);
-        $log->recordTransportEvent($eventId, $status, $detail, null, 'transport:' . ($result['transport'] ?? '?'));
-        \OPNsense\DeviceMonitor\EmailTransport::correlatePostfix($eventId, (string)($this->_resolvedRecipient() ?? ''));
+        try {
+            list($status, $detail) = \OPNsense\DeviceMonitor\EmailTransport::classify($result);
+            /* Submission only: queue correlation runs out of band in observe_email_log.php. */
+            $log->recordTransportEvent($eventId, $status, $detail, 'transport:' . ($result['transport'] ?? '?'));
+        } catch (\Throwable $e) {
+            /* Recording a result must never change or duplicate the delivery. */
+        }
     }
 
     private function _resolvedRecipient()
@@ -207,7 +223,7 @@ class NotificationHandler
         }
     }
 
-    private function _sendCustomEmail($subject, $html, $messageId = null)
+    protected function _sendCustomEmail($subject, $html, $messageId = null)
     {
         $model = new \OPNsense\DeviceMonitor\DeviceMonitor();
         $config = $model->getConfig();
@@ -276,14 +292,20 @@ class NotificationHandler
     {
         // Thin logging wrapper: the original implementation and its return values
         // are untouched; only the outcome is recorded, best-effort.
-        $log = \OPNsense\DeviceMonitor\EmailLog::instance();
+        $log = null;
+        try {
+            $log = \OPNsense\DeviceMonitor\EmailLog::instance();
+        } catch (\Throwable $e) {
+            $log = null;
+        }
         $type = $is_test
             ? \OPNsense\DeviceMonitor\EmailLog::TYPE_TEST
             : \OPNsense\DeviceMonitor\EmailLog::TYPE_NEW_DEVICE;
         $messageId = \OPNsense\DeviceMonitor\EmailLog::newMessageId((string)@gethostname());
-        $eventId = $log->recordSubmission($type, (string)($this->_resolvedRecipient() ?? ''), $is_test
-            ? 'Test - OPNsense Device Monitor'
-            : 'New device notification', null, null, null, null, $messageId);
+        $subjectForLog = $this->_subjectForEmail($is_test);
+        $eventId = $log === null ? null : $log->recordSubmission(
+            $type, (string)($this->_resolvedRecipient() ?? ''), $subjectForLog,
+            null, null, null, null, $messageId);
         try {
             $result = $this->_sendEmail($is_test, $messageId);
         } catch (\Throwable $e) {
@@ -294,7 +316,21 @@ class NotificationHandler
         return $result;
     }
 
-    private function _sendEmail($is_test = false, $messageId = null)
+    /** The subject the transport will actually emit, for accurate logging. */
+    protected function _subjectForEmail($is_test = false)
+    {
+        if ($is_test) {
+            return 'Test - OPNsense Device Monitor';
+        }
+        try {
+            $count = count($this->loadDevicesFromDb() ?: []);
+            return 'OPNsense: ' . $count . ' new device(s) detected';
+        } catch (\Throwable $e) {
+            return 'OPNsense: new device(s) detected';
+        }
+    }
+
+    protected function _sendEmail($is_test = false, $messageId = null)
     {
         //$this->fLog("=== sendEmail START === Mode: " . ($is_test ? 'TEST' : 'REAL'), 'EMAIL');
         

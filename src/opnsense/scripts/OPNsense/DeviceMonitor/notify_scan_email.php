@@ -282,7 +282,7 @@ if ($__dmEvent) {
     if ($ret === 0) {
         $__dmLog->recordTransportEvent($__dmEvent, \OPNsense\DeviceMonitor\EmailLog::STATE_QUEUED,
             'Queued to local sendmail', null, 'transport:sendmail');
-        \OPNsense\DeviceMonitor\EmailTransport::correlatePostfix($__dmEvent, (string)$emailTo);
+        /* Submission only: queue correlation runs out of band. */
     } else {
         $__dmLog->recordTransportEvent($__dmEvent, \OPNsense\DeviceMonitor\EmailLog::STATE_FAILED,
             \OPNsense\DeviceMonitor\EmailLog::sanitise($stderr ?: "sendmail exit code {$ret}"),
