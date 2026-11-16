@@ -2,6 +2,22 @@
 
 ## Current state
 
+**Email log feature — `.23` installation and UI acceptance pass (17 November 2026).** Candidate
+`ae091bfa…` (source `2a50811`, CI `43972141418` success) installed with `INSTALL_OK files=68
+core_locales=9 pruned=0`; all 49 manifest targets verify. **Settings were preserved, not restored to
+the old disabled baseline:** config `cebc403f…` was identical before and after, with monitoring and
+email enabled and a single configured operator recipient (guard verified, address never printed) as
+the operator authorised for this window. Both databases passed `integrity_check`; the email log kept
+its 20 rows (10 test, 9 new-device, 1 preview) at schema v2, including preview
+`210c1c39a10f9d4de5f44bacab912b20`. Verified on the installed tree: the View message dialog carries
+`aria-labelledby`, returns focus on close, renders plain text only, and the body relies on core modal
+scrolling; peer tabs, selectpicker controls and three POST endpoints are present; the preview and a
+captured row both return content with timelines; long content is bounded at 20 KB with the
+truncation flag set (temporary database). **Not verified:** authenticated API responses and live peer
+aggregation (no session or API key exists, and peer access stays disabled), plus the operator's
+on-screen consolidated pass. Peer aggregation remains fixture-validated only.
+
+
 **Captured-body browser acceptance — operator-confirmed PASS (17 November 2026).** Following the
 raw-JSON response fix and repair install, the operator confirmed via the supplied preview screenshot
 that the captured body renders correctly in the modal, including `<tag>`, a single `&`, quotes and the
