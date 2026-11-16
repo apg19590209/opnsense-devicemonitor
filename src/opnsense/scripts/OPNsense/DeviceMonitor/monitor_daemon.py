@@ -160,6 +160,26 @@ def run_due_port_discovery():
     except Exception as e:
         log(f"Port discovery error: {e}", level='INFO')
 
+# Email-log maintenance cadence: hourly retention plus observation of queued mail.
+# Kept deliberately slow and bounded so it cannot interfere with scanning.
+MAIL_MAINTENANCE_INTERVAL = 3600
+PHP_MAINTENANCE = '/usr/local/bin/php'
+SCRIPT_DIR_MAINT = '/usr/local/opnsense/scripts/OPNsense/DeviceMonitor'
+
+
+def run_mail_maintenance():
+    """Run retention and out-of-band observation. Best-effort; never raises."""
+    for script in ('prune_email_log.php', 'observe_email_log.php'):
+        try:
+            subprocess.run(
+                [PHP_MAINTENANCE, SCRIPT_DIR_MAINT + '/' + script],
+                capture_output=True, text=True, timeout=60
+            )
+        except Exception:
+            # Email-log maintenance must never disturb the monitoring loop.
+            pass
+
+
 def main():
     """Main daemon loop"""
     global running
@@ -174,6 +194,7 @@ def main():
     config = load_config()
     
     last_scan = 0
+    last_mail_maintenance = 0
     last_config_state = None  # Track configuration changes
     last_interval = None      # Track interval changes
     
@@ -211,6 +232,14 @@ def main():
                     run_due_port_discovery()
                     last_scan = current_time
             
+            # Email-log maintenance is scheduled here because the daemon is the
+            # plugin's established periodic mechanism. It runs regardless of the
+            # monitoring switch, is best-effort, and never blocks a scan.
+            now = time.time()
+            if now - last_mail_maintenance >= MAIL_MAINTENANCE_INTERVAL:
+                run_mail_maintenance()
+                last_mail_maintenance = now
+
             # Sleep 10 seconds before the next check
             time.sleep(10)
             

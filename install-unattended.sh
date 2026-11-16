@@ -43,11 +43,11 @@ VERIFIER=release/verify-release-inputs.sh
 # file inline here, and the inputs file pins the manifest, the prune helper, the legacy
 # ownership evidence and the catalogue merge helper. A tampered helper can therefore never
 # decide which files get removed.
-MANIFEST_SHA=9b29a353d9e7efd84d716bc3afcc32233f29fff7cac0fed751f9e813015909d6
-RELEASE_INPUTS_SHA=2d607f0b0e08adc822892ac19936b90e12b105fb251b75c3cea0ce8f25517f02
+MANIFEST_SHA=ff70fdcc757a7cd28bd2f1c0e0cb0aeaac9ee7748bd523d1d8238376da5792dd
+RELEASE_INPUTS_SHA=6946696d757ad00d68088ba6946fd7f61175087ea16dd2a65e232b9fb498df34
 VERIFIER_SHA=68b93f2a08f0808b67b6bd2ca76dca33a6cc5c159de4b61353b721eaefbb583d
 [ -f "$MANIFEST" ] && [ ! -L "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = "$MANIFEST_SHA" ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
-[ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 46 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
+[ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 47 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
 [ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = "$VERSION" ] || { echo 'ABORT: source version' >&2; exit 1; }
 [ -f "$VERIFIER" ] && [ ! -L "$VERIFIER" ] && [ "$(sha256 -q "$VERIFIER")" = "$VERIFIER_SHA" ] || { echo 'ABORT: verifier digest' >&2; exit 1; }
 [ -f "$RELEASE_INPUTS" ] && [ ! -L "$RELEASE_INPUTS" ] && [ "$(sha256 -q "$RELEASE_INPUTS")" = "$RELEASE_INPUTS_SHA" ] || { echo 'ABORT: release inputs digest' >&2; exit 1; }

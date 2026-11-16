@@ -113,7 +113,7 @@ class NotificationHandler
     /**
      * Original transport through local /usr/local/sbin/sendmail, typically os-postfix.
      */
-    private function sendViaSendmail($email_to, $email_from, $subject, $html)
+    private function sendViaSendmail($email_to, $email_from, $subject, $html, $messageId = null)
     {
         $sendmail = '/usr/local/sbin/sendmail';
         if (!is_executable($sendmail)) {
@@ -126,6 +126,10 @@ class NotificationHandler
         $message = "From: $email_from\r\n";
         $message .= "To: $email_to\r\n";
         $message .= "Subject: $subject\r\n";
+        if (is_string($messageId) && $messageId !== '') {
+            // Our own Message-ID lets the out-of-band observer prove queue identity.
+            $message .= "Message-ID: <{$messageId}>\r\n";
+        }
         $message .= "MIME-Version: 1.0\r\n";
         $message .= "Content-Type: text/html; charset=UTF-8\r\n";
         $message .= "\r\n$html";
@@ -165,13 +169,15 @@ class NotificationHandler
         // Logging wraps the real send without changing what it returns, so a
         // failure to record can never block or duplicate the delivery itself.
         $log = \OPNsense\DeviceMonitor\EmailLog::instance();
+        $messageId = \OPNsense\DeviceMonitor\EmailLog::newMessageId((string)@gethostname());
         $eventId = $log->recordSubmission(
             $notificationType ?: \OPNsense\DeviceMonitor\EmailLog::TYPE_SERVICE,
             (string)($this->_resolvedRecipient() ?? ''),
-            (string)$subject
+            (string)$subject,
+            null, null, null, null, $messageId
         );
         try {
-            $result = $this->_sendCustomEmail($subject, $html);
+            $result = $this->_sendCustomEmail($subject, $html, $messageId);
         } catch (\Throwable $e) {
             $this->_logOutcome($log, $eventId, ['result' => 'failed', 'message' => $e->getMessage()]);
             throw $e;
@@ -201,7 +207,7 @@ class NotificationHandler
         }
     }
 
-    private function _sendCustomEmail($subject, $html)
+    private function _sendCustomEmail($subject, $html, $messageId = null)
     {
         $model = new \OPNsense\DeviceMonitor\DeviceMonitor();
         $config = $model->getConfig();
@@ -223,7 +229,8 @@ class NotificationHandler
                     $email_to,
                     $email_from,
                     (string)$subject,
-                    (string)$html
+                    (string)$html,
+                    $messageId
                 );
                 $email_method = 'sendmail';
             }
@@ -273,11 +280,12 @@ class NotificationHandler
         $type = $is_test
             ? \OPNsense\DeviceMonitor\EmailLog::TYPE_TEST
             : \OPNsense\DeviceMonitor\EmailLog::TYPE_NEW_DEVICE;
+        $messageId = \OPNsense\DeviceMonitor\EmailLog::newMessageId((string)@gethostname());
         $eventId = $log->recordSubmission($type, (string)($this->_resolvedRecipient() ?? ''), $is_test
             ? 'Test - OPNsense Device Monitor'
-            : 'New device notification');
+            : 'New device notification', null, null, null, null, $messageId);
         try {
-            $result = $this->_sendEmail($is_test);
+            $result = $this->_sendEmail($is_test, $messageId);
         } catch (\Throwable $e) {
             $this->_logOutcome($log, $eventId, ['result' => 'failed', 'message' => $e->getMessage()]);
             throw $e;
@@ -286,7 +294,7 @@ class NotificationHandler
         return $result;
     }
 
-    private function _sendEmail($is_test = false)
+    private function _sendEmail($is_test = false, $messageId = null)
     {
         //$this->fLog("=== sendEmail START === Mode: " . ($is_test ? 'TEST' : 'REAL'), 'EMAIL');
         
@@ -453,7 +461,7 @@ HTML;
             if ($email_method === 'smtp') {
                 $sendResult = $this->sendViaDirectSmtp($subject, $html);
             } else {
-                $sendResult = $this->sendViaSendmail($email_to, $email_from, $subject, $html);
+                $sendResult = $this->sendViaSendmail($email_to, $email_from, $subject, $html, $messageId);
                 $email_method = 'sendmail';
             }
 

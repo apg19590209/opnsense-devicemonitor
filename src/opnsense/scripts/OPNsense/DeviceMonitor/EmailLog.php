@@ -1,19 +1,16 @@
 <?php
 /**
- * Device Monitor email log — a dedicated, best-effort record of every email the
- * plugin attempts to send.
+ * Device Monitor email log.
  *
- * Design constraints (see DECISIONS.md, email-log decision):
- *   * Lives in its own SQLite file; never in devices.db and never in the Postfix
- *     queue. Monitoring operations cannot be slowed or blocked by logging.
- *   * One logical email is one row. Transport events (submission, queue status,
- *     relay acceptance/last error) update that row through `recordTransportEvent`
- *     keyed by the caller's event_id, so one email never becomes several rows.
- *   * Writes are bounded and best-effort: any failure is swallowed after a
- *     sanitised diagnostic, because logging must never block or duplicate a send.
- *   * No message bodies, credentials or queue content are stored. Subject and
- *     recipient are administrative data and are stored verbatim but never
- *     exported without an explicit operator action.
+ * A dedicated, fail-open record of every email the plugin attempts to send.
+ *
+ *   * Own SQLite file (paths.emailLogDb). Never devices.db, never the Postfix queue.
+ *   * One logical email = one `email_log` row. Every transport outcome appends a row
+ *     to `email_log_events`, so the UI can show a genuine chronological timeline.
+ *   * Correlation uses a transport identity the sender actually observed (queue id
+ *     or message id), never a recipient match.
+ *   * Nothing here may block delivery: every public method swallows failure and
+ *     reports it through lastDiagnostic(). No shell execution is used.
  */
 
 namespace OPNsense\DeviceMonitor;
@@ -25,14 +22,12 @@ class EmailLog
     const MAX_STRING = 255;
     const MAX_DETAIL = 500;
 
-    /** Terminal and intermediate transport states. */
     const STATE_SUBMITTED = 'submitted';
     const STATE_QUEUED = 'queued';
     const STATE_ACCEPTED = 'accepted';
     const STATE_FAILED = 'failed';
     const STATE_UNKNOWN = 'unknown';
 
-    /** Notification categories produced by the plugin. */
     const TYPE_TEST = 'test';
     const TYPE_NEW_DEVICE = 'new_device';
     const TYPE_SCAN_RESULT = 'scan_result';
@@ -40,33 +35,31 @@ class EmailLog
     const TYPE_SERVICE = 'service';
     const TYPE_IDENTITY = 'identity';
 
-    private static $instance = null;
     private $dbFile;
     private $diagnostic = null;
 
     public function __construct($dbFile = null)
     {
-        if ($dbFile === null) {
-            $defaults = json_decode(file_get_contents(
-                '/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json'
-            ), true);
-            $dbFile = $defaults['paths']['emailLogDb'] ?? '/var/db/devicemonitor/email_log.db';
-        }
-        $this->dbFile = $dbFile;
+        $this->dbFile = $dbFile ?: self::defaultDbFile();
     }
 
-    public static function instance()
+    public static function defaultDbFile()
     {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
-        return self::$instance;
+        $defaults = @json_decode(@file_get_contents(
+            '/usr/local/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json'
+        ), true);
+        return $defaults['paths']['emailLogDb'] ?? '/var/db/devicemonitor/email_log.db';
     }
 
-    /** Reasons the last write failed, for the UI's logging-health note. */
     public function lastDiagnostic()
     {
         return $this->diagnostic;
+    }
+
+    private function fail($message)
+    {
+        $this->diagnostic = self::sanitise($message, self::MAX_DETAIL);
+        return null;
     }
 
     private function connect()
@@ -97,16 +90,26 @@ class EmailLog
             subject TEXT NOT NULL DEFAULT \'\',
             status TEXT NOT NULL DEFAULT \'unknown\',
             status_detail TEXT NOT NULL DEFAULT \'\',
+            transport TEXT NOT NULL DEFAULT \'\',
             queue_id TEXT NOT NULL DEFAULT \'\',
-            postfix_queue_id TEXT NOT NULL DEFAULT \'\',
-            evidence TEXT NOT NULL DEFAULT \'\'
+            message_id TEXT NOT NULL DEFAULT \'\'
+        )');
+        $db->exec('CREATE TABLE IF NOT EXISTS email_log_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id TEXT NOT NULL,
+            occurred_utc DATETIME NOT NULL,
+            stage TEXT NOT NULL,
+            status TEXT NOT NULL,
+            detail TEXT NOT NULL DEFAULT \'\',
+            evidence TEXT NOT NULL DEFAULT \'\',
+            source TEXT NOT NULL DEFAULT \'sender\'
         )');
         $db->exec('CREATE INDEX IF NOT EXISTS idx_email_log_created ON email_log(created_utc)');
         $db->exec('CREATE INDEX IF NOT EXISTS idx_email_log_type ON email_log(notification_type)');
         $db->exec('CREATE INDEX IF NOT EXISTS idx_email_log_status ON email_log(status)');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_email_log_events ON email_log_events(event_id, occurred_utc)');
     }
 
-    /** Sanitise arbitrary text for storage: bounded, no control characters. */
     public static function sanitise($value, $limit = self::MAX_STRING)
     {
         $value = is_string($value) ? $value : (string)$value;
@@ -118,10 +121,6 @@ class EmailLog
         return $value;
     }
 
-    /**
-     * Recipient is reduced to a bounded single address list. Credentials never
-     * appear here; callers pass exactly what they resolved.
-     */
     public static function sanitiseRecipient($value)
     {
         $parts = array_map('trim', explode(',', (string)$value));
@@ -129,191 +128,237 @@ class EmailLog
         return self::sanitise(implode(', ', array_slice($parts, 0, 10)));
     }
 
-    /** Stable identity for one logical email. */
     public static function newEventId()
     {
         return bin2hex(random_bytes(16));
     }
 
-    /** Current CARP role, best-effort; unknown when the probe fails. */
-    public static function currentRole()
+    /** RFC 5322 Message-ID the transport will emit (or already emitted). */
+    public static function newMessageId($nodeId = '')
     {
-        $out = @shell_exec('/sbin/ifconfig 2>/dev/null');
-        if (is_string($out)) {
-            if (preg_match('/carp:\s*(MASTER|BACKUP)/', $out, $m)) {
-                return strtolower($m[1]);
-            }
-            return 'non_ha';
-        }
-        return 'unknown';
+        $host = $nodeId !== '' ? $nodeId : 'devicemonitor';
+        return sprintf('%x.%s@%s', time(), bin2hex(random_bytes(8)), $host);
     }
 
-    /** Local node identity: IPv4 of re0/management interface plus hostname. */
+    /**
+     * Node identity without shell execution: hostname plus the addresses the kernel
+     * reports for this host, so a shared hostname never identifies a node alone.
+     */
     public static function currentNode()
     {
         $host = trim((string)@gethostname());
         $ip = '';
-        $out = @shell_exec("/sbin/ifconfig 2>/dev/null");
-        if (is_string($out) && preg_match('/inet (\d+\.\d+\.\d+\.\d+) /', $out, $m)) {
-            $ip = $m[1];
+        if (function_exists('net_get_interfaces')) {
+            $ifs = @net_get_interfaces();
+            if (is_array($ifs)) {
+                foreach (['re0', 'vtnet0', 'igc0', 'em0'] as $name) {
+                    if (!isset($ifs[$name]['unicast'])) {
+                        continue;
+                    }
+                    foreach ($ifs[$name]['unicast'] as $addr) {
+                        $candidate = (string)($addr['address'] ?? '');
+                        if (filter_var($candidate, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)
+                            && strpos($candidate, '127.') !== 0) {
+                            $ip = $candidate;
+                            break 2;
+                        }
+                    }
+                }
+            }
         }
         return ['host' => $host, 'ip' => $ip];
     }
 
-    /**
-     * Record the start of a logical email. Returns the event id used for later
-     * transport updates, or null when logging is unavailable.
-     */
-    public function recordSubmission($type, $recipient, $subject, $eventId = null, $nodeId = null, $nodeIp = null, $role = null)
+    public function recordSubmission($type, $recipient, $subject, $eventId = null, $nodeId = null, $nodeIp = null, $role = null, $messageId = null)
     {
-        $eventId = $eventId ?: self::newEventId();
-        $node = self::currentNode();
-        $now = gmdate('Y-m-d H:i:s');
         try {
+            $eventId = $eventId ?: self::newEventId();
+            $node = self::currentNode();
+            $now = gmdate('Y-m-d H:i:s');
             $db = $this->connect();
             $this->ensureSchema($db);
             $stmt = $db->prepare(
                 'INSERT INTO email_log (event_id, created_utc, updated_utc, node_id, node_ip, node_role,
-                    notification_type, recipient, subject, status, status_detail, evidence)
-                 VALUES (:e, :c, :u, :n, :ip, :r, :t, :to, :s, :st, :d, :ev)'
+                    notification_type, recipient, subject, status, status_detail, transport, queue_id, message_id)
+                 VALUES (:e, :c, :u, :n, :ip, :r, :t, :to, :s, :st, :d, \'\', \'\', :mid)'
             );
             $stmt->bindValue(':e', $eventId, SQLITE3_TEXT);
             $stmt->bindValue(':c', $now, SQLITE3_TEXT);
             $stmt->bindValue(':u', $now, SQLITE3_TEXT);
             $stmt->bindValue(':n', self::sanitise($nodeId !== null ? $nodeId : $node['host']), SQLITE3_TEXT);
             $stmt->bindValue(':ip', self::sanitise($nodeIp !== null ? $nodeIp : $node['ip']), SQLITE3_TEXT);
-            $stmt->bindValue(':r', self::sanitise($role !== null ? $role : self::currentRole()), SQLITE3_TEXT);
+            $stmt->bindValue(':r', self::sanitise($role !== null ? $role : 'unknown'), SQLITE3_TEXT);
             $stmt->bindValue(':t', self::sanitise($type), SQLITE3_TEXT);
             $stmt->bindValue(':to', self::sanitiseRecipient($recipient), SQLITE3_TEXT);
             $stmt->bindValue(':s', self::sanitise($subject), SQLITE3_TEXT);
             $stmt->bindValue(':st', self::STATE_SUBMITTED, SQLITE3_TEXT);
             $stmt->bindValue(':d', '', SQLITE3_TEXT);
-            $stmt->bindValue(':ev', 'submission', SQLITE3_TEXT);
+            $stmt->bindValue(':mid', self::sanitise((string)$messageId), SQLITE3_TEXT);
             $stmt->execute();
             $db->close();
             $this->diagnostic = null;
             return $eventId;
         } catch (\Throwable $e) {
-            $this->diagnostic = self::sanitise($e->getMessage(), self::MAX_DETAIL);
-            return null;
+            return $this->fail($e->getMessage());
         }
     }
 
     /**
-     * Attach a transport outcome to an existing logical email. Never inserts a
-     * duplicate row for a transport event; an unknown event_id is ignored (the
-     * submission itself may already have failed to log).
+     * Append one transport/observation event. Never rewrites history: a later stage
+     * adds a row, and only the email_log summary columns move forward.
      */
-    public function recordTransportEvent($eventId, $status, $detail = '', $queueId = null, $evidence = null)
+    public function recordTransportEvent($eventId, $status, $detail = '', $evidence = null, $source = 'sender', $queueId = null, $transport = null, $stage = null)
     {
         if (!$eventId) {
             return false;
         }
-        $now = gmdate('Y-m-d H:i:s');
         try {
+            $now = gmdate('Y-m-d H:i:s');
             $db = $this->connect();
             $this->ensureSchema($db);
-            $stmt = $db->prepare(
-                'UPDATE email_log SET updated_utc = :u, status = :st, status_detail = :d,
-                    queue_id = COALESCE(:q, queue_id), evidence = COALESCE(:ev, evidence)
+            $db->exec('BEGIN IMMEDIATE');
+            $ins = $db->prepare(
+                'INSERT INTO email_log_events (event_id, occurred_utc, stage, status, detail, evidence, source)
+                 VALUES (:e, :o, :g, :s, :d, :ev, :src)'
+            );
+            $ins->bindValue(':e', $eventId, SQLITE3_TEXT);
+            $ins->bindValue(':o', $now, SQLITE3_TEXT);
+            $ins->bindValue(':g', self::sanitise($stage !== null ? $stage : $status), SQLITE3_TEXT);
+            $ins->bindValue(':s', self::sanitise($status), SQLITE3_TEXT);
+            $ins->bindValue(':d', self::sanitise($detail, self::MAX_DETAIL), SQLITE3_TEXT);
+            $ins->bindValue(':ev', self::sanitise((string)$evidence), SQLITE3_TEXT);
+            $ins->bindValue(':src', self::sanitise($source), SQLITE3_TEXT);
+            $ins->execute();
+            $upd = $db->prepare(
+                'UPDATE email_log SET updated_utc = :u, status = :s, status_detail = :d,
+                    transport = CASE WHEN :tr = \'\' THEN transport ELSE :tr END,
+                    queue_id = CASE WHEN :q = \'\' THEN queue_id ELSE :q END
                  WHERE event_id = :e'
             );
-            $stmt->bindValue(':u', $now, SQLITE3_TEXT);
-            $stmt->bindValue(':st', self::sanitise($status), SQLITE3_TEXT);
-            $stmt->bindValue(':d', self::sanitise($detail, self::MAX_DETAIL), SQLITE3_TEXT);
-            $stmt->bindValue(':q', $queueId === null ? null : self::sanitise($queueId), SQLITE3_TEXT);
-            $stmt->bindValue(':ev', $evidence === null ? null : self::sanitise($evidence), SQLITE3_TEXT);
-            $stmt->bindValue(':e', $eventId, SQLITE3_TEXT);
-            $stmt->execute();
+            $upd->bindValue(':u', $now, SQLITE3_TEXT);
+            $upd->bindValue(':s', self::sanitise($status), SQLITE3_TEXT);
+            $upd->bindValue(':d', self::sanitise($detail, self::MAX_DETAIL), SQLITE3_TEXT);
+            $upd->bindValue(':tr', self::sanitise((string)$transport), SQLITE3_TEXT);
+            $upd->bindValue(':q', self::sanitise((string)$queueId), SQLITE3_TEXT);
+            $upd->bindValue(':e', $eventId, SQLITE3_TEXT);
+            $upd->execute();
+            $db->exec('COMMIT');
             $db->close();
             return true;
         } catch (\Throwable $e) {
-            $this->diagnostic = self::sanitise($e->getMessage(), self::MAX_DETAIL);
-            return false;
+            try { $db->exec('ROLLBACK'); } catch (\Throwable $ignored) {}
+            return (bool)$this->fail($e->getMessage());
         }
     }
 
-    /** Current status for one logical email, or null when unknown/absent. */
     public function currentStatus($eventId)
     {
-        if (!$eventId) {
-            return null;
-        }
         try {
             $db = $this->connect();
             $this->ensureSchema($db);
-            $stmt = $db->prepare('SELECT status FROM email_log WHERE event_id = :e');
+            $stmt = $db->prepare('SELECT status, message_id FROM email_log WHERE event_id = :e');
             $stmt->bindValue(':e', $eventId, SQLITE3_TEXT);
-            $res = $stmt->execute();
-            $row = $res->fetchArray(SQLITE3_ASSOC);
+            $row = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
             $db->close();
-            return $row ? $row['status'] : null;
+            return $row ?: null;
         } catch (\Throwable $e) {
-            return null;
+            return $this->fail($e->getMessage());
         }
     }
 
-    /** Delete only email-log rows older than the retention window. */
+    public function timeline($eventId)
+    {
+        try {
+            $db = $this->connect();
+            $this->ensureSchema($db);
+            $stmt = $db->prepare('SELECT occurred_utc, stage, status, detail, evidence, source
+                FROM email_log_events WHERE event_id = :e ORDER BY occurred_utc ASC, id ASC');
+            $stmt->bindValue(':e', $eventId, SQLITE3_TEXT);
+            $res = $stmt->execute();
+            $rows = [];
+            while ($row = $res->fetchArray(SQLITE3_ASSOC)) { $rows[] = $row; }
+            $db->close();
+            return $rows;
+        } catch (\Throwable $e) {
+            $this->fail($e->getMessage());
+            return [];
+        }
+    }
+
+    /** Emails still awaiting stronger evidence, oldest first, bounded. */
+    public function pendingForObservation($limit = 20)
+    {
+        $limit = max(1, min(100, (int)$limit));
+        try {
+            $db = $this->connect();
+            $this->ensureSchema($db);
+            $stmt = $db->prepare("SELECT event_id, message_id, updated_utc FROM email_log
+                WHERE status IN ('submitted', 'queued') AND message_id != ''
+                ORDER BY created_utc ASC LIMIT :l");
+            $stmt->bindValue(':l', $limit, SQLITE3_INTEGER);
+            $res = $stmt->execute();
+            $rows = [];
+            while ($row = $res->fetchArray(SQLITE3_ASSOC)) { $rows[] = $row; }
+            $db->close();
+            return $rows;
+        } catch (\Throwable $e) {
+            $this->fail($e->getMessage());
+            return [];
+        }
+    }
+
+    /** Delete expired log rows and every event that belongs to them. */
     public function prune($days = self::RETENTION_DAYS)
     {
         $cutoff = gmdate('Y-m-d H:i:s', time() - ($days * 86400));
         try {
             $db = $this->connect();
             $this->ensureSchema($db);
-            $stmt = $db->prepare('DELETE FROM email_log WHERE created_utc < :c');
-            $stmt->bindValue(':c', $cutoff, SQLITE3_TEXT);
-            $stmt->execute();
+            $db->exec('BEGIN IMMEDIATE');
+            $db->exec("CREATE TEMP TABLE IF NOT EXISTS expired_ids AS
+                SELECT event_id FROM email_log WHERE created_utc < '$cutoff'");
+            $db->exec('DELETE FROM email_log_events WHERE event_id IN (SELECT event_id FROM expired_ids)');
+            $db->exec("DELETE FROM email_log WHERE created_utc < '$cutoff'");
             $removed = $db->changes();
+            $db->exec('DROP TABLE IF EXISTS expired_ids');
+            $db->exec('COMMIT');
             $db->close();
             return $removed;
         } catch (\Throwable $e) {
-            $this->diagnostic = self::sanitise($e->getMessage(), self::MAX_DETAIL);
             return 0;
         }
     }
 
-    /** Read rows for the local UI. Bounded page size, escaped by the caller. */
     public function query(array $filters = [], $limit = 50, $offset = 0)
     {
         $limit = max(1, min(500, (int)$limit));
         $offset = max(0, (int)$offset);
         $where = [];
         $args = [];
-        if (!empty($filters['type'])) {
-            $where[] = 'notification_type = :t';
-            $args[':t'] = $filters['type'];
-        }
-        if (!empty($filters['status'])) {
-            $where[] = 'status = :s';
-            $args[':s'] = $filters['status'];
-        }
+        if (!empty($filters['type'])) { $where[] = 'notification_type = :t'; $args[':t'] = $filters['type']; }
+        if (!empty($filters['status'])) { $where[] = 'status = :s'; $args[':s'] = $filters['status']; }
         if (!empty($filters['search'])) {
-            $where[] = '(subject LIKE :q OR recipient LIKE :q)';
-            $args[':q'] = '%' . str_replace(['%', '_'], ['\%', '\_'], $filters['search']) . '%';
+            $where[] = '(subject LIKE :q ESCAPE \'\\\' OR recipient LIKE :q ESCAPE \'\\\')';
+            $args[':q'] = '%' . str_replace(['%', '_', '\\'], ['\%', '\_', '\\\\'], $filters['search']) . '%';
         }
         $sql = 'SELECT * FROM email_log';
-        if ($where) {
-            $sql .= ' WHERE ' . implode(' AND ', $where);
-        }
+        if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
         $sql .= ' ORDER BY created_utc DESC, id DESC LIMIT :l OFFSET :o';
         try {
             $db = $this->connect();
             $this->ensureSchema($db);
             $stmt = $db->prepare($sql);
-            foreach ($args as $k => $v) {
-                $stmt->bindValue($k, $v, SQLITE3_TEXT);
-            }
+            foreach ($args as $k => $v) { $stmt->bindValue($k, $v, SQLITE3_TEXT); }
             $stmt->bindValue(':l', $limit, SQLITE3_INTEGER);
             $stmt->bindValue(':o', $offset, SQLITE3_INTEGER);
             $res = $stmt->execute();
             $rows = [];
-            while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
-                $rows[] = $row;
-            }
+            while ($row = $res->fetchArray(SQLITE3_ASSOC)) { $rows[] = $row; }
             $db->close();
+            foreach ($rows as &$row) { $row['timeline'] = $this->timeline($row['event_id']); }
             return $rows;
         } catch (\Throwable $e) {
-            $this->diagnostic = self::sanitise($e->getMessage(), self::MAX_DETAIL);
+            $this->fail($e->getMessage());
             return [];
         }
     }

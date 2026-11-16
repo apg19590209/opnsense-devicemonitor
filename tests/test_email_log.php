@@ -31,8 +31,8 @@ check($rows[0]['subject'] === 'Subject one', 'subject stored');
 check($rows[0]['node_id'] !== '', 'node identity recorded');
 
 /* 2. multiple transport events update the same row (no double counting) */
-$log->recordTransportEvent($id, EmailLog::STATE_QUEUED, 'Queued to local sendmail', 'ABC123');
-$log->recordTransportEvent($id, EmailLog::STATE_ACCEPTED, 'SMTP relay accepted');
+$log->recordTransportEvent($id, EmailLog::STATE_QUEUED, 'Queued to local sendmail', 'transport:sendmail', 'sender', 'ABC123');
+$log->recordTransportEvent($id, EmailLog::STATE_ACCEPTED, 'SMTP relay accepted', 'transport:smtp', 'sender');
 $rows = $log->query([], 50, 0);
 check(count($rows) === 1, 'two transport events never create a second row');
 check($rows[0]['status'] === EmailLog::STATE_ACCEPTED, 'latest transport state wins');
@@ -115,6 +115,53 @@ $res = $dbr->query('PRAGMA table_info(email_log)');
 while ($c = $res->fetchArray(SQLITE3_ASSOC)) { $cols[] = $c['name']; }
 $dbr->close();
 check(!in_array('body', $cols) && !in_array('html', $cols), 'no message body column exists');
+
+
+/* 13. timeline is append-only and ordered */
+$idT = $log->recordSubmission(EmailLog::TYPE_SERVICE, 't@example.invalid', 'Timeline');
+$log->recordTransportEvent($idT, EmailLog::STATE_QUEUED, 'Queued to local sendmail', 'transport:sendmail', 'sender', null, 'sendmail', 'submission');
+$log->recordTransportEvent($idT, EmailLog::STATE_QUEUED, 'Present in Postfix queue', 'postcat header match', 'observer', 'QID123', null, 'deferred');
+$log->recordTransportEvent($idT, EmailLog::STATE_ACCEPTED, 'SMTP relay accepted', 'transport:smtp', 'sender', null, 'smtp', 'relay');
+$tl = $log->timeline($idT);
+check(count($tl) === 3, 'every transport event is retained (append-only)');
+check($tl[0]['stage'] === 'submission' && $tl[2]['stage'] === 'relay', 'timeline is chronological by stage');
+check($tl[1]['detail'] === 'Present in Postfix queue', 'earlier detail is not overwritten');
+check($tl[2]['status'] === EmailLog::STATE_ACCEPTED, 'later accepted state appended');
+
+/* 14. correlation never uses the recipient */
+$src = file_get_contents(__DIR__ . '/../src/opnsense/scripts/OPNsense/DeviceMonitor/EmailTransport.php');
+check(strpos($src, 'postqueue -j') === false, 'recipient-only queue matching removed');
+check(strpos($src, 'findQueueEntry') !== false, 'correlation keys on proven message identity');
+check(strpos($src, 'shell_exec') === false, 'no shell_exec in the transport observer');
+$logsrc = file_get_contents(__DIR__ . '/../src/opnsense/scripts/OPNsense/DeviceMonitor/EmailLog.php');
+check(strpos($logsrc, 'shell_exec') === false, 'no shell_exec in the recorder');
+check(strpos($src, 'Queue entry not observable') !== false, 'queue disappearance recorded as UNKNOWN');
+
+/* 15. prune removes events with their rows */
+$db2 = new SQLite3($tmp);
+$db2->exec("UPDATE email_log SET created_utc = '2020-01-01 00:00:00' WHERE event_id = '$idT'");
+$db2->close();
+$beforeEvents = (new SQLite3($tmp))->querySingle('SELECT COUNT(*) FROM email_log_events');
+$log->prune(30);
+$afterEvents = (new SQLite3($tmp))->querySingle('SELECT COUNT(*) FROM email_log_events');
+check($afterEvents < $beforeEvents, 'pruning cascades to the expired row events');
+$dbr = new SQLite3($tmp);
+check($dbr->querySingle("SELECT COUNT(*) FROM email_log_events WHERE event_id = '$idT'") === 0, 'expired events removed');
+$dbr->close();
+
+/* 16. fail-open: submission setup cannot throw */
+$log->diagnostic_force = null;
+$badType = new EmailLog('/dev/null/not-a-dir/log.db');
+$r = $badType->recordSubmission(EmailLog::TYPE_TEST, 'x@example.invalid', 's');
+check($r === null, 'submission setup fails open');
+$r = $badType->recordTransportEvent('abc', EmailLog::STATE_FAILED, 'x');
+check($r === false, 'outcome recording fails open');
+$r = $badType->pendingForObservation(5);
+check(is_array($r), 'observation query fails open');
+$r = $badType->timeline('abc');
+check(is_array($r), 'timeline read fails open');
+$r = $badType->prune(30);
+check($r === 0, 'prune fails open');
 
 @unlink($tmp);
 echo $fails === 0 ? "EMAIL_LOG_TESTS=PASS\n" : "EMAIL_LOG_TESTS=FAIL ($fails)\n";

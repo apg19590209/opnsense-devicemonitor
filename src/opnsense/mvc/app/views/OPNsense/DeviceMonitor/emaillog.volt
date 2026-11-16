@@ -153,7 +153,21 @@
                     $body.append($tr);
                     var $timeline = $('<tr>').hide();
                     var $cell = $('<td>').attr('colspan', 7).css('font-size', '12px');
-                    $cell.append($('<div>').text(row.status_detail || ''));
+                    var steps = row.timeline || [];
+                    if (steps.length === 0) {
+                        $cell.append($('<div>').addClass('text-muted').text(text.unknown));
+                    }
+                    steps.forEach(function (step) {
+                        var $line = $('<div>');
+                        $line.append($('<span>').css('font-family', 'monospace').text(step.occurred_utc + '  '));
+                        $line.append($('<strong>').text(step.stage + ': '));
+                        $line.append($('<span>').text(step.status));
+                        if (step.detail) { $line.append(document.createTextNode(' — ' + step.detail)); }
+                        if (step.source) {
+                            $line.append($('<span>').addClass('text-muted').text(' [' + step.source + ']'));
+                        }
+                        $cell.append($line);
+                    });
                     if (row.status === 'accepted') {
                         $cell.append($('<div>').addClass('text-muted').text(text.relayAcceptedNotice));
                     }

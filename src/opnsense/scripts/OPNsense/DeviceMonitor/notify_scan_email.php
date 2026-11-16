@@ -36,10 +36,12 @@ $emailFrom = $config['email_from'] ?? 'devicemonitor@opnsense.local';
 require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailLog.php');
 require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailTransport.php');
 $__dmLog = \OPNsense\DeviceMonitor\EmailLog::instance();
+$__dmMessageId = \OPNsense\DeviceMonitor\EmailLog::newMessageId((string)@gethostname());
 $__dmEvent = $__dmLog->recordSubmission(
     \OPNsense\DeviceMonitor\EmailLog::TYPE_SCAN_RESULT,
     (string)$emailTo,
-    (string)($data['ip'] ?? '') !== '' ? ('Scan result for ' . $data['ip']) : 'Scan result'
+    (string)($data['ip'] ?? '') !== '' ? ('Scan result for ' . $data['ip']) : 'Scan result',
+    null, null, null, null, $__dmMessageId
 );
 
 $e = static function ($value) {
@@ -243,6 +245,9 @@ if ($emailMethod === 'smtp') {
 $message  = "From: {$emailFrom}\r\n";
 $message .= "To: {$emailTo}\r\n";
 $message .= "Subject: {$subject}\r\n";
+if (is_string($__dmMessageId) && $__dmMessageId !== '') {
+    $message .= "Message-ID: <{$__dmMessageId}>\r\n";
+}
 $message .= "MIME-Version: 1.0\r\n";
 $message .= "Content-Type: text/html; charset=UTF-8\r\n";
 $message .= "\r\n{$html}";

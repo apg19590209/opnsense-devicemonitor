@@ -307,7 +307,7 @@ def test_ui_controller_and_candidate_manifest_are_combined():
     rows = {parts[2]: parts for parts in (line.split() for line in manifest)}
     assert rows["src/opnsense/scripts/OPNsense/DeviceMonitor/notify_failover.php"][1] == "755"
     assert "src/opnsense/scripts/OPNsense/DeviceMonitor/notify_identity_mail.php" not in rows
-    assert len(rows) == 46, len(rows)
+    assert len(rows) == 47, len(rows)
 
     print("INTEGRATION_UI_CONTROLLER_MANIFEST=PASS")
 
