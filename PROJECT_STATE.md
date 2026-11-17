@@ -2,7 +2,12 @@
 
 ## Current state
 
-**HA peer access hardened and Email Log deployed (18 November 2026).** Both nodes serve signed
+**HA peer access, Email Log and genuine-record verification (18 November 2026).** One labelled test
+email was sent from each node to `arnhem05.alerts@gmail.com`; both records show **Relay accepted**
+with genuine queue IDs (`.252` `C34A74FBE9`, `.253` `08A9439034`) and verify Local/Peer/All, distinct
+identities, remote content/timelines, filters, ordering and CSV on both appliances. A stale `latest.log`
+on `.252` had hidden the relay evidence; the reader now reads dated siblings and skips stale files
+(`cbd3754`, CI `44200893168`). Pagination remains fixture-tested only. Both nodes serve signed
 CSRs with verified chains (`.252` expires 2026-12-17 22:53:06Z, `.253` 23:06:55Z; renewal manual).
 A live probe proved the "read-only" peer account could reach Delete/Restore; a dedicated
 `page-services-devicemonitor-peer` privilege (peerpage + peermessage only) and an explicit write
