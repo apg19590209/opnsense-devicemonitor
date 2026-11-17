@@ -327,9 +327,9 @@ def test_time_heading_matches_the_displayed_clock():
     m = re.search(r'function renderTimezoneLegend\(\) \{.*?\n        \}', src, re.S)
     legend = m.group(0)
     assert "timeZoneName: 'short'" in legend, 'the zone comes from Intl, the same source as the values'
-    assert "heading.replace(" in src and "#email-log-time-heading').text(zone ?" in src, \
-        'the heading is rewritten with the derived zone name'
-    assert "lang.query('local')" in src, 'the replaceable word is translated, not hard-coded'
+    assert "heading.replace(" not in src, 'the heading is static; values carry their own zone suffix'
+    assert "$('#email-log-time-heading').text(" not in src, 'no script rewrites the column heading'
+    assert "lang.query('local')" not in src, 'no replaceable heading token is needed'
     # CSV stays UTC: the export header is the stored field, never a local label.
     ctrl = (ROOT / 'src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/EmaillogController.php').read_text()
     assert "'created_utc', 'node_ip'" in ctrl, 'CSV keeps the UTC-labelled field'

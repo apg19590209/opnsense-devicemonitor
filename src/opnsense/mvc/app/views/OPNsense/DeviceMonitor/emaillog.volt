@@ -81,7 +81,7 @@
                         <table class="table table-condensed table-hover" id="email-log-table">
                             <thead>
                             <tr>
-                                {# The label is derived from the same formatter as the cells. #}
+                                {# Static translated label; individual values carry their own zone suffix. #}
                                 <th id="email-log-time-heading">{{ devicemonitor_t('Time (local)') }}</th>
                                 <th>{{ devicemonitor_t('Node') }}</th>
                                 <th>{{ devicemonitor_t('Type') }}</th>
@@ -393,7 +393,6 @@
             eventSingular: {{ lang.query('event')|json_encode(15) }},
             eventPlural: {{ lang.query('events')|json_encode(15) }},
             noDelivery: {{ lang.query('No delivery details recorded')|json_encode(15) }},
-            local: {{ lang.query('local')|json_encode(15) }},
             queueId: {{ lang.query('Queue ID')|json_encode(15) }},
             delete: {{ lang.query('Delete')|json_encode(15) }},
             restore: {{ lang.query('Restore')|json_encode(15) }},
@@ -471,11 +470,6 @@
                     return part.type === 'timeZoneName';
                 }).map(function (part) { return part.value; })[0] || '';
             $('#email-log-timezone-legend').text(shown + (zone ? ' (' + zone + ')' : ''));
-            /* Keep the column heading on the same clock as the values, including a
-             * daylight-saving change: the zone name is read from Intl, not assumed. */
-            var heading = {{ lang.query('Time (local)')|json_encode(15) }};
-            $('#email-log-time-heading').text(zone ? heading.replace({{ lang.query('local')|json_encode(15) }},
-                zone) : heading);
         }
 
         /* Remote rows are read-only from this node. The note follows the scope and
