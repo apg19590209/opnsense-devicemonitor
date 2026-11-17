@@ -43,8 +43,8 @@ VERIFIER=release/verify-release-inputs.sh
 # file inline here, and the inputs file pins the manifest, the prune helper, the legacy
 # ownership evidence and the catalogue merge helper. A tampered helper can therefore never
 # decide which files get removed.
-MANIFEST_SHA=b3f83458761f3cf21aa94edf57db9f382b1bac69e0af66731b4dedaddd2616d4
-RELEASE_INPUTS_SHA=54b5c5480aeb0c14318cd6c8727b9c3cf4f1c160ab71282229017a24858d010c
+MANIFEST_SHA=3f163874c622dd00df76ef1401183a85944badd83f78837a58febd0fde77d625
+RELEASE_INPUTS_SHA=dd0be364e15dbf0baea9e5cc332e96c15c31326d48c535264055087d6214e6c1
 VERIFIER_SHA=68b93f2a08f0808b67b6bd2ca76dca33a6cc5c159de4b61353b721eaefbb583d
 [ -f "$MANIFEST" ] && [ ! -L "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = "$MANIFEST_SHA" ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 50 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }

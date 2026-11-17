@@ -91,7 +91,29 @@ check($read === [], 'a missing log yields no evidence (unknown), not an error');
 $old = [line('10:00:00', 'smtp', 'FFFF6666: to=<x@example.invalid>, status=sent')];
 check(EmailTransport::readLogLines(strtotime('2026-11-17 19:30:00'), 3600, [$rot]) !== null, 'lookback bounds the read');
 
-/* 8. historical timeline is preserved */
+/* 8. a stale latest.log symlink must not hide the dated log beside it */
+$dir = sys_get_temp_dir() . '/dmlogs' . getmypid();
+@mkdir($dir, 0700);
+file_put_contents($dir . '/postfix_20260101.log', "old\n");
+file_put_contents($dir . '/postfix_20260102.log', implode("\n", $sentLines) . "\n");
+@symlink($dir . '/postfix_20260101.log', $dir . '/latest.log');
+$read = EmailTransport::readLogLines(null, 86400, [$dir . '/latest.log']);
+check(EmailTransport::queueIdForMessageId($read, $msg) === '02FA4B055F',
+    'dated sibling is read when latest.log points at an older file');
+@unlink($dir . '/latest.log'); @unlink($dir . '/postfix_20260101.log'); @unlink($dir . '/postfix_20260102.log'); @rmdir($dir);
+
+/* 8b. a stale dated file must not stop the search before a newer one */
+$dir2 = sys_get_temp_dir() . '/dmlogs2' . getmypid();
+@mkdir($dir2, 0700);
+file_put_contents($dir2 . '/postfix_20260101.log', line('00:00:01', 'smtp', 'OLDD000: to=<x@example.invalid>, status=sent'));
+file_put_contents($dir2 . '/postfix_20260102.log', implode("\n", $sentLines) . "\n");
+@symlink($dir2 . '/postfix_20260101.log', $dir2 . '/latest.log');
+$read2 = EmailTransport::readLogLines(null, 86400, [$dir2 . '/latest.log']);
+check(EmailTransport::queueIdForMessageId($read2, $msg) === '02FA4B055F',
+    'a stale dated file does not end the search before a newer one');
+@unlink($dir2 . '/latest.log'); @unlink($dir2 . '/postfix_20260101.log'); @unlink($dir2 . '/postfix_20260102.log'); @rmdir($dir2);
+
+/* 9. historical timeline is preserved */
 $timeline = $log->messageDetail($eid)['timeline'];
 check($timeline[0]['stage'] === EmailLog::STATE_QUEUED && $timeline[0]['source'] === 'sender', 'the original sender event is kept');
 check($timeline[1]['source'] === 'observer' && $timeline[1]['status'] === EmailLog::STATE_ACCEPTED, 'the observer append follows it');

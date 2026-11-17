@@ -310,6 +310,18 @@ class EmailTransport
                     }
                 }
             }
+            /* OPNsense rotates by date and may leave latest.log pointing at an older
+             * file, so the dated siblings in the same directory are read too. */
+            $dir = dirname($real);
+            $dated = @glob($dir . '/*.log');
+            if (is_array($dated)) {
+                usort($dated, function ($a, $b) { return @filemtime($b) <=> @filemtime($a); });
+                foreach (array_slice($dated, 0, self::LOG_MAX_FILES) as $candidate) {
+                    if ($candidate !== $real && is_readable($candidate)) {
+                        $files[] = $candidate;
+                    }
+                }
+            }
         }
         $lines = [];
         $budget = self::LOG_MAX_BYTES;
@@ -322,15 +334,25 @@ class EmailTransport
                 continue;
             }
             $budget -= strlen($chunk);
-            foreach (array_reverse(preg_split('/\r?\n/', $chunk)) as $line) {
+            $before = count($lines);
+            $rows = array_reverse(preg_split('/\r?\n/', $chunk));
+            $stale = 0;
+            foreach ($rows as $line) {
                 $parsed = self::parseLogLine($line);
                 if ($parsed === null) {
                     continue;
                 }
                 if ($parsed['ts'] !== '' && ((int)$parsed['ts'] > 0) && ((int)$parsed['ts'] < $now - $windowSeconds)) {
-                    return $lines;
+                    $stale++;
+                    continue;
                 }
                 $lines[] = $line;
+            }
+            /* A file whose every line predates the window (for example a dated log
+             * from an earlier day, or a stale latest.log) is skipped; newer files
+             * later in the list are still read. */
+            if ($stale > 0 && count($lines) === $before) {
+                continue;
             }
         }
         return $lines;
