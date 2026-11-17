@@ -2,6 +2,13 @@
 
 ## Current state
 
+**Email Log labels corrected (17 November 2026).** The time column heading is derived from the same
+browser timezone that formats its values (local, following AEDT/AEST), and `accepted` displays as
+**Relay accepted** in the table, popup and timeline; internal values and CSV (UTC) are unchanged.
+Code `435efde`, CI `44043932789` success, installed from
+`/var/backups/devicemonitor/pre-labels-20261117T081136Z`. Labels await visual confirmation.
+Report: `.cline-reports/REPORT-20261117-081143-labels.md`.
+
 **Email Log delivery status resolved from Postfix evidence (17 November 2026).** The `.23` test email
 of 18:10:39 AEDT (row `a49b2e4a…`, queue `02FA4B055F`) now shows **Relay accepted** — DSN 2.0.0,
 `250 2.0.0 OK` — after the observer correlated the stored Message-ID with Postfix's cleanup record
