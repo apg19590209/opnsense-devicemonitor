@@ -64,7 +64,9 @@ def test_access_denial_mechanism():
     gate = body_of(src, 'requireWriteAccess')
     assert 'try {' in gate and 'throwReadOnly();' in gate and 'catch' in gate, \
         'the gate must convert the ACL refusal into a denial'
-    assert gate.index('throwReadOnly();') < gate.index('return true'), 'access is granted only after the check'
+    assert 'return false' in gate, 'the gate fails closed'
+    assert "hasPrivilege($this->getUserName(), 'page-services-devicemonitor')" in gate, \
+        'an explicit write privilege is required'
     action = body_of(src, 'setVisibilityAction')
     assert action.index('requireWriteAccess()') < action.index('markDeleted'), \
         'no mutation may run before the write gate'

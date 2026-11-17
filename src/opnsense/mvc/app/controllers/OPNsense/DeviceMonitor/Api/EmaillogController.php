@@ -42,6 +42,11 @@ class EmaillogController extends ApiControllerBase
      * refused, so a read-only account or read-only API key can never change a log
      * entry.
      */
+    /**
+     * Explicit write gate for Delete/Restore. The caller must hold the full
+     * Device Monitor privilege (the peer-read privilege alone is never enough) and
+     * must not carry user-config-readonly. Anything unproven is denied.
+     */
     private function requireWriteAccess()
     {
         try {
@@ -49,7 +54,12 @@ class EmaillogController extends ApiControllerBase
         } catch (\Throwable $e) {
             return false;
         }
-        return true;
+        try {
+            $acl = new \OPNsense\Core\ACL();
+            return $acl->hasPrivilege($this->getUserName(), 'page-services-devicemonitor');
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     private function nodeFacts()
