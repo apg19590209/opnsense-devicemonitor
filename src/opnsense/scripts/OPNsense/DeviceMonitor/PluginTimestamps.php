@@ -31,13 +31,13 @@ final class PluginTimestamps
      * Convert a stored UTC timestamp for the server-side fallback renderer,
      * using the OPNsense-configured zone (DST rules included).
      */
-    public static function toConfiguredZone($value)
+    public static function toConfiguredZone($value, $configFile = '/conf/config.xml')
     {
         $value = self::clean($value);
         if ($value === '') {
             return '';
         }
-        $zone = self::configuredZoneName();
+        $zone = self::configuredZoneName($configFile);
         try {
             $dt = \DateTimeImmutable::createFromFormat(self::FORMAT, $value, new \DateTimeZone('UTC'));
             return $dt->setTimezone(new \DateTimeZone($zone))->format(self::FORMAT);

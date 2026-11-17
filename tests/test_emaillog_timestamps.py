@@ -35,30 +35,39 @@ def test_recorder_stores_utc():
     assert "$now = gmdate('Y-m-d H:i:s');" in src, 'event updates use UTC'
 
 
-def test_fallback_uses_configured_zone_with_dst():
-    zone = php("require '%s'; echo OPNsense\\DeviceMonitor\\PluginTimestamps::configuredZoneName();" % TS)
-    assert zone == 'Australia/Sydney', f'.23 is configured for Sydney, got {zone!r}'
-    cases = {
-        '2026-11-17 02:59:59': '2026-11-17 13:59:59',
-        '2026-11-17 03:00:00': '2026-11-17 14:00:00',
-        '2026-11-17 13:00:00': '2026-11-18 00:00:00',
-        '2026-04-04 15:59:59': '2026-04-05 02:59:59',
-        '2026-04-04 16:00:00': '2026-04-05 02:00:00',
-        '2026-10-03 15:59:59': '2026-10-04 01:59:59',
-        '2026-10-03 16:00:00': '2026-10-04 03:00:00',
-    }
-    for utc, expected in cases.items():
-        got = php("require '%s'; echo OPNsense\\DeviceMonitor\\PluginTimestamps::toConfiguredZone('%s');" % (TS, utc))
-        assert got == expected, (utc, got, expected)
-    # Independent reproduction through zoneinfo. The instant 16:00:00Z lands on
-    # the ambiguous 02:00 hour; PHP resolves that wall time to the later instance
-    # (AEST), so it is compared on the rendered fields and its wall time pinned.
-    for utc, expected in cases.items():
-        probe = datetime.strptime(utc, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
-        assert probe.astimezone(SYD).strftime('%Y-%m-%d %H:%M:%S') == expected, utc
-    ambiguous = datetime(2026, 4, 4, 16, 0, tzinfo=timezone.utc).astimezone(SYD)
-    assert ambiguous.hour == 2 and ambiguous.strftime('%z') == '+1000', 'the 16:00Z instant is 02:00 AEST'
-    assert php("require '%s'; echo OPNsense\\DeviceMonitor\\PluginTimestamps::toConfiguredZone('nonsense');" % TS) == ''
+def test_fallback_uses_configured_zone_with_dst(tmp=None):
+    """The converter uses the configured zone. A temporary config.xml keeps this
+    independent of the host (a CI runner has no OPNsense configuration)."""
+    import tempfile
+    tmpdir = tempfile.mkdtemp()
+    cfg = Path(tmpdir) / 'config.xml'
+    cfg.write_text("<?xml version='1.0'?><opnsense><system><timezone>Australia/Sydney"
+                   "</timezone></system></opnsense>", encoding='utf-8')
+    try:
+        zone = php("require '%s'; echo OPNsense\\DeviceMonitor\\PluginTimestamps::configuredZoneName('%s');" % (TS, cfg))
+        assert zone == 'Australia/Sydney', f'configured zone is read from config.xml, got {zone!r}'
+        cases = {
+            '2026-11-17 02:59:59': '2026-11-17 13:59:59',
+            '2026-11-17 03:00:00': '2026-11-17 14:00:00',
+            '2026-11-17 13:00:00': '2026-11-18 00:00:00',
+            '2026-04-04 15:59:59': '2026-04-05 02:59:59',
+            '2026-04-04 16:00:00': '2026-04-05 02:00:00',
+            '2026-10-03 15:59:59': '2026-10-04 01:59:59',
+            '2026-10-03 16:00:00': '2026-10-04 03:00:00',
+        }
+        for utc, expected in cases.items():
+            got = php("require '%s'; echo OPNsense\\DeviceMonitor\\PluginTimestamps::toConfiguredZone('%s', '%s');"
+                      % (TS, utc, cfg))
+            assert got == expected, (utc, got, expected)
+            probe = datetime.strptime(utc, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+            assert probe.astimezone(SYD).strftime('%Y-%m-%d %H:%M:%S') == expected, utc
+        ambiguous = datetime(2026, 4, 4, 16, 0, tzinfo=timezone.utc).astimezone(SYD)
+        assert ambiguous.hour == 2 and ambiguous.strftime('%z') == '+1000', 'the 16:00Z instant is 02:00 AEST'
+        assert php("require '%s'; echo OPNsense\\DeviceMonitor\\PluginTimestamps::toConfiguredZone('nonsense', '%s');"
+                   % (TS, cfg)) == ''
+    finally:
+        import shutil
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def test_browser_formatter_midnight_and_dst():
