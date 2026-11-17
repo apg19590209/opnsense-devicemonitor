@@ -2,6 +2,17 @@
 
 ## Current state
 
+**Email Log delivery status resolved from Postfix evidence (17 November 2026).** The \`.23\` test email
+of 18:10:39 AEDT (row \`a49b2e4a…\`, queue \`02FA4B055F\`) now shows **Relay accepted** — DSN 2.0.0,
+\`250 2.0.0 OK\` — after the observer correlated the stored Message-ID with Postfix's cleanup record
+and per-recipient smtp outcome; the earlier sender and observation events are retained. Generic
+\`.23\` email delivery is operator-confirmed end-to-end PASS (screenshot). Webhook (no destination;
+TLS verification disabled in \`sendWebhook()\`) and live peer integration remain open. Code
+\`069f08b\`, CI \`44040829833\` success, installed from
+\`/var/backups/devicemonitor/pre-delivery-tracking-20261117T074818Z\`. Close-out rule amended in
+\`AGENTS.md\`; Decision 74. Canonical report:
+\`.cline-reports/REPORT-20261117-074840.md\`.
+
 **`.23` email transport configured through the Postfix plugin (17 November 2026).** After a root
 cleanup (below) freed space, `os-postfix` (`postfix 3.11.7_5,1`) was installed from the supported
 repository — the same proven method as `.252`. The plugin's `General` model now mirrors `.253`'s
