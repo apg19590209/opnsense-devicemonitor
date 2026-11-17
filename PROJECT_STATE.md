@@ -2,6 +2,13 @@
 
 ## Current state
 
+**HA peer deployment prepared, not applied (17 November 2026).** Candidate
+`d99cc0b1…` (1,997,997 bytes) from `07bae2a`; `.252` shows the pre-feature `EmaillogController`
+and a 0-byte placeholder log, so neither HA node runs the Email Log feature yet. Read-only peer
+API, TLS verification and row identity reviewed. Read-only API accounts, CA trust and reciprocal
+peer settings remain to be created and await approval. Report:
+`.cline-reports/REPORT-20261117-085542-ha-peer-prep.md`.
+
 **Email Log labels corrected (17 November 2026).** The time column heading is derived from the same
 browser timezone that formats its values (local, following AEDT/AEST), and `accepted` displays as
 **Relay accepted** in the table, popup and timeline, under the translated static **Time (local)**
