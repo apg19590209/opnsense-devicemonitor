@@ -8,6 +8,7 @@ OPNsense-configured zone. This suite pins storage, the fallback conversion
 available, and that the views never print the raw UTC value.
 """
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -71,14 +72,21 @@ def test_fallback_uses_configured_zone_with_dst(tmp=None):
 
 
 def test_browser_formatter_midnight_and_dst():
-    node = shutil.which('node')
+    # CI installs node on PATH; this host keeps it in /usr/local/bin.
+    node = shutil.which('node') or shutil.which('node', path='/usr/local/bin:/usr/bin:/bin')
     if node is None:
         print('BROWSER_FORMATTER=SKIPPED (node unavailable)')
         return
     src = VIEW.read_text(encoding='utf-8')
     start = src.index('function formatTimestamp(')
-    end = src.index('function renderTimezoneLegend(')
-    fn = src[start:end]
+    # Stop at the next function, whatever it is (status labels may sit between).
+    end = start + re.search(r'\n        function [A-Za-z_]', src[start + 10:]).start() + 10
+    # The display-only status map is Volt-templated; drop it (it is asserted
+    # separately) so the real formatter still runs under node.
+    segment = src[start:end]
+    segment = re.sub(r'var statusNames = \{.*?\n        \};', '', segment, flags=re.S)
+    assert re.search(r'\{\{|\{%', segment) is None, segment[-200:]
+    fn = segment
     script = fn + """
 console.log(formatTimestamp('2026-11-17 02:59:59', 'FB'));
 console.log(formatTimestamp('2026-11-17 03:00:00', 'FB'));
@@ -87,9 +95,12 @@ console.log(formatTimestamp('2026-04-04 16:00:00', 'FB'));
 console.log(formatTimestamp('2026-10-03 16:00:00', 'FB'));
 console.log(formatTimestamp('garbage', 'FB'));
 """
+
     def run(tz):
+        # Inherit the host environment (node needs its ICU/library paths) and set TZ.
+        env = dict(os.environ, TZ=tz)
         return subprocess.run([node, '-e', script], capture_output=True, text=True,
-                              env={'TZ': tz, 'PATH': '/usr/bin:/bin:/usr/local/bin'}).stdout.split('\n')
+                              env=env).stdout.split('\n')
     def wall(line, expected_wall):
         # The zone name comes from the runtime's locale data: full ICU names it
         # (AEDT/AEST), a C-locale runtime gives the equivalent numeric offset.

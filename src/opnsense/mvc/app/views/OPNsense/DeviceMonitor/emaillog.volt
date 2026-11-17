@@ -81,7 +81,8 @@
                         <table class="table table-condensed table-hover" id="email-log-table">
                             <thead>
                             <tr>
-                                <th id="email-log-time-heading">{{ devicemonitor_t('Time (UTC)') }}</th>
+                                {# The label is derived from the same formatter as the cells. #}
+                                <th id="email-log-time-heading">{{ devicemonitor_t('Time (local)') }}</th>
                                 <th>{{ devicemonitor_t('Node') }}</th>
                                 <th>{{ devicemonitor_t('Type') }}</th>
                                 <th>{{ devicemonitor_t('Recipient') }}</th>
@@ -392,6 +393,7 @@
             eventSingular: {{ lang.query('event')|json_encode(15) }},
             eventPlural: {{ lang.query('events')|json_encode(15) }},
             noDelivery: {{ lang.query('No delivery details recorded')|json_encode(15) }},
+            local: {{ lang.query('local')|json_encode(15) }},
             queueId: {{ lang.query('Queue ID')|json_encode(15) }},
             delete: {{ lang.query('Delete')|json_encode(15) }},
             restore: {{ lang.query('Restore')|json_encode(15) }},
@@ -447,6 +449,21 @@
         /* Stored values are UTC; every view renders them in the browser's own
          * zone. The legend names that zone from the browser itself, so the
          * reader knows which clock the converted times are on. */
+        /* Display-only: internal and API values stay unchanged. An accepted handoff
+         * is relay acceptance, never proof of inbox receipt. */
+        var statusNames = {
+            accepted: {{ lang.query('Relay accepted')|json_encode(15) }},
+            queued: {{ lang.query('Queued or deferred')|json_encode(15) }},
+            deferred: {{ lang.query('Queued or deferred')|json_encode(15) }},
+            submitted: {{ lang.query('Submitted')|json_encode(15) }},
+            failed: {{ lang.query('Failed')|json_encode(15) }},
+            unknown: {{ lang.query('Unknown')|json_encode(15) }}
+        };
+        function statusLabel(value) {
+            var key = String(value || '').toLowerCase();
+            return statusNames.hasOwnProperty(key) ? statusNames[key] : (value || '');
+        }
+
         function renderTimezoneLegend() {
             var shown = {{ lang.query('Time shown in your local timezone')|json_encode(15) }};
             var zone = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
@@ -454,6 +471,11 @@
                     return part.type === 'timeZoneName';
                 }).map(function (part) { return part.value; })[0] || '';
             $('#email-log-timezone-legend').text(shown + (zone ? ' (' + zone + ')' : ''));
+            /* Keep the column heading on the same clock as the values, including a
+             * daylight-saving change: the zone name is read from Intl, not assumed. */
+            var heading = {{ lang.query('Time (local)')|json_encode(15) }};
+            $('#email-log-time-heading').text(zone ? heading.replace({{ lang.query('local')|json_encode(15) }},
+                zone) : heading);
         }
 
         /* Remote rows are read-only from this node. The note follows the scope and
@@ -548,7 +570,7 @@
                     $tr.append($('<td>').text(row.notification_type));
                     $tr.append($('<td>').text(row.recipient));
                     $tr.append($('<td>').text(row.subject));
-                    $tr.append($('<td>').text(row.status));
+                    $tr.append($('<td>').text(statusLabel(row.status)));
                     var $detail = $('<td>');
                     /* The single row action. Metadata, message content and the full
                      * delivery timeline all open in the dialog. It is always offered,
@@ -656,7 +678,7 @@
                  ['Node', m.node_ip + (m.node_role ? ' (' + m.node_role + ')' : '')],
                  ['Time', formatTimestamp(m.created_utc, m.created_local)],
                  ['Type', m.notification_type],
-                 ['Status', m.status]].forEach(function (pair) {
+                 ['Status', statusLabel(m.status)]].forEach(function (pair) {
                     $meta.append($('<dt>').text(pair[0])).append($('<dd>').text(pair[1] || ''));
                 });
                 // Body is plain text; .text() prevents any markup or remote load.
@@ -677,9 +699,9 @@
                     $('<div>').addClass('email-log-event-time')
                         .text(formatTimestamp(step.occurred_utc, step.occurred_local)).appendTo($row);
                     $('<div>')
-                        .append($('<strong>').text(step.stage))
+                        .append($('<strong>').text(statusLabel(step.stage)))
                         .append(document.createTextNode(' — '))
-                        .append($('<span>').text(step.status))
+                        .append($('<span>').text(statusLabel(step.status)))
                         .appendTo($row);
                     if (step.detail) { $('<div>').addClass('email-log-event-detail').text(step.detail).appendTo($row); }
                     if (step.source) {

@@ -320,6 +320,38 @@ def test_header_reuses_the_panel_header_style():
     print('DIALOG_HEADER_THEME=PASS')
 
 
+def test_time_heading_matches_the_displayed_clock():
+    src = VIEW.read_text(encoding='utf-8')
+    assert "{{ devicemonitor_t('Time (UTC)') }}</th>" not in src, 'a static UTC heading contradicts local values'
+    assert "{{ devicemonitor_t('Time (local)') }}</th>" in src, 'the heading starts from the neutral local label'
+    m = re.search(r'function renderTimezoneLegend\(\) \{.*?\n        \}', src, re.S)
+    legend = m.group(0)
+    assert "timeZoneName: 'short'" in legend, 'the zone comes from Intl, the same source as the values'
+    assert "heading.replace(" in src and "#email-log-time-heading').text(zone ?" in src, \
+        'the heading is rewritten with the derived zone name'
+    assert "lang.query('local')" in src, 'the replaceable word is translated, not hard-coded'
+    # CSV stays UTC: the export header is the stored field, never a local label.
+    ctrl = (ROOT / 'src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/EmaillogController.php').read_text()
+    assert "'created_utc', 'node_ip'" in ctrl, 'CSV keeps the UTC-labelled field'
+    print('DIALOG_TIME_HEADING=PASS')
+
+
+def test_status_labels_are_display_only():
+    src = VIEW.read_text(encoding='utf-8')
+    assert "accepted: {{ lang.query('Relay accepted')" in src, 'accepted displays as Relay accepted'
+    for site in ("text(statusLabel(row.status))", "['Status', statusLabel(m.status)]",
+                 "text(statusLabel(step.stage))", "text(statusLabel(step.status))"):
+        assert site in src, f'{site} must use the label map'
+    assert ".text(row.status)" not in src and ".text(m.status)" not in src, 'no raw internal status shown'
+    assert "<option value=\"accepted\">{{ devicemonitor_t('Relay accepted') }}" in src, 'filter label matches'
+    assert "status: $('#email-log-status').val()" in src, 'filters still send the internal value'
+    ctrl = (ROOT / 'src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/EmaillogController.php').read_text()
+    assert "'status' => (string)$row['status']" in ctrl, 'API status values unchanged'
+    assert 'inbox' not in src[src.index('var statusNames'):src.index('function renderTimezoneLegend')].lower(), \
+        'relay acceptance must not imply inbox receipt'
+    print('DIALOG_STATUS_LABELS=PASS')
+
+
 def test_plain_text_preserved():
     src = VIEW.read_text(encoding='utf-8')
     assert "$('#email-log-message-body').text(" in src, 'body must be rendered as text'
@@ -358,6 +390,8 @@ def main():
     test_legacy_rows_keep_delivery()
     test_no_small_custom_typography()
     test_spacing_specification()
+    test_time_heading_matches_the_displayed_clock()
+    test_status_labels_are_display_only()
     test_plain_text_preserved()
     test_keyboard_and_focus()
     print('EMAIL_LOG_DIALOG_REGRESSION=PASS')
