@@ -3349,3 +3349,39 @@ drift.
 `tests/test_price_gate.py` pins UTC boundaries, AEDT and AEST local boundaries, the DST label change
 with a fixed UTC window, weekdays never peaking, weekends never peaking, and holidays only when
 configured.
+
+## 74. Delivery outcomes come from the exact Message-ID and Postfix's own records
+
+### Decision
+
+Out-of-band observation correlates a recorded email with Postfix by the **exact Message-ID
+Postfix wrote for it** (`postfix/cleanup` `message-id=<…>` line → queue ID), and then reads the
+per-recipient `postfix/smtp` outcome lines for that queue ID: `status=sent` with a `2.x.y.z` DSN is
+recorded as **Relay accepted**, `status=deferred` as queued, `status=bounced` as failed. Subject,
+recipient and approximate time are never used as the link.
+
+Messages that leave the queue before observation are resolved from the processing log within a
+bounded lookback (`OBSERVE_MAX_AGE_SECONDS`), reading at most a fixed number of rotated log files
+and bytes, newest first, from `latest.log`/`mail.log`/`maillog` and their rotated siblings.
+Observation runs only from the scheduled maintenance path, never from the send path, and repeated
+passes append nothing when the latest event already records the same outcome. Missing evidence —
+including a queue file that simply disappeared, or a rotated log that no longer covers the instant
+— remains `unknown`.
+
+Mixed per-recipient outcomes are never summarised as complete success; they are recorded as
+`unknown` (or `failed` when every recipient bounced) with each recipient's outcome named in the
+detail. Relay acceptance is never described as inbox delivery.
+
+Fail-open sending, soft deletion, retention and read-only peer access are unchanged.
+
+### Reason
+
+The `.23` test email of 17 November 2026 was accepted by Gmail (`250 2.0.0 OK`) yet stayed
+`unknown`, because the log was not consulted at all once the queue file was gone. The queue file
+is inherently short-lived for a working relay, so the processing log is the durable evidence.
+
+### Tests and evidence
+
+`tests/test_email_log_delivery_tracking.php` covers fast queue disappearance, exact matching,
+unrelated concurrent mail, deferred and bounced outcomes, mixed recipients, repeated processing,
+rotated and missing logs, and preservation of the earlier timeline.

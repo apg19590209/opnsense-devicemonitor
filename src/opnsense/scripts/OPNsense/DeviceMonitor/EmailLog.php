@@ -473,7 +473,10 @@ class EmailLog
             $db = $this->connect();
             $this->ensureSchema($db);
             $stmt = $db->prepare("SELECT event_id, message_id, updated_utc FROM email_log
-                WHERE status IN ('submitted', 'queued') AND message_id != ''
+                /* 'unknown' rows are re-examined because the processing log may carry
+                 * an outcome the queue file no longer proves; the observation window
+                 * and the observer's idempotent append bound the cost. */
+                WHERE status IN ('submitted', 'queued', 'unknown') AND message_id != ''
                 ORDER BY created_utc ASC LIMIT :l");
             $stmt->bindValue(':l', $limit, SQLITE3_INTEGER);
             $res = $stmt->execute();

@@ -1830,3 +1830,11 @@ and `tests/test_price_gate.py` covering UTC, AEDT, AEST, weekday/weekend and con
 boundaries. No billing setting is touched, and the `y` confirmation with the abort on anything
 else is unchanged. CI and local tests are unaffected by token billing; the gate governs
 premium *spend* only.
+
+## Email Log delivery status from Postfix evidence (resolved 17 November 2026)
+
+**Description:** the Email Log reported `unknown` for a message Gmail had accepted, because
+observation only looked at the Postfix queue, which empties as soon as a working relay forwards.
+**Status: resolved** by Decision 74: exact Message-ID → queue ID → per-recipient log outcome, with
+`Relay accepted` semantics, idempotent appends, bounded rotated-log reads and `unknown` retained
+when evidence is missing. Covered by `tests/test_email_log_delivery_tracking.php`.

@@ -55,14 +55,19 @@ This file is the shared project instruction file for Codex and Cline. It supplem
 - After each logical change, inspect the diff, run the most focused relevant test or check first, run broader regression or static checks when appropriate, verify actual behaviour where runtime validation is required, and check for unintended changes. Do not claim success from an edit or a tool's assertion alone. If validation fails, stop progression, diagnose the failure, and report it.
 - After two identical failed attempts, stop retrying. Report the cause, the evidence collected, and the next diagnostic step instead of looping autonomously.
 - Do not rerun commands, tests, Git checks, hash checks, or source inspection merely to restate a final report when those results were already verified in the current task or session. Run a fresh command only for genuinely missing, materially stale, or explicitly required validation data.
-- At the end of every successful task or code modification, write a milestone report under `.cline-reports/` named `REPORT-YYYYMMDD-HHMMSS.md`, using the sections required by `.clinerules/15-auto-capture-reports.md`, unless the current instruction requires a different report destination. State the report path in the final response.
-- The final report must state the objective, files changed, validation performed and results, current Git state, scope boundaries, outstanding issues, and exactly one recommended next step. For consequential or multi-part work, use the full report structure in `.clinerules/10-workflow-and-finalisation.md`.
+- **One canonical task report is the authoritative record.** Write it under `.cline-reports/` as `REPORT-YYYYMMDD-HHMMSS.md`, containing the outcome, commit/candidate identity, meaningful test results, installation and rollback details, and unresolved items. State the report path in the final response. Any further detail belongs in that report, not in a second report.
+- **Records are brief and point at the report.** `PROJECT_STATE.md` gets a short current-state summary linking to the canonical report. Update `PRODUCT_BACKLOG.md` only when an item's scope, status or acceptance changes, and `DECISIONS.md` only for a substantive policy, architecture or behaviour decision — not for routine implementation fixes.
+- **One PR description update at close-out**, avoiding duplicate milestone comments; comment only to flag a blocker or review finding.
+- **Reuse valid evidence.** Do not rerun tests, checks or hashes, create extra backup copies, or reseal unchanged evidence merely to produce or refresh documentation. Deployment backups, guarded installs, security checks and accurate acceptance records remain mandatory.
+- Documentation edits are batched into one final pass and keep historical records intact; do not expand them into historical cleanup.
+- The final answer states the outcome, validation, remaining work and a rollback reference, linking to the report rather than repeating it. For consequential or multi-part work, use the full report structure in `.clinerules/10-workflow-and-finalisation.md`.
 - After producing the final report, stop. Do not begin another phase, make another edit, commit, deploy, or act on the recommended next step until the user explicitly instructs it.
 
 ## Known configuration discrepancies
 
 - The workstation-local `.clinerules/90-local-remote-access.md` was corrected on 5 November 2026 to identify `fix/pruning-remediation-20261103` and `release/2.13`. It remains untracked and must be reviewed if branch policy changes.
-- The global Cline rule `/root/Documents/Cline/Rules/custom_instructions.md` restates peak hours. `tests/price_gate.py` remains the source of truth; do not copy its hours into Codex configuration.
+- The global Cline rule `/root/Documents/Cline/Rules/custom_instructions.md` restates peak hours in fixed-offset wording. `tests/price_gate.py` remains the source of truth (provider UTC schedule); do not copy its hours into Codex configuration.
+- The report-format requirements in `.clinerules/15-auto-capture-reports.md` and `.clinerules/10-workflow-and-finalisation.md` describe one milestone report per task. Read them as the shape of the single canonical report required here, not as a reason to write parallel or duplicate reports.
 
 ## Precision guardrails
 
