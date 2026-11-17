@@ -1838,3 +1838,10 @@ observation only looked at the Postfix queue, which empties as soon as a working
 **Status: resolved** by Decision 74: exact Message-ID → queue ID → per-recipient log outcome, with
 `Relay accepted` semantics, idempotent appends, bounded rotated-log reads and `unknown` retained
 when evidence is missing. Covered by `tests/test_email_log_delivery_tracking.php`.
+
+## Email Log peer privilege separation (resolved 18 November 2026)
+
+**Status: resolved.** Peer accounts carried the full Device Monitor privilege, so the "read-only"
+account could enter Delete/Restore. A dedicated `page-services-devicemonitor-peer` privilege
+(peerpage/peermessage only) plus an explicit write-privilege gate now deny mutations at the
+framework layer; verified live on `.23`, `.252` and `.253`.

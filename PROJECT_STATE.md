@@ -2,6 +2,15 @@
 
 ## Current state
 
+**HA peer access hardened and Email Log deployed (18 November 2026).** Both nodes serve signed
+CSRs with verified chains (`.252` expires 2026-12-17 22:53:06Z, `.253` 23:06:55Z; renewal manual).
+A live probe proved the "read-only" peer account could reach Delete/Restore; a dedicated
+`page-services-devicemonitor-peer` privilege (peerpage + peermessage only) and an explicit write
+gate fix it, verified live on `.23`, `.252` and `.253` (`403` before action). Email Log installed
+on both HA nodes with settings, databases and CARP unchanged; reciprocal peer settings configured
+with verified TLS and empty-state aggregation confirmed. Populated aggregation remains unproven.
+Report: `.cline-reports/REPORT-20261117-233000-ha-peer-acl.md`.
+
 **HA peer deployment paused on ACME validation reachability (18 November 2026).** `.252`'s ACME order for
 `opnsense.home.arpa` + VIP `.254` + node IP `.252` returned `201`, then the CA refused the first
 (DNS) authorization; the IP authorizations were never tested. A probe proved the challenge server
