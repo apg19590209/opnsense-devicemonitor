@@ -1808,3 +1808,25 @@ normally. This did not change the Device Monitor payload or its configuration.
 No Device Monitor or service check failed. Rollback was not invoked, `FRESH=1` remains untested,
 the OPNsense-generated configuration backup remains under `/conf/backup/`, and real-host
 `FRESH=1` remains tracked as **DM-BL-012**.
+
+## Price gate corrected to the provider's UTC schedule (17 November 2026)
+
+**Description:** `tests/price_gate.py` defined the premium windows as Sydney wall-clock hours,
+`((11, 14), (16, 20))`, inherited from the generic Cline rule. DeepSeek publishes UTC windows,
+Monday-Friday 01:00–04:00 and 06:00–10:00, excluding Chinese public holidays; in AEDT those are
+noon–15:00 and 17:00–21:00. The gate was therefore an hour early at both edges under daylight
+saving and emitted a misleading "Mon-Fri 11:00-14:00 AEDT" label, which an operator could read as
+provider pricing. The cause was an **outdated, locally configured window definition**
+(`PEAK_WINDOWS` + Sydney-wall-clock evaluation), not the timezone conversion, which correctly used
+`zoneinfo('Australia/Sydney')`; the misleading text was the wall-clock label.
+
+**Benefit:** the gate now matches provider pricing exactly, and CI or a harness cannot silently run
+past a real premium boundary.
+
+**Implemented:** windows are evaluated in UTC (`PEAK_WINDOWS_UTC = ((1, 4), (6, 10))`), with Sydney
+labels computed only for display; an explicit holiday calendar
+(`DEEPSEEK_HOLIDAYS_FILE`, default `tests/deepseek_holidays.json`, absent = nothing excluded);
+and `tests/test_price_gate.py` covering UTC, AEDT, AEST, weekday/weekend and configured-holiday
+boundaries. No billing setting is touched, and the `y` confirmation with the abort on anything
+else is unchanged. CI and local tests are unaffected by token billing; the gate governs
+premium *spend* only.

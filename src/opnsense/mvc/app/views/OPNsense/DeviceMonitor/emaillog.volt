@@ -31,6 +31,7 @@
                         <div class="alert alert-warning" id="email-log-partial" style="display:none;font-size:12px;"></div>
                         <div class="alert alert-warning" id="email-log-diagnostic" style="display:none;font-size:12px;"></div>
                         <div class="text-muted" id="email-log-remote-note" style="display:none;font-size:12px;"></div>
+                        <div class="text-muted" id="email-log-timezone-legend" style="font-size:12px;margin-bottom:4px;"></div>
 
                         <div class="row" style="margin-bottom:10px;">
                             <div class="col-sm-3">
@@ -80,7 +81,7 @@
                         <table class="table table-condensed table-hover" id="email-log-table">
                             <thead>
                             <tr>
-                                <th>{{ devicemonitor_t('Time (UTC)') }}</th>
+                                <th id="email-log-time-heading">{{ devicemonitor_t('Time (UTC)') }}</th>
                                 <th>{{ devicemonitor_t('Node') }}</th>
                                 <th>{{ devicemonitor_t('Type') }}</th>
                                 <th>{{ devicemonitor_t('Recipient') }}</th>
@@ -415,6 +416,46 @@
 
         var scope = 'local';
 
+        /* Plugin timestamp convention: stored UTC, rendered once in the browser's
+         * own timezone with its DST rules and native abbreviation. When the browser
+         * cannot format the value, ``localFallback`` (converted server-side with the
+         * OPNsense-configured zone) is shown instead. Intl renders the fields and
+         * the zone from the same instant, so midnight and DST boundaries are never
+         * formatted from mixed calendars. */
+        function formatTimestamp(utc, localFallback) {
+            var value = String(utc || '').trim();
+            if (value === '') { return '\u2014'; }
+            var date = new Date(value.replace(' ', 'T') + 'Z');
+            if (isNaN(date.getTime())) { return localFallback || value; }
+            var parts = {};
+            var opts = {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hourCycle: 'h23', timeZoneName: 'short'
+            };
+            try {
+                new Intl.DateTimeFormat(undefined, opts)
+                    .formatToParts(date).forEach(function (part) { parts[part.type] = part.value; });
+            } catch (e) {
+                new Intl.DateTimeFormat('en-GB', opts)
+                    .formatToParts(date).forEach(function (part) { parts[part.type] = part.value; });
+            }
+            return parts.year + '-' + parts.month + '-' + parts.day + ' ' +
+                parts.hour + ':' + parts.minute + ':' + parts.second +
+                (parts.timeZoneName ? ' ' + parts.timeZoneName : '');
+        }
+        /* Stored values are UTC; every view renders them in the browser's own
+         * zone. The legend names that zone from the browser itself, so the
+         * reader knows which clock the converted times are on. */
+        function renderTimezoneLegend() {
+            var shown = {{ lang.query('Time shown in your local timezone')|json_encode(15) }};
+            var zone = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
+                .formatToParts(new Date()).filter(function (part) {
+                    return part.type === 'timeZoneName';
+                }).map(function (part) { return part.value; })[0] || '';
+            $('#email-log-timezone-legend').text(shown + (zone ? ' (' + zone + ')' : ''));
+        }
+
         /* Remote rows are read-only from this node. The note follows the scope and
          * the visibility: Local + All entries can carry peer rows when a peer is
          * configured, so a disabled action there is never left unexplained. */
@@ -502,7 +543,7 @@
                 }
                 rows.forEach(function (row) {
                     var $tr = $('<tr>');
-                    $tr.append($('<td>').text(row.created_utc));
+                    $tr.append($('<td>').text(formatTimestamp(row.created_utc, row.created_local)));
                     $tr.append($('<td>').text(row.node_ip + ' ' + row.node_role));
                     $tr.append($('<td>').text(row.notification_type));
                     $tr.append($('<td>').text(row.recipient));
@@ -613,7 +654,7 @@
                 var $meta = $('#email-log-message-meta').empty();
                 [['Recipient', m.recipient],
                  ['Node', m.node_ip + (m.node_role ? ' (' + m.node_role + ')' : '')],
-                 ['Time (UTC)', m.created_utc],
+                 ['Time', formatTimestamp(m.created_utc, m.created_local)],
                  ['Type', m.notification_type],
                  ['Status', m.status]].forEach(function (pair) {
                     $meta.append($('<dt>').text(pair[0])).append($('<dd>').text(pair[1] || ''));
@@ -633,7 +674,8 @@
                     // One readable row per event, in the recorded (chronological) order:
                     // time, stage and status, then any diagnostic detail and source.
                     var $row = $('<div>').addClass('email-log-event');
-                    $('<div>').addClass('email-log-event-time').text(step.occurred_utc).appendTo($row);
+                    $('<div>').addClass('email-log-event-time')
+                        .text(formatTimestamp(step.occurred_utc, step.occurred_local)).appendTo($row);
                     $('<div>')
                         .append($('<strong>').text(step.stage))
                         .append(document.createTextNode(' — '))
@@ -766,6 +808,7 @@
              * load, so no explicit init here: doing so would double-initialise.
              * The options never change, so no per-request refresh is needed
              * either; only the initial request waits for the ready handler. */
+            renderTimezoneLegend();
             load();
         });
     })();

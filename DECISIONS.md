@@ -3321,3 +3321,31 @@ and the additive repeatable upgrade. `tests/test_emaillog_visibility_api.py` cov
 every read path, the closed value set, the write gate ordering, the read-only peer endpoints,
 no mail is touched, and remote rows staying disabled. `tests/test_emaillog_dialog.py` covers Clear
 filters, the visibility control, the confirmation wording and the event-count pluralisation.
+
+## 73. The peak-price gate mirrors the provider's UTC schedule
+
+### Decision
+
+`tests/price_gate.py` evaluates the premium windows in **UTC**, Monday–Friday 01:00–04:00 and
+06:00–10:00 (start inclusive, end exclusive). Sydney labels are computed only for display, so a
+daylight-saving change alters the label and never the boundary. The provider's additional
+exclusion of Chinese public holidays is configuration, read from `DEEPSEEK_HOLIDAYS_FILE`
+(default `tests/deepseek_holidays.json`); an absent or empty calendar excludes nothing and no
+holiday dates are invented in code.
+
+The gate keeps its premium-spend contract: a window prints a warning and requires an explicit `y`;
+anything else aborts. Bypass remains the operator's option only. The gate says nothing about whether
+CI or local tests consume provider tokens.
+
+### Reason
+
+The earlier Sydney wall-clock windows (`11:00–14:00`, `16:00–20:00`) were copied from a generic rule
+and ran an hour early at both edges under daylight saving, while the status text named those local
+hours in a way that read as provider pricing. UTC evaluation removes the conversion as a source of
+drift.
+
+### Tests and evidence
+
+`tests/test_price_gate.py` pins UTC boundaries, AEDT and AEST local boundaries, the DST label change
+with a fixed UTC window, weekdays never peaking, weekends never peaking, and holidays only when
+configured.

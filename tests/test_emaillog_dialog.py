@@ -64,8 +64,10 @@ def test_padded_body_and_sections():
     src_all = src
     assert "$('#email-log-message-title').text(m.subject" in src_all, \
         'the subject must become the dialog heading'
-    for label in ("Recipient", "Node", "Time (UTC)", "Type", "Status"):
+    for label in ("Recipient", "Node", "Time", "Type", "Status"):
         assert f"['{label}'" in src_all, f'{label} missing from metadata'
+    assert "['Time', formatTimestamp(m.created_utc, m.created_local)]" in src_all, \
+        'metadata shows the converted instant, not the raw UTC text'
     print('DIALOG_SUBJECT_AND_META=PASS')
     assert 'class="modal-footer"' in src and 'data-dismiss="modal"' in src, 'footer close button missing'
     print('DIALOG_LAYOUT=PASS')

@@ -37,12 +37,18 @@ runner's locale.
 
 Behaviour:
 
-* Off-peak (weekends, or Mon-Fri outside the premium windows) -> silent no-op,
-  the harness runs exactly as before.
-* Premium window (Mon-Fri 11:00-14:00 or 16:00-20:00 Sydney time) -> prints a
+* Off-peak (weekends, configured holidays, or outside the premium windows in
+  UTC) -> silent no-op, the harness runs exactly as before.
+* Premium window (Monday-Friday, 01:00-04:00 UTC or 06:00-10:00 UTC) -> prints a
   warning and requires an interactive ``y`` confirmation before the caller may
   continue. Anything else (``n``, empty answer, timeout, EOF, Ctrl-C) aborts
   with exit code 1 *before* the harness allocates any heavy context.
+
+The windows are the provider's own UTC schedule. They are evaluated in UTC so a
+Sydney daylight-saving change can never move a boundary; Sydney labels are
+computed only for display. The provider also excludes Chinese public holidays;
+that calendar is configuration (``deepseek_holidays.json``), never invented
+here, and an empty calendar excludes nothing.
 
 Hook a harness up at the very top of its execution flow:
 
@@ -62,17 +68,28 @@ import os
 import select
 import sys
 from collections.abc import Callable, Sequence
-from datetime import datetime
+import json
+from datetime import date, datetime, time, timedelta, timezone
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 SYDNEY_TZ = ZoneInfo("Australia/Sydney")
+UTC_TZ = timezone.utc
 
-# Premium (full-price) windows as (start_hour, end_hour) in Sydney local time,
-# Monday-Friday only. Start inclusive, end exclusive.
-PEAK_WINDOWS: tuple[tuple[int, int], ...] = ((11, 14), (16, 20))
+# Premium (full-price) windows as (start_hour, end_hour) in UTC, Monday-Friday
+# only. Start inclusive, end exclusive. These are the provider's published
+# UTC windows: 01:00-04:00 and 06:00-10:00.
+PEAK_WINDOWS_UTC: tuple[tuple[int, int], ...] = ((1, 4), (6, 10))
 
 # Monday == 0 ... Sunday == 6, matching datetime.weekday().
 PEAK_WEEKDAYS: frozenset[int] = frozenset({0, 1, 2, 3, 4})
+
+# The provider also excludes Chinese public holidays. That calendar is not
+# derived or guessed here: it is supplied as an ISO date list, one "YYYY-MM-DD"
+# per entry. An absent or empty file excludes nothing, so the gate never
+# silently treats a holiday as off-peak without a configured calendar.
+HOLIDAYS_ENV_VAR = "DEEPSEEK_HOLIDAYS_FILE"
+DEFAULT_HOLIDAYS_FILE = Path(__file__).with_name("deepseek_holidays.json")
 
 PEAK_WARNING = "⚠️ PEAK PRICE WARNING: You are running tests in a full-price window."
 ABORT_MESSAGE = "Peak-price gate: aborted before any heavy context or API loop."
@@ -103,42 +120,98 @@ def sydney_now(reference: datetime | None = None) -> datetime:
     return reference.astimezone(SYDNEY_TZ)
 
 
-def _minute_of_day(moment: datetime) -> int:
-    return moment.hour * 60 + moment.minute
+def utc_now(reference: datetime | None = None) -> datetime:
+    """Return the instant in UTC.
+
+    ``reference`` exists for tests and CLI dry runs: an aware datetime is
+    converted to UTC, a naive one is assumed to already be UTC.
+    """
+    if reference is None:
+        return datetime.now(UTC_TZ)
+    if reference.tzinfo is None:
+        return reference.replace(tzinfo=UTC_TZ)
+    return reference.astimezone(UTC_TZ)
 
 
-def is_peak_window(reference: datetime | None = None) -> bool:
-    """True when the given instant falls inside a premium billing window."""
-    moment = sydney_now(reference)
-    if moment.weekday() not in PEAK_WEEKDAYS:
+def holiday_calendar_path() -> Path:
+    override = os.environ.get(HOLIDAYS_ENV_VAR, "").strip()
+    return Path(override) if override else DEFAULT_HOLIDAYS_FILE
+
+
+def load_holidays(path: Path | None = None) -> frozenset[date]:
+    """Configured provider-excluded dates, or an empty set when none exist.
+
+    A malformed file is an error, not an excuse: it must not silently make a
+    premium day look off-peak.
+    """
+    path = holiday_calendar_path() if path is None else path
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return frozenset()
+    if isinstance(raw, dict):
+        raw = raw.get("excluded_dates", [])
+    parsed = set()
+    for item in raw:
+        parsed.add(date.fromisoformat(str(item)))
+    return frozenset(parsed)
+
+
+def _window_bounds(moment_utc: datetime) -> tuple[datetime, datetime] | None:
+    """The active UTC window for the instant, or None."""
+    minute_of_day = moment_utc.hour * 60 + moment_utc.minute
+    for start_hour, end_hour in PEAK_WINDOWS_UTC:
+        if start_hour * 60 <= minute_of_day < end_hour * 60:
+            day = moment_utc.date()
+            return (
+                datetime.combine(day, time(start_hour), UTC_TZ),
+                datetime.combine(day, time(end_hour), UTC_TZ),
+            )
+    return None
+
+
+def is_peak_window(reference: datetime | None = None, *, holidays: frozenset[date] | None = None) -> bool:
+    """True when the instant falls inside a premium billing window.
+
+    The provider's schedule is Monday-Friday in UTC, with its own excluded
+    holiday dates. A window that starts on a weekday and crosses midnight into
+    a Saturday keeps its weekday's classification until the instant it ends.
+    """
+    moment = utc_now(reference)
+    bounds = _window_bounds(moment)
+    if bounds is None or moment.weekday() not in PEAK_WEEKDAYS:
         return False
-    minute_of_day = _minute_of_day(moment)
-    return any(
-        start_hour * 60 <= minute_of_day < end_hour * 60
-        for start_hour, end_hour in PEAK_WINDOWS
-    )
+    excluded = load_holidays() if holidays is None else holidays
+    # A window belongs to the UTC date it starts on, so a window ending just
+    # after midnight is still classified by the date that began it.
+    return bounds[0].date() not in excluded
+
+
+def _sydney_label(moment: datetime) -> str:
+    local = moment.astimezone(SYDNEY_TZ)
+    return f"{local:%H:%M} {local.tzname()}"
 
 
 def peak_window_label(reference: datetime | None = None) -> str:
     """Human readable description of the active window, empty when off-peak."""
-    moment = sydney_now(reference)
-    minute_of_day = _minute_of_day(moment)
-    for start_hour, end_hour in PEAK_WINDOWS:
-        if start_hour * 60 <= minute_of_day < end_hour * 60:
-            return (
-                f"Mon-Fri {start_hour:02d}:00-{end_hour:02d}:00 "
-                f"{moment.tzname()} (now {moment.strftime('%a %H:%M')})"
-            )
-    return ""
+    moment = utc_now(reference)
+    bounds = _window_bounds(moment)
+    if bounds is None or not is_peak_window(moment):
+        return ""
+    start, end = bounds
+    return (
+        f"Mon-Fri {start:%H:%M}-{end:%H:%M} UTC "
+        f"({_sydney_label(start)}-{_sydney_label(end)} Sydney; now {_sydney_label(moment)})"
+    )
 
 
 def describe_peak_status(reference: datetime | None = None) -> tuple[bool, str]:
     """Return ``(is_peak, description)`` without touching stdin/stdout."""
-    moment = sydney_now(reference)
-    clock = moment.strftime("%a %Y-%m-%d %H:%M:%S %Z")
+    moment = utc_now(reference)
+    clock = f"{moment:%a %Y-%m-%d %H:%M:%S} UTC ({_sydney_label(moment)} Sydney)"
     if is_peak_window(moment):
-        return True, f"premium window active ({clock})"
-    return False, f"off-peak ({clock})"
+        return True, f"premium window active, {peak_window_label(moment)} [{clock}]"
+    return False, f"off-peak [{clock}]"
 
 def bypass_requested(bypass: bool | None = None) -> bool:
     """True when the caller opted out, explicitly or via ``CLINE_PRICE_GATE``."""
@@ -275,7 +348,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="price_gate",
         description="Gate test harness runs that would start inside a premium "
-        "full-price window (Sydney time).",
+        "full-price window (provider schedule, evaluated in UTC).",
     )
     parser.add_argument(
         "--now",
@@ -305,6 +378,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     """CLI entry point: ``python3 tests/price_gate.py [--status]``."""
     args = _parse_args(argv)
+    # A value without an offset is taken as UTC; the provider's windows are UTC.
     reference = datetime.fromisoformat(args.now) if args.now else None
 
     if args.status:

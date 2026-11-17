@@ -2,6 +2,39 @@
 
 ## Current state
 
+**`.23` email transport configured through the Postfix plugin (17 November 2026).** After a root
+cleanup (below) freed space, `os-postfix` (`postfix 3.11.7_5,1`) was installed from the supported
+repository — the same proven method as `.252`. The plugin's `General` model now mirrors `.253`'s
+relay: `relayhost smtp.gmail.com:587`, SASL enabled with the credential transferred privately from
+`.253` (hash-identical `smtp_auth`, `8f50…`), `smtpclient_security may`, `mynetworks` loopback,
+`inet_interfaces localhost`, `myhostname OPSENSE-DM23` for RFC-5322 identification only, and
+`smtpd_sasl_auth_enable` from the plugin template. Templates rendered by `configctl template
+reload OPNsense/Postfix`; all map databases compiled by the plugin's `setup.sh` (with its own
+`/usr/local/sbin` on PATH); Postfix running with listeners only on `127.0.0.1:25` and `[::1]:25`.
+Device Monitor keeps `email_method=sendmail`; its configuration is byte-identical
+(`cecb403f…`), and `enabled`, `monitored_interfaces`, HA settings and webhooks are unchanged.
+**The authorised labelled test email has NOT yet been sent** — it is held by the price gate (see
+below). Backups: `/var/backups/devicemonitor/pre-postfix-20261117T030617Z` (config.xml, Device
+Monitor config, package inventory) and `pre-postfix-model-20261117T063822Z` (config.xml
+`4d222512…` before the model save; the saved file is `0b6a10b8…`).
+
+**Price gate corrected to the provider's UTC schedule (17 November 2026).** The gate had carried a
+Sydney wall-clock definition (`11:00–14:00`, `16:00–20:00`) taken from the generic Cline rule, while
+DeepSeek publishes UTC windows (Mon–Fri 01:00–04:00 and 06:00–10:00, Chinese public holidays
+excluded). The conversion was correct; the configured window was not, and its label read as
+provider pricing. The gate now evaluates UTC, labels Sydney for display only, reads an explicit
+holiday calendar (absent = none excluded) and is pinned by `tests/test_price_gate.py`. Decision 73.
+
+**Root filesystem recovered (17 November 2026).** Root reached 100% with negative free space,
+which blocked the package install and even Python bytecode writes. The reproducible
+`/usr/ports/distfiles` cache (4.2 GB) was verified as downloads only (no build running, nothing
+written for 30 minutes) and deleted in place, keeping the directory's mode and ownership: root is
+now **3.9 GB free**. Backups, evidence, source checkouts, databases, credentials and the Go/Zig
+caches were untouched. A 15 GB USB stick (`DNXTNKV80W22UDP6PV9Z`) was formatted as UFS
+(`gpt/dmarchive`) for archive use, but its filesystem corrupted under a sustained 4 GB copy and
+the device is parked, unmounted and classified unsuitable for backups pending full verification; a
+destructive address-dependent test verified only the first 1 GiB of its advertised 15 GB.
+
 **Email Log Clear filters, soft delete/restore, visibility filter and themed dialog header (17 November 2026).**
 Clear filters resets search, type and status, returns to page one and refreshes once while
 preserving the Local/Peer/All scope. Delete is soft only: schema version 3 adds `deleted_utc`

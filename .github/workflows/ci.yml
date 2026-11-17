@@ -58,6 +58,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y php-cli gettext sqlite3
 
+      - name: Validate the peak-price gate boundaries
+        run: python3 tests/test_price_gate.py
+
       - name: Compile Python sources
         run: |
           set -eu
@@ -176,6 +179,9 @@ jobs:
 
       - name: Validate email log visibility and soft deletion
         run: php tests/test_email_log_visibility.php
+
+      - name: Validate email log timestamps follow the plugin convention
+        run: python3 tests/test_emaillog_timestamps.py
 
       - name: Validate email log Delete/Restore access contract
         run: python3 tests/test_emaillog_visibility_api.py

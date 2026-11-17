@@ -20,6 +20,7 @@ class EmaillogController extends ApiControllerBase
     private function recorder()
     {
         require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailLog.php');
+        require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/PluginTimestamps.php');
         return \OPNsense\DeviceMonitor\EmailLog::instance();
     }
 
@@ -54,6 +55,7 @@ class EmaillogController extends ApiControllerBase
     private function nodeFacts()
     {
         require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailLog.php');
+        require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/PluginTimestamps.php');
         $node = \OPNsense\DeviceMonitor\EmailLog::currentNode();
         return [
             'node_id' => $node['host'],
@@ -102,6 +104,14 @@ class EmaillogController extends ApiControllerBase
                     'source' => (string)($step['source'] ?? ''),
                 ];
             }
+            /* Fallback rendering only: the browser converts the UTC value with its
+             * own DST rules; this uses the configured zone if it cannot. */
+            foreach ($timeline as $i => $step) {
+                $timeline[$i]['occurred_local'] = \OPNsense\DeviceMonitor\PluginTimestamps::toConfiguredZone($step['occurred_utc']);
+            }
+            $clean['created_local'] = \OPNsense\DeviceMonitor\PluginTimestamps::toConfiguredZone($clean['created_utc']);
+            $clean['deleted_local'] = \OPNsense\DeviceMonitor\PluginTimestamps::toConfiguredZone($clean['deleted_utc']);
+            $clean['timezone'] = \OPNsense\DeviceMonitor\PluginTimestamps::configuredZoneName();
             $clean['timeline'] = $timeline;
             $safe[] = $clean;
         }
@@ -180,6 +190,9 @@ class EmaillogController extends ApiControllerBase
                 'content_format' => $hasContent ? (string)($row['content_format'] ?? '') : '',
                 'content_truncated' => $hasContent && !empty($row['content_truncated']),
                 'content' => $hasContent ? (string)$row['content_text'] : '',
+                'created_local' => \OPNsense\DeviceMonitor\PluginTimestamps::toConfiguredZone((string)$row['created_utc']),
+                'deleted_local' => \OPNsense\DeviceMonitor\PluginTimestamps::toConfiguredZone((string)($row['deleted_utc'] ?? '')),
+                'timezone' => \OPNsense\DeviceMonitor\PluginTimestamps::configuredZoneName(),
                 'timeline' => $timeline,
             ],
         ], true);
@@ -359,6 +372,9 @@ class EmaillogController extends ApiControllerBase
                 'content_available' => $hasContent,
                 'content' => $hasContent ? (string)$row['content_text'] : '',
                 'content_truncated' => $hasContent && !empty($row['content_truncated']),
+                'created_local' => \OPNsense\DeviceMonitor\PluginTimestamps::toConfiguredZone((string)$row['created_utc']),
+                'deleted_local' => \OPNsense\DeviceMonitor\PluginTimestamps::toConfiguredZone((string)($row['deleted_utc'] ?? '')),
+                'timezone' => \OPNsense\DeviceMonitor\PluginTimestamps::configuredZoneName(),
                 'timeline' => $timeline,
             ],
         ], true);
