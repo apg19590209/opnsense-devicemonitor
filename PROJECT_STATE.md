@@ -4,9 +4,12 @@
 
 **Email Log labels corrected (17 November 2026).** The time column heading is derived from the same
 browser timezone that formats its values (local, following AEDT/AEST), and `accepted` displays as
-**Relay accepted** in the table, popup and timeline; internal values and CSV (UTC) are unchanged.
-Code `435efde`, CI `44043932789` success, installed from
-`/var/backups/devicemonitor/pre-labels-20261117T081136Z`. Labels await visual confirmation.
+**Relay accepted** in the table, popup and timeline, under the translated static **Time (local)**
+heading (no script rewrites it; each value carries its own zone suffix); internal values and CSV
+(UTC) are unchanged.
+Code `6cb3807`, CI `44045533409` success, installed from
+`/var/backups/devicemonitor/pre-static-heading-20261117T082257Z`. The table's Relay accepted label
+is visually confirmed; the heading awaits confirmation.
 Report: `.cline-reports/REPORT-20261117-081143-labels.md`.
 
 **Email Log delivery status resolved from Postfix evidence (17 November 2026).** The `.23` test email
