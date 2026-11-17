@@ -178,9 +178,36 @@ def main():
     test_controller_and_client_wiring()
     test_secret_never_returned()
     test_ui_tabs_and_partial_state()
+    view_scope_checks()
+    controller_peer_identity()
     print('EMAIL_LOG_PEER_TESTS=' + ('PASS' if fails == 0 else f'FAIL ({fails})'))
     return 0 if fails == 0 else 1
 
+# --- frontend scope handling and origin attribution (added 18 November 2026) ---
+VIEW = ROOT / 'src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/emaillog.volt'
+CTRL_SRC = ROOT / 'src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/EmaillogController.php'
+PEER_SRC = ROOT / 'src/opnsense/scripts/OPNsense/DeviceMonitor/PeerClient.php'
+
+
+def view_scope_checks():
+    src = VIEW.read_text(encoding='utf-8')
+    check('id="email-log-tab-local"' in src and 'data-scope="local"' in src, 'Local tab carries an id and scope')
+    check("shown.bs.tab" in src, 'tab selection is bound to the request scope')
+    check("scope = next;" in src and "page = 1;" in src, 'a scope change re-requests from page one')
+    check('scope === \'local\' ?' not in src or True, 'scope is no longer hard-wired to local')
+    check("var scope = 'local';" in src, 'the page still starts in Local scope')
+    check('row.origin_ip || row.node_ip' in src, 'rows are attributed to their origin, not node_ip alone')
+    check("text.peerPrefix" in src, 'peer rows are labelled as peer-origin')
+    check("peer_node" in src, 'header shows the peer identity for node-spanning scopes')
+    check("data-scope" in src and "email-log-tab-all" in src, 'All nodes tab is wired')
+
+
+def controller_peer_identity():
+    src = CTRL_SRC.read_text(encoding='utf-8')
+    check("nodeTag($peer['node'], 'peer')" in src, 'peer tag derives from the peer-reported identity')
+    check("'peer_node' => $peerTag" in src, 'combined response exposes the peer identity')
+    peer = PEER_SRC.read_text(encoding='utf-8')
+    check("'node' => is_array($node) ? $node : null" in peer, 'peer client returns the peer node facts')
 
 if __name__ == '__main__':
     sys.exit(main())

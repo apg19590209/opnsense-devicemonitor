@@ -13,7 +13,8 @@
             <div class="panel-body">
                 <ul class="nav nav-tabs" role="tablist">
                     <li role="presentation" class="active">
-                        <a href="#email-log-local" role="tab" data-toggle="tab">{{ devicemonitor_t('Local') }}</a>
+                        <a href="#email-log-local" id="email-log-tab-local" role="tab" data-toggle="tab"
+                           data-scope="local">{{ devicemonitor_t('Local') }}</a>
                     </li>
                     <li role="presentation">
                         <a href="#email-log-table" id="email-log-tab-peer" role="tab" data-toggle="tab"
@@ -393,6 +394,7 @@
             eventSingular: {{ lang.query('event')|json_encode(15) }},
             eventPlural: {{ lang.query('events')|json_encode(15) }},
             noDelivery: {{ lang.query('No delivery details recorded')|json_encode(15) }},
+            peerPrefix: {{ lang.query('Peer')|json_encode(15) }},
             queueId: {{ lang.query('Queue ID')|json_encode(15) }},
             delete: {{ lang.query('Delete')|json_encode(15) }},
             restore: {{ lang.query('Restore')|json_encode(15) }},
@@ -534,24 +536,26 @@
                     return;
                 }
                 refreshRemoteNote();
-                if (scope !== 'local') {
-                    setScopeNote(data);
-                } else {
+                /* The banner always describes the scope that produced this response. */
+                if (scope === 'local') {
                     $('#email-log-partial').hide();
                     $('#email-log-scope-note').text(text.localOnly);
+                } else {
+                    setScopeNote(data);
                 }
                 var allRows = data.rows || [];
-                var rows = allRows.filter(function (r) {
-                    if (scope === 'peer') { return r.scope === 'peer'; }
-                    return true;
-                });
+                var rows = scope === 'peer' ? allRows.filter(function (r) { return r.scope === 'peer'; }) : allRows;
                 var $body = $('#email-log-rows').empty();
-                if (scope === 'local' && data.node) {
-                    $('#email-log-node').text((data.node.node_id || '') + ' ' + (data.node.node_ip || '') +
-                        (data.node.role ? ' (' + data.node.role + ')' : ''));
-                } else {
-                    $('#email-log-node').text(data.local_node ? (data.local_node.node_id || '') : '');
+                /* Header identity: this node, and for node-spanning scopes also the peer. */
+                var localId = (data.local_node && (data.local_node.node_ip || data.local_node.node_id)) ||
+                    (data.node && (data.node.node_ip || data.node.node_id)) || '';
+                var localRole = (data.node && data.node.role) || (data.local_node && data.local_node.role) || '';
+                var header = localId + (localRole ? ' (' + localRole + ')' : '');
+                if (scope !== 'local' && data.peer_node && (data.peer_node.node_ip || data.peer_node.node_id)) {
+                    header += ' | ' + text.peerPrefix + ' ' +
+                        (data.peer_node.node_ip || data.peer_node.node_id);
                 }
+                $('#email-log-node').text(header);
                 if (data.logging_diagnostic) {
                     $('#email-log-diagnostic').show().text(data.logging_diagnostic);
                 } else {
@@ -560,7 +564,11 @@
                 rows.forEach(function (row) {
                     var $tr = $('<tr>');
                     $tr.append($('<td>').text(formatTimestamp(row.created_utc, row.created_local)));
-                    $tr.append($('<td>').text(row.node_ip + ' ' + row.node_role));
+                    /* Attribute the row to the node that produced it: both HA nodes share
+                     * the hostname, so the origin IP is what distinguishes them. */
+                    var originIp = row.origin_ip || row.node_ip || '';
+                    var nodeText = (row.scope === 'peer' ? (text.peerPrefix + ' ') : '') + originIp;
+                    $tr.append($('<td>').text((nodeText + ' ' + (row.node_role || '')).trim()));
                     $tr.append($('<td>').text(row.notification_type));
                     $tr.append($('<td>').text(row.recipient));
                     $tr.append($('<td>').text(row.subject));
@@ -722,6 +730,16 @@
                     .modal('show');
             });
         }
+
+        /* The Local/Peer/All nodes tabs own the request scope: selecting one re-requests
+         * with that scope so the tab, the banner and the returned origin always agree. */
+        $('#email-log-tab-local, #email-log-tab-peer, #email-log-tab-all').on('shown.bs.tab', function () {
+            var next = String($(this).attr('data-scope') || 'local');
+            if (next === scope) { return; }
+            scope = next;
+            page = 1;
+            load();
+        });
 
         $('#email-log-type, #email-log-status, #email-log-visibility').on('change', function () { page = 1; load(); });
         $('#email-log-search').on('input', function () { page = 1; load(); });

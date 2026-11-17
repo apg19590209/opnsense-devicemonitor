@@ -265,6 +265,7 @@ class EmaillogController extends ApiControllerBase
         $settings = $this->peerSettings();
         $peer = null;
         $peerTag = ['scope' => 'peer', 'node_id' => '', 'node_ip' => '', 'role' => ''];
+        $client = null;
         if ($settings['enabled']) {
             $errors = \OPNsense\DeviceMonitor\PeerClient::validate($settings);
             if (!empty($errors)) {
@@ -272,6 +273,11 @@ class EmaillogController extends ApiControllerBase
             } else {
                 $client = new \OPNsense\DeviceMonitor\PeerClient($settings);
                 $peer = $client->search($filters, \OPNsense\DeviceMonitor\EmailLogAggregate::MAX_PAGE, 0);
+                /* The peer reports its own identity; without it both nodes show the same
+                 * hostname and a peer row could not be attributed to a node. */
+                if (!empty($peer['available']) && is_array($peer['node'] ?? null)) {
+                    $peerTag = \OPNsense\DeviceMonitor\EmailLogAggregate::nodeTag($peer['node'], 'peer');
+                }
             }
         }
 
@@ -294,6 +300,7 @@ class EmaillogController extends ApiControllerBase
             'peer' => $combined['peer'],
             'peer_enabled' => $settings['enabled'],
             'local_node' => $localTag,
+            'peer_node' => $peerTag,
         ], true);
         return;
     }

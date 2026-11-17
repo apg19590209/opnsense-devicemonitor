@@ -158,7 +158,8 @@ class PeerClient
         if (!is_array($rows)) {
             return $this->unavailable('Peer returned an unusable row set.');
         }
-        return ['available' => true, 'rows' => $rows];
+        $node = $result['data']['node'] ?? null;
+        return ['available' => true, 'rows' => $rows, 'node' => is_array($node) ? $node : null];
     }
 
     /** One message with its content and timeline. */
