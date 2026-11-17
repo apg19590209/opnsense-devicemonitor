@@ -2,6 +2,13 @@
 
 ## Current state
 
+**HA peer deployment paused on internal CA policy (17 November 2026).** `.252`'s ACME order for
+`opnsense.home.arpa` + VIP `.254` + node IP `.252` returned `201`, then the CA refused the DNS
+identifier ("will not issue certificates for the identifier"); the node IP identifiers were
+accepted. `.252`'s alt names now include `.252`, but its live certificate is still expired and
+unchanged; `.253` untouched; candidate `d99cc0b1…` not installed. Diagnosis:
+`.cline-reports/REPORT-20261117-105844-ca-diagnosis.md`.
+
 **HA peer deployment prepared, not applied (17 November 2026).** Candidate
 `d99cc0b1…` (1,997,997 bytes) from `07bae2a`; `.252` shows the pre-feature `EmaillogController`
 and a 0-byte placeholder log, so neither HA node runs the Email Log feature yet. Read-only peer
