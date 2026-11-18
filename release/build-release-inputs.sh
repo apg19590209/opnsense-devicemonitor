@@ -34,9 +34,26 @@ TMP=$OUT.new
 # verifier and is not self-referential here; it pins this file instead.
 INPUTS=$(printf '%s\n' \
     "release/v${VERSION}-runtime.manifest" \
+    "release/manifests/v${VERSION}-runtime.manifest" \
     "release/prune-plan.sh" \
     "release/legacy-targets.txt" \
-    "release/merge-opnsense-catalog.sh" | sort -u)
+    "release/merge-opnsense-catalog.sh" \
+    "release/repair-core-catalogues.sh" \
+    "release/pristine-catalogues.sha256" \
+    "release/verify-candidate.sh" \
+    "release/feature-set.txt" \
+    "release/verify-bundle.py" \
+    "release/verify-fetched-bundle.sh" \
+    "release/verify-testbed-acceptance.sh" \
+    "release/testbed-acceptance.sh" \
+    "release/record-acceptance.sh" \
+    "release/validate-deploy-archive.py" \
+    "release/execution-ledger.py" \
+    "release/run-host-checks.sh" \
+    "release/verify-execution.py" \
+    "release/current-task-requirements.txt" \
+    "release/acceptance-check.php" \
+    "release/results-file.py" | sort -u)
 
 # Fail before writing anything: a half-written checksum file is worse than none.
 for path in $INPUTS; do

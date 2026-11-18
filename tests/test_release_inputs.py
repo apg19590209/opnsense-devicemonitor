@@ -106,6 +106,9 @@ def test_pins_are_consistent():
     assert pin('MANIFEST_SHA') == rows[manifest]
     assert pin('RELEASE_INPUTS_SHA') == sha256(RELEASE / 'release-inputs.sha256')
     assert pin('VERIFIER_SHA') == sha256(RELEASE / 'verify-release-inputs.sh')
+    deploy = (RELEASE / 'deploy-candidate.sh').read_text()
+    gate_pin = re.search(r'^INSTALLER_SHA=([0-9a-f]{64})$', deploy, re.M)
+    assert gate_pin and gate_pin.group(1) == sha256(INSTALLER)
 
 
 def test_manifest_guards_match_target_derivation():

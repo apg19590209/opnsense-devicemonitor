@@ -16,7 +16,9 @@ $fails = 0;
 function check($c, $m) { global $fails; if ($c) { echo "  PASS $m\n"; } else { $fails++; echo "  FAIL $m\n"; } }
 
 /* syslog-ng style, as installed on .23: the pid is not bracketed. */
-function line($ts, $prog, $msg) { return "<22>1 2026-11-17T$ts+11:00 OPNsense.internal postfix/$prog 1234 - [meta sequenceId=\"1\"] $msg"; }
+/* Fixture timestamps must be inside the one-day observation window on every runner; the
+ * date itself is deliberately relative, while the fixture times retain their order. */
+function line($ts, $prog, $msg) { return "<22>1 " . gmdate('Y-m-d') . "T$ts+00:00 OPNsense.internal postfix/$prog 1234 - [meta sequenceId=\"1\"] $msg"; }
 
 $db = tempnam(sys_get_temp_dir(), 'dmtrack'); unlink($db);
 $log = new EmailLog($db);
@@ -90,6 +92,7 @@ $read = EmailTransport::readLogLines(null, 86400, ['/nonexistent/latest.log']);
 check($read === [], 'a missing log yields no evidence (unknown), not an error');
 $old = [line('10:00:00', 'smtp', 'FFFF6666: to=<x@example.invalid>, status=sent')];
 check(EmailTransport::readLogLines(strtotime('2026-11-17 19:30:00'), 3600, [$rot]) !== null, 'lookback bounds the read');
+check(EmailTransport::readLogLines(time(), EmailTransport::OBSERVE_MAX_AGE_SECONDS, [$rot]) !== [], 'relative fixture remains in the live observation window');
 
 /* 8. a stale latest.log symlink must not hide the dated log beside it */
 $dir = sys_get_temp_dir() . '/dmlogs' . getmypid();

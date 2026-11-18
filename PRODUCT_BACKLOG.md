@@ -15,6 +15,18 @@ or approved for future development.
 
 ## Open backlog
 
+### Deployment-entry-point release safeguards: **`CLOSED`**
+
+**Description:** Enforce explicit source identity, required feature completeness, exact archive
+membership, unexpected-removal protection and candidate-bound sequential acceptance at the deployment
+entry point.
+
+**Benefit:** Prevent a stale or silently incomplete candidate from reaching a testbed or HA node.
+
+**Status:** Closed 18 November 2026. Final source `202d6ef` / bundle `b4e388ac…` accepted on `.23`,
+`.253` and `.252`; isolated rejection tests pass. Public release approval remains outstanding.
+Report: `.cline-reports/REPORT-20261118-205100-testbed-acceptance-closeout.md`.
+
 ### DM-BL-008a — Dutch (nl_NL) is not selectable in the GUI language list: **`CLOSED`**
 
 **Description:** Make the Dutch Device Monitor catalogue usable through the normal

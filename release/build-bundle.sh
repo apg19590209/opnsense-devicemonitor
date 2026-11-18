@@ -51,11 +51,39 @@ if [ -f "$REPO/release/feature-set.txt" ]; then
     done
     set +f
 fi
-# shellcheck disable=SC2086
-/bin/sh "$REPO/release/verify-candidate.sh" --ancestor "${DM_CANDIDATE_ANCESTOR:-main}" $FEATURE_ARGS >/dev/null || {
-    echo 'ABORT: candidate identity check failed' >&2
-    exit 1
-}
+if [ "${DM_SOURCE_EXPORT:-0}" != 1 ] && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    # shellcheck disable=SC2086
+    # A CI PR checkout has no local main, but the integration ref is still authoritative.
+    if [ -z "${DM_CANDIDATE_ANCESTOR:-}" ] && ! git rev-parse --verify --quiet 'main^{commit}' >/dev/null; then
+        DM_CANDIDATE_ANCESTOR=origin/main
+    fi
+    /bin/sh "$REPO/release/verify-candidate.sh" --ancestor "${DM_CANDIDATE_ANCESTOR:-main}" $FEATURE_ARGS >/dev/null || {
+        echo 'ABORT: candidate identity check failed' >&2
+        exit 1
+    }
+    SOURCE=$(git rev-parse HEAD)
+else
+    # An exported source has no Git ancestry metadata. It must state its exact source and
+    # carry the exporter's mode map; a .git directory here would make the two metadata
+    # sources ambiguous.
+    [ ! -e "$REPO/.git" ] || { echo 'ABORT: DM_SOURCE_EXPORT inside a Git checkout is ambiguous' >&2; exit 1; }
+    SOURCE=${DM_CANDIDATE_SOURCE:-}
+    case "$SOURCE" in *[!0-9a-f]*|'') echo 'ABORT: exported source needs DM_CANDIDATE_SOURCE as a commit SHA' >&2; exit 1;; esac
+    [ "${#SOURCE}" -eq 40 ] || { echo 'ABORT: DM_CANDIDATE_SOURCE must be a full commit SHA' >&2; exit 1; }
+    for baseline in release/manifests/*-runtime.manifest; do
+        [ -f "$baseline" ] || continue
+        while read -r hash mode feature target; do
+            [ -n "$feature" ] || { echo 'ABORT: malformed baseline row' >&2; exit 1; }
+            awk -v s="$feature" '$3 == s {found=1} END {exit !found}' "$REPO/release/v${VERSION}-runtime.manifest" ||
+                { echo "ABORT: manifest lost a baseline target: $feature" >&2; exit 1; }
+        done < "$baseline"
+    done
+    while read -r feature; do
+        case "$feature" in ''|'#'*) continue ;; esac
+        awk -v p="$feature" 'index($3,p)>0 {found=1} END {exit !found}' "$REPO/release/v${VERSION}-runtime.manifest" ||
+            { echo "ABORT: manifest lacks feature $feature" >&2; exit 1; }
+    done < "$REPO/release/feature-set.txt"
+fi
 
 # 1. Manifest payload: the hash-verified install targets.
 awk '{print $3}' "$MANIFEST" > "$LIST"
@@ -81,8 +109,33 @@ printf '%s\n' \
     release/release-inputs.sha256 \
     release/verify-release-inputs.sh \
     release/merge-opnsense-catalog.sh \
+    release/repair-core-catalogues.sh \
+    release/pristine-catalogues.sha256 \
+    release/manifests/v${VERSION}-runtime.manifest \
+    release/verify-candidate.sh \
+    release/feature-set.txt \
+    release/verify-bundle.py \
+    release/verify-fetched-bundle.sh \
+    release/verify-testbed-acceptance.sh \
+    release/testbed-acceptance.sh \
+    release/record-acceptance.sh \
+    release/execution-ledger.py \
+    release/verify-execution.py \
+    release/run-host-checks.sh \
+    release/acceptance-check.php \
+    release/results-file.py \
+    release/export-modes.txt \
+    release/current-task-requirements.txt \
+    release/export-modes.txt \
+    release/validate-deploy-archive.py \
     release/prune-plan.sh \
     release/legacy-targets.txt >> "$LIST"
+# The packed pristine baselines are a repair input, not a runtime target. They are shipped one
+# file per supported locale (nine in total) and are neither installed nor listed in the record.
+for lang in $SUPPORTED_LOCALES; do
+    [ "$lang" = en_US ] && continue
+    printf '%s\n' "release/core-catalogues/${lang}.OPNsense.mo" >> "$LIST"
+done
 
 sort -u "$LIST" -o "$LIST"
 echo "allow-list entries: $(wc -l < "$LIST" | tr -d ' ')"
@@ -96,7 +149,17 @@ while IFS= read -r f; do
     fi
     mkdir -p "$BUILD/$(dirname "$f")"
     cp -p "$f" "$BUILD/$f"
-    mode=$(git ls-files --stage -- "$f" | awk 'NR == 1 { print $1 } END { if (NR != 1) exit 1 }')
+    if [ "${DM_SOURCE_EXPORT:-0}" != 1 ] && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        mode=$(git ls-files --stage -- "$f" | awk 'NR == 1 { print $1 } END { if (NR != 1) exit 1 }')
+    elif [ "${DM_SOURCE_EXPORT:-0}" = 1 ]; then
+        # Exported sources use the checked-in mode map made from the Git index. A path-based
+        # guess would change archive modes and therefore the published identity.
+        mode=$(awk -F' ' -v p="$f" '$2 == p {print $1; found=1} END {if (!found) exit 1}' "$REPO/release/export-modes.txt") ||
+            { echo "UNSUPPORTED_SOURCE=$f (not in release/export-modes.txt)" >&2; exit 1; }
+    else
+        echo "UNSUPPORTED_SOURCE=$f (no Git metadata; set DM_SOURCE_EXPORT=1)" >&2
+        exit 1
+    fi
     case $mode in
         100644) chmod 644 "$BUILD/$f" ;;
         100755) chmod 755 "$BUILD/$f" ;;
@@ -226,5 +289,16 @@ if [ ! -s "$OUT" ]; then
     echo "BUNDLE_EMPTY=$OUT (0 bytes)" >&2
     exit 1
 fi
+printf 'version=%s\nsource=%s\nbytes=%s\nsha256=%s\n' "$VERSION" "$SOURCE" \
+    "$(wc -c < "$OUT" | tr -d ' ')" "$(digest "$OUT")" > "$OUT.identity"
+chmod 644 "$OUT.identity"
+# The built archive is verified against the list it was built from and the files in the
+# fetched checkout; an incomplete or altered archive never gets a success line.
+python3 "$SCRIPT_DIR/verify-bundle.py" --archive "$OUT" --list "$LIST" \
+    --identity "$OUT.identity" --source "$SOURCE" || {
+    echo "BUNDLE_VERIFY_FAILED=$OUT" >&2
+    exit 1
+}
 echo "archive bytes     : $(wc -c < "$OUT" | tr -d ' ')"
 printf 'bundle sha256: %s\n' "$(digest "$OUT")"
+printf 'bundle identity: %s\n' "$OUT.identity"

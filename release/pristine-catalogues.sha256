@@ -1,0 +1,11 @@
+# Pristine OPNsense core catalogues for the supported locales (Decision 71).
+# Format: <name> <sha256> <path>, one packed file in the release archive.
+cs_CZ.OPNsense.mo 5876dfb110d26f42324e94035cfa5551bcb943df2dd004a08bba3079c650ee1f release/core-catalogues/cs_CZ.OPNsense.mo
+de_DE.OPNsense.mo 75c269909d705d91b995578bb3f8f667422d00e6b15eb775fad77a3477494974 release/core-catalogues/de_DE.OPNsense.mo
+es_ES.OPNsense.mo 1104496c52f19f9aa2bddba32732cd292316aee878dfce6b9bc337f6c12707bd release/core-catalogues/es_ES.OPNsense.mo
+fr_FR.OPNsense.mo a5ade5cdf62ac010ce2fef94e3ba81bd25609a26f8a66deb9753955651d30a2f release/core-catalogues/fr_FR.OPNsense.mo
+it_IT.OPNsense.mo 7340219d5d216cbda507080465fb9769c1ace1919cf138bb34285384c0d211fd release/core-catalogues/it_IT.OPNsense.mo
+ja_JP.OPNsense.mo ab8ad9a907d3d67cd9ec70d81663200a0524ffd06e73a64bba9ce1bc9ab64de3 release/core-catalogues/ja_JP.OPNsense.mo
+pt_BR.OPNsense.mo 42d0e726c69215bf4f15792a08ecd5ebe4b42d0a701cf9218ac08dbb96fa5de9 release/core-catalogues/pt_BR.OPNsense.mo
+ru_RU.OPNsense.mo c06ebe69140b416f215f871a7f732f2ea96a80de6565a5f351dfca25eee6b40e release/core-catalogues/ru_RU.OPNsense.mo
+zh_CN.OPNsense.mo 1670e6fae2e0466a45b58636541db0e57532cbfb633d90e7f2fe4c61bf0fb6fd release/core-catalogues/zh_CN.OPNsense.mo

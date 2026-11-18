@@ -2,6 +2,48 @@
 
 ## Current state
 
+**Prevention review — evidence-backed close-out controls (18 November 2026).** The deployment
+gate now records actual host/stage/checks in an append-only execution ledger; acceptance derives
+from those records, and close-out status is computed against an explicit requirements audit.
+Isolated tests reject missing checks, MASTER-before-BACKUP and unqualified COMPLETE reports.
+Hosts were not redeployed. The accepted host archive remains `b4e388ac…`; prevention candidate
+`f02bc9a8…` is not deployed. Report:
+`.cline-reports/REPORT-20261118-205100-testbed-acceptance-closeout.md`.
+
+**Email Log recovery and release safeguards — COMPLETE for internal acceptance (18 November 2026).**
+Final candidate source `202d6ef` and bundle `b4e388ac…` (12,517,325 bytes) are installed and accepted
+on `.23`, `.253 MASTER` and `.252 BACKUP` in sequence, using the same archive. The deployment gate
+rejects stale source, missing features, altered archives and missing prior-stage acceptance; obsolete
+pruning remains record-driven. Per-host authenticated, database, settings/certificate, role and
+daemon checks pass. Public release still requires approval; no push, merge, tag or publication occurred.
+Report: `.cline-reports/REPORT-20261118-205100-testbed-acceptance-closeout.md`.
+
+**Authenticated `.23` recovery verification and safeguards-candidate checks — PARTIAL (18 November 2026).**
+Staged `.252` acceptance stopped before any write: the candidate is verified and `.252` is healthy, but
+the installer does not independently enforce the candidate/feature guard. See the amended report.
+The currently installed recovery payload `038f44c` passed authenticated `.23` reads, message retrieval,
+export and restricted-peer checks without record mutation; temporary test accounts and credential files
+were removed and verified. Safeguards candidate `4983c58`/bundle `e3ded6f…` was installed and checked on
+`.23` only, with 70/70 runtime targets unchanged and retained backups. Candidate-bound `.252` acceptance
+is still the remaining gate; no HA candidate deployment, genuine-record deletion, email, push, tag or
+publication occurred. Tony's screenshots remain scoped visual evidence of the recovered `.23` build only.
+Report: `.cline-reports/REPORT-20261118-205100-testbed-acceptance-closeout.md`.
+
+**Recovery verification, `.253` catalogue repair and release safeguards — PARTIAL (18 November 2026).**
+`.252` and `.253` pass authenticated reciprocal peer reads and restricted mutation denial; `.253`'s nine
+core catalogues were rebuilt from shipped pristine baselines with a retained rollback backup, and its
+stale ACL was restored to the reviewed `038f44c` file. Local `.23` checks pass (`devices.db`/`email_log.db`
+integrity `ok`; 13 active Email Log rows; installed message retrieval and runtime language acceptance).
+Tony's screenshots give scoped visual acceptance of the recovered `038f44c` build (13 active rows,
+message dialog, header selection, and delete/delete-all confirmations); automated authenticated API
+checks and candidate-bound `.23`/`.252` evidence for the safeguards candidate remain outstanding. Local candidate `1c0c29f` (test-only safeguard addition; payload
+at `7c38af8`/`cc78ce9`) implements explicit source/bundle identity, exact archive membership,
+baseline-removal refusal, and candidate-hash-bound `.23`-then-`.252` acceptance; isolated regressions and
+bundle determinism pass. Bundle `e3ded6f…` is 12,514,253 bytes; its growth is the 10.4 MB of shipped
+pristine catalogues, with no backups, databases, credentials, repository metadata or unintended build
+artifacts. No HA candidate deployment, push, tag or publication occurred. Report:
+`.cline-reports/REPORT-20261118-062453-recovery-safeguards-closeout.md`.
+
 **PR #9 merged into main (18 November 2026).** Merge commit
 `c00426d335c7840ae3876df91bac7b84a5143581` at 2026-11-18 04:00:00Z via merge commit; reviewed head
 `038f44c`, last code change `51fcaf4` (CI `44223883558` success) — only documentation followed.

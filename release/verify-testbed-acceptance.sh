@@ -1,60 +1,45 @@
 #!/bin/sh
-# Refuse promotion unless the candidate was accepted on the testbed.
+# Verify sequential promotion evidence for one exact candidate.
 #
-#   verify-testbed-acceptance.sh EVIDENCE_FILE
+#   verify-testbed-acceptance.sh --source SHA --identity FILE --through .23|.252|.253
 #
-# The evidence file is written by the testbed validation step (or by the operator
-# running it) and must name the exact candidate bundle digest and version, the
-# host it was accepted on, and the feature files that were verified present.
-# Promotion -- creating a tag or attaching release assets -- must run this first.
-#
-# Format (one key=value per line, '#' comments allowed):
-#   version=2.15.0
-#   bundle_sha256=<64 hex>
-#   testbed=192.168.20.23
-#   feature_files=<n>        number of Email Log files verified present+hash-matched
-#   result=PASS
-#
-# A result other than PASS, a missing file, a digest mismatch with
-# release/bundle-digest.txt, or a different version is a hard stop.
+# The archive is hashed and the source is read from the identity; no evidence is accepted unless
+# it names that same hash and source. The host records are produced by record-acceptance.sh
+# after each host's functional checks have passed.
 set -eu
 LC_ALL=C
 export LC_ALL
-
-[ "$#" -eq 1 ] || { echo 'usage: verify-testbed-acceptance.sh EVIDENCE_FILE' >&2; exit 2; }
-EVIDENCE=$1
-[ -f "$EVIDENCE" ] && [ ! -L "$EVIDENCE" ] || { echo "ABORT: evidence file missing: $EVIDENCE" >&2; exit 1; }
-
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 REPO=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
+SOURCE=
+IDENTITY=
+THROUGH=
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --source) [ "$#" -ge 2 ] || exit 2; SOURCE=$2; shift 2 ;;
+        --identity) [ "$#" -ge 2 ] || exit 2; IDENTITY=$2; shift 2 ;;
+        --through) [ "$#" -ge 2 ] || exit 2; THROUGH=$2; shift 2 ;;
+        *) echo "ABORT: unknown argument $1" >&2; exit 2 ;;
+    esac
+done
+[ -n "$SOURCE" ] && [ -n "$IDENTITY" ] && [ -n "$THROUGH" ] || { echo 'usage: --source SHA --identity FILE --through STAGE' >&2; exit 2; }
+[ -f "$IDENTITY" ] && [ ! -L "$IDENTITY" ] || { echo 'ABORT: identity missing' >&2; exit 1; }
+DIGEST=$(sed -n 's/^sha256=//p' "$IDENTITY" | tail -1)
+IDENT_SOURCE=$(sed -n 's/^source=//p' "$IDENTITY" | tail -1)
+[ "$DIGEST" = "$(sha256 -q "${IDENTITY%.identity}")" ] || { echo 'ABORT: archive/identity mismatch' >&2; exit 1; }
+[ "$SOURCE" = "$IDENT_SOURCE" ] || { echo 'ABORT: identity source mismatch' >&2; exit 1; }
 cd "$REPO"
-
-value() { sed -n "s/^$1=//p" "$EVIDENCE" | tail -1; }
-
-VERSION=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
-    src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json)
-RESULT=$(value result)
-VERSION_IN=$(value version)
-SHA_IN=$(value bundle_sha256)
-FEATURES=$(value feature_files)
-MARKER_DIR=${DM_ACCEPTANCE_MARKER_DIR:-release/acceptance}
-MARKER=$MARKER_DIR/v${VERSION}.accepted
-
-[ "$RESULT" = 'PASS' ] || { echo "ABORT: testbed acceptance result is '${RESULT:-missing}', not PASS" >&2; exit 1; }
-[ "$VERSION_IN" = "$VERSION" ] || { echo "ABORT: evidence is for '${VERSION_IN:-nothing}', candidate is $VERSION" >&2; exit 1; }
-case "$FEATURES" in ''|*[!0-9]*) echo 'ABORT: feature_files count missing' >&2; exit 1;; esac
-MIN=$(grep -vc '^#' release/feature-set.txt 2>/dev/null || echo 0)
-[ "$FEATURES" -ge "$MIN" ] || { echo "ABORT: only $FEATURES feature file(s) verified, need $MIN" >&2; exit 1; }
-RECORDED=$(sed -n 's/^sha256 \([0-9a-f]\{64\}\)$/\1/p' release/bundle-digest.txt | tail -1)
-[ -n "$RECORDED" ] || { echo 'ABORT: bundle digest not recorded' >&2; exit 1; }
-[ "$SHA_IN" = "$RECORDED" ] || { echo "ABORT: acceptance digest does not match the recorded bundle" >&2; exit 1; }
-
-mkdir -p "$MARKER_DIR"
-{
-    echo "version=$VERSION"
-    echo "bundle_sha256=$RECORDED"
-    echo "testbed=$(value testbed)"
-    echo "feature_files=$FEATURES"
-    echo "accepted_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-} > "$MARKER"
-echo "TESTBED_ACCEPTANCE_OK=version=$VERSION marker=$MARKER"
+case "$THROUGH" in
+    .23) STAGES='.23' ;;
+    .252) STAGES='.23 .252' ;;
+    .253) STAGES='.23 .252 .253' ;;
+    *) echo 'ABORT: --through must be .23, .252 or .253' >&2; exit 2 ;;
+esac
+for stage in $STAGES; do
+    file="release/acceptance/$stage-$DIGEST.passed"
+    [ -f "$file" ] || { echo "ABORT: acceptance stage $stage missing" >&2; exit 1; }
+    [ "$(sed -n 's/^bundle_sha256=//p' "$file" | tail -1)" = "$DIGEST" ] || { echo "ABORT: stage $stage is another candidate" >&2; exit 1; }
+    [ "$(sed -n 's/^source=//p' "$file" | tail -1)" = "$SOURCE" ] || { echo "ABORT: stage $stage source mismatch" >&2; exit 1; }
+    [ "$(sed -n 's/^result=//p' "$file" | tail -1)" = PASS ] || { echo "ABORT: stage $stage did not PASS" >&2; exit 1; }
+done
+printf 'ACCEPTANCE_OK_%s source=%s sha256=%s\n' "$(printf %s "$THROUGH" | tr -d .)" "$SOURCE" "$DIGEST"

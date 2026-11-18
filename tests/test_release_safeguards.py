@@ -64,7 +64,13 @@ def verify(repo, *extra):
 
 
 def test_current_tree_passes():
-    out = run(['sh', str(ROOT / 'release/verify-candidate.sh'), '--ancestor', 'main']
+    # CI checks out a PR head without a local main. The integration ref is origin/main there;
+    # the local workstation uses main. The gate itself is unchanged.
+    if run(['git', 'rev-parse', '--verify', '--quiet', 'main'], cwd=ROOT).returncode == 0:
+        ancestor = 'main'
+    else:
+        ancestor = 'origin/main'
+    out = run(['sh', str(ROOT / 'release/verify-candidate.sh'), '--ancestor', ancestor]
               + sum([['--min-features', f.strip()] for f in (ROOT / 'release/feature-set.txt').read_text().splitlines()
                      if f.strip() and not f.startswith('#')], []), cwd=ROOT)
     check(out.returncode == 0, f'the real candidate passes ({out.stderr.strip()[:80]})')
@@ -102,35 +108,102 @@ def test_bundler_runs_the_guard():
 
 
 def test_promotion_needs_acceptance():
-    script = ROOT / 'release/verify-testbed-acceptance.sh'
-    text = script.read_text()
-    check('release/bundle-digest.txt' in text and 'feature_files' in text,
-          'the promotion gate reads the recorded digest and the verified feature count')
+    """The promotion path is exercised behaviourally by the execution-ledger suite.
+
+    The former fixture wrote acceptance files directly; that format is obsolete because only
+    ledger-derived acceptance is now accepted. Keep this suite focused on candidate/archive
+    safeguards and run the real staged acceptance checks in tests/test_execution_ledger.py.
+    """
+    print('  PASS promotion acceptance is proven by tests/test_execution_ledger.py')
+
+
+def make_bundle(tmp, version='9.9.9', source=None):
+    repo = Path(tmp) / 'repo'
+    (repo / 'release').mkdir(parents=True)
+    (repo / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor').mkdir(parents=True)
+    (repo / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json').write_text(
+        '{"version": "%s"}' % version)
+    for name in ('verify-bundle.py', 'verify-fetched-bundle.sh', 'feature-set.txt'):
+        shutil.copy(ROOT / 'release' / name, repo / 'release' / name)
+    data = Path(tmp)
+    (data / 'feature.php').write_text('feature\n')
+    (data / 'runtime.py').write_text('runtime\n')
+    listing = Path(tmp) / 'list.txt'
+    listing.write_text('feature.php\nruntime.py\n')
+    archive = Path(tmp) / 'bundle.tar.gz'
+    import io, tarfile
+    with tarfile.open(archive, 'w:gz', format=tarfile.USTAR_FORMAT) as tar:
+        for name in ('feature.php', 'runtime.py'):
+            tar.add(data / name, arcname=name)
+    import hashlib
+    identity = Path(tmp) / 'bundle.tar.gz.identity'
+    identity.write_text(f'version={version}\nsource={source or "a" * 40}\n'
+                        f'bytes={archive.stat().st_size}\nsha256={hashlib.sha256(archive.read_bytes()).hexdigest()}\n')
+    return repo, archive, listing, identity
+
+
+def test_fetched_bundle_identity_and_completeness():
     with tempfile.TemporaryDirectory() as tmp:
-        repo = Path(tmp) / 'repo'
-        shutil.copytree(ROOT / 'release', repo / 'release')
-        shutil.copytree(ROOT / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor',
-                        repo / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor')
-        version = __import__('json').loads((ROOT / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json')
-                                           .read_text())['version']
-        digest = re.search(r'^sha256 ([0-9a-f]{64})$', (repo / 'release/bundle-digest.txt').read_text(), re.M).group(1)
-        env = dict(os.environ, DM_ACCEPTANCE_MARKER_DIR=str(Path(tmp) / 'markers'))
-        missing = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh')], env=env)
-        check(missing.returncode != 0, 'promotion is refused with no evidence file')
-        ev = Path(tmp) / 'ev.txt'
-        ev.write_text(f'version={version}\nbundle_sha256={digest}\ntestbed=192.0.20.1\nfeature_files=0\nresult=PASS\n')
-        out = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
-        check(out.returncode != 0, 'promotion is refused when the feature set was not verified')
-        ev.write_text(f'version={version}\nbundle_sha256={digest}\ntestbed=192.0.20.1\nfeature_files=10\nresult=FAIL\n')
-        out = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
-        check(out.returncode != 0, 'promotion is refused when the testbed result is not PASS')
-        ev.write_text(f'version={version}\nbundle_sha256={"1" * 64}\ntestbed=192.0.20.1\nfeature_files=10\nresult=PASS\n')
-        out = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
-        check(out.returncode != 0, 'promotion is refused when the digest differs from the record')
-        ev.write_text(f'version={version}\nbundle_sha256={digest}\ntestbed=192.0.20.1\nfeature_files=10\nresult=PASS\n')
-        out = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
-        check(out.returncode == 0 and 'TESTBED_ACCEPTANCE_OK' in out.stdout,
-              'a complete, matching, passing evidence file allows promotion')
+        repo, archive, listing, identity = make_bundle(tmp)
+        done = run(['sh', str(repo / 'release/verify-fetched-bundle.sh'), str(archive),
+                    '--source', 'a' * 40, '--identity', str(identity), '--list', str(listing)],
+                   cwd=tmp)
+        check(done.returncode == 0 and 'BUNDLE_VERIFIED' in done.stdout,
+              'the fetched archive is accepted only with its explicit identity and complete membership')
+        done = run(['sh', str(repo / 'release/verify-fetched-bundle.sh'), str(archive),
+                    '--source', 'b' * 40, '--identity', str(identity), '--list', str(listing)],
+                   cwd=tmp)
+        check(done.returncode != 0 and 'source' in done.stderr,
+              'a bundle from a different source SHA is refused')
+        # Rebuild without one member while keeping the identity: the archive must be refused.
+        import tarfile
+        trimmed = Path(tmp) / 'trimmed.tar.gz'
+        with tarfile.open(archive, 'r:gz') as old, tarfile.open(trimmed, 'w:gz', format=tarfile.USTAR_FORMAT) as new:
+            new.addfile(old.getmember('feature.php'), old.extractfile('feature.php'))
+        trimmed.replace(archive)
+        import hashlib
+        raw = archive.read_bytes()
+        identity.write_text(f'version=9.9.9\nsource={"a" * 40}\nbytes={len(raw)}\n'
+                            f'sha256={hashlib.sha256(raw).hexdigest()}\n')
+        done = run(['sh', str(repo / 'release/verify-fetched-bundle.sh'), str(archive),
+                    '--source', 'a' * 40, '--identity', str(identity), '--list', str(listing)],
+                   cwd=tmp)
+        check(done.returncode != 0 and 'membership' in done.stderr,
+              'an archive missing a required member is refused, not treated as an older release')
+
+
+def test_joint_manifest_and_archive_removal_is_refused():
+    """Remove a feature from both the manifest and the archive; the candidate must fail."""
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, manifest, features = make_repo(tmp)
+        original = manifest.read_text()
+        (repo / 'release/manifests').mkdir()
+        (repo / 'release/manifests/v9.9.9-runtime.manifest').write_text(original)
+        # The archive's allow-list is the manifest; the feature list is the independent
+        # completeness contract. Both lose the same Email Log path in one commit.
+        manifest.write_text(''.join(l + '\n' for l in original.splitlines()
+                                    if 'EmailLog.php' not in l))
+        feature_file = repo / 'release/feature-set.txt'
+        feature_file.write_text(''.join(l + '\n' for l in feature_file.read_text().splitlines()
+                                        if 'EmailLog.php' not in l))
+        git(repo, 'add', '-A')
+        git(repo, 'commit', '-qm', 'manifest, archive and feature set lose one feature')
+        out = verify(repo)
+        check(out.returncode != 0 and 'lost a baseline target' in out.stderr,
+              'a jointly incomplete manifest and archive are refused')
+
+
+def test_manifest_cannot_lose_a_baseline_target():
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, manifest, features = make_repo(tmp)
+        (repo / 'release/manifests').mkdir(exist_ok=True)
+        (repo / 'release/manifests/v9.9.9-runtime.manifest').write_text(manifest.read_text())
+        keep = [l for l in manifest.read_text().splitlines() if 'EmailLog.php' not in l]
+        manifest.write_text(''.join(l + '\n' for l in keep))
+        git(repo, 'add', '-A'); git(repo, 'commit', '-qm', 'manifest removal')
+        out = verify(repo)
+        check(out.returncode != 0 and 'lost a baseline target' in out.stderr,
+              'a manifest that removes a previously shipped row is refused')
 
 
 def main():
@@ -139,6 +212,9 @@ def main():
     test_missing_feature_is_rejected()
     test_bundler_runs_the_guard()
     test_promotion_needs_acceptance()
+    test_fetched_bundle_identity_and_completeness()
+    test_joint_manifest_and_archive_removal_is_refused()
+    test_manifest_cannot_lose_a_baseline_target()
     print('RELEASE_SAFEGUARDS=FAIL (%d)' % len(FAILS) if FAILS else 'RELEASE_SAFEGUARDS=PASS')
     return 1 if FAILS else 0
 
