@@ -265,7 +265,7 @@ jobs:
             exit 1
           }
           cat /tmp/upgrade-predecessors.log
-          grep -q '^UPGRADE_PREDECESSORS=PASS passed=10 skipped=0$' /tmp/upgrade-predecessors.log
+          grep -q '^UPGRADE_PREDECESSORS=PASS passed=11 skipped=0$' /tmp/upgrade-predecessors.log
 
       # Ownership evidence for pruning (Decision 62): regenerated from the release
       # manifests at the tags and compared with release/legacy-targets.txt.
@@ -312,7 +312,7 @@ jobs:
         run: python3 tests/test_upgrade_prediction.py
 
       # Triggers, preserved branch entries and the selection itself: every tests/*.py named
-      # below must exist, and the predecessor step must require passed=10 skipped=0.
+      # below must exist, and the predecessor step must require passed=11 skipped=0.
       - name: Validate the CI configuration
         run: python3 tests/test_ci_config.py
 
