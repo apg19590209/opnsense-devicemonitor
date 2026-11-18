@@ -7,8 +7,9 @@ A new test email from `.252` (record `a14af952…`, 2026-11-18 02:43:32 UTC, sub
 OPNsense Device Monitor") stored `Server:` / `Time:` / `To:` as compact label/value lines and is
 **Relay accepted** (queue `82CAC5179F`, `dsn=2.0.0`, `250 2.0.0 OK`); inbox receipt is not
 asserted and awaits Tony. PR head `9cd1398` (code head `51fcaf4`, CI `44223883558` success) is OPEN
-and MERGEABLE with no code blockers; automated checks pass and visual acceptance covers only the
-Local table and the subject-opened popup. Manual certificate renewal is due before 2026-12-17;
+and MERGEABLE with no code blockers; automated checks pass and visual acceptance covers the Local
+table, the subject-opened popup and the new `.252` email at 13:43:32 AEDT (compact label/value
+lines, paragraph spacing, Relay accepted display); inbox receipt remains unconfirmed. Manual certificate renewal is due before 2026-12-17;
 webhook and USB findings unchanged. Report:
 `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
 
