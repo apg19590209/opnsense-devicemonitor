@@ -110,6 +110,9 @@
 #       (the PUBLISHED v2.14.0 payload; retained here as the release identity. The
 #        feature branch below supersedes it for branch CI only and must not be
 #        published under this version without a new release decision.)
+#   cc4790de3a3665e82f76af7f893e8fdda8185a3b15eab0258870f8db8303c28f  2027693 bytes
+#       (the prior 2.14.0 candidate identity; superseded by the recovery safeguards and
+#        the packed pristine catalogue baselines, which add repair inputs to the archive)
 version 2.14.0
-bytes 2027693
-sha256 cc4790de3a3665e82f76af7f893e8fdda8185a3b15eab0258870f8db8303c28f
+bytes 12514253
+sha256 e3ded6fce723cca1f0aec877d632ba66be8314ab1f3563779d12861990bc7d9c
