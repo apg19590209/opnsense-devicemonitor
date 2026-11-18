@@ -132,6 +132,8 @@
 #       (CI-tested packaging before the generated-evidence and acceptance-check review fixes)
 #   fd2361cd2dc513d841e069c3d915f1c139ad72131752dfd4f4be4a2f4fae921d  12552146 bytes
 #       (review build before the final acceptance-input pins were regenerated)
+#   4187a952f5d1e7cf96cd3b869ee328ca7a9c4dbb22af3634d0bba4f4f28b3a05  12552146 bytes
+#       (pre-package export metadata; superseded because export-modes.txt was absent)
 version 2.14.0
-bytes 12552146
-sha256 4187a952f5d1e7cf96cd3b869ee328ca7a9c4dbb22af3634d0bba4f4f28b3a05
+bytes 12554194
+sha256 be2b64caa5bb317f9ffef506beba8f5266babfab1c68f14b7b96d2fa7d51689b
