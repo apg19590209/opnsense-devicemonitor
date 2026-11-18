@@ -45,6 +45,8 @@ def make_tree(tmp):
         ('release/validate-deploy-archive.py', 'release/validate-deploy-archive.py'),
         ('release/testbed-acceptance.sh', 'release/testbed-acceptance.sh'),
         ('release/execution-ledger.py', 'release/execution-ledger.py'),
+        ('release/results-file.py', 'release/results-file.py'),
+        ('release/acceptance-check.php', 'release/acceptance-check.php'),
         ('release/verify-testbed-acceptance.sh', 'release/verify-testbed-acceptance.sh'),
         ('release/verify-testbed-acceptance.sh', 'release/verify-testbed-acceptance.sh'),
         ('release/feature-set.txt', 'release/feature-set.txt'),
@@ -96,13 +98,28 @@ def isolated_accept(repo, identity, source, stage):
     if stage != '.23':
         checks += ',certificates,role,peer'
     ledger = repo / 'release/execution-ledger.jsonl'
-    evidence = repo / ('release/evidence-' + stage + '.txt')
-    evidence.write_text(''.join(c + ' PASS generated-test-evidence\n' for c in checks.split(',')))
+    evidence = repo / ('release/evidence-' + stage + '.json')
+    args = ['python3', str(repo / 'release/results-file.py'), '--out', str(evidence)]
+    for c in checks.split(','):
+        args += ['--check', c + '=PASS']
+    run(args)
     rec = run(['python3', str(repo / 'release/execution-ledger.py'), 'record', '--ledger', str(ledger),
                '--stage', stage, '--host', host, '--source', source, '--bundle', digest,
                '--phase', 'deploy', '--checks', checks, '--result', 'PASS', '--evidence', str(evidence)])
     if rec.returncode != 0:
         return rec
+    post = repo / ('release/evidence-' + stage + '-own.json')
+    args = ['python3', str(repo / 'release/results-file.py'), '--out', str(post)]
+    for c in checks.split(','):
+        if c != 'deploy':
+            args += ['--check', c + '=PASS']
+    run(args)
+    own = run(['python3', str(repo / 'release/execution-ledger.py'), 'record', '--ledger', str(ledger),
+               '--stage', stage, '--host', host, '--source', source, '--bundle', digest,
+               '--phase', 'own-check', '--checks', ','.join(c for c in checks.split(',') if c != 'deploy'),
+               '--result', 'PASS', '--evidence', str(post)])
+    if own.returncode != 0:
+        return own
     return run(['python3', str(repo / 'release/execution-ledger.py'), 'accept', '--ledger', str(ledger),
                 '--stage', stage, '--host', host, '--source', source, '--bundle', digest,
                 '--identity', str(identity), '--out', str(repo / 'release/acceptance' / (stage + '-' + digest + '.passed'))])
@@ -171,6 +188,19 @@ def test_evidence_for_another_candidate_is_refused():
               'acceptance for another archive hash cannot authorise this one')
 
 
+def test_installer_mode_is_executable_in_archives():
+    modes = {}
+    for line in (ROOT / 'release/export-modes.txt').read_text().splitlines():
+        mode, path = line.split(maxsplit=1)
+        modes[path] = mode
+    check(modes.get('install-unattended.sh') == '100755',
+          'the installer is recorded executable in the exported mode map')
+    import subprocess
+    index = subprocess.run(['git', 'ls-files', '--stage', '--', 'install-unattended.sh'],
+                           cwd=ROOT, capture_output=True, text=True, timeout=30).stdout.split()
+    check(index and index[0] == '100755', 'the installer is executable in the Git index')
+
+
 def test_stale_ancestry_is_refused():
     with tempfile.TemporaryDirectory() as tmp:
         repo, archive, identity, payload, source, feature = make_tree(tmp)
@@ -220,6 +250,55 @@ def test_master_cannot_precede_backup_acceptance():
         check(out.returncode == 0, 'hostname MASTER is allowed after BACKUP acceptance')
 
 
+def test_host_check_failure_aborts_before_acceptance():
+    source = (ROOT / 'release/deploy-candidate.sh').read_text()
+    block = source[source.index('# Every required functional'):]
+    check('host checks failed; no acceptance is possible' in block and 'exit 1' in block,
+          'the entry point aborts on failed generated host checks')
+    check('--phase own-check' in block and '--result PASS' in block and '--evidence "$HOST_EVIDENCE"' in block,
+          'only a complete generated PASS batch is recorded for acceptance')
+
+
+def test_failed_host_checks_cannot_yield_acceptance():
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, archive, identity, payload, source, feature = make_tree(tmp)
+        import hashlib
+        digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+        evidence = Path(tmp) / 'failed.json'
+        run(['python3', str(repo / 'release/results-file.py'), '--out', str(evidence),
+             '--check', 'records=FAIL', '--check', 'settings=PASS'])
+        ledger = repo / 'release/execution-ledger.jsonl'
+        rec = run(['python3', str(repo / 'release/execution-ledger.py'), 'record', '--ledger', str(ledger),
+                   '--stage', '.23', '--host', '192.168.20.23', '--source', source, '--bundle', digest,
+                   '--phase', 'own-check', '--checks', 'records,settings', '--result', 'FAIL',
+                   '--evidence', str(evidence)])
+        check(rec.returncode != 0, 'a batch result must match its generated per-check outcomes')
+        ledger.write_text('')
+        run(['python3', str(repo / 'release/results-file.py'), '--out', str(evidence),
+             '--check', 'records=FAIL', '--check', 'settings=PASS'])
+        rec = run(['python3', str(repo / 'release/execution-ledger.py'), 'record', '--ledger', str(ledger),
+                   '--stage', '.23', '--host', '192.168.20.23', '--source', source, '--bundle', digest,
+                   '--phase', 'own-check', '--checks', 'records,settings', '--result', 'FAIL',
+                   '--evidence', str(evidence)])
+        check(rec.returncode != 0, 'a mixed outcome needs its own per-check record')
+        ledger.write_text('')
+        for name, result in (('records', 'FAIL'), ('settings', 'PASS')):
+            one = Path(tmp) / (name + '.json')
+            run(['python3', str(repo / 'release/results-file.py'), '--out', str(one), '--check', name + '=' + result])
+            run(['python3', str(repo / 'release/execution-ledger.py'), 'record', '--ledger', str(ledger),
+                 '--stage', '.23', '--host', '192.168.20.23', '--source', source, '--bundle', digest,
+                 '--phase', 'own-check', '--checks', name, '--result', result, '--evidence', str(one)])
+        rows = [__import__('json').loads(x) for x in ledger.read_text().splitlines()]
+        outcomes = {r['check']: r['result'] for r in rows}
+        check(outcomes == {'records': 'FAIL', 'settings': 'PASS'},
+              'generated per-check outcomes, not a blanket manual result, reach the ledger')
+        from importlib.machinery import SourceFileLoader
+        loader = SourceFileLoader('ledger', str(repo / 'release/execution-ledger.py'))
+        mod = loader.load_module()
+        check(not mod.passed(rows, source, digest, '.23', 'records'),
+              'a failed generated check cannot be read as PASS')
+
+
 def test_prior_stage_is_required():
     with tempfile.TemporaryDirectory() as tmp:
         repo, archive, identity, payload, source, feature = make_tree(tmp)
@@ -262,7 +341,10 @@ def main():
     test_gate_and_sequence()
     test_master_cannot_precede_backup_acceptance()
     test_evidence_for_another_candidate_is_refused()
+    test_host_check_failure_aborts_before_acceptance()
+    test_failed_host_checks_cannot_yield_acceptance()
     test_stale_ancestry_is_refused()
+    test_installer_mode_is_executable_in_archives()
     test_export_mode_map_matches_git_index()
     test_prior_stage_is_required()
     test_unexpected_removal_is_distinct_from_pruning()

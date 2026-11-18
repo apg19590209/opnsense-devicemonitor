@@ -23,11 +23,28 @@ def run(args):
 
 
 def rec(ledger, stage, host, source, bundle, checks, result='PASS', phase='deploy'):
-    evidence = Path(ledger).with_name('evidence-%s-%s.txt' % (stage, phase))
-    evidence.write_text(''.join('%s %s generated-test-evidence\n' % (c, result) for c in checks))
-    return run(['python3', str(LEDGER), 'record', '--ledger', str(ledger), '--stage', stage,
-                '--host', host, '--source', source, '--bundle', bundle, '--phase', phase,
-                '--checks', ','.join(checks), '--result', result, '--evidence', str(evidence)])
+    evidence = Path(ledger).with_name('evidence-%s-%s.json' % (stage, phase))
+    args = ['python3', str(ROOT / 'release/results-file.py'), '--out', str(evidence)]
+    for c in checks:
+        args += ['--check', '%s=%s' % (c, result)]
+    run(args)
+    first = run(['python3', str(LEDGER), 'record', '--ledger', str(ledger), '--stage', stage,
+                 '--host', host, '--source', source, '--bundle', bundle, '--phase', phase,
+                 '--checks', ','.join(checks), '--result', result, '--evidence', str(evidence)])
+    if first.returncode == 0 and phase == 'deploy':
+        # A deployment record is not a host acceptance. The supported runner supplies a second
+        # generated result file for the informational checks.
+        post = Path(ledger).with_name('evidence-%s-own.json' % stage)
+        args = ['python3', str(ROOT / 'release/results-file.py'), '--out', str(post)]
+        for c in checks:
+            if c != 'deploy':
+                args += ['--check', '%s=%s' % (c, result)]
+        run(args)
+        return run(['python3', str(LEDGER), 'record', '--ledger', str(ledger), '--stage', stage,
+                    '--host', host, '--source', source, '--bundle', bundle, '--phase', 'own-check',
+                    '--checks', ','.join(c for c in checks if c != 'deploy'),
+                    '--result', result, '--evidence', str(post)])
+    return first
 
 
 def accept(ledger, stage, host, source, bundle, identity, out):
@@ -82,12 +99,15 @@ def test_verify_testbed_acceptance_requires_both_stages():
              'authenticated-csv', 'mutation-denial', 'database-integrity', 'settings', 'daemon', 'catalogue'])
         out = accept(ledger, '.23', '192.168.20.23', source, digest, identity, p / '.23')
         check(out.returncode == 0, '.23 acceptance appears only after complete .23 checks')
+        # The acceptance marker name follows the host-stage convention used by the gate.
+        (p / ('.23-' + digest + '.passed')).write_bytes((p / '.23').read_bytes())
         rec(ledger, '.252', '192.168.20.252', source, digest,
             ['deploy', 'installed-hashes', 'records', 'authenticated-search', 'authenticated-message',
              'authenticated-csv', 'mutation-denial', 'database-integrity', 'settings', 'certificates',
              'role', 'peer', 'daemon', 'catalogue'])
         out = accept(ledger, '.252', '192.168.20.252', source, digest, identity, p / '.252')
         check(out.returncode == 0, '.252 acceptance requires and follows .23')
+        (p / ('.252-' + digest + '.passed')).write_bytes((p / '.252').read_bytes())
         rec(ledger, '.253', '192.168.20.253', source, digest,
             ['deploy', 'installed-hashes', 'records', 'authenticated-search', 'authenticated-message',
              'authenticated-csv', 'mutation-denial', 'database-integrity', 'settings', 'certificates',
@@ -96,18 +116,35 @@ def test_verify_testbed_acceptance_requires_both_stages():
         check(out.returncode == 0, '.253 acceptance follows .252')
 
 
+def test_generated_checks_do_not_substitute_for_deployment():
+    with tempfile.TemporaryDirectory() as tmp:
+        p, archive, identity, ledger, source, digest = setup(tmp)
+        evidence = p / 'checks.json'
+        run(['python3', str(ROOT / 'release/results-file.py'), '--out', str(evidence),
+             '--check', 'records=PASS', '--check', 'database-integrity=PASS'])
+        run(['python3', str(LEDGER), 'record', '--ledger', str(ledger), '--stage', '.23',
+             '--host', '192.168.20.23', '--source', source, '--bundle', digest,
+             '--phase', 'own-check', '--checks', 'records,database-integrity', '--result', 'PASS',
+             '--evidence', str(evidence)])
+        out = accept(ledger, '.23', '192.168.20.23', source, digest, identity, p / '.23')
+        check(out.returncode != 0 and 'acceptance requires generated host-check evidence' not in out.stderr,
+              'generated checks alone are never an acceptance record')
+
+
 def test_typed_result_is_refused_without_generated_evidence():
     with tempfile.TemporaryDirectory() as tmp:
         p, archive, identity, ledger, source, digest = setup(tmp)
         typed = p / 'typed.txt'
         typed.write_text('deploy PASS hand-typed\n')
+        old = p / 'old.txt'
+        old.write_text('deploy PASS old-format\n')
         # Use a record for a check not present in the generated evidence file: the record must
         # refuse rather than treating its own PASS value as authority.
         result = run(['python3', str(LEDGER), 'record', '--ledger', str(ledger), '--stage', '.23',
                       '--host', '192.168.20.23', '--source', source, '--bundle', digest,
                       '--phase', 'deploy', '--checks', 'deploy,records', '--result', 'PASS',
                       '--evidence', str(typed)])
-        check(result.returncode != 0 and 'evidence has no result' in result.stderr,
+        check(result.returncode != 0 and ('evidence has no result' in result.stderr or 'machine-generated' in result.stderr),
               'a record cannot claim a check absent from generated evidence')
         missing = p / 'not-created.yaml'
         result = run(['python3', str(LEDGER), 'record', '--ledger', str(ledger), '--stage', '.23',
@@ -116,6 +153,12 @@ def test_typed_result_is_refused_without_generated_evidence():
                       '--evidence', str(missing)])
         check(result.returncode != 0 and 'evidence file missing' in result.stderr,
               'a record is refused when the generated evidence file is missing')
+        result = run(['python3', str(LEDGER), 'record', '--ledger', str(ledger), '--stage', '.23',
+                      '--host', '192.168.20.23', '--source', source, '--bundle', digest,
+                      '--phase', 'deploy', '--checks', 'deploy', '--result', 'PASS',
+                      '--evidence', str(old)])
+        check(result.returncode != 0 and 'machine-generated' in result.stderr,
+              'hand-typed evidence text is refused')
 
 
 def test_prior_stage_is_required():
@@ -159,6 +202,7 @@ def test_closeout_requires_evidence_and_explicit_exception():
 
 def main():
     test_missing_checks_block_acceptance()
+    test_generated_checks_do_not_substitute_for_deployment()
     test_typed_result_is_refused_without_generated_evidence()
     test_prior_stage_is_required()
     test_verify_testbed_acceptance_requires_both_stages()

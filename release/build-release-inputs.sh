@@ -52,7 +52,8 @@ INPUTS=$(printf '%s\n' \
     "release/run-host-checks.sh" \
     "release/verify-execution.py" \
     "release/current-task-requirements.txt" \
-    "release/acceptance-check.php" | sort -u)
+    "release/acceptance-check.php" \
+    "release/results-file.py" | sort -u)
 
 # Fail before writing anything: a half-written checksum file is worse than none.
 for path in $INPUTS; do

@@ -82,7 +82,7 @@ with socket.create_connection(('127.0.0.1',443),5) as sock:
 PY
 }
 peer_check() { php -r 'require_once("/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/PeerClient.php"); $c=json_decode(file_get_contents("/var/db/devicemonitor/config.json"),true); $p=["url"=>$c["email_log_peer_url"],"api_key"=>$c["email_log_peer_api_key"],"api_secret"=>$c["email_log_peer_api_secret"],"ca_pem"=>$c["email_log_peer_ca_pem"],"timeout"=>8]; $r=(new \\OPNsense\\DeviceMonitor\\PeerClient($p))->search([],50,0); exit(empty($r["available"])?1:0);'; }
-auth_check() { php /root/src/opnsense-devicemonitor-upstream/release/acceptance-check.php "$1" || return 1; }
+auth_check() { php "$(dirname "$0")/acceptance-check.php" "$1" || return 1; }
 run installed-hashes installed_check
 run records records_check
 run database-integrity db_check
@@ -95,4 +95,5 @@ run catalogue catalogue_check
 for check in authenticated-search authenticated-message authenticated-csv mutation-denial; do
     run "$check" auth_check "$check"
 done
+python3 "$(dirname "$0")/results-file.py" --out "$OUT" $RESULT_ARGS
 [ "$failure" = 0 ] || exit 1

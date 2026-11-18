@@ -70,8 +70,9 @@ def stage_rows(rows, source, bundle, stage):
 
 
 def passed(rows, source, bundle, stage, check):
-    return any(r.get('host') == HOSTS[stage] and r.get('check') == check and
-               r.get('result') == 'PASS' for r in stage_rows(rows, source, bundle, stage))
+    return any(r.get('host') == HOSTS[stage] and r.get('phase') in ('deploy', 'own-check') and
+               r.get('check') == check and r.get('result') == 'PASS' and r.get('evidence')
+               for r in stage_rows(rows, source, bundle, stage))
 
 
 def missing(rows, source, bundle, stage):
@@ -79,22 +80,26 @@ def missing(rows, source, bundle, stage):
 
 
 def generated_evidence(path):
-    """Return check -> PASS from a runner's generated evidence file.
+    """Read one machine-written result file from the supported runner.
 
-    Each line is "<check> PASS <small evidence>" or "<check> FAIL ...". A missing or malformed
-    row is never inferred as PASS. The file itself must be regular, not a symlink.
+    The file is JSON with a run id and check -> PASS|FAIL map. It is a transport for outcomes
+    produced by executed commands, not an acceptance marker. Missing, malformed or manually
+    produced text files are refused.
     """
     if not os.path.isfile(path) or os.path.islink(path):
         fail('evidence file missing or not regular: ' + path)
-    out = {}
-    for line in open(path, encoding='utf-8'):
-        parts = line.strip().split(' ', 2)
-        if len(parts) < 2 or parts[1] not in ('PASS', 'FAIL'):
-            fail('malformed evidence line: ' + line.strip())
-        check, result = parts[0], parts[1]
-        if check in out:
-            fail('duplicate evidence check: ' + check)
-        out[check] = result
+    try:
+        payload = json.load(open(path, encoding='utf-8'))
+    except (OSError, ValueError):
+        fail('evidence is not a machine-generated results file')
+    if payload.get('format') != 'dm-check-results-v1' or not payload.get('run') or not isinstance(payload.get('checks'), dict):
+        fail('evidence is not a machine-generated results file')
+    # A run id alone is not proof of a check's execution. The evidence file records only what
+    # the supported runner wrote; consumers must not infer any check missing from its map.
+    out = payload['checks']
+    for check, result in out.items():
+        if not isinstance(check, str) or result not in ('PASS', 'FAIL'):
+            fail('invalid check result in evidence')
     return out
 
 
@@ -121,9 +126,10 @@ def record(args):
                                          and r.get('result') == 'PASS' for r in rows):
         fail('MASTER has no passing .252 acceptance record')
     for check in checks:
+        outcome = evidence[check] if args.phase == 'own-check' else args.result
         append(args.ledger, {'time': now(), 'stage': args.stage, 'host': args.host,
                              'source': args.source, 'bundle_sha256': args.bundle,
-                             'phase': args.phase, 'check': check, 'result': args.result,
+                             'phase': args.phase, 'check': check, 'result': outcome,
                              'evidence': args.evidence})
 
 def accept(args):
@@ -134,10 +140,21 @@ def accept(args):
     if left:
         fail('missing checks: ' + ','.join(left))
     prereq = PREREQUISITE[args.stage]
-    if prereq and not os.path.isfile(args.out.replace(args.stage, prereq)):
-        fail('prior acceptance missing for ' + prereq)
-    if not os.path.isfile(args.identity) or sha256(args.identity[:-9]) != args.bundle:
+    if prereq:
+        prior = os.path.join(os.path.dirname(os.path.abspath(args.out)), '%s-%s.passed' % (prereq, args.bundle))
+        if not os.path.isfile(prior) or os.path.islink(prior):
+            fail('prior acceptance missing for ' + prereq)
+        if not any(r.get('stage') == prereq and r.get('phase') == 'acceptance' and r.get('result') == 'PASS'
+                   and r.get('bundle_sha256') == args.bundle for r in rows):
+            fail('prior acceptance has no matching ledger record for ' + prereq)
+    if not os.path.isfile(args.identity) or os.path.islink(args.identity) or sha256(args.identity[:-9]) != args.bundle:
         fail('identity does not match archive')
+    # Acceptance may only be derived from real generated evidence. Legacy markers can be read
+    # by a deployment gate for historical ordering, but cannot create a new acceptance.
+    if not any(r.get('phase') == 'deploy' and r.get('evidence') for r in stage_rows(rows, args.source, args.bundle, args.stage)):
+        fail('acceptance requires a generated deployment record')
+    if not any(r.get('phase') == 'own-check' and r.get('evidence') for r in stage_rows(rows, args.source, args.bundle, args.stage)):
+        fail('acceptance requires generated host-check evidence')
     marker = {'version': json.load(open(os.path.join(os.path.dirname(__file__), '..', 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json')))['version'],
               'source': args.source, 'bundle_sha256': args.bundle, 'host': args.host,
               'stage': args.stage, 'result': 'PASS', 'after': prereq,
