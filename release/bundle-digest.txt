@@ -136,8 +136,13 @@
 #       (pre-package export metadata; superseded because export-modes.txt was absent)
 #   be2b64caa5bb317f9ffef506beba8f5266babfab1c68f14b7b96d2fa7d51689b  12554194 bytes
 #       (2.14.0 release-tool candidate; superseded by the 2.15.0 Email Log release cut)
+#   aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f  12554194 bytes
+#       (approved candidate; superseded because it packaged a stale host-check runner and
+#        acceptance helper, preventing generated `.23` acceptance)
+#   aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f  12554194 bytes
+#       (approved host payload; its packaged acceptance runner prevented generated host checks)
 version 2.15.0
-bytes 12554194
-sha256 aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f
+bytes 12570066
+sha256 77554e6db794fab4c7ef51e9a78713c8b386a490e5bfdb6ebc9b0ac457296cfc
 #   Bundled source b0e8355; identical bytes to the source 83be9d4 candidate because
 #   b0e8355 adds only release-package records outside the archive allow-list.
