@@ -73,10 +73,24 @@ def test_notices_removed():
           'remote explanation is an accessible description, not page text')
 
 
-def test_runtime_management_address():
-    php = ("require '%s'; echo OPNsense\\DeviceMonitor\\NodeIdentity::managementAddress();" % IDENT)
+def test_management_address_selection():
+    """The rule, proven against fixtures rather than this host's own addresses."""
+    import tempfile
+    tmp = Path(tempfile.mkdtemp())
+    cfg = tmp / 'config.xml'
+    cfg.write_text(
+        "<?xml version='1.0'?><opnsense><interfaces>"
+        "<wan><if>pppoe0</if><ipaddr>pppoe</ipaddr></wan>"
+        "<opt1><if>em0</if><ipaddr>10.0.99.9</ipaddr></opt1>"
+        "<lan><if>igc1</if><ipaddr>192.0.2.10</ipaddr></lan>"
+        "</interfaces></opnsense>", encoding='utf-8')
+    php = ("require '%s'; $c=simplexml_load_file('%s');"
+           "echo OPNsense\\DeviceMonitor\\NodeIdentity::managementAddress($c);" % (IDENT, cfg))
     out = subprocess.run(['php', '-r', php], capture_output=True, text=True, timeout=20).stdout.strip()
-    check(out == '192.168.20.23', f'management address is the configured LAN address (got {out!r})')
+    check(out == '192.0.2.10', f'LAN address wins over another interface (got {out!r})')
+    for f in cfg.parent.iterdir():
+        f.unlink()
+    cfg.parent.rmdir()
 
 
 def main():
@@ -84,7 +98,7 @@ def main():
     test_label_format()
     test_historical_roles_preserved()
     test_notices_removed()
-    test_runtime_management_address()
+    test_management_address_selection()
     print('EMAIL_LOG_IDENTITY_PRESENTATION=FAIL (%d)' % len(FAILS) if FAILS
           else 'EMAIL_LOG_IDENTITY_PRESENTATION=PASS')
     return 1 if FAILS else 0
