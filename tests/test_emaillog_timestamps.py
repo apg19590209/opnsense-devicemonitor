@@ -132,7 +132,8 @@ def test_views_render_converted_values():
     assert "['Time', formatTimestamp(m.created_utc, m.created_local)]" in src, 'metadata uses it'
     assert 'formatTimestamp(step.occurred_utc, step.occurred_local)' in src, 'timeline uses it'
     assert ".text(row.created_utc)" not in src and ".text(step.occurred_utc)" not in src, 'no raw UTC shown'
-    assert 'email-log-timezone-legend' in src and 'timeZoneName' in src, 'the shown zone is labelled from the browser'
+    assert 'timeZoneName' in src, 'the zone abbreviation comes from the browser formatter'
+    assert 'email-log-timezone-legend' not in src, 'no separate timezone legend is shown'
     for hard in ("+11:00", "+10:00", 'AEDT', 'AEST'):
         assert hard not in src, f'no hardcoded offset or abbreviation: {hard}'
     ctrl = CTRL.read_text(encoding='utf-8')

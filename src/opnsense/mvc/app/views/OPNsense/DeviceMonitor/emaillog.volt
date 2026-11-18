@@ -31,8 +31,8 @@
                         <div class="alert alert-info" id="email-log-scope-note" style="font-size:12px;"></div>
                         <div class="alert alert-warning" id="email-log-partial" style="display:none;font-size:12px;"></div>
                         <div class="alert alert-warning" id="email-log-diagnostic" style="display:none;font-size:12px;"></div>
-                        <div class="text-muted" id="email-log-remote-note" style="display:none;font-size:12px;"></div>
-                        <div class="text-muted" id="email-log-timezone-legend" style="font-size:12px;margin-bottom:4px;"></div>
+                        {# Describes the disabled remote action only; no global banner text. #}
+                        <span class="sr-only" id="email-log-remote-note"></span>
 
                         <div class="row" style="margin-bottom:10px;">
                             <div class="col-sm-3">
@@ -395,6 +395,8 @@
             eventPlural: {{ lang.query('events')|json_encode(15) }},
             noDelivery: {{ lang.query('No delivery details recorded')|json_encode(15) }},
             peerPrefix: {{ lang.query('Peer')|json_encode(15) }},
+            thisNode: {{ lang.query('This node')|json_encode(15) }},
+            recordedRole: {{ lang.query('Recorded role')|json_encode(15) }},
             queueId: {{ lang.query('Queue ID')|json_encode(15) }},
             delete: {{ lang.query('Delete')|json_encode(15) }},
             restore: {{ lang.query('Restore')|json_encode(15) }},
@@ -465,21 +467,13 @@
             return statusNames.hasOwnProperty(key) ? statusNames[key] : (value || '');
         }
 
-        function renderTimezoneLegend() {
-            var shown = {{ lang.query('Time shown in your local timezone')|json_encode(15) }};
-            var zone = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
-                .formatToParts(new Date()).filter(function (part) {
-                    return part.type === 'timeZoneName';
-                }).map(function (part) { return part.value; })[0] || '';
-            $('#email-log-timezone-legend').text(shown + (zone ? ' (' + zone + ')' : ''));
-        }
-
         /* Remote rows are read-only from this node. The note follows the scope and
          * the visibility: Local + All entries can carry peer rows when a peer is
          * configured, so a disabled action there is never left unexplained. */
         function refreshRemoteNote() {
-            var mayCarryPeer = scope !== 'local' || $('#email-log-visibility').val() === 'all';
-            $('#email-log-remote-note').toggle(mayCarryPeer).text(mayCarryPeer ? text.remoteLocked : '');
+            /* The explanation lives on the disabled remote control (title and
+             * aria-describedby), never as page-wide text. */
+            $('#email-log-remote-note').text(text.remoteLocked);
         }
 
         function setScopeNote(data) {
@@ -546,14 +540,16 @@
                 var allRows = data.rows || [];
                 var rows = scope === 'peer' ? allRows.filter(function (r) { return r.scope === 'peer'; }) : allRows;
                 var $body = $('#email-log-rows').empty();
-                /* Header identity: this node, and for node-spanning scopes also the peer. */
-                var localId = (data.local_node && (data.local_node.node_ip || data.local_node.node_id)) ||
-                    (data.node && (data.node.node_ip || data.node.node_id)) || '';
-                var localRole = (data.node && data.node.role) || (data.local_node && data.local_node.role) || '';
-                var header = localId + (localRole ? ' (' + localRole + ')' : '');
-                if (scope !== 'local' && data.peer_node && (data.peer_node.node_ip || data.peer_node.node_id)) {
-                    header += ' | ' + text.peerPrefix + ' ' +
-                        (data.peer_node.node_ip || data.peer_node.node_id);
+                /* Header identity: "hostname — management IP — role", labelled so the
+                 * local and remote nodes cannot be confused. */
+                function nodeLabel(facts) {
+                    if (!facts) { return ''; }
+                    return facts.label || [facts.node_id, facts.node_ip, facts.role]
+                        .filter(function (v) { return v; }).join(' \u2014 ');
+                }
+                var header = text.thisNode + ': ' + nodeLabel(data.local_node || data.node || null);
+                if (scope !== 'local' && data.peer_node) {
+                    header += ' | ' + text.peerPrefix + ': ' + nodeLabel(data.peer_node);
                 }
                 $('#email-log-node').text(header);
                 if (data.logging_diagnostic) {
@@ -566,9 +562,12 @@
                     $tr.append($('<td>').text(formatTimestamp(row.created_utc, row.created_local)));
                     /* Attribute the row to the node that produced it: both HA nodes share
                      * the hostname, so the origin IP is what distinguishes them. */
+                    /* origin_ip identifies the node for correlation; node_role is the role
+                     * recorded when the email was created and is never rewritten. */
                     var originIp = row.origin_ip || row.node_ip || '';
                     var nodeText = (row.scope === 'peer' ? (text.peerPrefix + ' ') : '') + originIp;
-                    $tr.append($('<td>').text((nodeText + ' ' + (row.node_role || '')).trim()));
+                    if (row.node_role) { nodeText += ' (' + row.node_role + ')'; }
+                    $tr.append($('<td>').text(nodeText.trim()));
                     $tr.append($('<td>').text(row.notification_type));
                     $tr.append($('<td>').text(row.recipient));
                     $tr.append($('<td>').text(row.subject));
@@ -677,7 +676,7 @@
                 $('#email-log-message-title').text(m.subject || text.unknown);
                 var $meta = $('#email-log-message-meta').empty();
                 [['Recipient', m.recipient],
-                 ['Node', m.node_ip + (m.node_role ? ' (' + m.node_role + ')' : '')],
+                 [text.recordedRole, (m.node_ip || '') + (m.node_role ? ' (' + m.node_role + ')' : '')],
                  ['Time', formatTimestamp(m.created_utc, m.created_local)],
                  ['Type', m.notification_type],
                  ['Status', statusLabel(m.status)]].forEach(function (pair) {
@@ -842,7 +841,6 @@
              * load, so no explicit init here: doing so would double-initialise.
              * The options never change, so no per-request refresh is needed
              * either; only the initial request waits for the ready handler. */
-            renderTimezoneLegend();
             load();
         });
     })();

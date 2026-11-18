@@ -64,8 +64,8 @@ def test_padded_body_and_sections():
     src_all = src
     assert "$('#email-log-message-title').text(m.subject" in src_all, \
         'the subject must become the dialog heading'
-    for label in ("Recipient", "Node", "Time", "Type", "Status"):
-        assert f"['{label}'" in src_all, f'{label} missing from metadata'
+    for label in ("text.recordedRole", "'Time'", "'Type'", "'Status'"):
+        assert label in src_all, f'{label} missing from metadata'
     assert "['Time', formatTimestamp(m.created_utc, m.created_local)]" in src_all, \
         'metadata shows the converted instant, not the raw UTC text'
     print('DIALOG_SUBJECT_AND_META=PASS')
@@ -324,9 +324,9 @@ def test_time_heading_matches_the_displayed_clock():
     src = VIEW.read_text(encoding='utf-8')
     assert "{{ devicemonitor_t('Time (UTC)') }}</th>" not in src, 'a static UTC heading contradicts local values'
     assert "{{ devicemonitor_t('Time (local)') }}</th>" in src, 'the heading starts from the neutral local label'
-    m = re.search(r'function renderTimezoneLegend\(\) \{.*?\n        \}', src, re.S)
-    legend = m.group(0)
-    assert "timeZoneName: 'short'" in legend, 'the zone comes from Intl, the same source as the values'
+    formatter = src[src.index('function formatTimestamp'):]
+    assert "timeZoneName: 'short'" in formatter[:formatter.index('function ', 10)], \
+        'each value carries its zone from Intl'
     assert "heading.replace(" not in src, 'the heading is static; values carry their own zone suffix'
     assert "$('#email-log-time-heading').text(" not in src, 'no script rewrites the column heading'
     assert "lang.query('local')" not in src, 'no replaceable heading token is needed'
@@ -347,8 +347,8 @@ def test_status_labels_are_display_only():
     assert "status: $('#email-log-status').val()" in src, 'filters still send the internal value'
     ctrl = (ROOT / 'src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/EmaillogController.php').read_text()
     assert "'status' => (string)$row['status']" in ctrl, 'API status values unchanged'
-    assert 'inbox' not in src[src.index('var statusNames'):src.index('function renderTimezoneLegend')].lower(), \
-        'relay acceptance must not imply inbox receipt'
+    status_block = src[src.index('var statusNames'):src.index('function ', src.index('var statusNames') + 10)]
+    assert 'inbox' not in status_block.lower(), 'relay acceptance must not imply inbox receipt'
     print('DIALOG_STATUS_LABELS=PASS')
 
 

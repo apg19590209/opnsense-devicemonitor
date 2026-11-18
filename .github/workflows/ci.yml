@@ -186,6 +186,9 @@ jobs:
       - name: Validate email log peer privilege boundaries
         run: python3 tests/test_emaillog_peer_privilege.py
 
+      - name: Validate email log node identity presentation
+        run: python3 tests/test_emaillog_identity_presentation.py
+
       - name: Validate email log delivery tracking from Postfix logs
         run: php tests/test_email_log_delivery_tracking.php
 

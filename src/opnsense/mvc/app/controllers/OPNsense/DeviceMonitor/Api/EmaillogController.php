@@ -62,16 +62,17 @@ class EmaillogController extends ApiControllerBase
         }
     }
 
+    /**
+     * Identity shown to the operator. The address is the configured management
+     * interface (the LAN interface's static address), never "the first NIC that
+     * happens to have an IPv4 address"; the role is the live CARP state.
+     */
     private function nodeFacts()
     {
         require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailLog.php');
         require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/PluginTimestamps.php');
-        $node = \OPNsense\DeviceMonitor\EmailLog::currentNode();
-        return [
-            'node_id' => $node['host'],
-            'node_ip' => $node['ip'],
-            'role' => (string)@shell_exec("ifconfig 2>/dev/null | grep -oE 'carp: [A-Z]+' | head -1 | awk '{print $2}'") ?: 'unknown',
-        ];
+        require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NodeIdentity.php');
+        return \OPNsense\DeviceMonitor\NodeIdentity::local();
     }
 
     /** POST /api/devicemonitor/emaillog/search */
@@ -277,6 +278,15 @@ class EmaillogController extends ApiControllerBase
                  * hostname and a peer row could not be attributed to a node. */
                 if (!empty($peer['available']) && is_array($peer['node'] ?? null)) {
                     $peerTag = \OPNsense\DeviceMonitor\EmailLogAggregate::nodeTag($peer['node'], 'peer');
+                }
+                /* The configured endpoint is the authoritative address for the peer;
+                 * a peer reporting a different address must not misattribute rows. */
+                $endpoint = (string)parse_url((string)$settings['url'], PHP_URL_HOST);
+                if ($endpoint !== '') {
+                    $peerTag['node_ip'] = $endpoint;
+                    $peerTag['label'] = \OPNsense\DeviceMonitor\NodeIdentity::label(
+                        $peerTag['node_id'], $endpoint, $peerTag['role']
+                    );
                 }
             }
         }

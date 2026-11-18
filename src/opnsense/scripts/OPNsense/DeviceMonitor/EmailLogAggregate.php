@@ -19,11 +19,18 @@ class EmailLogAggregate
 
     public static function nodeTag(array $facts, $scope)
     {
+        $host = (string)($facts['host'] ?? $facts['node_id'] ?? '');
+        $ip = (string)($facts['ip'] ?? $facts['node_ip'] ?? '');
+        $role = trim((string)($facts['role'] ?? ''));
+        /* Presentation label only: "hostname — management IP — role". Rows keep
+         * their own recorded role, which is never replaced by this live role. */
+        $label = (string)($facts['label'] ?? implode(' \u{2014} ', array_filter([$host, $ip, $role], 'strlen')));
         return [
             'scope' => $scope,
-            'node_id' => (string)($facts['host'] ?? $facts['node_id'] ?? ''),
-            'node_ip' => (string)($facts['ip'] ?? $facts['node_ip'] ?? ''),
-            'role' => (string)($facts['role'] ?? ''),
+            'node_id' => $host,
+            'node_ip' => $ip,
+            'role' => $role,
+            'label' => $label,
         ];
     }
 
