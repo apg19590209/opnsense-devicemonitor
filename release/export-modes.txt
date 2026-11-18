@@ -18,7 +18,11 @@
 100644 release/core-catalogues/pt_BR.OPNsense.mo
 100644 release/core-catalogues/ru_RU.OPNsense.mo
 100644 release/core-catalogues/zh_CN.OPNsense.mo
+100644 release/current-task-handoff.md
+100644 release/current-task-requirements.txt
 100755 release/deploy-candidate.sh
+100644 release/execution-ledger.jsonl
+100755 release/execution-ledger.py
 100644 release/export-modes.txt
 100644 release/feature-set.txt
 100644 release/legacy-targets.txt
@@ -31,6 +35,7 @@
 100755 release/record-acceptance.sh
 100644 release/release-inputs.sha256
 100644 release/repair-core-catalogues.sh
+100755 release/run-host-checks.sh
 100644 release/supported-locales.sh
 100755 release/testbed-acceptance.sh
 100644 release/v2.10-notes.md
@@ -45,6 +50,7 @@
 100755 release/validate-deploy-archive.py
 100755 release/verify-bundle.py
 100755 release/verify-candidate.sh
+100755 release/verify-execution.py
 100755 release/verify-fetched-bundle.sh
 100755 release/verify-release-inputs.sh
 100755 release/verify-testbed-acceptance.sh
