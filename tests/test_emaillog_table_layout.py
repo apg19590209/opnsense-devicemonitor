@@ -30,7 +30,7 @@ def test_shared_layout():
     cols = re.findall(r'<col class="(email-log-col-[a-z]+)"/>', src)
     check(cols == ['email-log-col-select', 'email-log-col-time', 'email-log-col-node',
                    'email-log-col-type', 'email-log-col-recipient', 'email-log-col-subject',
-                   'email-log-col-status', 'email-log-col-actions'], f'column order {cols}')
+                   'email-log-col-status'], f'column order {cols}')
     css_total = css_block(src)
     widths_sum = sum(int(w) for w in re.findall(r'email-log-col-[a-z]+ \{ width: (\d+)%; \}', css_total))
     check(widths_sum == 100, f'selection column does not change the 100% total (got {widths_sum})')
@@ -54,21 +54,26 @@ def test_shared_layout():
 def test_wrapping_and_responsive_container():
     src = VIEW.read_text(encoding='utf-8')
     css = css_block(src)
-    table_css = css.split('#email-log-table.email-log-table td,')[1].split('}')[0]
-    check('overflow-wrap: anywhere' in table_css, 'values wrap')
-    check('word-break: break-word' in table_css, 'long tokens break instead of clipping')
-    check('white-space: normal' in css[css.index('td.email-log-actions'):][:200],
-          'actions wrap inside their column')
+    table_css = css[css.index('#email-log-table.email-log-table td,'):]
+    table_css = table_css[:table_css.index('}')]
+    check('overflow-wrap: break-word' in table_css, 'long tokens break instead of clipping')
+    check('word-break: normal' in table_css, 'text wraps at word boundaries, not per character')
+    check('white-space: normal' in css[css.index('.email-log-subject {'):][:400],
+          'the clickable subject wraps naturally')
     check('class="table-responsive"' in src, 'table uses the standard responsive container')
     check('display: none' not in css.split('#email-log-table.email-log-table')[1].split('@media')[0],
           'no content is hidden to force alignment')
 
 
-def test_actions_column():
+def test_actions_are_inline():
     src = VIEW.read_text(encoding='utf-8')
-    check(".addClass('email-log-actions')" in src, 'action cell carries its column class')
-    check("var remote = row.scope === 'peer';" in src and ".prop('disabled', remote)" in src,
-          'remote rows keep their disabled action')
+    check("<td>').addClass('email-log-actions" not in src, 'no separate actions cell')
+    check('email-log-subject' in src and 'email-log-restore' in src,
+          'subject action and inline restore exist')
+    row = src[src.index('rows.forEach(function (row)'):src.index('$body.append($tr)')]
+    check("if (deleted && $('#email-log-visibility').val() !== 'active')" in row,
+          'restore appears only for deleted rows in the Deleted/All views')
+    check(".prop('disabled', remote)" in row, 'remote restore stays disabled')
     check("formatTimestamp(row.created_utc, row.created_local)" in src,
           'time keeps its date-aware suffix')
 
@@ -92,14 +97,14 @@ def test_toolbar_and_actions_containment():
     check('class="email-log-toolbar" role="toolbar"' in src, 'actions live in one toolbar')
     check('flex-wrap: wrap' in css_block(src), 'toolbar wraps')
     check('email-log-filters' in src, 'filters have their own row')
-    check('white-space: nowrap' not in css_block(src).split('td.email-log-actions')[1].split('}')[0],
-          'action cells are allowed to wrap')
+    check('nowrap' not in css_block(src).split('.email-log-subject {')[0][-200:] + css_block(src)[css_block(src).index('.email-log-subject {'):][:400],
+          'the subject action itself is not forced onto one line')
     check('overflow: hidden' not in css_block(src), 'nothing is hidden to conceal overflow')
     check("email-log-table td', 'overflow-wrap: anywhere" not in src, 'no placeholder')
-    check(len(re.findall(r'<col class=', src)) == 8, 'eight columns incl. selection and actions')
-    check(len(re.findall(r'<th[ >]', src)) == 8, 'eight header cells match the colgroup')
+    check(len(re.findall(r'<col class=', src)) == 7, 'seven columns: selection plus six data columns')
+    check(len(re.findall(r'<th[ >]', src)) == 7, 'seven header cells match the colgroup')
     row = src[src.index('rows.forEach(function (row)'):src.index('$body.append($tr)')]
-    check(row.count('$tr.append(') == 8, 'eight body cells per row')
+    check(row.count('$tr.append(') == 7, 'seven body cells per row')
 
 
 def test_unknown_historical_role_omitted():
@@ -123,6 +128,24 @@ def test_confirm_dialog_style():
     check('email-log-delete-all-confirm' in src, 'delete all keeps its checkbox')
 
 
+def test_clickable_subject_contract():
+    src = VIEW.read_text(encoding='utf-8')
+    row = src[src.index('rows.forEach(function (row)'):src.index('$body.append($tr)')]
+    check("<button type=\"button\">" in row and ".addClass('email-log-subject')" in row,
+          'the subject is a native button, so keyboard activation is native')
+    check(".text(subjectText || text.noSubject)" in row, 'an empty subject shows the translated label')
+    check("noSubject: {{ lang.query('No subject')" in src, 'the label is translated')
+    check("' \\u2014 ' + text.viewMessage" in row, 'the accessible name says what activation does')
+    check('email-log-select' in row and "$tr.on('click'" not in row,
+          'checkbox clicks stay independent; the row itself is not clickable')
+    check("openMessage(row.event_id, row.scope === 'peer')" in row,
+          'the same dialog and peer retrieval path is used')
+    check("prop('disabled', remote)" in row, 'remote restore remains disabled')
+    check("text.restore" in row, 'restore is reachable for deleted rows')
+    for forbidden in ("text.viewMessage)</", ".text(text.delete)"):
+        check(forbidden not in row, f'no per-row {forbidden.strip()} button remains')
+
+
 def test_empty_state_uses_same_table():
     src = VIEW.read_text(encoding='utf-8')
     empty = src[src.index('id="email-log-empty"'):]
@@ -142,11 +165,12 @@ def test_long_content_fixture():
 def main():
     test_shared_layout()
     test_wrapping_and_responsive_container()
-    test_actions_column()
+    test_actions_are_inline()
     test_banner_follows_scope()
     test_toolbar_and_actions_containment()
     test_unknown_historical_role_omitted()
     test_confirm_dialog_style()
+    test_clickable_subject_contract()
     test_empty_state_uses_same_table()
     test_long_content_fixture()
     print('EMAIL_LOG_TABLE_LAYOUT=FAIL (%d)' % len(FAILS) if FAILS else 'EMAIL_LOG_TABLE_LAYOUT=PASS')

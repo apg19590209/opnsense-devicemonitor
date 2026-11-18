@@ -207,10 +207,12 @@ def test_one_row_action_opens_everything():
     src = VIEW.read_text(encoding='utf-8')
     start = src.index('rows.forEach(function (row) {')
     loop = src[start:src.index("$('#email-log-empty')", start)]
-    assert loop.count("$('<button>')") == 2, \
-        'View message plus exactly one Delete/Restore control per row'
-    assert loop.count("openMessage(") == 1, 'only View message opens the dialog'
-    assert "data-action" in loop and 'confirmVisibility' in loop, 'Delete/Restore is its own action'
+    assert loop.count("$('<button type=\"button\">')") == 2, \
+        'the subject action plus the conditional inline Restore'
+    assert "email-log-subject" in loop and 'openMessage(' in loop, 'the subject opens the dialog'
+    assert "email-log-restore" in loop and 'confirmVisibility' in loop, 'Restore stays inline'
+    assert "if (deleted && $('#email-log-visibility').val() !== 'active')" in loop, \
+        'Restore is rendered only for deleted rows outside the Active view'
     assert 'text.diagnostics' not in loop and "'Timeline'" not in loop, 'no separate Timeline action'
     assert "<tr>').hide()" not in loop and 'closest(\'tr\').next()' not in loop, \
         'no inline table timeline expansion'

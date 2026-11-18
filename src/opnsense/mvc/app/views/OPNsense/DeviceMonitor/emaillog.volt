@@ -99,7 +99,6 @@
                                 <col class="email-log-col-recipient"/>
                                 <col class="email-log-col-subject"/>
                                 <col class="email-log-col-status"/>
-                                <col class="email-log-col-actions"/>
                             </colgroup>
                             <thead>
                             <tr>
@@ -112,7 +111,6 @@
                                 <th>{{ devicemonitor_t('Recipient') }}</th>
                                 <th>{{ devicemonitor_t('Subject') }}</th>
                                 <th>{{ devicemonitor_t('Status') }}</th>
-                                <th></th>
                             </tr>
                             </thead>
                             <tbody id="email-log-rows"></tbody>
@@ -163,27 +161,43 @@
         width: 100%;
         margin-bottom: 0;
     }
-    /* The selection column is taken from the actions column only, so the other
-     * proportions of the agreed layout are unchanged. */
+    /* Seven columns: selection, time, node, type, recipient, subject, status. The
+     * former actions column's space now belongs to Subject. */
     #email-log-table.email-log-table .email-log-col-select { width: 3%; }
     #email-log-table.email-log-table .email-log-col-time { width: 16%; }
     #email-log-table.email-log-table .email-log-col-node { width: 19%; }
     #email-log-table.email-log-table .email-log-col-type { width: 10%; }
     #email-log-table.email-log-table .email-log-col-recipient { width: 17%; }
-    #email-log-table.email-log-table .email-log-col-subject { width: 22%; }
+    #email-log-table.email-log-table .email-log-col-subject { width: 25%; }
     #email-log-table.email-log-table .email-log-col-status { width: 10%; }
-    #email-log-table.email-log-table .email-log-col-actions { width: 3%; }
-    /* Values wrap rather than being clipped; fonts are unchanged. */
+    /* Values wrap naturally at word boundaries; a single unbroken token is only
+     * broken as a last resort, so text never wraps one letter per line. */
     #email-log-table.email-log-table td,
     #email-log-table.email-log-table th {
-        overflow-wrap: anywhere;
-        word-break: break-word;
+        overflow-wrap: break-word;
+        word-break: normal;
+        hyphens: none;
         vertical-align: top;
     }
-    /* Actions wrap inside their own column; nothing is hidden or shrunk. */
-    #email-log-table.email-log-table td.email-log-actions .btn {
-        margin: 0 0 2px 0;
+    /* The subject is the row's action: a theme link-styled button, left aligned. */
+    #email-log-table.email-log-table .email-log-subject {
+        display: block;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        text-align: left;
         white-space: normal;
+        word-break: normal;
+    }
+    #email-log-table.email-log-table .email-log-subject:hover,
+    #email-log-table.email-log-table .email-log-subject:focus {
+        text-decoration: underline;
+    }
+    /* Restore (Deleted view only) sits beside the subject inside the same cell. */
+    #email-log-table.email-log-table .email-log-restore {
+        margin-left: 8px;
+        white-space: nowrap;
     }
     @media (max-width: 991px) {
         #email-log-table.email-log-table { min-width: 720px; }
@@ -480,6 +494,8 @@
             selectionRemote: {{ lang.query('Remote entries cannot be selected from this node.')|json_encode(15) }},            eventSingular: {{ lang.query('event')|json_encode(15) }},
             eventPlural: {{ lang.query('events')|json_encode(15) }},
             noDelivery: {{ lang.query('No delivery details recorded')|json_encode(15) }},
+            noSubject: {{ lang.query('No subject')|json_encode(15) }},
+            restore: {{ lang.query('Restore')|json_encode(15) }},
             peerPrefix: {{ lang.query('Peer')|json_encode(15) }},
             thisNode: {{ lang.query('This node')|json_encode(15) }},
             roleWhenSent: {{ lang.query('Role when sent')|json_encode(15) }},
@@ -712,41 +728,34 @@
                     $tr.append($('<td>').text(nodeText.trim()));
                     $tr.append($('<td>').text(row.notification_type));
                     $tr.append($('<td>').text(row.recipient));
-                    $tr.append($('<td>').text(row.subject));
-                    $tr.append($('<td>').text(statusLabel(row.status)));
-                    var $detail = $('<td>').addClass('email-log-actions');
-                    /* The single row action. Metadata, message content and the full
-                     * delivery timeline all open in the dialog. It is always offered,
-                     * even for rows recorded before capture: the dialog then explains
-                     * that the content is unavailable and still lists the delivery. */
-                    $('<button>').addClass('btn btn-default btn-xs')
-                        .attr('data-event-id', row.event_id)
-                        .attr('aria-label', text.viewMessage)
-                        .text(text.viewMessage)
-                        .on('click', function () { openMessage(row.event_id, row.scope === 'peer'); })
-                        .appendTo($detail);
-                    /* Delete/Restore act on this node's database only. A remote row is
-                     * shown with the action disabled and the reason attached, because no
-                     * secure cross-node mutation capability is configured. */
-                    var remote = row.scope === 'peer';
+                    /* The subject is the row's single action: a native, keyboard-operable
+                     * button styled as a theme link, opening the existing message dialog.
+                     * An empty subject shows the translated clickable label instead. */
                     var deleted = (row.deleted_utc || '') !== '';
-                    var $change = $('<button>').addClass('btn btn-default btn-xs')
-                        .css('margin-left', '4px')
+                    var subjectText = String(row.subject || '').trim();
+                    var $subject = $('<button type="button">').addClass('email-log-subject')
                         .attr('data-event-id', row.event_id)
-                        .attr('data-action', deleted ? 'restore' : 'delete')
-                        .prop('disabled', remote)
-                        .text(deleted ? text.restore : text.delete)
-                        .on('click', function () {
-                            confirmVisibility(row.event_id, !deleted);
-                        });
-                    if (remote) {
-                        /* A disabled control is not announced by assistive technology,
-                         * so the explanation travels on the control and again in the
-                         * dialog: the peer's log is read-only from this node. */
-                        $change.attr('title', text.remoteLocked).attr('aria-describedby', 'email-log-remote-note');
+                        .attr('aria-label', (subjectText || text.noSubject) + ' \u2014 ' + text.viewMessage)
+                        .text(subjectText || text.noSubject)
+                        .on('click', function () { openMessage(row.event_id, row.scope === 'peer'); });
+                    var $subjectCell = $('<td>').append($subject);
+                    /* Restore lives inline beside the subject and only in the Deleted view;
+                     * remote rows stay read-only because this node cannot mutate a peer. */
+                    if (deleted && $('#email-log-visibility').val() !== 'active') {
+                        var remote = row.scope === 'peer';
+                        var $restore = $('<button type="button">').addClass('btn btn-link btn-xs email-log-restore')
+                            .attr('data-event-id', row.event_id)
+                            .attr('data-action', 'restore')
+                            .prop('disabled', remote)
+                            .text(text.restore)
+                            .on('click', function () { confirmVisibility(row.event_id, false); });
+                        if (remote) {
+                            $restore.attr('title', text.remoteLocked).attr('aria-describedby', 'email-log-remote-note');
+                        }
+                        $subjectCell.append($restore);
                     }
-                    $change.appendTo($detail);
-                    $tr.append($detail);
+                    $tr.append($subjectCell);
+                    $tr.append($('<td>').text(statusLabel(row.status)));
                     $body.append($tr);
                 });
                 $('#email-log-empty').toggle(rows.length === 0);

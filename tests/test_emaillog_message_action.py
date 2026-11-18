@@ -16,10 +16,10 @@ def test_action_is_not_conditionally_hidden():
     src = VIEW.read_text(encoding='utf-8')
     assert 'if (row.has_content)' not in src, \
         'View message must not be gated on captured content'
-    start = src.index("/* The single row action.")
-    block = src[start:src.index('appendTo($detail)', start)]
-    assert 'text.viewMessage' in block, 'button label missing'
-    assert 'openMessage(row.event_id' in block, 'button must open the message modal'
+    start = src.index("/* The subject is the row's single action")
+    block = src[start:src.index('$body.append($tr)', start)]
+    assert 'text.viewMessage' in block, 'accessible label includes View message'
+    assert 'openMessage(row.event_id' in block, 'the subject must open the message modal'
 
 
 def test_every_row_gets_the_button():
@@ -37,8 +37,10 @@ def test_one_row_action():
     row_at = src.index('rows.forEach(function (row) {')
     end_at = src.index("$('#email-log-empty')", row_at)
     loop = src[row_at:end_at]
-    assert loop.count("<button>')") == 2, 'View message plus one Delete/Restore control per row'
-    assert "data-action" in loop, 'the second control is the visibility action'
+    assert loop.count("$('<button type=\"button\">')") == 2, \
+        'the clickable subject plus the conditional inline Restore'
+    assert 'email-log-subject' in loop and 'email-log-restore' in loop, 'both controls present'
+    assert "<td>').addClass('email-log-actions" not in src, 'the Actions column is gone'
     assert 'text.diagnostics' not in src, 'the separate Timeline action must be gone'
     assert "closest('tr').next()" not in src, 'no inline timeline row remains'
     assert 'text.viewMessage' in loop and 'openMessage(row.event_id' in loop
