@@ -9,8 +9,8 @@ covers entries outside the current filters and page and needs an explicit checkb
 actions run behind the explicit write privilege, validate ownership, are transactional and report
 the real affected count; only visibility changes. Remote rows cannot be selected. Message metadata
 shows "Role when sent" only when a role was recorded. Code `9fa1b9e`, CI `44211502506`; installed
-from `install-v214.{Ru223K,obfmEu,VwGIfL}`. Report:
-`.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
+from `install-v214.{Ru223K,obfmEu,VwGIfL}`. Screenshot fixes (`3768c82`): bulk controls moved into a wrapping toolbar, action buttons wrap, `unknown` historical roles are omitted, and the confirmation dialog is ~480px, viewport-bound and names the owning node.
+Report: `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
 
 **HA peer access, Email Log and genuine-record verification (18 November 2026).** One labelled test
 email was sent from each node to `arnhem05.alerts@gmail.com`; both records show **Relay accepted**
