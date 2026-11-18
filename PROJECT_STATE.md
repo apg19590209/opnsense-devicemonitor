@@ -2,6 +2,14 @@
 
 ## Current state
 
+**PR #9 merged into main (18 November 2026).** Merge commit
+`c00426d335c7840ae3876df91bac7b84a5143581` at 2026-11-18 04:00:00Z via merge commit; reviewed head
+`038f44c`, last code change `51fcaf4` (CI `44223883558` success) — only documentation followed.
+Open limitations: pagination fixture-tested only; Peer/All nodes, Deleted/All and dialog screens not
+visually confirmed; manual certificate renewal before 2026-12-17; webhook (no destination, TLS
+verification disabled) and parked USB findings unchanged. Report:
+`.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
+
 **Email Log formatting verified with a genuine record; PR #9 final review (18 November 2026).**
 A new test email from `.252` (record `a14af952…`, 2026-11-18 02:43:32 UTC, subject "Test -
 OPNsense Device Monitor") stored `Server:` / `Time:` / `To:` as compact label/value lines and is
