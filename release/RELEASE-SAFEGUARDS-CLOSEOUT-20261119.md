@@ -53,6 +53,10 @@ close-out record.
 candidate/deployment/acceptance suites, pinned-input and bundle checks, then builds from a clean
 export before a push. It is an aggregator, not a new test framework. The remaining model-dependent
 step is remembering to run it; the runner does not eliminate that judgment or CI-environment drift.
+During PR #13 review, its failure path was exercised in isolated copies: an injected bundle-build
+failure stopped the run with a nonzero status, and a changed recorded digest stopped at bundle
+safety. Its only live-path access is its own source tree and temporary directories; no installer,
+service, SSH, API or credential path is invoked.
 
 ## Remaining release work
 

@@ -13,6 +13,8 @@ export LC_ALL
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 REPO=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 cd "$REPO"
+TMP=$(mktemp -d /tmp/dm-preflight.XXXXXX)
+trap 'rm -rf "$TMP"' EXIT
 
 run() {
     name=$1
@@ -26,8 +28,8 @@ run() {
     fi
 }
 
-php tests/test_email_log_delivery_tracking.php >/tmp/dm-preflight-email.log || {
-    tail -20 /tmp/dm-preflight-email.log >&2
+php tests/test_email_log_delivery_tracking.php >"$TMP/email.log" || {
+    tail -20 "$TMP/email.log" >&2
     printf 'PREFLIGHT_email_delivery=FAIL\n' >&2
     exit 1
 }
@@ -38,6 +40,7 @@ run execution_ledger python3 tests/test_execution_ledger.py
 run release_inputs python3 tests/test_release_inputs.py
 run bundle_safety python3 tests/test_bundle_build_safety.py
 run bundle_reproducibility python3 tests/test_bundle_reproducibility.py
+run bundle_determinism python3 tests/test_bundle_determinism.py
 # Build from a clean export of the committed tree. This exercises the same source metadata and
 # export path the release archive uses, so a missing packaged input is found before pushing.
 WORK=$(mktemp -d /tmp/dm-preflight-build.XXXXXX)
