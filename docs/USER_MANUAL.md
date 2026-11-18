@@ -904,6 +904,38 @@ installer afterwards to merge the plugin's strings again.
 1. Settings → **Email Notifications** → configure recipient/transport → **Test Email**.
 2. Settings → **Webhook Notifications** → configure URL → **Test webhook**.
 
+### 16.9 Review the Email Log
+
+Services → **Device Monitor** → **Email Log** lists every notification attempt this node submitted.
+
+- **Status** describes what is actually known. **Relay accepted** means the relay accepted the
+  message (DSN `2.0.0`); it is **not** proof that the message reached the recipient's inbox. Only
+  the recipient can confirm receipt. Other values are Submitted, Queued or deferred, Failed and
+  Unknown; Unknown is used when the evidence is missing and is never assumed to be delivered.
+- **Time (local)** shows each timestamp in your browser's timezone with its own suffix (for example
+  `AEDT`/`AEST`); CSV export keeps the stored UTC field.
+- **Click a row's subject** to open the message. The dialog shows the metadata, the plain-text body
+  and the delivery timeline; an entry without a subject shows **No subject**. Delivery is collapsed
+  under **Delivery details**, which names the number of recorded events.
+- **Copy of every node.** Tabs select **Local** (this node), **Peer** (the configured peer) and
+  **All nodes** (both). The header names each node as hostname — management IP — role, and rows show
+  the node that produced the email with the role recorded when it was sent.
+- **Peer setup.** Configure the peer under Settings → **Email Log Peer** (or the corresponding
+  fields in the Device Monitor settings): the peer's HTTPS address, an API key/secret belonging to a
+  user that has only the **Services: Device Monitor (email log peer read)** privilege, and — when the
+  certificates are issued by an internal CA — that CA certificate. Peer access is read-only: remote
+  entries cannot be deleted, restored or selected, and no other API is reachable with the peer key.
+  If the peer is unavailable the list says so and still shows the local records.
+- **Remove entries from view (soft deletion).** Select local entries with the checkboxes and use
+  **Delete selected (n)**, or remove every active local entry with **Delete all local entries**
+  (which also covers entries outside the current filters and page and needs an explicit
+  confirmation). Deleted entries are hidden, not destroyed: they stay restorable until the normal
+  30-day retention removes them. Actual emails and mail queues are never affected. Switch
+  **Active / Deleted / All entries** to view them; in the Deleted and All entries views a
+  **Restore** button appears beside the subject of each deleted row.
+- **Clear filters** resets search, type and status and returns to page one. **Export CSV** exports
+  the current filters and visibility as UTC-labelled data.
+
 ---
 
 ## 17. Troubleshooting
