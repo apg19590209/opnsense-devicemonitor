@@ -4,14 +4,17 @@ Objective: complete Email Log recovery and release safeguards; prevention review
 
 Authority: local commits only; no push, merge, tag or publication; deploy only to the authorised stage.
 
-Pinned candidate: b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72 (host evidence); f02bc9a8218b6ef25e775bd48efab9e13d70acaa1e5d5c9c44b4b3a0fe9eb22c (not deployed)
+Pinned hosted archive: b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72; release-tool candidate: will be pinned after final build
 Source: 202d6efd4c126f85393116e569e72931d936efdc
 
-- .23: accepted (deployment evidence; acceptance marker predates the ledger)
-- .252: accepted (deployment evidence; acceptance marker predates the ledger)
-- .253: accepted (deployment evidence; acceptance marker predates the ledger)
+- .23: historical acceptance marker exists; no generated-evidence ledger record
+- .252: historical acceptance marker exists; no generated-evidence ledger record
+- .253: historical acceptance marker exists; no generated-evidence ledger record
 
-Outstanding checks: `python3 release/execution-ledger.py status` (current requirements file and consolidated report).
+Outstanding checks: the current execution ledger has no generated evidence for a fresh host
+acceptance, so a new COMPLETE claim must not be made from the prior manually summarized records.
+Run the supported checks on each authorised host and then `python3 release/execution-ledger.py
+status` (requirements file and consolidated report).
 
 Stop conditions: price gate premium without approval; missing access; unsafe verification failure; action outside authority.
 

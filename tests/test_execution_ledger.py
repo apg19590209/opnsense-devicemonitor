@@ -23,9 +23,11 @@ def run(args):
 
 
 def rec(ledger, stage, host, source, bundle, checks, result='PASS', phase='deploy'):
+    evidence = Path(ledger).with_name('evidence-%s-%s.txt' % (stage, phase))
+    evidence.write_text(''.join('%s %s generated-test-evidence\n' % (c, result) for c in checks))
     return run(['python3', str(LEDGER), 'record', '--ledger', str(ledger), '--stage', stage,
                 '--host', host, '--source', source, '--bundle', bundle, '--phase', phase,
-                '--checks', ','.join(checks), '--result', result])
+                '--checks', ','.join(checks), '--result', result, '--evidence', str(evidence)])
 
 
 def accept(ledger, stage, host, source, bundle, identity, out):
@@ -62,6 +64,28 @@ def test_missing_checks_block_acceptance():
              'database-integrity', 'settings', 'daemon', 'catalogue'])
         result = accept(ledger, '.23', '192.168.20.23', source, digest, identity, out)
         check(result.returncode == 0 and out.exists(), 'a complete .23 record creates acceptance')
+
+
+def test_typed_result_is_refused_without_generated_evidence():
+    with tempfile.TemporaryDirectory() as tmp:
+        p, archive, identity, ledger, source, digest = setup(tmp)
+        typed = p / 'typed.txt'
+        typed.write_text('deploy PASS hand-typed\n')
+        # Use a record for a check not present in the generated evidence file: the record must
+        # refuse rather than treating its own PASS value as authority.
+        result = run(['python3', str(LEDGER), 'record', '--ledger', str(ledger), '--stage', '.23',
+                      '--host', '192.168.20.23', '--source', source, '--bundle', digest,
+                      '--phase', 'deploy', '--checks', 'deploy,records', '--result', 'PASS',
+                      '--evidence', str(typed)])
+        check(result.returncode != 0 and 'evidence has no result' in result.stderr,
+              'a record cannot claim a check absent from generated evidence')
+        missing = p / 'not-created.yaml'
+        result = run(['python3', str(LEDGER), 'record', '--ledger', str(ledger), '--stage', '.23',
+                      '--host', '192.168.20.23', '--source', source, '--bundle', digest,
+                      '--phase', 'deploy', '--checks', 'deploy', '--result', 'PASS',
+                      '--evidence', str(missing)])
+        check(result.returncode != 0 and 'evidence file missing' in result.stderr,
+              'a record is refused when the generated evidence file is missing')
 
 
 def test_prior_stage_is_required():
@@ -105,6 +129,7 @@ def test_closeout_requires_evidence_and_explicit_exception():
 
 def main():
     test_missing_checks_block_acceptance()
+    test_typed_result_is_refused_without_generated_evidence()
     test_prior_stage_is_required()
     test_closeout_requires_evidence_and_explicit_exception()
     print('EXECUTION_LEDGER=FAIL (%d)' % len(FAILS) if FAILS else 'EXECUTION_LEDGER=PASS')

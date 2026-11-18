@@ -96,9 +96,11 @@ def isolated_accept(repo, identity, source, stage):
     if stage != '.23':
         checks += ',certificates,role,peer'
     ledger = repo / 'release/execution-ledger.jsonl'
+    evidence = repo / ('release/evidence-' + stage + '.txt')
+    evidence.write_text(''.join(c + ' PASS generated-test-evidence\n' for c in checks.split(',')))
     rec = run(['python3', str(repo / 'release/execution-ledger.py'), 'record', '--ledger', str(ledger),
                '--stage', stage, '--host', host, '--source', source, '--bundle', digest,
-               '--phase', 'deploy', '--checks', checks, '--result', 'PASS'])
+               '--phase', 'deploy', '--checks', checks, '--result', 'PASS', '--evidence', str(evidence)])
     if rec.returncode != 0:
         return rec
     return run(['python3', str(repo / 'release/execution-ledger.py'), 'accept', '--ledger', str(ledger),
@@ -203,7 +205,7 @@ def test_master_cannot_precede_backup_acceptance():
         check(out.returncode != 0 and '.252 acceptance missing' in out.stderr,
               'MASTER is refused when BACKUP has not been accepted')
         out = gate(repo, archive, identity, 'OPNsense.home.arpa', source)
-        check(out.returncode != 0 and ('management address' in out.stderr or '.252 acceptance missing' in out.stderr),
+        check(out.returncode != 0 and ('DM_DEPLOY_STAGE' in out.stderr or '.252 acceptance missing' in out.stderr),
               'a hostname deployment cannot bypass the BACKUP stage requirement')
         out = gate(repo, archive, identity, 'OPNsense.home.arpa', source,
                    extra_env={'DM_DEPLOY_STAGE': '.253'})

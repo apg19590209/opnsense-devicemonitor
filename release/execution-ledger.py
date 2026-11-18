@@ -78,7 +78,28 @@ def missing(rows, source, bundle, stage):
     return [c for c in REQUIRED[stage] if not passed(rows, source, bundle, stage, c)]
 
 
+def generated_evidence(path):
+    """Return check -> PASS from a runner's generated evidence file.
+
+    Each line is "<check> PASS <small evidence>" or "<check> FAIL ...". A missing or malformed
+    row is never inferred as PASS. The file itself must be regular, not a symlink.
+    """
+    if not os.path.isfile(path) or os.path.islink(path):
+        fail('evidence file missing or not regular: ' + path)
+    out = {}
+    for line in open(path, encoding='utf-8'):
+        parts = line.strip().split(' ', 2)
+        if len(parts) < 2 or parts[1] not in ('PASS', 'FAIL'):
+            fail('malformed evidence line: ' + line.strip())
+        check, result = parts[0], parts[1]
+        if check in out:
+            fail('duplicate evidence check: ' + check)
+        out[check] = result
+    return out
+
+
 def record(args):
+    """Append a structured record only when its generated evidence exists and agrees."""
     if args.stage not in STAGES or args.host != HOSTS[args.stage]:
         fail('stage and host must match')
     checks = [c for c in args.checks.split(',') if c]
@@ -86,8 +107,13 @@ def record(args):
         fail('unknown or empty check set')
     if args.phase not in ('deploy', 'own-check') or args.result not in ('PASS', 'FAIL'):
         fail('invalid phase or result')
+    evidence = generated_evidence(args.evidence)
+    for check in checks:
+        if check not in evidence:
+            fail('evidence has no result for check: ' + check)
+        if evidence[check] != args.result:
+            fail('recorded result differs from evidence for check: ' + check)
     rows = load(args.ledger)
-
     if args.stage == '.252' and not any(r.get('stage') == '.23' and r.get('phase') == 'acceptance'
                                          and r.get('result') == 'PASS' for r in rows):
         fail('BACKUP has no passing .23 acceptance record')
@@ -97,8 +123,8 @@ def record(args):
     for check in checks:
         append(args.ledger, {'time': now(), 'stage': args.stage, 'host': args.host,
                              'source': args.source, 'bundle_sha256': args.bundle,
-                             'phase': args.phase, 'check': check, 'result': args.result})
-
+                             'phase': args.phase, 'check': check, 'result': args.result,
+                             'evidence': args.evidence})
 
 def accept(args):
     if args.stage not in STAGES or args.host != HOSTS[args.stage]:
@@ -154,6 +180,13 @@ def status(args):
         req_results.append((key, ok))
         print('REQUIREMENT_%s=%s' % (key, 'PASS' if ok else 'OPEN'))
     report_status = next((x for x in open(args.report, encoding='utf-8') if x.startswith('**Status:')), '')
+    prerequisites = {
+        '.23': True,
+        '.252': any(r.get('stage') == '.23' and r.get('phase') == 'acceptance' and r.get('result') == 'PASS' for r in rows),
+        '.253': any(r.get('stage') == '.252' and r.get('phase') == 'acceptance' and r.get('result') == 'PASS' for r in rows),
+    }
+    if not all(prerequisites.values()):
+        open_stage.append('prerequisite:' + ','.join(s for s, v in prerequisites.items() if not v))
     overall = 'COMPLETE' if not open_stage and all(ok for _, ok in req_results) else 'PARTIAL'
     if overall != 'COMPLETE' and 'Status: COMPLETE' in report_status:
         fail('report claims COMPLETE while required evidence is open')
@@ -190,7 +223,7 @@ def main(argv):
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest='command', required=True)
     fields = {
-        'record': ('ledger', 'stage', 'host', 'source', 'bundle', 'phase', 'checks', 'result'),
+        'record': ('ledger', 'stage', 'host', 'source', 'bundle', 'phase', 'checks', 'result', 'evidence'),
         'accept': ('ledger', 'stage', 'host', 'source', 'bundle', 'identity', 'out'),
         'status': ('ledger', 'source', 'bundle', 'requirements', 'report'),
         'exception': ('ledger', 'requirement', 'reason'),
