@@ -19,7 +19,8 @@ if (empty($c['key']) || empty($c['secret'])) { fwrite(STDERR, "credential file i
 
 function local_call($path, array $post, array $c)
 {
-    $ch = curl_init('https://OPNsense.home.arpa/api/devicemonitor/emaillog/' . $path);
+    $host = getenv('DM_ACCEPTANCE_HOST') ?: 'OPNsense.home.arpa';
+    $ch = curl_init('https://' . $host . '/api/devicemonitor/emaillog/' . $path);
     if ($ch === false) { return [0, false]; }
     curl_setopt_array($ch, [
         CURLOPT_POST => true,

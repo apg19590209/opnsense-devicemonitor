@@ -50,6 +50,7 @@ INPUTS=$(printf '%s\n' \
     "release/validate-deploy-archive.py" \
     "release/execution-ledger.py" \
     "release/run-host-checks.sh" \
+    "release/build-bundle.sh" \
     "release/verify-execution.py" \
     "release/current-task-requirements.txt" \
     "release/acceptance-check.php" \

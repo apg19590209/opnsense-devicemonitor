@@ -82,16 +82,28 @@ with socket.create_connection(('127.0.0.1',443),5) as sock:
 PY
 }
 peer_check() { php -r 'require_once("/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/PeerClient.php"); $c=json_decode(file_get_contents("/var/db/devicemonitor/config.json"),true); $p=["url"=>$c["email_log_peer_url"],"api_key"=>$c["email_log_peer_api_key"],"api_secret"=>$c["email_log_peer_api_secret"],"ca_pem"=>$c["email_log_peer_ca_pem"],"timeout"=>8]; $r=(new \\OPNsense\\DeviceMonitor\\PeerClient($p))->search([],50,0); exit(empty($r["available"])?1:0);'; }
-auth_check() { php "$(dirname "$0")/acceptance-check.php" "$1" || return 1; }
+auth_check() {
+    # The local management name may not resolve on .23; its own verified address is the same
+    # API endpoint and keeps certificate verification enabled.
+    case "$STAGE" in
+        .23) DM_ACCEPTANCE_HOST=${DM_ACCEPTANCE_HOST:-192.168.20.23} php "$(dirname "$0")/acceptance-check.php" "$1" || return 1 ;;
+        *) php "$(dirname "$0")/acceptance-check.php" "$1" || return 1 ;;
+    esac
+}
 run installed-hashes installed_check
 run records records_check
 run database-integrity db_check
 run settings settings_check
 run certificates certificate_check
 run role role_check
-run peer peer_check
 run daemon daemon_check
 run catalogue catalogue_check
+if [ "$STAGE" = .23 ]; then
+    # .23 has no configured peer; peer reads are an HA-node requirement and are checked on .252/.253.
+    printf 'peer=NOT_APPLICABLE local testbed has no configured peer\n'
+else
+    run peer peer_check
+fi
 for check in authenticated-search authenticated-message authenticated-csv mutation-denial; do
     run "$check" auth_check "$check"
 done

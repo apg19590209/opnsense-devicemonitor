@@ -1,0 +1,9 @@
+version=2.15.0
+source=b0e8355c3b67d3845c9fcac3edc5ec23223c7095
+bundle_sha256=aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f
+host=192.168.20.23
+stage=.23
+result=PASS
+after=
+evidence=execution-ledger:/root/src/opnsense-devicemonitor-upstream/release/execution-ledger.jsonl
+accepted_at=2026-11-18T23:16:01Z
