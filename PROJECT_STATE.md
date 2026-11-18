@@ -2,6 +2,14 @@
 
 ## Current state
 
+**Prevention review — evidence-backed close-out controls (18 November 2026).** The deployment
+gate now records actual host/stage/checks in an append-only execution ledger; acceptance derives
+from those records, and close-out status is computed against an explicit requirements audit.
+Isolated tests reject missing checks, MASTER-before-BACKUP and unqualified COMPLETE reports.
+Hosts were not redeployed. The accepted host archive remains `b4e388ac…`; prevention candidate
+`f02bc9a8…` is not deployed. Report:
+`.cline-reports/REPORT-20261118-205100-testbed-acceptance-closeout.md`.
+
 **Email Log recovery and release safeguards — COMPLETE for internal acceptance (18 November 2026).**
 Final candidate source `202d6ef` and bundle `b4e388ac…` (12,517,325 bytes) are installed and accepted
 on `.23`, `.253 MASTER` and `.252 BACKUP` in sequence, using the same archive. The deployment gate
