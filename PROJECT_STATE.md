@@ -3,6 +3,8 @@
 ## Current state
 
 **Authenticated `.23` recovery verification and safeguards-candidate checks — PARTIAL (18 November 2026).**
+Staged `.252` acceptance stopped before any write: the candidate is verified and `.252` is healthy, but
+the installer does not independently enforce the candidate/feature guard. See the amended report.
 The currently installed recovery payload `038f44c` passed authenticated `.23` reads, message retrieval,
 export and restricted-peer checks without record mutation; temporary test accounts and credential files
 were removed and verified. Safeguards candidate `4983c58`/bundle `e3ded6f…` was installed and checked on
