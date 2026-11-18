@@ -122,6 +122,7 @@ printf '%s\n' \
     release/execution-ledger.py \
     release/verify-execution.py \
     release/run-host-checks.sh \
+    release/acceptance-check.php \
     release/current-task-requirements.txt \
     release/export-modes.txt \
     release/validate-deploy-archive.py \

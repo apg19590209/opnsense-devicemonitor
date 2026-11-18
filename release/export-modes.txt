@@ -1,5 +1,6 @@
 100644 install-unattended.sh
 100644 install.sh
+100755 release/acceptance-check.php
 100644 release/acceptance/.23-b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72.passed
 100644 release/acceptance/.252-b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72.passed
 100644 release/acceptance/.253-b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72.passed
