@@ -2,6 +2,13 @@
 
 ## Current state
 
+**Release and deployment safeguards merged into `main` (19 November 2026).** PR #11 merged reviewed
+head `294caa3` normally as merge commit `5b5f51b`; CI `44404713134` passed at that head. The merged
+changes are release/install tooling and tests only—no runtime application-file changes. The final
+tooling archive is `be2b64ca…` (source `294caa3`, 12,554,194 bytes) and is **not deployed**; hosts
+remain healthy on the separately accepted runtime archive `b4e388ac…`. No tag or publication occurred.
+Close-out: `release/RELEASE-SAFEGUARDS-CLOSEOUT-20261119.md`.
+
 **Prevention review — evidence-backed close-out controls (18 November 2026).** The deployment
 gate now records actual host/stage/checks in an append-only execution ledger; acceptance derives
 from those records, and close-out status is computed against an explicit requirements audit.
@@ -12,7 +19,7 @@ Hosts were not redeployed. The accepted host archive remains `b4e388ac…`; prev
 
 **Email Log recovery and release safeguards — COMPLETE for internal acceptance (18 November 2026).**
 Final candidate source `202d6ef` and bundle `b4e388ac…` (12,517,325 bytes) are installed and accepted
-on `.23`, `.253 MASTER` and `.252 BACKUP` in sequence, using the same archive. The deployment gate
+on `.23`, then `.252 BACKUP`, then `.253 MASTER`, using the same archive. The deployment gate
 rejects stale source, missing features, altered archives and missing prior-stage acceptance; obsolete
 pruning remains record-driven. Per-host authenticated, database, settings/certificate, role and
 daemon checks pass. Public release still requires approval; no push, merge, tag or publication occurred.
