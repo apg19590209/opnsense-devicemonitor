@@ -139,3 +139,5 @@
 version 2.15.0
 bytes 12554194
 sha256 aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f
+#   Bundled source b0e8355; identical bytes to the source 83be9d4 candidate because
+#   b0e8355 adds only release-package records outside the archive allow-list.

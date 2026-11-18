@@ -4,7 +4,7 @@ Objective: prepare the v2.15.0 Email Log release approval package; no deployment
 
 Authority: local commits and release-candidate construction only. Hosts remain on the separately accepted runtime archive; no stage is authorised in this package.
 
-Pinned hosted archive: b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72; v2.15.0 candidate: aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f
+Pinned hosted archive: b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72; v2.15.0 candidate: aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f (source b0e8355)
 Source: 202d6efd4c126f85393116e569e72931d936efdc
 
 - .23: historical acceptance marker exists; no generated-evidence ledger record
