@@ -70,10 +70,14 @@ def build(tree, workdir):
     stage = workdir / 'stage'
     out = workdir / 'bundle.tar.gz'
     listing = workdir / 'list.txt'
+    # A cloned checkout has no local main. Name the checked-out commit's integration
+    # ancestor explicitly; this exercises candidate verification rather than bypassing it.
     env = dict(os.environ,
                DM_BUNDLE_STAGE=str(stage),
                DM_BUNDLE_OUT=str(out),
-               DM_BUNDLE_LIST=str(listing))
+               DM_BUNDLE_LIST=str(listing),
+               DM_CANDIDATE_ANCESTOR=git('rev-parse', 'origin/main', cwd=tree)
+               if git('rev-parse', '--verify', '--quiet', 'origin/main', cwd=tree) else 'HEAD')
     done = subprocess.run(['sh', str(tree / 'release/build-bundle.sh')],
                           capture_output=True, text=True, env=env, timeout=600)
     assert done.returncode == 0, (done.stdout, done.stderr)
