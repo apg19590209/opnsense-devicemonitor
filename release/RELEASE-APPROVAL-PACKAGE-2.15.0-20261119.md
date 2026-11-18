@@ -1,6 +1,6 @@
 # FINAL REPORT — Email Log release approval package
 
-**Status: PARTIAL (INCIDENT RECONCILED; `.23` INSTALLED, ACCEPTANCE PENDING).** The v2.15.0 approval package and exact-head CI are complete. An unauthorised ad hoc `.252` move of `email_log.db` was reconciled: the original file was restored from the pre-incident consistent snapshot and verified byte-identical (`de99a51c…`, two records/five events), with authenticated reads and integrity checks passing. The approved archive was then installed on `.23`; the post-install result collector exposed a separate tooling bug, so host acceptance is not yet recorded and `.252`/`.253` promotion has not begun. No tag or publication occurred.
+**Status: BLOCKED (APPROVED ARCHIVE DEFECT; NO PROMOTION).** The v2.15.0 approval package and exact-head CI are complete. An unauthorised ad hoc `.252` move of `email_log.db` was reconciled: the original file was restored from the pre-incident consistent snapshot and verified byte-identical (`de99a51c…`, two records/five events), with authenticated reads and integrity checks passing. The approved archive was then installed on `.23`; the post-install result collector exposed a separate tooling bug, so host acceptance is not yet recorded and `.252`/`.253` promotion has not begun. No tag or publication occurred.
 
 ## Proposed version
 
@@ -98,6 +98,32 @@ regression-tested; no acceptance was fabricated from the incomplete run.
 core_locales=9 pruned=0 unchanged=69`. The post-install result collector then failed, so no host
 acceptance has been recorded and no promotion to `.252` has begun. `.252` and `.253` remain on the
 previously accepted runtime and were not redeployed by this attempt.
+
+### Final decision required — approved archive contains a defective acceptance runner
+
+The incident itself is reconciled in the section above and did **not** lose `.252` data. The live
+database and its moved predecessor both hold the original two records and five events; the
+authenticated listing, CSV, message and denied-mutation checks pass. That does not close the
+release sequence.
+
+A separate tooling defect affected the approved archive. `release/run-host-checks.sh` did not
+initialise its result collector under `set -u`, so `.23` installed successfully but could not
+produce generated acceptance. The source fix was committed and `.23` acceptance was then recorded
+against **`aa1270ed…`**. However, the archive already used for `.23` contains the defective runner;
+and the corrected runner changes the archive identity. The approved hash therefore cannot be
+used to complete a valid generated-acceptance sequence without either:
+
+- approving a new archive that packages the corrected runner and repeating `.23` acceptance for
+  that new identity; or
+- accepting that the approved `aa1270ed…` archive has no generated-acceptance path.
+
+The latter is not recommended and is not a release-ready state. The `.23` host remains on the
+approved archive; `.252` remains on its earlier accepted runtime with preserved data; `.253`
+remains MASTER/0. No promotion, merge, tag or publication was performed.
+
+**Exact action required:** approve a corrected v2.15.0 archive built from the release branch with
+the fixed runner and acceptance helper, then authorise its fresh sequential `.23` → `.252` → `.253`
+acceptance. The approved `aa1270ed…` identity must not be silently substituted.
 
 ## Action for Tony to approve
 
