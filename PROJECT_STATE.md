@@ -10,6 +10,7 @@ actions run behind the explicit write privilege, validate ownership, are transac
 the real affected count; only visibility changes. Remote rows cannot be selected. Message metadata
 shows "Role when sent" only when a role was recorded. Code `9fa1b9e`, CI `44211502506`; installed
 from `install-v214.{Ru223K,obfmEu,VwGIfL}`. Screenshot fixes (`3768c82`): bulk controls moved into a wrapping toolbar, action buttons wrap, `unknown` historical roles are omitted, and the confirmation dialog is ~480px, viewport-bound and names the owning node.
+The subject is now the row action (clickable, keyboard-operable, "No subject" when empty), the Actions column is gone (seven columns, Subject 25%), inline Restore remains in the Deleted view, and text wraps at word boundaries (`ea79659`).
 Report: `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
 
 **HA peer access, Email Log and genuine-record verification (18 November 2026).** One labelled test
