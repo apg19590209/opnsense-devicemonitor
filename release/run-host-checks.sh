@@ -26,13 +26,13 @@ done
 case "$STAGE" in .23|.252|.253) : ;; *) echo 'ABORT: invalid stage' >&2; exit 2 ;; esac
 [ -n "$SOURCE" ] && [ -n "$BUNDLE" ] && [ -n "$OUT" ] || { echo 'usage: --stage --source --bundle --out' >&2; exit 2; }
 mkdir -p "$(dirname "$OUT")"
-: > "$OUT"
 failure=0
+RESULT_ARGS=
 run() {
     name=$1
     shift
     rc=0
-    "$@" >/tmp/dm-host-check.log 2>&1 || rc=$?
+    "$@" >"${TMPDIR:-/tmp}/dm-host-check.$$.log" 2>&1 || rc=$?
     if [ "$rc" = 0 ]; then
         result=PASS
         note="exit=0"
@@ -41,7 +41,7 @@ run() {
         note="exit=$rc"
         failure=1
     fi
-    printf '%s %s %s\n' "$name" "$result" "$note" >> "$OUT"
+    RESULT_ARGS="$RESULT_ARGS --check $name=$result"
 }
 db_check() { python3 - <<'PY'
 import sqlite3

@@ -201,6 +201,17 @@ def test_installer_mode_is_executable_in_archives():
     check(index and index[0] == '100755', 'the installer is executable in the Git index')
 
 
+def test_host_runner_collects_results_under_strict_shell():
+    """The check runner must initialise its collector under set -u and preserve FAIL outcomes."""
+    text = (ROOT / 'release/run-host-checks.sh').read_text()
+    check('\nfailure=0\nRESULT_ARGS=\nrun() {' in text,
+          'the host-check result collector is initialised before use')
+    check('RESULT_ARGS="$RESULT_ARGS --check $name=$result"' in text,
+          'each executed result is added to the generated evidence')
+    check(': > "$OUT"' not in text,
+          'the runner does not seed a plain-text evidence file')
+
+
 def test_stale_ancestry_is_refused():
     with tempfile.TemporaryDirectory() as tmp:
         repo, archive, identity, payload, source, feature = make_tree(tmp)
@@ -344,6 +355,7 @@ def main():
     test_host_check_failure_aborts_before_acceptance()
     test_failed_host_checks_cannot_yield_acceptance()
     test_stale_ancestry_is_refused()
+    test_host_runner_collects_results_under_strict_shell()
     test_installer_mode_is_executable_in_archives()
     test_export_mode_map_matches_git_index()
     test_prior_stage_is_required()
