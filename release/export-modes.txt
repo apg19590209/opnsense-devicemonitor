@@ -36,6 +36,7 @@
 100755 release/record-acceptance.sh
 100644 release/release-inputs.sha256
 100644 release/repair-core-catalogues.sh
+100755 release/results-file.py
 100755 release/run-host-checks.sh
 100644 release/supported-locales.sh
 100755 release/testbed-acceptance.sh
