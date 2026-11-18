@@ -24,7 +24,7 @@ class EmailLogAggregate
         $role = trim((string)($facts['role'] ?? ''));
         /* Presentation label only: "hostname — management IP — role". Rows keep
          * their own recorded role, which is never replaced by this live role. */
-        $label = (string)($facts['label'] ?? implode(' \u{2014} ', array_filter([$host, $ip, $role], 'strlen')));
+        $label = (string)($facts['label'] ?? implode(" \u{2014} ", array_filter([$host, $ip, $role], 'strlen')));
         return [
             'scope' => $scope,
             'node_id' => $host,

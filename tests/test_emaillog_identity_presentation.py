@@ -73,6 +73,12 @@ def test_notices_removed():
           'remote explanation is an accessible description, not page text')
 
 
+def test_label_renders_em_dash():
+    php = ("require '%s'; echo OPNsense\\DeviceMonitor\\NodeIdentity::label('h','192.0.2.1','master');" % IDENT)
+    out = subprocess.run(['php', '-r', php], capture_output=True, text=True, timeout=20).stdout
+    check(out.strip() == 'h \u2014 192.0.2.1 \u2014 master', f'label renders a real em dash (got {out!r})')
+
+
 def test_management_address_selection():
     """The rule, proven against fixtures rather than this host's own addresses."""
     import tempfile
@@ -98,6 +104,7 @@ def main():
     test_label_format()
     test_historical_roles_preserved()
     test_notices_removed()
+    test_label_renders_em_dash()
     test_management_address_selection()
     print('EMAIL_LOG_IDENTITY_PRESENTATION=FAIL (%d)' % len(FAILS) if FAILS
           else 'EMAIL_LOG_IDENTITY_PRESENTATION=PASS')

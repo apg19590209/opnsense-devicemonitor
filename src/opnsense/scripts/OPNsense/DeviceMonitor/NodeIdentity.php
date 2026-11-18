@@ -61,7 +61,7 @@ final class NodeIdentity
     public static function label($host, $ip, $role)
     {
         $parts = array_filter([trim((string)$host), trim((string)$ip), trim((string)$role)], 'strlen');
-        return implode(' \u{2014} ', $parts);
+        return implode(" \u{2014} ", $parts);
     }
 
     private static function config()
