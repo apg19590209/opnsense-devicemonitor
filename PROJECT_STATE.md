@@ -2,6 +2,20 @@
 
 ## Current state
 
+**Recovery verification, `.253` catalogue repair and release safeguards — PARTIAL (18 November 2026).**
+`.252` and `.253` pass authenticated reciprocal peer reads and restricted mutation denial; `.253`'s nine
+core catalogues were rebuilt from shipped pristine baselines with a retained rollback backup, and its
+stale ACL was restored to the reviewed `038f44c` file. Local `.23` checks pass (`devices.db`/`email_log.db`
+integrity `ok`; 13 active Email Log rows; installed message retrieval and runtime language acceptance);
+authenticated browser/API acceptance and candidate-bound `.23` evidence remain outstanding because the
+local API requires a valid session/key. Local candidate `1c0c29f` (test-only safeguard addition; payload
+at `7c38af8`/`cc78ce9`) implements explicit source/bundle identity, exact archive membership,
+baseline-removal refusal, and candidate-hash-bound `.23`-then-`.252` acceptance; isolated regressions and
+bundle determinism pass. Bundle `e3ded6f…` is 12,514,253 bytes; its growth is the 10.4 MB of shipped
+pristine catalogues, with no backups, databases, credentials, repository metadata or unintended build
+artifacts. No HA candidate deployment, push, tag or publication occurred. Report:
+`.cline-reports/REPORT-20261118-062453-recovery-safeguards-closeout.md`.
+
 **PR #9 merged into main (18 November 2026).** Merge commit
 `c00426d335c7840ae3876df91bac7b84a5143581` at 2026-11-18 04:00:00Z via merge commit; reviewed head
 `038f44c`, last code change `51fcaf4` (CI `44223883558` success) — only documentation followed.
