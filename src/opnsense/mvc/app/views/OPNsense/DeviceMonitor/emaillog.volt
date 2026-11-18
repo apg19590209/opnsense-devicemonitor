@@ -34,7 +34,7 @@
                         {# Describes the disabled remote action only; no global banner text. #}
                         <span class="sr-only" id="email-log-remote-note"></span>
 
-                        <div class="row" style="margin-bottom:10px;">
+                        <div class="row email-log-filters">
                             <div class="col-sm-3">
                                 <input type="text" id="email-log-search" class="form-control input-sm"
                                        placeholder="{{ devicemonitor_t('Search subject or recipient') }}">
@@ -69,19 +69,21 @@
                                     <option value="unknown">{{ devicemonitor_t('Unknown') }}</option>
                                 </select>
                             </div>
-                            <div class="col-sm-2">
-                                <button id="email-log-export" class="btn btn-default btn-sm">
-                                    <i class="fa fa-download"></i> {{ devicemonitor_t('Export CSV') }}
-                                </button>
-                                <button id="email-log-clear" type="button" class="btn btn-link btn-sm">
-                                    {{ devicemonitor_t('Clear filters') }}
-                                </button>
-                                <button id="email-log-delete-selected" type="button" class="btn btn-default btn-sm"
-                                        disabled>{{ devicemonitor_t('Delete selected') }} (0)</button>
-                                <button id="email-log-delete-all" type="button" class="btn btn-default btn-sm">
-                                    {{ devicemonitor_t('Delete all local entries') }}
-                                </button>
-                            </div>
+                        </div>
+                        {# Actions sit in one wrapping toolbar so every control stays inside the
+                           container; buttons wrap instead of overflowing. #}
+                        <div class="email-log-toolbar" role="toolbar">
+                            <button id="email-log-export" class="btn btn-default btn-sm">
+                                <i class="fa fa-download"></i> {{ devicemonitor_t('Export CSV') }}
+                            </button>
+                            <button id="email-log-clear" type="button" class="btn btn-link btn-sm">
+                                {{ devicemonitor_t('Clear filters') }}
+                            </button>
+                            <button id="email-log-delete-selected" type="button" class="btn btn-default btn-sm"
+                                    disabled>{{ devicemonitor_t('Delete selected') }} (0)</button>
+                            <button id="email-log-delete-all" type="button" class="btn btn-default btn-sm">
+                                {{ devicemonitor_t('Delete all local entries') }}
+                            </button>
                         </div>
 
                         {# One shared column layout for Local, Peer and All nodes: the same
@@ -135,6 +137,25 @@
 </div>
 
 <style>
+    /* Confirmation dialog: ~480px on desktop, never wider than the viewport. */
+    #email-log-delete-modal .email-log-confirm-dialog {
+        width: 480px;
+        max-width: calc(100vw - 32px);
+        margin: 60px auto 16px;
+    }
+    #email-log-delete-modal .modal-body p { line-height: 1.5; margin-bottom: 12px; }
+    #email-log-delete-modal .modal-body { overflow-wrap: anywhere; }
+    @media (max-width: 520px) {
+        #email-log-delete-modal .email-log-confirm-dialog { margin: 16px auto; }
+    }
+    #email-log-local .email-log-filters { margin-bottom: 8px; }
+    #email-log-local .email-log-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+    #email-log-local .email-log-toolbar .btn { margin: 0; }
     /* Shared Email Log column layout. Proportions follow the Local screenshot:
        time and status are compact, node and subject carry the extra width. */
     #email-log-table.email-log-table {
@@ -159,8 +180,10 @@
         word-break: break-word;
         vertical-align: top;
     }
-    #email-log-table.email-log-table td.email-log-actions {
-        white-space: nowrap;
+    /* Actions wrap inside their own column; nothing is hidden or shrunk. */
+    #email-log-table.email-log-table td.email-log-actions .btn {
+        margin: 0 0 2px 0;
+        white-space: normal;
     }
     @media (max-width: 991px) {
         #email-log-table.email-log-table { min-width: 720px; }
@@ -405,7 +428,7 @@
 {# Standard OPNsense confirmation dialog (same structure as core modal confirmations). #}
 <div class="modal fade" id="email-log-delete-modal" tabindex="-1" role="dialog"
      aria-labelledby="email-log-delete-title">
-    <div class="modal-dialog modal-sm" role="document">
+    <div class="modal-dialog email-log-confirm-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header panel-heading">
                 <button type="button" class="close" data-dismiss="modal"
@@ -485,6 +508,8 @@
         var scope = 'local';
         /* Selected local event ids (value = owning node for the confirmation text). */
         var selected = {};
+        /* "hostname — management IP" of this node, used to name it in confirmations. */
+        var localNodeLabel = '';
 
         function syncSelection() {
             $('#email-log-remote-note').text(text.remoteLocked + ' ' + text.selectionRemote);
@@ -642,7 +667,9 @@
                     return facts.label || [facts.node_id, facts.node_ip, facts.role]
                         .filter(function (v) { return v; }).join(' \u2014 ');
                 }
-                var header = text.thisNode + ': ' + nodeLabel(data.local_node || data.node || null);
+                var localFacts = data.local_node || data.node || null;
+                localNodeLabel = nodeLabel(localFacts) || '';
+                var header = text.thisNode + ': ' + localNodeLabel;
                 if (scope !== 'local' && data.peer_node) {
                     header += ' | ' + text.peerPrefix + ': ' + nodeLabel(data.peer_node);
                 }
@@ -678,7 +705,10 @@
                      * recorded when the email was created and is never rewritten. */
                     var originIp = row.origin_ip || row.node_ip || '';
                     var nodeText = (row.scope === 'peer' ? (text.peerPrefix + ' ') : '') + originIp;
-                    if (row.node_role) { nodeText += ' (' + row.node_role + ')'; }
+                    var sentRole = String(row.node_role || '').trim();
+                    if (sentRole !== '' && sentRole.toLowerCase() !== 'unknown') {
+                        nodeText += ' (' + sentRole + ')';
+                    }
                     $tr.append($('<td>').text(nodeText.trim()));
                     $tr.append($('<td>').text(row.notification_type));
                     $tr.append($('<td>').text(row.recipient));
@@ -903,7 +933,7 @@
         /* Both bulk actions use the same standard confirmation dialog. */
         function confirmBulk(mode) {
             var ids = Object.keys(selected);
-            var node = (ids.length && typeof selected[ids[0]] === 'string') ? selected[ids[0]] : 'this node';
+            var node = localNodeLabel || 'this node';
             $pendingDelete = { mode: mode, ids: ids };
             var all = mode === 'all';
             var body = all

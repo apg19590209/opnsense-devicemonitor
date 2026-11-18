@@ -132,7 +132,8 @@ def test_header_clears_fixed_navigation():
     assert 'display: flex' in content and 'flex-direction: column' in content, \
         'content must lay out header/body/footer as a column'
     assert 'calc(100vh - 102px)' in content, 'content capped to the remaining viewport'
-    body = block('.modal-body {')
+    body = css[css.index('#email-log-message-modal .modal-body {'):]
+    body = body[:body.index('}')]
     assert 'overflow-y: auto' in body and 'min-height: 0' in body, 'only the body scrolls'
     assert not re.search(r'(^|[;{\s])height:', body), 'body must not fix its height'
     grouping = css[css.index('modal-header,\n    #email-log-message-modal .modal-footer {'):]

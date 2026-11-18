@@ -57,7 +57,8 @@ def test_wrapping_and_responsive_container():
     table_css = css.split('#email-log-table.email-log-table td,')[1].split('}')[0]
     check('overflow-wrap: anywhere' in table_css, 'values wrap')
     check('word-break: break-word' in table_css, 'long tokens break instead of clipping')
-    check('white-space: nowrap' in css, 'actions stay in one line inside their column')
+    check('white-space: normal' in css[css.index('td.email-log-actions'):][:200],
+          'actions wrap inside their column')
     check('class="table-responsive"' in src, 'table uses the standard responsive container')
     check('display: none' not in css.split('#email-log-table.email-log-table')[1].split('@media')[0],
           'no content is hidden to force alignment')
@@ -86,6 +87,42 @@ def test_banner_follows_scope():
           'All nodes sets its banner before any partial-results note')
 
 
+def test_toolbar_and_actions_containment():
+    src = VIEW.read_text(encoding='utf-8')
+    check('class="email-log-toolbar" role="toolbar"' in src, 'actions live in one toolbar')
+    check('flex-wrap: wrap' in css_block(src), 'toolbar wraps')
+    check('email-log-filters' in src, 'filters have their own row')
+    check('white-space: nowrap' not in css_block(src).split('td.email-log-actions')[1].split('}')[0],
+          'action cells are allowed to wrap')
+    check('overflow: hidden' not in css_block(src), 'nothing is hidden to conceal overflow')
+    check("email-log-table td', 'overflow-wrap: anywhere" not in src, 'no placeholder')
+    check(len(re.findall(r'<col class=', src)) == 8, 'eight columns incl. selection and actions')
+    check(len(re.findall(r'<th[ >]', src)) == 8, 'eight header cells match the colgroup')
+    row = src[src.index('rows.forEach(function (row)'):src.index('$body.append($tr)')]
+    check(row.count('$tr.append(') == 8, 'eight body cells per row')
+
+
+def test_unknown_historical_role_omitted():
+    src = VIEW.read_text(encoding='utf-8')
+    row = src[src.index('rows.forEach(function (row)'):src.index('$body.append($tr)')]
+    check("toLowerCase() !== 'unknown'" in row, 'table omits an unknown historical role')
+    dlg = src[src.index('function openMessage'):]
+    check("toLowerCase() !== 'unknown'" in dlg, 'dialog omits an unknown historical role')
+    check("Role when sent" in src, 'a known role is labelled Role when sent')
+
+
+def test_confirm_dialog_style():
+    css = css_block(VIEW.read_text(encoding='utf-8'))
+    block = css[css.index('.email-log-confirm-dialog'):]
+    block = block[:block.index('}')]
+    check('width: 480px' in block, 'confirmation dialog ~480px')
+    check('max-width: calc(100vw - 32px)' in block, 'confirmation dialog is viewport constrained')
+    src = VIEW.read_text(encoding='utf-8')
+    check('class="modal fade"' in src and 'panel-heading' in src, 'standard OPNsense modal styling kept')
+    check('localNodeLabel' in src, 'confirmation names the owning node')
+    check('email-log-delete-all-confirm' in src, 'delete all keeps its checkbox')
+
+
 def test_empty_state_uses_same_table():
     src = VIEW.read_text(encoding='utf-8')
     empty = src[src.index('id="email-log-empty"'):]
@@ -107,6 +144,9 @@ def main():
     test_wrapping_and_responsive_container()
     test_actions_column()
     test_banner_follows_scope()
+    test_toolbar_and_actions_containment()
+    test_unknown_historical_role_omitted()
+    test_confirm_dialog_style()
     test_empty_state_uses_same_table()
     test_long_content_fixture()
     print('EMAIL_LOG_TABLE_LAYOUT=FAIL (%d)' % len(FAILS) if FAILS else 'EMAIL_LOG_TABLE_LAYOUT=PASS')

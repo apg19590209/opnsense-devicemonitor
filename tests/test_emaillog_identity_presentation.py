@@ -49,12 +49,13 @@ def test_label_format():
 
 def test_historical_roles_preserved():
     view = VIEW.read_text(encoding='utf-8')
-    check("if (row.node_role) { nodeText += ' (' + row.node_role + ')'" in view,
-          'rows show the recorded role from the row itself')
+    check("if (sentRole !== '' && sentRole.toLowerCase() !== 'unknown') {\n                        nodeText += ' (' + sentRole + ')'" in view,
+          'rows show a known recorded role from the row itself')
     check("if (hasSentRole) { metaPairs.push([text.roleWhenSent, sentRole]); }" in view,
           'a recorded role is shown as "Role when sent" only when present')
-    check("row.node_role || " not in view.replace("if (row.node_role) {", ""),
-          'the live role never substitutes a missing recorded role')
+    row = view[view.index('rows.forEach(function (row)'):view.index('$body.append($tr)')]
+    check('row.role' not in row and 'headerRole' not in row,
+          'the live header role never substitutes a missing recorded role')
     ctrl = CTRL.read_text(encoding='utf-8')
     check("'node_role' => (string)$row['node_role']" in ctrl, 'API keeps the stored node_role')
 
