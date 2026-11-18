@@ -1845,3 +1845,10 @@ when evidence is missing. Covered by `tests/test_email_log_delivery_tracking.php
 account could enter Delete/Restore. A dedicated `page-services-devicemonitor-peer` privilege
 (peerpage/peermessage only) plus an explicit write-privilege gate now deny mutations at the
 framework layer; verified live on `.23`, `.252` and `.253`.
+
+## Email Log bulk soft deletion (resolved 18 November 2026)
+
+**Status: resolved.** Local entries can be selected (page-scoped header checkbox) and removed
+with "Delete selected (n)" or "Delete all local entries" through standard confirmations. Bulk
+actions require the write privilege, validate ownership server-side, run in one transaction and
+report the affected count; entries stay restorable until normal retention.
