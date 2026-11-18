@@ -2,6 +2,15 @@
 
 ## Current state
 
+**PR #9 final review (18 November 2026).** Reviewed head `0754bb5` (code head `ea79659`, CI
+`44218707777` success; later commits are documentation only). PR is OPEN and MERGEABLE; no confirmed
+defects in access control, credential handling, migrations, retention or packaging. The user manual
+now documents the Email Log (§16.9: relay status meaning, peer setup, clickable subject, soft
+deletion and restoration). Operator visual PASS is recorded for the Local table and the
+subject-opened popup only. Manual certificate renewal remains due before 2026-12-17; webhook and USB
+findings unchanged. Report:
+`.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
+
 **Email Log bulk selection and soft deletion (18 November 2026).** The shared table layout is
 integrated on `.23`, `.252` and `.253`; local rows are selectable with a header checkbox and
 "Delete selected (n)" / "Delete all local entries" use the standard confirmation dialogs (delete-all
