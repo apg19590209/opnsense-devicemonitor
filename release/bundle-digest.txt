@@ -113,6 +113,12 @@
 #   cc4790de3a3665e82f76af7f893e8fdda8185a3b15eab0258870f8db8303c28f  2027693 bytes
 #       (the prior 2.14.0 candidate identity; superseded by the recovery safeguards and
 #        the packed pristine catalogue baselines, which add repair inputs to the archive)
+#   e3ded6fce723cca1f0aec877d632ba66be8314ab1f3563779d12861990bc7d9c  12514253 bytes
+#       (the earlier safeguards candidate, source 4983c58; superseded by the deployment
+#        gate, per-host acceptance records and exported-source mode contract)
+#   f5144b8eaccdbf0e4941b344c72c7cb84854146f196f3584a6d393b815204217  12509133 bytes
+#       (the pre-packaging-fix build; superseded by including the acceptance tools that the
+#        installer's pinned inputs require)
 version 2.14.0
-bytes 12514253
-sha256 e3ded6fce723cca1f0aec877d632ba66be8314ab1f3563779d12861990bc7d9c
+bytes 12517325
+sha256 b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72

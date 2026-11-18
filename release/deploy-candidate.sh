@@ -48,7 +48,7 @@ tar -xzf "$ARCHIVE" -C "$STAGE"
 python3 "$SCRIPT_DIR/validate-deploy-archive.py" --archive "$ARCHIVE" --identity "$IDENTITY" \
     --source "$SOURCE" --root "$STAGE"
 
-case "$HOST" in OPNsense.internal|192.168.20.23|192.168.20.252|192.168.20.253) : ;; *) echo "ABORT: unsupported host $HOST" >&2; exit 1 ;; esac
+case "$HOST" in OPNsense.internal|OPNsense.home.arpa|192.168.20.23|192.168.20.252|192.168.20.253) : ;; *) echo "ABORT: unsupported host $HOST" >&2; exit 1 ;; esac
 ACCEPTANCE_DIR=$REPO/release/acceptance
 if [ "$HOST" = 192.168.20.252 ]; then
     [ -f "$ACCEPTANCE_DIR/.23-$IDENT_SHA.passed" ] || { echo 'ABORT: .23 acceptance missing for this candidate' >&2; exit 1; }
