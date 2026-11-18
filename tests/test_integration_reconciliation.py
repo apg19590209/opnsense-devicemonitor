@@ -84,7 +84,7 @@ def test_combined_defaults_and_config_loading():
     defaults = json.loads(DEFAULTS.read_text())
     config = defaults["config"]
 
-    assert defaults["version"] == "2.14.0"
+    assert defaults["version"] == "2.15.0"
     for key in (
         "identity_email_enabled",
         "email_reminder_scan",
