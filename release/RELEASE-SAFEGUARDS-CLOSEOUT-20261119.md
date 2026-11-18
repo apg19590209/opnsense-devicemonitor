@@ -31,6 +31,29 @@
 - CI `44404713134` passed at the reviewed head before merge.
 - The workflows that changed are release tooling and test fixtures; their tests exercise real refusal paths, including stale ancestry, altered archives, missing features, missing prior stages and hand-typed evidence.
 
+## CI failure audit — grouped by cause (19 November 2026)
+
+The feature branch had eight failed CI runs and two successful runs. They represent six distinct
+causes; the later successes at `5b3867b` and `294caa3` cover the merge candidate.
+
+| Cause | Runs | Classification | Local preflight should have caught it? | Repeated after diagnosis? | Status |
+|---|---|---|---|---|---|
+| Email Log delivery fixtures used a fixed old date, outside the live one-day observation window on the runner. | `44302961103` (`27aeffe`) | Incorrect test fixture, not runtime behaviour. | Yes: the focused Email Log fixture is cheap to run locally and now runs in preflight. | No. | Resolved by relative timestamps and a live-window assertion. |
+| The candidate test and bundler assumed a local `main`; a PR checkout only has `origin/main`. | `44303269512` (`357f38f`), `44304134493` (`136c52a`) | Incorrect test/deployment-tooling assumption about CI checkout topology. | Yes, with a clean-export build or a checkout without local `main`. | Yes, once for the test helper, then once for the bundler. | Resolved by resolving the integration ref for CI; no gate weakened. |
+| The determinism fixture called a helper that treats a missing `origin/main` as fatal instead of using the clone's head. | `44305339722` (`e3708bf`) | Incorrect test fixture. | Yes: run the test from a detached clone. | No. | Resolved by using the cloned head as the explicit integration ref. |
+| A release-safeguard test still exercised the previous hand-written acceptance format after the ledger became authoritative. | `44303515863` (`2604d55`) | Incorrect/obsolete test path. | Yes: the focused suite failed locally once the new format landed. | No. | Resolved by moving the behavioural stage checks to the execution-ledger suite. |
+| A pinned acceptance helper was added to installer inputs but omitted from the archive allow-list. | `44304691592` (`acd061f`) | Packaging problem. | Yes: the export build plus pinned-input verification catches it. | Yes: the same class recurred once with `results-file.py` at `44404173257` (`acaad79`). | Resolved by packaging both helpers. |
+| Export metadata was needed to reproduce archives in CI; the mode map was not itself shipped. | `44304966659` (`3f68446`) | Packaging/configuration problem. | Yes: the export build and identity comparison catch it. | No. | Resolved by shipping `export-modes.txt`. |
+
+No infrastructure failure was observed. None of these runs changed a host. The final required run
+`44404713134` at reviewed head `294caa3` passed; current `main` also contains the separately tested
+close-out record.
+
+**Small prevention change:** `release/preflight.sh` runs the existing Email Log fixture,
+candidate/deployment/acceptance suites, pinned-input and bundle checks, then builds from a clean
+export before a push. It is an aggregator, not a new test framework. The remaining model-dependent
+step is remembering to run it; the runner does not eliminate that judgment or CI-environment drift.
+
 ## Remaining release work
 
 - Adoption of the newer installer/tooling archive requires a separately authorised sequential deployment and generated host acceptance.
