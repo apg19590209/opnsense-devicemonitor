@@ -50,12 +50,21 @@ python3 "$SCRIPT_DIR/validate-deploy-archive.py" --archive "$ARCHIVE" --identity
 
 case "$HOST" in OPNsense.internal|OPNsense.home.arpa|192.168.20.23|192.168.20.252|192.168.20.253) : ;; *) echo "ABORT: unsupported host $HOST" >&2; exit 1 ;; esac
 ACCEPTANCE_DIR=$REPO/release/acceptance
-if [ "$HOST" = 192.168.20.252 ]; then
-    [ -f "$ACCEPTANCE_DIR/.23-$IDENT_SHA.passed" ] || { echo 'ABORT: .23 acceptance missing for this candidate' >&2; exit 1; }
-fi
-if [ "$HOST" = 192.168.20.253 ]; then
-    [ -f "$ACCEPTANCE_DIR/.252-$IDENT_SHA.passed" ] || { echo 'ABORT: .252 acceptance missing for this candidate' >&2; exit 1; }
-fi
+# The node's address is the stage even when its hostname is the same on both HA nodes.
+case "$HOST" in
+    192.168.20.252)
+        [ -f "$ACCEPTANCE_DIR/.23-$IDENT_SHA.passed" ] || { echo 'ABORT: .23 acceptance missing for this candidate' >&2; exit 1; } ;;
+    192.168.20.253)
+        [ -f "$ACCEPTANCE_DIR/.252-$IDENT_SHA.passed" ] || { echo 'ABORT: .252 acceptance missing for this candidate' >&2; exit 1; } ;;
+    OPNsense.home.arpa)
+        # Both HA hosts share this hostname. A caller deploying by hostname must state the
+        # stage explicitly so a MASTER deployment cannot be mistaken for BACKUP.
+        case "${DM_DEPLOY_STAGE:-}" in
+            .252) [ -f "$ACCEPTANCE_DIR/.23-$IDENT_SHA.passed" ] || { echo 'ABORT: .23 acceptance missing for this candidate' >&2; exit 1; } ;;
+            .253) [ -f "$ACCEPTANCE_DIR/.252-$IDENT_SHA.passed" ] || { echo 'ABORT: .252 acceptance missing for this candidate' >&2; exit 1; } ;;
+            *) echo 'ABORT: hostname deployment requires DM_DEPLOY_STAGE=.252 or .253' >&2; exit 1 ;;
+        esac ;;
+esac
 if [ "$CHECK" = 1 ]; then
     echo "DEPLOYMENT_CHECK_OK source=$SOURCE bundle_sha256=$IDENT_SHA host=$HOST"
     exit 0

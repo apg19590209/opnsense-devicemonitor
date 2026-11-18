@@ -119,6 +119,9 @@
 #   f5144b8eaccdbf0e4941b344c72c7cb84854146f196f3584a6d393b815204217  12509133 bytes
 #       (the pre-packaging-fix build; superseded by including the acceptance tools that the
 #        installer's pinned inputs require)
+#   b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72  12517325 bytes
+#       (accepted on .23/.252/.253 with path-based export mode guessing; superseded by the
+#        Git-index mode map, which restores the install scripts' recorded 0644 mode)
 version 2.14.0
-bytes 12517325
-sha256 b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72
+bytes 12524498
+sha256 d7b628e960d070cf16c36119ca4617877d3ad3a647e587f89845d49dff073896

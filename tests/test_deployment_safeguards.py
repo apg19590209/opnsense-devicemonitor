@@ -83,12 +83,13 @@ def make_tree(tmp):
     return repo, archive, identity, payload, source, feature
 
 
-def gate(repo, archive, identity, host, source, check=True):
+def gate(repo, archive, identity, host, source, check=True, extra_env=None):
     args = ['/bin/sh', str(repo / 'release/deploy-candidate.sh'), str(archive), str(identity),
             '--host', host, '--source', source]
     if check:
         args.append('--check')
-    return run(args, cwd=repo)
+    env = dict(os.environ, **(extra_env or {}))
+    return run(args, cwd=repo, env=env)
 
 
 def test_gate_and_sequence():
@@ -166,6 +167,34 @@ def test_stale_ancestry_is_refused():
               'a stale source worktree cannot reach the deployment gate')
 
 
+def test_master_cannot_precede_backup_acceptance():
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, archive, identity, payload, source, feature = make_tree(tmp)
+        (repo / 'release/acceptance').mkdir(exist_ok=True)
+        # Only .23 exists: MASTER must be refused by both its address and its shared hostname.
+        r = run(['/bin/sh', str(repo / 'release/testbed-acceptance.sh'), '--source', source,
+                 '--identity', str(identity), '--host', '.23'], cwd=repo)
+        check(r.returncode == 0, 'the prerequisite .23 record is created')
+        out = gate(repo, archive, identity, '192.168.20.253', source)
+        check(out.returncode != 0 and '.252 acceptance missing' in out.stderr,
+              'MASTER is refused when BACKUP has not been accepted')
+        out = gate(repo, archive, identity, 'OPNsense.home.arpa', source)
+        check(out.returncode != 0 and 'DM_DEPLOY_STAGE' in out.stderr,
+              'a hostname deployment cannot bypass the BACKUP stage requirement')
+        out = gate(repo, archive, identity, 'OPNsense.home.arpa', source,
+                   extra_env={'DM_DEPLOY_STAGE': '.253'})
+        check(out.returncode != 0 and '.252 acceptance missing' in out.stderr,
+              'hostname MASTER is refused without BACKUP acceptance')
+        r = run(['/bin/sh', str(repo / 'release/testbed-acceptance.sh'), '--source', source,
+                 '--identity', str(identity), '--host', '.252'], cwd=repo)
+        check(r.returncode == 0, 'BACKUP acceptance is created only after .23')
+        out = gate(repo, archive, identity, '192.168.20.253', source)
+        check(out.returncode == 0, 'MASTER is allowed after BACKUP acceptance')
+        out = gate(repo, archive, identity, 'OPNsense.home.arpa', source,
+                   extra_env={'DM_DEPLOY_STAGE': '.253'})
+        check(out.returncode == 0, 'hostname MASTER is allowed after BACKUP acceptance')
+
+
 def test_prior_stage_is_required():
     with tempfile.TemporaryDirectory() as tmp:
         repo, archive, identity, payload, source, feature = make_tree(tmp)
@@ -175,6 +204,21 @@ def test_prior_stage_is_required():
         out = gate(repo, archive, identity, '192.168.20.253', source)
         check(out.returncode != 0 and '.252 acceptance missing' in out.stderr,
               '.253 is refused without .252 acceptance')
+
+
+def test_export_mode_map_matches_git_index():
+    """Export mode metadata must be the Git index, not a path-based guess."""
+    rows = {}
+    for line in (ROOT / 'release/export-modes.txt').read_text().splitlines():
+        if line.strip():
+            mode, path = line.split(maxsplit=1)
+            rows[path] = mode
+    for path in ('install-unattended.sh', 'install.sh', 'uninstall.sh',
+                 'release/merge-opnsense-catalog.sh', 'release/repair-core-catalogues.sh',
+                 'src/opnsense/scripts/OPNsense/DeviceMonitor/notify_failover.php'):
+        actual = run(['git', 'ls-files', '--stage', '--', path], cwd=ROOT).stdout.split()
+        check(actual and actual[0] == rows.get(path),
+              'export mode matches Git for ' + path)
 
 
 def test_unexpected_removal_is_distinct_from_pruning():
@@ -191,8 +235,10 @@ def test_unexpected_removal_is_distinct_from_pruning():
 
 def main():
     test_gate_and_sequence()
+    test_master_cannot_precede_backup_acceptance()
     test_evidence_for_another_candidate_is_refused()
     test_stale_ancestry_is_refused()
+    test_export_mode_map_matches_git_index()
     test_prior_stage_is_required()
     test_unexpected_removal_is_distinct_from_pruning()
     print('DEPLOYMENT_SAFEGUARDS=FAIL (%d)' % len(FAILS) if FAILS else 'DEPLOYMENT_SAFEGUARDS=PASS')

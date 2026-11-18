@@ -60,7 +60,9 @@ if [ "${DM_SOURCE_EXPORT:-0}" != 1 ] && git rev-parse --is-inside-work-tree >/de
     SOURCE=$(git rev-parse HEAD)
 else
     # An exported source has no Git ancestry metadata. It must state its exact source and
-    # still pass the independent manifest baseline and feature checks.
+    # carry the exporter's mode map; a .git directory here would make the two metadata
+    # sources ambiguous.
+    [ ! -e "$REPO/.git" ] || { echo 'ABORT: DM_SOURCE_EXPORT inside a Git checkout is ambiguous' >&2; exit 1; }
     SOURCE=${DM_CANDIDATE_SOURCE:-}
     case "$SOURCE" in *[!0-9a-f]*|'') echo 'ABORT: exported source needs DM_CANDIDATE_SOURCE as a commit SHA' >&2; exit 1;; esac
     [ "${#SOURCE}" -eq 40 ] || { echo 'ABORT: DM_CANDIDATE_SOURCE must be a full commit SHA' >&2; exit 1; }
@@ -113,6 +115,7 @@ printf '%s\n' \
     release/verify-testbed-acceptance.sh \
     release/testbed-acceptance.sh \
     release/record-acceptance.sh \
+    release/export-modes.txt \
     release/validate-deploy-archive.py \
     release/prune-plan.sh \
     release/legacy-targets.txt >> "$LIST"
@@ -137,18 +140,14 @@ while IFS= read -r f; do
     cp -p "$f" "$BUILD/$f"
     if [ "${DM_SOURCE_EXPORT:-0}" != 1 ] && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         mode=$(git ls-files --stage -- "$f" | awk 'NR == 1 { print $1 } END { if (NR != 1) exit 1 }')
+    elif [ "${DM_SOURCE_EXPORT:-0}" = 1 ]; then
+        # Exported sources use the checked-in mode map made from the Git index. A path-based
+        # guess would change archive modes and therefore the published identity.
+        mode=$(awk -F' ' -v p="$f" '$2 == p {print $1; found=1} END {if (!found) exit 1}' "$REPO/release/export-modes.txt") ||
+            { echo "UNSUPPORTED_SOURCE=$f (not in release/export-modes.txt)" >&2; exit 1; }
     else
-        # An exported source records mode in the filesystem only when invoked with the
-        # exporter's deterministic mode convention (DM_SOURCE_EXPORT=1).
-        if [ "${DM_SOURCE_EXPORT:-0}" = 1 ]; then
-            case "$f" in
-                install.sh|install-unattended.sh|uninstall.sh|release/*.sh|release/*.py) mode=100755 ;;
-                *) mode=100644 ;;
-            esac
-        else
-            echo "UNSUPPORTED_SOURCE=$f (no Git metadata; set DM_SOURCE_EXPORT=1)" >&2
-            exit 1
-        fi
+        echo "UNSUPPORTED_SOURCE=$f (no Git metadata; set DM_SOURCE_EXPORT=1)" >&2
+        exit 1
     fi
     case $mode in
         100644) chmod 644 "$BUILD/$f" ;;
