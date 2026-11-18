@@ -8,7 +8,9 @@ with genuine queue IDs (`.252` `C34A74FBE9`, `.253` `08A9439034`) and verify Loc
 identities, remote content/timelines, filters, ordering and CSV on both appliances. A stale `latest.log`
 on `.252` had hidden the relay evidence; the reader now reads dated siblings and skips stale files
 (`cbd3754`, CI `44200893168`). The Local/Peer/All tabs now drive the request scope and rows carry their true origin
-(`d267519`, CI `44202158065`), verified on both appliances. Pagination remains fixture-tested only. Both nodes serve signed
+(`d267519`, CI `44202158065`), verified on both appliances. Node headers now read `hostname — management IP — role` with This node/Peer labels, the management
+address comes from configuration, and rows keep their historical recorded role (`48d459a`).
+Pagination remains fixture-tested only. Both nodes serve signed
 CSRs with verified chains (`.252` expires 2026-12-17 22:53:06Z, `.253` 23:06:55Z; renewal manual).
 A live probe proved the "read-only" peer account could reach Delete/Restore; a dedicated
 `page-services-devicemonitor-peer` privilege (peerpage + peermessage only) and an explicit write
