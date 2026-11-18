@@ -51,8 +51,8 @@ def test_historical_roles_preserved():
     view = VIEW.read_text(encoding='utf-8')
     check("if (row.node_role) { nodeText += ' (' + row.node_role + ')'" in view,
           'rows show the recorded role from the row itself')
-    check("[text.recordedRole, (m.node_ip || '')" in view,
-          'message metadata labels the recorded role')
+    check("if (hasSentRole) { metaPairs.push([text.roleWhenSent, sentRole]); }" in view,
+          'a recorded role is shown as "Role when sent" only when present')
     check("row.node_role || " not in view.replace("if (row.node_role) {", ""),
           'the live role never substitutes a missing recorded role')
     ctrl = CTRL.read_text(encoding='utf-8')

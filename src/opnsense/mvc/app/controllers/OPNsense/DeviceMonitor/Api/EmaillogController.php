@@ -452,6 +452,98 @@ class EmaillogController extends ApiControllerBase
         return $this->setVisibilityAction(true);
     }
 
+    /**
+     * POST /api/devicemonitor/emaillog/bulkdelete
+     *
+     * Soft-delete the selected local entries. Only event ids that exist in this
+     * node's own log are touched; remote rows are rejected rather than ignored so a
+     * caller mixing them in gets an explicit error.
+     */
+    public function bulkdeleteAction()
+    {
+        return $this->bulkAction('delete');
+    }
+
+    /** POST /api/devicemonitor/emaillog/restorebulk */
+    public function restorebulkAction()
+    {
+        return $this->bulkAction('restore');
+    }
+
+    private function bulkAction($mode)
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed', 'message' => 'POST required'];
+        }
+        if (!$this->requireWriteAccess()) {
+            $this->response->setStatusCode(403, 'Forbidden');
+            return ['result' => 'forbidden', 'message' => 'Write access is required to change the email log.'];
+        }
+        $raw = $this->request->getPost('event_ids', null, []);
+        if (!is_array($raw)) {
+            $raw = preg_split('/[,\s]+/', (string)$raw, -1, PREG_SPLIT_NO_EMPTY);
+        }
+        $ids = [];
+        foreach ((array)$raw as $id) {
+            $id = strtolower(trim((string)$id));
+            if ($id === '') {
+                continue;
+            }
+            if (!preg_match('/^[0-9a-f]{32}$/', $id)) {
+                return ['result' => 'failed', 'message' => 'One of the selected entries is not a local record'];
+            }
+            $ids[$id] = true;
+        }
+        if (empty($ids)) {
+            return ['result' => 'failed', 'message' => 'No entries were selected'];
+        }
+        $log = $this->recorder();
+        /* Ownership: every selected id must exist in this node's own log. */
+        $known = [];
+        foreach ($log->query(['visibility' => 'all'], 500, 0) as $row) {
+            $known[(string)$row['event_id']] = true;
+        }
+        foreach (array_keys($ids) as $id) {
+            if (!isset($known[$id])) {
+                $this->response->setStatusCode(403, 'Forbidden');
+                return ['result' => 'forbidden', 'message' => 'A selected entry does not belong to this node'];
+            }
+        }
+        $changed = $mode === 'delete'
+            ? $log->markDeletedMany(array_keys($ids))
+            : $log->restoreMany(array_keys($ids));
+        if ($changed === null) {
+            return ['result' => 'failed', 'message' => $log->lastDiagnostic() ?: 'No change'];
+        }
+        return ['result' => 'ok', 'affected' => $changed, 'requested' => count($ids)];
+    }
+
+    /**
+     * POST /api/devicemonitor/emaillog/deleteall
+     *
+     * Soft-delete every active entry in this node's own log, regardless of the
+     * current filters or page. The client must echo the explicit confirmation.
+     */
+    public function deleteallAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['result' => 'failed', 'message' => 'POST required'];
+        }
+        if (!$this->requireWriteAccess()) {
+            $this->response->setStatusCode(403, 'Forbidden');
+            return ['result' => 'forbidden', 'message' => 'Write access is required to change the email log.'];
+        }
+        if ((string)$this->request->getPost('confirm', 'string', '') !== 'delete-all') {
+            return ['result' => 'failed', 'message' => 'Explicit confirmation is required'];
+        }
+        $log = $this->recorder();
+        $changed = $log->markAllDeleted();
+        if ($changed === null) {
+            return ['result' => 'failed', 'message' => $log->lastDiagnostic() ?: 'No change'];
+        }
+        return ['result' => 'ok', 'affected' => $changed];
+    }
+
     /** POST /api/devicemonitor/emaillog/restore */
     public function restoreAction()
     {

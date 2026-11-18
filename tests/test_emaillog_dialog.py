@@ -64,7 +64,7 @@ def test_padded_body_and_sections():
     src_all = src
     assert "$('#email-log-message-title').text(m.subject" in src_all, \
         'the subject must become the dialog heading'
-    for label in ("text.recordedRole", "'Time'", "'Type'", "'Status'"):
+    for label in ("['Node'", "'Time'", "'Type'", "'Status'"):
         assert label in src_all, f'{label} missing from metadata'
     assert "['Time', formatTimestamp(m.created_utc, m.created_local)]" in src_all, \
         'metadata shows the converted instant, not the raw UTC text'

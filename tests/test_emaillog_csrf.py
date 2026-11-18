@@ -52,12 +52,14 @@ def test_all_requests_use_the_shared_helper():
         '/api/devicemonitor/emaillog/exportcsv',
         '/api/devicemonitor/emaillog/delete',
         '/api/devicemonitor/emaillog/restore',
+        '/api/devicemonitor/emaillog/bulkdelete',
+        '/api/devicemonitor/emaillog/deleteall',
     }
     for endpoint in endpoints:
         assert endpoint in src, f'{endpoint} missing from the page'
     posts = src.count("type: 'POST'")
     # search/combined share one call path, export one, and delete/restore one.
-    assert posts == 4, f'expected 4 ajax POSTs (search/combined share one), found {posts}'
+    assert posts == 5, f'expected 5 ajax POSTs (search/combined share one), found {posts}'
     code = '\n'.join(ln for ln in src.splitlines() if not ln.strip().startswith(('*', '/*', '//', '<!--')))
     assert 'setRequestHeader' not in code, 'the page must not hand-roll token handling'
     assert 'csrf_token' not in code, 'the page must not read the token directly'

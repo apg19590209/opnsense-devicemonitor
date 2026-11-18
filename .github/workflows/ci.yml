@@ -180,6 +180,12 @@ jobs:
       - name: Validate email log visibility and soft deletion
         run: php tests/test_email_log_visibility.php
 
+      - name: Validate email log bulk deletion on temporary databases
+        run: php tests/test_email_log_bulk.php
+
+      - name: Validate email log bulk selection and access contract
+        run: python3 tests/test_emaillog_bulk_access.py
+
       - name: Validate email log timestamps follow the plugin convention
         run: python3 tests/test_emaillog_timestamps.py
 

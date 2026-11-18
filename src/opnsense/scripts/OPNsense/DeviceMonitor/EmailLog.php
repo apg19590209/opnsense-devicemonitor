@@ -597,6 +597,97 @@ class EmailLog
     }
 
     /**
+     * Soft-delete a set of own entries in one transaction and report what actually
+     * changed. Identifiers that are malformed or unknown are ignored, never guessed;
+     * rows that are already deleted are not counted twice.
+     */
+    public function markDeletedMany(array $eventIds)
+    {
+        return $this->setVisibilityMany($eventIds, true);
+    }
+
+    /** Restore a set of own entries in one transaction. */
+    public function restoreMany(array $eventIds)
+    {
+        return $this->setVisibilityMany($eventIds, false);
+    }
+
+    /** Soft-delete every active entry in this node's own log. */
+    public function markAllDeleted()
+    {
+        try {
+            $db = $this->connect();
+            $this->ensureSchema($db);
+            $db->exec('BEGIN IMMEDIATE');
+            $now = gmdate('Y-m-d H:i:s');
+            $db->exec("UPDATE email_log SET deleted_utc = '$now', updated_utc = '$now' WHERE deleted_utc = ''");
+            $changed = $db->changes();
+            /* One timeline event per affected entry, inside the same transaction. */
+            $db->exec("INSERT INTO email_log_events (event_id, occurred_utc, stage, status, detail, evidence, source)
+                SELECT event_id, '$now', 'bulk', 'deleted', 'Deleted with the Delete all local entries action',
+                    'bulk delete all', 'operator' FROM email_log WHERE deleted_utc = '$now'");
+            $db->exec('COMMIT');
+            $db->close();
+            return $changed;
+        } catch (\Throwable $e) {
+            try { $db->exec('ROLLBACK'); } catch (\Throwable $ignored) {}
+            $this->fail($e->getMessage());
+            return null;
+        }
+    }
+
+    private function setVisibilityMany(array $eventIds, $deleted)
+    {
+        $valid = [];
+        foreach ($eventIds as $id) {
+            $id = strtolower(trim((string)$id));
+            if (preg_match('/^[0-9a-f]{32}$/', $id)) {
+                $valid[$id] = true;
+            }
+        }
+        if (empty($valid)) {
+            $this->fail('No valid entry was selected');
+            return null;
+        }
+        try {
+            $db = $this->connect();
+            $this->ensureSchema($db);
+            $db->exec('BEGIN IMMEDIATE');
+            $now = gmdate('Y-m-d H:i:s');
+            $stmt = $db->prepare('UPDATE email_log SET deleted_utc = :d, updated_utc = :u
+                WHERE event_id = :e AND deleted_utc ' . ($deleted ? '= \'\'' : '<> \'\''));
+            $ev = $db->prepare("INSERT INTO email_log_events (event_id, occurred_utc, stage, status, detail, evidence, source)
+                VALUES (:e, :o, 'bulk', :s, :d, 'bulk selection', 'operator')");
+            $changed = 0;
+            foreach (array_keys($valid) as $eventId) {
+                $stmt->bindValue(':d', $deleted ? $now : '', SQLITE3_TEXT);
+                $stmt->bindValue(':u', $now, SQLITE3_TEXT);
+                $stmt->bindValue(':e', $eventId, SQLITE3_TEXT);
+                $stmt->reset();
+                $stmt->execute();
+                if ($db->changes() < 1) {
+                    continue;
+                }
+                $changed++;
+                $ev->bindValue(':e', $eventId, SQLITE3_TEXT);
+                $ev->bindValue(':o', $now, SQLITE3_TEXT);
+                $ev->bindValue(':s', $deleted ? 'deleted' : 'restored', SQLITE3_TEXT);
+                $ev->bindValue(':d', $deleted ? 'Deleted with the Delete selected action'
+                    : 'Restored with the restore action', SQLITE3_TEXT);
+                $ev->reset();
+                $ev->execute();
+            }
+            $db->exec('COMMIT');
+            $db->close();
+            return $changed;
+        } catch (\Throwable $e) {
+            try { $db->exec('ROLLBACK'); } catch (\Throwable $ignored) {}
+            $this->fail($e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Set or clear the visibility marker. Message content, the event id, the
      * transport status and the complete timeline are never touched, and the
      * 30-day retention policy is unchanged: a deleted entry still expires with

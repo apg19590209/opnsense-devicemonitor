@@ -28,9 +28,12 @@ def test_shared_layout():
     src = VIEW.read_text(encoding='utf-8')
     check('<colgroup>' in src, 'table declares a colgroup')
     cols = re.findall(r'<col class="(email-log-col-[a-z]+)"/>', src)
-    check(cols == ['email-log-col-time', 'email-log-col-node', 'email-log-col-type',
-                   'email-log-col-recipient', 'email-log-col-subject',
+    check(cols == ['email-log-col-select', 'email-log-col-time', 'email-log-col-node',
+                   'email-log-col-type', 'email-log-col-recipient', 'email-log-col-subject',
                    'email-log-col-status', 'email-log-col-actions'], f'column order {cols}')
+    css_total = css_block(src)
+    widths_sum = sum(int(w) for w in re.findall(r'email-log-col-[a-z]+ \{ width: (\d+)%; \}', css_total))
+    check(widths_sum == 100, f'selection column does not change the 100% total (got {widths_sum})')
     css = css_block(src)
     check('table-layout: fixed' in css, 'fixed table layout')
     widths = {}

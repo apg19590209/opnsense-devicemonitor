@@ -76,6 +76,11 @@
                                 <button id="email-log-clear" type="button" class="btn btn-link btn-sm">
                                     {{ devicemonitor_t('Clear filters') }}
                                 </button>
+                                <button id="email-log-delete-selected" type="button" class="btn btn-default btn-sm"
+                                        disabled>{{ devicemonitor_t('Delete selected') }} (0)</button>
+                                <button id="email-log-delete-all" type="button" class="btn btn-default btn-sm">
+                                    {{ devicemonitor_t('Delete all local entries') }}
+                                </button>
                             </div>
                         </div>
 
@@ -85,6 +90,7 @@
                         <div class="table-responsive">
                         <table class="table table-condensed table-hover email-log-table" id="email-log-table">
                             <colgroup>
+                                <col class="email-log-col-select"/>
                                 <col class="email-log-col-time"/>
                                 <col class="email-log-col-node"/>
                                 <col class="email-log-col-type"/>
@@ -95,6 +101,8 @@
                             </colgroup>
                             <thead>
                             <tr>
+                                <th class="email-log-select-head"><input type="checkbox" id="email-log-select-all"
+                                        aria-label="{{ devicemonitor_t('Select all eligible entries on this page') }}"/></th>
                                 {# Static translated label; individual values carry their own zone suffix. #}
                                 <th id="email-log-time-heading">{{ devicemonitor_t('Time (local)') }}</th>
                                 <th>{{ devicemonitor_t('Node') }}</th>
@@ -134,13 +142,16 @@
         width: 100%;
         margin-bottom: 0;
     }
+    /* The selection column is taken from the actions column only, so the other
+     * proportions of the agreed layout are unchanged. */
+    #email-log-table.email-log-table .email-log-col-select { width: 3%; }
     #email-log-table.email-log-table .email-log-col-time { width: 16%; }
     #email-log-table.email-log-table .email-log-col-node { width: 19%; }
     #email-log-table.email-log-table .email-log-col-type { width: 10%; }
     #email-log-table.email-log-table .email-log-col-recipient { width: 17%; }
     #email-log-table.email-log-table .email-log-col-subject { width: 22%; }
     #email-log-table.email-log-table .email-log-col-status { width: 10%; }
-    #email-log-table.email-log-table .email-log-col-actions { width: 6%; }
+    #email-log-table.email-log-table .email-log-col-actions { width: 3%; }
     /* Values wrap rather than being clipped; fonts are unchanged. */
     #email-log-table.email-log-table td,
     #email-log-table.email-log-table th {
@@ -405,6 +416,12 @@
             </div>
             <div class="modal-body" style="padding:24px;">
                 <p id="email-log-delete-text"></p>
+                <div id="email-log-delete-all-extra" style="display:none;">
+                    <label>
+                        <input type="checkbox" id="email-log-delete-all-confirm"/>
+                        {{ devicemonitor_t('I understand this removes every active local entry from view') }}
+                    </label>
+                </div>
             </div>
             <div class="modal-footer" style="padding:16px 24px;">
                 <button type="button" class="btn btn-default" data-dismiss="modal">{{ devicemonitor_t('Cancel') }}</button>
@@ -432,12 +449,17 @@
             allNodes: {{ lang.query('Showing records from this node and the configured peer.')|json_encode(15) }},
             partialData: {{ lang.query('Incomplete data:')|json_encode(15) }},
             viewFailed: {{ lang.query('Could not load this message')|json_encode(15) }},
-            eventSingular: {{ lang.query('event')|json_encode(15) }},
+            keepNotice: {{ lang.query('Entries are hidden and can be restored until the normal 30-day retention removes them. Actual emails and mail queues are unaffected.')|json_encode(15) }},
+            deleteSelectedTitle: {{ lang.query('Delete selected entries')|json_encode(15) }},
+            deleteAllTitle: {{ lang.query('Delete all local entries')|json_encode(15) }},
+            deleteSelectedBody: {{ lang.query('Remove %count% selected local entr%plural% from the active log on %node%?')|json_encode(15) }},
+            deleteAllBody: {{ lang.query('Remove every active local entry on %node% from the active log, including entries outside the current filters and page?')|json_encode(15) }},
+            selectionRemote: {{ lang.query('Remote entries cannot be selected from this node.')|json_encode(15) }},            eventSingular: {{ lang.query('event')|json_encode(15) }},
             eventPlural: {{ lang.query('events')|json_encode(15) }},
             noDelivery: {{ lang.query('No delivery details recorded')|json_encode(15) }},
             peerPrefix: {{ lang.query('Peer')|json_encode(15) }},
             thisNode: {{ lang.query('This node')|json_encode(15) }},
-            recordedRole: {{ lang.query('Recorded role')|json_encode(15) }},
+            roleWhenSent: {{ lang.query('Role when sent')|json_encode(15) }},
             queueId: {{ lang.query('Queue ID')|json_encode(15) }},
             delete: {{ lang.query('Delete')|json_encode(15) }},
             restore: {{ lang.query('Restore')|json_encode(15) }},
@@ -461,6 +483,37 @@
         }
 
         var scope = 'local';
+        /* Selected local event ids (value = owning node for the confirmation text). */
+        var selected = {};
+
+        function syncSelection() {
+            $('#email-log-remote-note').text(text.remoteLocked + ' ' + text.selectionRemote);
+            var count = Object.keys(selected).length;
+            $('#email-log-delete-selected')
+                .prop('disabled', count === 0 || scope !== 'local')
+                .text({{ lang.query('Delete selected')|json_encode(15) }} + ' (' + count + ')');
+            var boxes = $('.email-log-select:not(:disabled)');
+            var all = boxes.length > 0 && boxes.filter(':checked').length === boxes.length;
+            $('#email-log-select-all').prop('checked', all).prop('indeterminate',
+                !all && boxes.filter(':checked').length > 0);
+            $('#email-log-delete-all').prop('disabled', scope !== 'local');
+        }
+
+        /* Any change of scope, filters or page drops the selection. */
+        function clearSelection() {
+            selected = {};
+            syncSelection();
+        }
+
+        $('#email-log-select-all').on('change', function () {
+            var on = $(this).prop('checked');
+            $('.email-log-select:not(:disabled)').each(function () {
+                $(this).prop('checked', on);
+                var id = $(this).attr('data-event-id');
+                if (on) { selected[id] = true; } else { delete selected[id]; }
+            });
+            syncSelection();
+        });
 
         /* Plugin timestamp convention: stored UTC, rendered once in the browser's
          * own timezone with its DST rules and native abbreviation. When the browser
@@ -599,8 +652,25 @@
                 } else {
                     $('#email-log-diagnostic').hide();
                 }
+                selected = {};
+                syncSelection();
                 rows.forEach(function (row) {
                     var $tr = $('<tr>');
+                    /* Only local records can be selected; remote rows are read-only
+                     * here and say so on the control itself. */
+                    var remoteRow = row.scope === 'peer';
+                    var $select = $('<input type="checkbox"/>').addClass('email-log-select')
+                        .attr('data-event-id', row.event_id)
+                        .prop('disabled', remoteRow)
+                        .on('change', function () {
+                            if ($(this).prop('checked')) { selected[row.event_id] = row.node_ip || true; }
+                            else { delete selected[row.event_id]; }
+                            syncSelection();
+                        });
+                    if (remoteRow) {
+                        $select.attr('title', text.remoteLocked).attr('aria-describedby', 'email-log-remote-note');
+                    }
+                    $tr.append($('<td>').addClass('email-log-select-cell').append($select));
                     $tr.append($('<td>').text(formatTimestamp(row.created_utc, row.created_local)));
                     /* Attribute the row to the node that produced it: both HA nodes share
                      * the hostname, so the origin IP is what distinguishes them. */
@@ -717,11 +787,19 @@
                 $('#email-log-message-error').hide().text('');
                 $('#email-log-message-title').text(m.subject || text.unknown);
                 var $meta = $('#email-log-message-meta').empty();
-                [['Recipient', m.recipient],
-                 [text.recordedRole, (m.node_ip || '') + (m.node_role ? ' (' + m.node_role + ')' : '')],
-                 ['Time', formatTimestamp(m.created_utc, m.created_local)],
-                 ['Type', m.notification_type],
-                 ['Status', statusLabel(m.status)]].forEach(function (pair) {
+                /* The role recorded when the email was sent is shown only when one was
+                 * actually captured; the node's current role is never substituted. */
+                var sentRole = String(m.node_role || '').trim();
+                var hasSentRole = sentRole !== '' && sentRole.toLowerCase() !== 'unknown';
+                var metaPairs = [
+                    ['Recipient', m.recipient],
+                    ['Node', m.node_ip],
+                    ['Time', formatTimestamp(m.created_utc, m.created_local)],
+                    ['Type', m.notification_type],
+                    ['Status', statusLabel(m.status)]
+                ];
+                if (hasSentRole) { metaPairs.push([text.roleWhenSent, sentRole]); }
+                metaPairs.forEach(function (pair) {
                     $meta.append($('<dt>').text(pair[0])).append($('<dd>').text(pair[1] || ''));
                 });
                 // Body is plain text; .text() prevents any markup or remote load.
@@ -779,11 +857,12 @@
             if (next === scope) { return; }
             scope = next;
             page = 1;
+            clearSelection();
             load();
         });
 
-        $('#email-log-type, #email-log-status, #email-log-visibility').on('change', function () { page = 1; load(); });
-        $('#email-log-search').on('input', function () { page = 1; load(); });
+        $('#email-log-type, #email-log-status, #email-log-visibility').on('change', function () { page = 1; clearSelection(); load(); });
+        $('#email-log-search').on('input', function () { page = 1; clearSelection(); load(); });
 
         /* Clear filters resets search, type and status to their defaults, returns to
          * page one and refreshes once. The Local/Peer/All scope and the Active/
@@ -794,6 +873,7 @@
             $('#email-log-status').val('');
             $('#email-log-type, #email-log-status').selectpicker('refresh');
             page = 1;
+            clearSelection();
             load();
         });
 
@@ -820,11 +900,67 @@
                 .modal('show');
         }
 
+        /* Both bulk actions use the same standard confirmation dialog. */
+        function confirmBulk(mode) {
+            var ids = Object.keys(selected);
+            var node = (ids.length && typeof selected[ids[0]] === 'string') ? selected[ids[0]] : 'this node';
+            $pendingDelete = { mode: mode, ids: ids };
+            var all = mode === 'all';
+            var body = all
+                ? text.deleteAllBody.replace('%node%', node)
+                : text.deleteSelectedBody.replace('%count%', ids.length)
+                    .replace('%plural%', ids.length === 1 ? 'y' : 'ies').replace('%node%', node);
+            $('#email-log-delete-title').text(all ? text.deleteAllTitle : text.deleteSelectedTitle);
+            $('#email-log-delete-text').text(body + ' ' + text.keepNotice);
+            $('#email-log-delete-all-extra').toggle(all);
+            $('#email-log-delete-all-confirm').prop('checked', false);
+            $('#email-log-delete-confirm')
+                .toggleClass('btn-danger', true).toggleClass('btn-primary', false)
+                .prop('disabled', all)
+                .text(text.delete);
+            $('#email-log-delete-modal').modal('show');
+        }
+
+        $('#email-log-delete-all-confirm').on('change', function () {
+            $('#email-log-delete-confirm').prop('disabled', !$(this).prop('checked'));
+        });
+
+        $('#email-log-delete-selected').on('click', function () {
+            if (Object.keys(selected).length) { confirmBulk('selected'); }
+        });
+        $('#email-log-delete-all').on('click', function () { confirmBulk('all'); });
+
         $('#email-log-delete-confirm').on('click', function () {
             var pending = $pendingDelete;
             $pendingDelete = null;
             $('#email-log-delete-modal').modal('hide');
-            if (pending) { changeVisibility(pending.eventId, pending.deleted); }
+            if (!pending) { return; }
+            if (pending.mode) {
+                $.ajax({
+                    url: pending.mode === 'all'
+                        ? '/api/devicemonitor/emaillog/deleteall'
+                        : '/api/devicemonitor/emaillog/bulkdelete',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: pending.mode === 'all'
+                        ? { confirm: 'delete-all' }
+                        : { 'event_ids[]': pending.ids }
+                }).fail(function (xhr) {
+                    $('#email-log-diagnostic').show().text(text.changeFailed +
+                        ' (HTTP ' + (xhr && xhr.status ? xhr.status : '?') + ')');
+                }).done(function (data) {
+                    if (!data || data.result !== 'ok') {
+                        $('#email-log-diagnostic').show().text(text.changeFailed +
+                            (data && data.message ? ': ' + data.message : ''));
+                        return;
+                    }
+                    $('#email-log-diagnostic').hide();
+                    clearSelection();
+                    load();
+                });
+                return;
+            }
+            changeVisibility(pending.eventId, pending.deleted);
         });
 
         /* Soft delete/restore only: the server changes the visibility marker and
@@ -851,8 +987,8 @@
                 load();
             });
         }
-        $('#email-log-prev').on('click', function () { if (page > 1) { page--; load(); } });
-        $('#email-log-next').on('click', function () { page++; load(); });
+        $('#email-log-prev').on('click', function () { if (page > 1) { page--; clearSelection(); load(); } });
+        $('#email-log-next').on('click', function () { page++; clearSelection(); load(); });
         $('#email-log-export').on('click', function () {
             $.ajax({
                 url: '/api/devicemonitor/emaillog/exportcsv',
