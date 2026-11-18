@@ -81,8 +81,23 @@ printf '%s\n' \
     release/release-inputs.sha256 \
     release/verify-release-inputs.sh \
     release/merge-opnsense-catalog.sh \
+    release/repair-core-catalogues.sh \
+    release/pristine-catalogues.sha256 \
+    release/manifests/v${VERSION}-runtime.manifest \
+    release/verify-candidate.sh \
+    release/feature-set.txt \
+    release/verify-bundle.py \
+    release/verify-fetched-bundle.sh \
+    release/verify-testbed-acceptance.sh \
+    release/testbed-acceptance.sh \
     release/prune-plan.sh \
     release/legacy-targets.txt >> "$LIST"
+# The packed pristine baselines are a repair input, not a runtime target. They are shipped one
+# file per supported locale (nine in total) and are neither installed nor listed in the record.
+for lang in $SUPPORTED_LOCALES; do
+    [ "$lang" = en_US ] && continue
+    printf '%s\n' "release/core-catalogues/${lang}.OPNsense.mo" >> "$LIST"
+done
 
 sort -u "$LIST" -o "$LIST"
 echo "allow-list entries: $(wc -l < "$LIST" | tr -d ' ')"
@@ -226,5 +241,17 @@ if [ ! -s "$OUT" ]; then
     echo "BUNDLE_EMPTY=$OUT (0 bytes)" >&2
     exit 1
 fi
+SOURCE=$(git rev-parse HEAD)
+printf 'version=%s\nsource=%s\nbytes=%s\nsha256=%s\n' "$VERSION" "$SOURCE" \
+    "$(wc -c < "$OUT" | tr -d ' ')" "$(digest "$OUT")" > "$OUT.identity"
+chmod 644 "$OUT.identity"
+# The built archive is verified against the list it was built from and the files in the
+# fetched checkout; an incomplete or altered archive never gets a success line.
+python3 "$SCRIPT_DIR/verify-bundle.py" --archive "$OUT" --list "$LIST" \
+    --identity "$OUT.identity" --source "$SOURCE" || {
+    echo "BUNDLE_VERIFY_FAILED=$OUT" >&2
+    exit 1
+}
 echo "archive bytes     : $(wc -c < "$OUT" | tr -d ' ')"
 printf 'bundle sha256: %s\n' "$(digest "$OUT")"
+printf 'bundle identity: %s\n' "$OUT.identity"

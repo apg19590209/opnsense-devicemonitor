@@ -104,8 +104,8 @@ def test_bundler_runs_the_guard():
 def test_promotion_needs_acceptance():
     script = ROOT / 'release/verify-testbed-acceptance.sh'
     text = script.read_text()
-    check('release/bundle-digest.txt' in text and 'feature_files' in text,
-          'the promotion gate reads the recorded digest and the verified feature count')
+    check('release/bundle-digest.txt' in text and 'feature_files' in text and 'stage=.252' in text,
+          'the promotion gate reads the recorded digest, verifies target files, and requires .252')
     with tempfile.TemporaryDirectory() as tmp:
         repo = Path(tmp) / 'repo'
         shutil.copytree(ROOT / 'release', repo / 'release')
@@ -114,23 +114,101 @@ def test_promotion_needs_acceptance():
         version = __import__('json').loads((ROOT / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json')
                                            .read_text())['version']
         digest = re.search(r'^sha256 ([0-9a-f]{64})$', (repo / 'release/bundle-digest.txt').read_text(), re.M).group(1)
-        env = dict(os.environ, DM_ACCEPTANCE_MARKER_DIR=str(Path(tmp) / 'markers'))
-        missing = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh')], env=env)
-        check(missing.returncode != 0, 'promotion is refused with no evidence file')
+        source = run(['git', 'rev-parse', 'HEAD'], cwd=ROOT).stdout.strip()
+        env = dict(os.environ, DM_ACCEPTANCE_MARKER_DIR=str(Path(tmp) / 'markers'), GIT_DIR=str(ROOT / '.git'))
         ev = Path(tmp) / 'ev.txt'
-        ev.write_text(f'version={version}\nbundle_sha256={digest}\ntestbed=192.0.20.1\nfeature_files=0\nresult=PASS\n')
-        out = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
-        check(out.returncode != 0, 'promotion is refused when the feature set was not verified')
-        ev.write_text(f'version={version}\nbundle_sha256={digest}\ntestbed=192.0.20.1\nfeature_files=10\nresult=FAIL\n')
-        out = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
-        check(out.returncode != 0, 'promotion is refused when the testbed result is not PASS')
-        ev.write_text(f'version={version}\nbundle_sha256={"1" * 64}\ntestbed=192.0.20.1\nfeature_files=10\nresult=PASS\n')
-        out = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
-        check(out.returncode != 0, 'promotion is refused when the digest differs from the record')
-        ev.write_text(f'version={version}\nbundle_sha256={digest}\ntestbed=192.0.20.1\nfeature_files=10\nresult=PASS\n')
-        out = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
-        check(out.returncode == 0 and 'TESTBED_ACCEPTANCE_OK' in out.stdout,
-              'a complete, matching, passing evidence file allows promotion')
+        def write(stage23=True, stage252=True, sha=digest, front_sha=digest, src=source):
+            body = [f'version={version}', f'source={src}', f'bundle_sha256={sha}',
+                    'feature_files=10']
+            if stage23:
+                body.append(f'stage=.23 testbed=192.168.20.23 bundle_sha256={sha} result=PASS feature_files=10')
+            if stage252:
+                body.append(f'stage=.252 host=192.168.20.252 bundle_sha256={front_sha} result=PASS feature_files=10 after=.23')
+            body.append('result=PASS')
+            ev.write_text('\n'.join(body) + '\n')
+        done = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh')], env=env)
+        check(done.returncode != 0, 'promotion is refused with no evidence file')
+        write(stage23=False, stage252=True)
+        done = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
+        check(done.returncode != 0, 'promotion is refused when .23 acceptance is missing')
+        write(stage23=True, stage252=False)
+        done = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
+        check(done.returncode != 0, 'promotion is refused when .252 acceptance is missing')
+        write(stage23=True, stage252=True, front_sha='1' * 64)
+        done = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
+        check(done.returncode != 0, 'a .252 marker for a different candidate is refused')
+        write()
+        done = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
+        check(done.returncode == 0 and 'TESTBED_ACCEPTANCE_OK' in done.stdout,
+              'a candidate-bound .23 then .252 PASS allows promotion')
+
+
+def make_bundle(tmp, version='9.9.9', source=None):
+    repo = Path(tmp) / 'repo'
+    (repo / 'release').mkdir(parents=True)
+    (repo / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor').mkdir(parents=True)
+    (repo / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json').write_text(
+        '{"version": "%s"}' % version)
+    for name in ('verify-bundle.py', 'verify-fetched-bundle.sh', 'feature-set.txt'):
+        shutil.copy(ROOT / 'release' / name, repo / 'release' / name)
+    data = Path(tmp)
+    (data / 'feature.php').write_text('feature\n')
+    (data / 'runtime.py').write_text('runtime\n')
+    listing = Path(tmp) / 'list.txt'
+    listing.write_text('feature.php\nruntime.py\n')
+    archive = Path(tmp) / 'bundle.tar.gz'
+    import io, tarfile
+    with tarfile.open(archive, 'w:gz', format=tarfile.USTAR_FORMAT) as tar:
+        for name in ('feature.php', 'runtime.py'):
+            tar.add(data / name, arcname=name)
+    import hashlib
+    identity = Path(tmp) / 'bundle.tar.gz.identity'
+    identity.write_text(f'version={version}\nsource={source or "a" * 40}\n'
+                        f'bytes={archive.stat().st_size}\nsha256={hashlib.sha256(archive.read_bytes()).hexdigest()}\n')
+    return repo, archive, listing, identity
+
+
+def test_fetched_bundle_identity_and_completeness():
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, archive, listing, identity = make_bundle(tmp)
+        done = run(['sh', str(repo / 'release/verify-fetched-bundle.sh'), str(archive),
+                    '--source', 'a' * 40, '--identity', str(identity), '--list', str(listing)],
+                   cwd=tmp)
+        check(done.returncode == 0 and 'BUNDLE_VERIFIED' in done.stdout,
+              'the fetched archive is accepted only with its explicit identity and complete membership')
+        done = run(['sh', str(repo / 'release/verify-fetched-bundle.sh'), str(archive),
+                    '--source', 'b' * 40, '--identity', str(identity), '--list', str(listing)],
+                   cwd=tmp)
+        check(done.returncode != 0 and 'source' in done.stderr,
+              'a bundle from a different source SHA is refused')
+        # Rebuild without one member while keeping the identity: the archive must be refused.
+        import tarfile
+        trimmed = Path(tmp) / 'trimmed.tar.gz'
+        with tarfile.open(archive, 'r:gz') as old, tarfile.open(trimmed, 'w:gz', format=tarfile.USTAR_FORMAT) as new:
+            new.addfile(old.getmember('feature.php'), old.extractfile('feature.php'))
+        trimmed.replace(archive)
+        import hashlib
+        raw = archive.read_bytes()
+        identity.write_text(f'version=9.9.9\nsource={"a" * 40}\nbytes={len(raw)}\n'
+                            f'sha256={hashlib.sha256(raw).hexdigest()}\n')
+        done = run(['sh', str(repo / 'release/verify-fetched-bundle.sh'), str(archive),
+                    '--source', 'a' * 40, '--identity', str(identity), '--list', str(listing)],
+                   cwd=tmp)
+        check(done.returncode != 0 and 'membership' in done.stderr,
+              'an archive missing a required member is refused, not treated as an older release')
+
+
+def test_manifest_cannot_lose_a_baseline_target():
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, manifest, features = make_repo(tmp)
+        (repo / 'release/manifests').mkdir(exist_ok=True)
+        (repo / 'release/manifests/v9.9.9-runtime.manifest').write_text(manifest.read_text())
+        keep = [l for l in manifest.read_text().splitlines() if 'EmailLog.php' not in l]
+        manifest.write_text(''.join(l + '\n' for l in keep))
+        git(repo, 'add', '-A'); git(repo, 'commit', '-qm', 'manifest removal')
+        out = verify(repo)
+        check(out.returncode != 0 and 'lost a baseline target' in out.stderr,
+              'a manifest that removes a previously shipped row is refused')
 
 
 def main():
@@ -139,6 +217,8 @@ def main():
     test_missing_feature_is_rejected()
     test_bundler_runs_the_guard()
     test_promotion_needs_acceptance()
+    test_fetched_bundle_identity_and_completeness()
+    test_manifest_cannot_lose_a_baseline_target()
     print('RELEASE_SAFEGUARDS=FAIL (%d)' % len(FAILS) if FAILS else 'RELEASE_SAFEGUARDS=PASS')
     return 1 if FAILS else 0
 

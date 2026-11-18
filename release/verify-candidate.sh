@@ -52,6 +52,24 @@ VERSION=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["versi
 MANIFEST=release/v${VERSION}-runtime.manifest
 [ -f "$MANIFEST" ] || { echo "ABORT: manifest $MANIFEST missing" >&2; exit 1; }
 
+# Removal guard. The manifest is append-oriented; replacing a row can legitimately be a
+# feature change, but silently losing a row is exactly how the stale v2.15.0 candidate
+# dropped every Email Log file. A baseline for each released line is kept under
+# release/manifests/, and every baseline target must remain. Older baselines are retained so a
+# later version cannot quietly drop a previously shipped file.
+for baseline in release/manifests/*-runtime.manifest; do
+    [ -f "$baseline" ] || continue
+    unstable=0
+    while read -r hash mode source target; do
+        [ -n "$source" ] || { unstable=1; continue; }
+        if ! awk -v s="$source" '$3 == s { found = 1 } END { exit !found }' "$MANIFEST"; then
+            echo "ABORT: manifest lost a baseline target from ${baseline##*/}: $source" >&2
+            unstable=1
+        fi
+    done < "$baseline"
+    [ "$unstable" = 0 ] || exit 1
+done
+
 for spec in $FEATURES; do
     path=${spec%%:*}
     minimum=${spec##*:}
