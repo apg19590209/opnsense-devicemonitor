@@ -1,6 +1,6 @@
 # FINAL REPORT — Email Log release approval package
 
-**Status: READY FOR RELEASE APPROVAL, NOT RELEASED.** This package proposes Device Monitor **v2.15.0** from current `main` (`6687756`) using the merged release safeguards. It is not deployed, tagged or published.
+**Status: PARTIAL (STOPPED BEFORE DEPLOYMENT; HOST PRESERVED).** The v2.15.0 approval package and exact-head CI are complete; no host deployment, acceptance transfer, tag or publication occurred. During preparation an unauthorised `.252` move of `email_log.db` was issued; it was restored immediately from the existing consistent snapshot and verified byte-identical (`de99a51c…`, two records). The sequence was stopped before deployment rather than proceeding after that operator error.
 
 ## Proposed version
 
@@ -32,6 +32,18 @@ Fresh acceptance is required for archive **`aa1270ed…`**. The installed hosts 
 5. Obtain explicit release approval, then tag, publish and attach the archive plus checksums.
 
 Manual certificate renewal remains due before 2026-12-17. Webhook destination/TLS and the parked USB finding are unchanged. No host deployment, tag or publication is included in this package.
+
+## Staged acceptance — stopped before first installation (19 November 2026)
+
+**Candidate approval:** v2.15.0 at source `b0e8355`, archive `aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f`, 96 members. The package branch head is `53808c4`; its additional change covers the published 2.14.0 predecessor and does not alter the approved archive bytes. Exact-head CI **`44415417408` passed**. PR **#14** is open for repository-policy review; it has not been merged.
+
+**Pre-deployment checks completed:** archive identity and source match; complete membership and required Email Log files; 21/21 pinned inputs; release manifest 51/51 and all eleven accepted predecessor upgrades pass; merged preflight passes, including two byte-identical clean-export builds.
+
+**No stage was deployed.** `.23` acceptance did not start. `.252` remains healthy and on the previously accepted runtime: install record `7f0d4861…`; `devices.db` and `email_log.db` integrity `ok`; `email_log.db` restored to snapshot hash `de99a51c…`; daemon running; CARP BACKUP/advskew 100. `.253` was not contacted for deployment and retains MASTER/advskew 0. No temporary test account or Email Log test email was created.
+
+**Stop condition:** the unauthorised `.252` database move was an operator-side preparation mistake. Although the file was restored and verified, deployment was not allowed to proceed after it. The approved archive remains undeployed and its acceptance is not transferred to any host.
+
+**Exact release action required:** after an explicit confirmation that the restored `.252` state is acceptable, authorise a fresh sequential `.23` → `.252` → `.253` deployment of archive `aa1270ed…` through the enforced entry point, followed by generated per-host acceptance. Merge, tag and publication remain separately unauthorised.
 
 ## Action for Tony to approve
 
