@@ -14,7 +14,7 @@ export LC_ALL
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 REPO=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 cd "$REPO"
-INSTALLER_SHA=229419a29e956c0f1273f3596915058f817d1cb8182226bc56474deb69053582
+INSTALLER_SHA=f9c10fafdfe77953e07c448a336a4a6fd06f380ba92d1c5504d5027c20352082
 INPUTS_SHA=8ab307aaca4951724d8095c942fb92d7b391b1e66b43f174032522f0cdb36bc6
 [ "$#" -ge 2 ] || { echo 'usage: deploy-candidate.sh ARCHIVE IDENTITY --host HOST --source SHA [--check]' >&2; exit 2; }
 ARCHIVE=$1
@@ -48,26 +48,47 @@ tar -xzf "$ARCHIVE" -C "$STAGE"
 python3 "$SCRIPT_DIR/validate-deploy-archive.py" --archive "$ARCHIVE" --identity "$IDENTITY" \
     --source "$SOURCE" --root "$STAGE"
 
-case "$HOST" in OPNsense.internal|OPNsense.home.arpa|192.168.20.23|192.168.20.252|192.168.20.253) : ;; *) echo "ABORT: unsupported host $HOST" >&2; exit 1 ;; esac
-ACCEPTANCE_DIR=$REPO/release/acceptance
-# The node's address is the stage even when its hostname is the same on both HA nodes.
+# One deployment entry point: the management address identifies the host and its stage. Both
+# HA nodes share a hostname, so hostname input cannot distinguish BACKUP from MASTER.
 case "$HOST" in
-    192.168.20.252)
-        [ -f "$ACCEPTANCE_DIR/.23-$IDENT_SHA.passed" ] || { echo 'ABORT: .23 acceptance missing for this candidate' >&2; exit 1; } ;;
-    192.168.20.253)
-        [ -f "$ACCEPTANCE_DIR/.252-$IDENT_SHA.passed" ] || { echo 'ABORT: .252 acceptance missing for this candidate' >&2; exit 1; } ;;
-    OPNsense.home.arpa)
-        # Both HA hosts share this hostname. A caller deploying by hostname must state the
-        # stage explicitly so a MASTER deployment cannot be mistaken for BACKUP.
+    192.168.20.23) DEPLOY_STAGE=.23 ;;
+    192.168.20.252) DEPLOY_STAGE=.252 ;;
+    192.168.20.253) DEPLOY_STAGE=.253 ;;
+    OPNsense.internal) DEPLOY_STAGE=.23 ;;
+    *)
         case "${DM_DEPLOY_STAGE:-}" in
-            .252) [ -f "$ACCEPTANCE_DIR/.23-$IDENT_SHA.passed" ] || { echo 'ABORT: .23 acceptance missing for this candidate' >&2; exit 1; } ;;
-            .253) [ -f "$ACCEPTANCE_DIR/.252-$IDENT_SHA.passed" ] || { echo 'ABORT: .252 acceptance missing for this candidate' >&2; exit 1; } ;;
-            *) echo 'ABORT: hostname deployment requires DM_DEPLOY_STAGE=.252 or .253' >&2; exit 1 ;;
+            .23|.252|.253) DEPLOY_STAGE=$DM_DEPLOY_STAGE ;;
+            *) echo 'ABORT: deployment must use the node management address' >&2; exit 1 ;;
         esac ;;
 esac
+case "$DEPLOY_STAGE" in
+    .252) [ -f "$REPO/release/acceptance/.23-$IDENT_SHA.passed" ] || { echo 'ABORT: .23 acceptance missing for this candidate' >&2; exit 1; } ;;
+    .253) [ -f "$REPO/release/acceptance/.252-$IDENT_SHA.passed" ] || { echo 'ABORT: .252 acceptance missing for this candidate' >&2; exit 1; } ;;
+esac
+LEDGER=$REPO/release/execution-ledger.jsonl
+record() {
+    python3 "$SCRIPT_DIR/execution-ledger.py" record --ledger "$LEDGER" --stage "$DEPLOY_STAGE" \
+        --host "$DEPLOY_HOST" --source "$SOURCE" --bundle "$IDENT_SHA" \
+        --phase "$1" --check "$2" --result "$3"
+}
+DEPLOY_HOST=$(python3 - "$DEPLOY_STAGE" <<'PY2'
+import sys
+print({'.23':'192.168.20.23','.252':'192.168.20.252','.253':'192.168.20.253'}[sys.argv[1]])
+PY2
+)
 if [ "$CHECK" = 1 ]; then
-    echo "DEPLOYMENT_CHECK_OK source=$SOURCE bundle_sha256=$IDENT_SHA host=$HOST"
+    record deploy deploy PASS
+    echo "DEPLOYMENT_CHECK_OK source=$SOURCE bundle_sha256=$IDENT_SHA host=$HOST stage=$DEPLOY_STAGE"
     exit 0
 fi
 cd "$STAGE"
-/bin/sh install-unattended.sh --host "$HOST"
+INSTALL_RESULT=0
+/bin/sh install-unattended.sh --host "$HOST" || INSTALL_RESULT=$?
+record deploy "$([ "$INSTALL_RESULT" = 0 ] && echo PASS || echo FAIL)" deploy,installed-hashes
+[ "$INSTALL_RESULT" = 0 ] || {
+    # The installer has already performed its own guarded rollback and verification.
+    exit "$INSTALL_RESULT"
+}
+# Installed hashes are part of the installer's verified plan. Functional, database, settings,
+# role and peer checks are executed by the host verifier and recorded in the append-only
+# execution ledger. record-acceptance.sh refuses to create acceptance without every PASS.

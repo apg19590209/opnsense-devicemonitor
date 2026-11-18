@@ -44,6 +44,8 @@ def make_tree(tmp):
         ('release/record-acceptance.sh', 'release/record-acceptance.sh'),
         ('release/validate-deploy-archive.py', 'release/validate-deploy-archive.py'),
         ('release/testbed-acceptance.sh', 'release/testbed-acceptance.sh'),
+        ('release/execution-ledger.py', 'release/execution-ledger.py'),
+        ('release/verify-testbed-acceptance.sh', 'release/verify-testbed-acceptance.sh'),
         ('release/verify-testbed-acceptance.sh', 'release/verify-testbed-acceptance.sh'),
         ('release/feature-set.txt', 'release/feature-set.txt'),
     ):
@@ -83,6 +85,27 @@ def make_tree(tmp):
     return repo, archive, identity, payload, source, feature
 
 
+def isolated_accept(repo, identity, source, stage):
+    """Record the full required check set for a synthetic host, then request acceptance."""
+    import hashlib
+    archive = Path(str(identity)[:-9])
+    digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+    host = {'.23': '192.168.20.23', '.252': '192.168.20.252', '.253': '192.168.20.253'}[stage]
+    checks = ('deploy,installed-hashes,records,authenticated-search,authenticated-message,'
+              'authenticated-csv,mutation-denial,database-integrity,settings,daemon,catalogue')
+    if stage != '.23':
+        checks += ',certificates,role,peer'
+    ledger = repo / 'release/execution-ledger.jsonl'
+    rec = run(['python3', str(repo / 'release/execution-ledger.py'), 'record', '--ledger', str(ledger),
+               '--stage', stage, '--host', host, '--source', source, '--bundle', digest,
+               '--phase', 'deploy', '--checks', checks, '--result', 'PASS'])
+    if rec.returncode != 0:
+        return rec
+    return run(['python3', str(repo / 'release/execution-ledger.py'), 'accept', '--ledger', str(ledger),
+                '--stage', stage, '--host', host, '--source', source, '--bundle', digest,
+                '--identity', str(identity), '--out', str(repo / 'release/acceptance' / (stage + '-' + digest + '.passed'))])
+
+
 def gate(repo, archive, identity, host, source, check=True, extra_env=None):
     args = ['/bin/sh', str(repo / 'release/deploy-candidate.sh'), str(archive), str(identity),
             '--host', host, '--source', source]
@@ -118,13 +141,15 @@ def test_gate_and_sequence():
         check(out.returncode != 0, 'altered archive bytes are refused')
         # Sequential acceptance records.
         (repo / 'release/acceptance').mkdir(exist_ok=True)
-        r = run(['/bin/sh', str(repo / 'release/testbed-acceptance.sh'), '--source', source,
-                 '--identity', str(identity), '--host', '.23'], cwd=repo)
+        r = isolated_accept(repo, identity, source, '.23')
         check(r.returncode == 0, '.23 acceptance is recorded')
+        # MASTER before BACKUP is refused even when .23 exists.
+        out = gate(repo, archive, identity, '192.168.20.253', source)
+        check(out.returncode != 0 and '.252 acceptance missing' in out.stderr,
+              'MASTER is refused before BACKUP acceptance')
         out = gate(repo, archive, identity, '192.168.20.252', source)
         check(out.returncode == 0, '.252 is allowed after .23')
-        r = run(['/bin/sh', str(repo / 'release/testbed-acceptance.sh'), '--source', source,
-                 '--identity', str(identity), '--host', '.252'], cwd=repo)
+        r = isolated_accept(repo, identity, source, '.252')
         check(r.returncode == 0, '.252 acceptance is recorded')
         out = gate(repo, archive, identity, '192.168.20.253', source)
         check(out.returncode == 0, '.253 is allowed after .252')
@@ -172,21 +197,19 @@ def test_master_cannot_precede_backup_acceptance():
         repo, archive, identity, payload, source, feature = make_tree(tmp)
         (repo / 'release/acceptance').mkdir(exist_ok=True)
         # Only .23 exists: MASTER must be refused by both its address and its shared hostname.
-        r = run(['/bin/sh', str(repo / 'release/testbed-acceptance.sh'), '--source', source,
-                 '--identity', str(identity), '--host', '.23'], cwd=repo)
+        r = isolated_accept(repo, identity, source, '.23')
         check(r.returncode == 0, 'the prerequisite .23 record is created')
         out = gate(repo, archive, identity, '192.168.20.253', source)
         check(out.returncode != 0 and '.252 acceptance missing' in out.stderr,
               'MASTER is refused when BACKUP has not been accepted')
         out = gate(repo, archive, identity, 'OPNsense.home.arpa', source)
-        check(out.returncode != 0 and 'DM_DEPLOY_STAGE' in out.stderr,
+        check(out.returncode != 0 and ('management address' in out.stderr or '.252 acceptance missing' in out.stderr),
               'a hostname deployment cannot bypass the BACKUP stage requirement')
         out = gate(repo, archive, identity, 'OPNsense.home.arpa', source,
                    extra_env={'DM_DEPLOY_STAGE': '.253'})
         check(out.returncode != 0 and '.252 acceptance missing' in out.stderr,
               'hostname MASTER is refused without BACKUP acceptance')
-        r = run(['/bin/sh', str(repo / 'release/testbed-acceptance.sh'), '--source', source,
-                 '--identity', str(identity), '--host', '.252'], cwd=repo)
+        r = isolated_accept(repo, identity, source, '.252')
         check(r.returncode == 0, 'BACKUP acceptance is created only after .23')
         out = gate(repo, archive, identity, '192.168.20.253', source)
         check(out.returncode == 0, 'MASTER is allowed after BACKUP acceptance')
