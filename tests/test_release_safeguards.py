@@ -64,7 +64,13 @@ def verify(repo, *extra):
 
 
 def test_current_tree_passes():
-    out = run(['sh', str(ROOT / 'release/verify-candidate.sh'), '--ancestor', 'main']
+    # CI checks out a PR head without a local main. The integration ref is origin/main there;
+    # the local workstation uses main. The gate itself is unchanged.
+    if run(['git', 'rev-parse', '--verify', '--quiet', 'main'], cwd=ROOT).returncode == 0:
+        ancestor = 'main'
+    else:
+        ancestor = 'origin/main'
+    out = run(['sh', str(ROOT / 'release/verify-candidate.sh'), '--ancestor', ancestor]
               + sum([['--min-features', f.strip()] for f in (ROOT / 'release/feature-set.txt').read_text().splitlines()
                      if f.strip() and not f.startswith('#')], []), cwd=ROOT)
     check(out.returncode == 0, f'the real candidate passes ({out.stderr.strip()[:80]})')
