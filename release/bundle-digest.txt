@@ -128,6 +128,8 @@
 #       (pre-review evidence packaging; superseded by generated-evidence enforcement)
 #   6072c240b4879835a3aaeba0062f55faabf25cbf0fe4b3ff2b2d040e144561a6  12546514 bytes
 #       (pre-acceptance-check packaging; superseded because the pinned check file was absent)
+#   4f5e2ff8646faca55d4539f21942f6d670161eb75a15399b0ace992a1b2634a5  12550098 bytes
+#       (CI-tested packaging before the generated-evidence and acceptance-check review fixes)
 version 2.14.0
-bytes 12550098
-sha256 4f5e2ff8646faca55d4539f21942f6d670161eb75a15399b0ace992a1b2634a5
+bytes 12552146
+sha256 fd2361cd2dc513d841e069c3d915f1c139ad72131752dfd4f4be4a2f4fae921d

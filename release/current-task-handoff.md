@@ -4,7 +4,7 @@ Objective: complete Email Log recovery and release safeguards; prevention review
 
 Authority: local commits only; no push, merge, tag or publication; deploy only to the authorised stage.
 
-Pinned hosted archive: b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72; release-tool candidate: 4f5e2ff8646faca55d4539f21942f6d670161eb75a15399b0ace992a1b2634a5
+Pinned hosted archive: b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72; release-tool candidate: fd2361cd2dc513d841e069c3d915f1c139ad72131752dfd4f4be4a2f4fae921d
 Source: 202d6efd4c126f85393116e569e72931d936efdc
 
 - .23: historical acceptance marker exists; no generated-evidence ledger record
