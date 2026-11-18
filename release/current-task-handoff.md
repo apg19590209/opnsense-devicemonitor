@@ -1,6 +1,6 @@
 # Current task handoff
 
-Objective: complete Email Log recovery and release safeguards.
+Objective: complete Email Log recovery and release safeguards; prevention review closed.
 
 Authority: local commits only; no push, merge, tag or publication; deploy only to the authorised stage.
 
