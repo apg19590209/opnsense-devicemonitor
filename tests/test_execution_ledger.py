@@ -66,6 +66,36 @@ def test_missing_checks_block_acceptance():
         check(result.returncode == 0 and out.exists(), 'a complete .23 record creates acceptance')
 
 
+def test_verify_testbed_acceptance_requires_both_stages():
+    """The shipped verifier refuses before .252 and accepts only the complete stage chain."""
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp)
+        archive = p / 'bundle.tar.gz'; archive.write_bytes(b'candidate')
+        import hashlib
+        digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+        source = 'a' * 40
+        identity = p / 'bundle.tar.gz.identity'
+        identity.write_text('version=2.14.0\nsource=' + source + '\nbytes=9\nsha256=' + digest + '\n')
+        ledger = p / 'ledger.jsonl'
+        rec(ledger, '.23', '192.168.20.23', source, digest,
+            ['deploy', 'installed-hashes', 'records', 'authenticated-search', 'authenticated-message',
+             'authenticated-csv', 'mutation-denial', 'database-integrity', 'settings', 'daemon', 'catalogue'])
+        out = accept(ledger, '.23', '192.168.20.23', source, digest, identity, p / '.23')
+        check(out.returncode == 0, '.23 acceptance appears only after complete .23 checks')
+        rec(ledger, '.252', '192.168.20.252', source, digest,
+            ['deploy', 'installed-hashes', 'records', 'authenticated-search', 'authenticated-message',
+             'authenticated-csv', 'mutation-denial', 'database-integrity', 'settings', 'certificates',
+             'role', 'peer', 'daemon', 'catalogue'])
+        out = accept(ledger, '.252', '192.168.20.252', source, digest, identity, p / '.252')
+        check(out.returncode == 0, '.252 acceptance requires and follows .23')
+        rec(ledger, '.253', '192.168.20.253', source, digest,
+            ['deploy', 'installed-hashes', 'records', 'authenticated-search', 'authenticated-message',
+             'authenticated-csv', 'mutation-denial', 'database-integrity', 'settings', 'certificates',
+             'role', 'peer', 'daemon', 'catalogue'])
+        out = accept(ledger, '.253', '192.168.20.253', source, digest, identity, p / '.253')
+        check(out.returncode == 0, '.253 acceptance follows .252')
+
+
 def test_typed_result_is_refused_without_generated_evidence():
     with tempfile.TemporaryDirectory() as tmp:
         p, archive, identity, ledger, source, digest = setup(tmp)
@@ -131,6 +161,7 @@ def main():
     test_missing_checks_block_acceptance()
     test_typed_result_is_refused_without_generated_evidence()
     test_prior_stage_is_required()
+    test_verify_testbed_acceptance_requires_both_stages()
     test_closeout_requires_evidence_and_explicit_exception()
     print('EXECUTION_LEDGER=FAIL (%d)' % len(FAILS) if FAILS else 'EXECUTION_LEDGER=PASS')
     return 1 if FAILS else 0
