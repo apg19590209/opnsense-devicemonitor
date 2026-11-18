@@ -198,6 +198,27 @@ def test_fetched_bundle_identity_and_completeness():
               'an archive missing a required member is refused, not treated as an older release')
 
 
+def test_joint_manifest_and_archive_removal_is_refused():
+    """Remove a feature from both the manifest and the archive; the candidate must fail."""
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, manifest, features = make_repo(tmp)
+        original = manifest.read_text()
+        (repo / 'release/manifests').mkdir()
+        (repo / 'release/manifests/v9.9.9-runtime.manifest').write_text(original)
+        # The archive's allow-list is the manifest; the feature list is the independent
+        # completeness contract. Both lose the same Email Log path in one commit.
+        manifest.write_text(''.join(l + '\n' for l in original.splitlines()
+                                    if 'EmailLog.php' not in l))
+        feature_file = repo / 'release/feature-set.txt'
+        feature_file.write_text(''.join(l + '\n' for l in feature_file.read_text().splitlines()
+                                        if 'EmailLog.php' not in l))
+        git(repo, 'add', '-A')
+        git(repo, 'commit', '-qm', 'manifest, archive and feature set lose one feature')
+        out = verify(repo)
+        check(out.returncode != 0 and 'lost a baseline target' in out.stderr,
+              'a jointly incomplete manifest and archive are refused')
+
+
 def test_manifest_cannot_lose_a_baseline_target():
     with tempfile.TemporaryDirectory() as tmp:
         repo, manifest, features = make_repo(tmp)
@@ -218,6 +239,7 @@ def main():
     test_bundler_runs_the_guard()
     test_promotion_needs_acceptance()
     test_fetched_bundle_identity_and_completeness()
+    test_joint_manifest_and_archive_removal_is_refused()
     test_manifest_cannot_lose_a_baseline_target()
     print('RELEASE_SAFEGUARDS=FAIL (%d)' % len(FAILS) if FAILS else 'RELEASE_SAFEGUARDS=PASS')
     return 1 if FAILS else 0
