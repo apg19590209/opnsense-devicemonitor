@@ -45,7 +45,9 @@ INPUTS=$(printf '%s\n' \
     "release/verify-bundle.py" \
     "release/verify-fetched-bundle.sh" \
     "release/verify-testbed-acceptance.sh" \
-    "release/testbed-acceptance.sh" | sort -u)
+    "release/testbed-acceptance.sh" \
+    "release/record-acceptance.sh" \
+    "release/validate-deploy-archive.py" | sort -u)
 
 # Fail before writing anything: a half-written checksum file is worse than none.
 for path in $INPUTS; do

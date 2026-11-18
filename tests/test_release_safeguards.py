@@ -102,45 +102,46 @@ def test_bundler_runs_the_guard():
 
 
 def test_promotion_needs_acceptance():
+    """The stage records are hash-bound; .252 cannot be reached without .23, and vice versa."""
     script = ROOT / 'release/verify-testbed-acceptance.sh'
     text = script.read_text()
-    check('release/bundle-digest.txt' in text and 'feature_files' in text and 'stage=.252' in text,
-          'the promotion gate reads the recorded digest, verifies target files, and requires .252')
+    check('release/acceptance' in text and '.252' in text and '.253' in text,
+          'the promotion gate reads per-host acceptance records and requires .252')
     with tempfile.TemporaryDirectory() as tmp:
         repo = Path(tmp) / 'repo'
         shutil.copytree(ROOT / 'release', repo / 'release')
         shutil.copytree(ROOT / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor',
                         repo / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor')
-        version = __import__('json').loads((ROOT / 'src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json')
-                                           .read_text())['version']
-        digest = re.search(r'^sha256 ([0-9a-f]{64})$', (repo / 'release/bundle-digest.txt').read_text(), re.M).group(1)
-        source = run(['git', 'rev-parse', 'HEAD'], cwd=ROOT).stdout.strip()
-        env = dict(os.environ, DM_ACCEPTANCE_MARKER_DIR=str(Path(tmp) / 'markers'), GIT_DIR=str(ROOT / '.git'))
-        ev = Path(tmp) / 'ev.txt'
-        def write(stage23=True, stage252=True, sha=digest, front_sha=digest, src=source):
-            body = [f'version={version}', f'source={src}', f'bundle_sha256={sha}',
-                    'feature_files=10']
-            if stage23:
-                body.append(f'stage=.23 testbed=192.168.20.23 bundle_sha256={sha} result=PASS feature_files=10')
-            if stage252:
-                body.append(f'stage=.252 host=192.168.20.252 bundle_sha256={front_sha} result=PASS feature_files=10 after=.23')
-            body.append('result=PASS')
-            ev.write_text('\n'.join(body) + '\n')
-        done = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh')], env=env)
-        check(done.returncode != 0, 'promotion is refused with no evidence file')
-        write(stage23=False, stage252=True)
-        done = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
-        check(done.returncode != 0, 'promotion is refused when .23 acceptance is missing')
-        write(stage23=True, stage252=False)
-        done = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
-        check(done.returncode != 0, 'promotion is refused when .252 acceptance is missing')
-        write(stage23=True, stage252=True, front_sha='1' * 64)
-        done = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
-        check(done.returncode != 0, 'a .252 marker for a different candidate is refused')
-        write()
-        done = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), str(ev)], env=env)
-        check(done.returncode == 0 and 'TESTBED_ACCEPTANCE_OK' in done.stdout,
-              'a candidate-bound .23 then .252 PASS allows promotion')
+        archive = Path(tmp) / 'bundle.tar.gz'
+        archive.write_bytes(b'candidate')
+        digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+        source = 'a' * 40
+        identity = Path(tmp) / 'bundle.tar.gz.identity'
+        identity.write_text('version=2.14.0\n' + f'source={source}\nbytes={archive.stat().st_size}\nsha256={digest}\n')
+        (repo / 'release/acceptance').mkdir(exist_ok=True)
+        def record(host, sha=digest):
+            path = repo / 'release/acceptance' / f'{host}-{sha}.passed'
+            path.write_text(f'version=2.14.0\nsource={source}\nbundle_sha256={sha}\nhost={host}\nresult=PASS\n')
+        check(run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), '--source', source,
+                   '--identity', str(identity), '--through', '.23'], cwd=repo).returncode != 0,
+              'promotion is refused with no .23 record')
+        record('.23')
+        check(run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), '--source', source,
+                   '--identity', str(identity), '--through', '.252'], cwd=repo).returncode != 0,
+              'promotion is refused without .252')
+        record('.252')
+        done = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), '--source', source,
+                    '--identity', str(identity), '--through', '.252'], cwd=repo)
+        check(done.returncode == 0 and 'ACCEPTANCE_OK_252' in done.stdout,
+              'candidate-bound .23 then .252 PASS allows the next stage')
+        other = '1' * 64
+        for stale in (repo / 'release/acceptance').glob('.*-%s.passed' % digest):
+            stale.unlink()
+        record('.23', other)
+        record('.252', other)
+        done = run(['sh', str(repo / 'release/verify-testbed-acceptance.sh'), '--source', source,
+                    '--identity', str(identity), '--through', '.252'], cwd=repo)
+        check(done.returncode != 0, 'records for another candidate hash are refused')
 
 
 def make_bundle(tmp, version='9.9.9', source=None):
