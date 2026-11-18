@@ -130,6 +130,8 @@
 #       (pre-acceptance-check packaging; superseded because the pinned check file was absent)
 #   4f5e2ff8646faca55d4539f21942f6d670161eb75a15399b0ace992a1b2634a5  12550098 bytes
 #       (CI-tested packaging before the generated-evidence and acceptance-check review fixes)
+#   fd2361cd2dc513d841e069c3d915f1c139ad72131752dfd4f4be4a2f4fae921d  12552146 bytes
+#       (review build before the final acceptance-input pins were regenerated)
 version 2.14.0
 bytes 12552146
-sha256 fd2361cd2dc513d841e069c3d915f1c139ad72131752dfd4f4be4a2f4fae921d
+sha256 4187a952f5d1e7cf96cd3b869ee328ca7a9c4dbb22af3634d0bba4f4f28b3a05
