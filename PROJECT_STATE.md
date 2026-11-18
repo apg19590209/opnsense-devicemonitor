@@ -6,9 +6,10 @@
 `.252` and `.253` pass authenticated reciprocal peer reads and restricted mutation denial; `.253`'s nine
 core catalogues were rebuilt from shipped pristine baselines with a retained rollback backup, and its
 stale ACL was restored to the reviewed `038f44c` file. Local `.23` checks pass (`devices.db`/`email_log.db`
-integrity `ok`; 13 active Email Log rows; installed message retrieval and runtime language acceptance);
-authenticated browser/API acceptance and candidate-bound `.23` evidence remain outstanding because the
-local API requires a valid session/key. Local candidate `1c0c29f` (test-only safeguard addition; payload
+integrity `ok`; 13 active Email Log rows; installed message retrieval and runtime language acceptance).
+Tony's screenshots give scoped visual acceptance of the recovered `038f44c` build (13 active rows,
+message dialog, header selection, and delete/delete-all confirmations); automated authenticated API
+checks and candidate-bound `.23`/`.252` evidence for the safeguards candidate remain outstanding. Local candidate `1c0c29f` (test-only safeguard addition; payload
 at `7c38af8`/`cc78ce9`) implements explicit source/bundle identity, exact archive membership,
 baseline-removal refusal, and candidate-hash-bound `.23`-then-`.252` acceptance; isolated regressions and
 bundle determinism pass. Bundle `e3ded6f…` is 12,514,253 bytes; its growth is the 10.4 MB of shipped
