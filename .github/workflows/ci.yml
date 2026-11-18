@@ -278,6 +278,9 @@ jobs:
       - name: Validate prune backup, delete and rollback
         run: python3 tests/test_prune_apply.py
 
+      - name: Validate release candidate safeguards
+        run: python3 tests/test_release_safeguards.py
+
       - name: Validate the pinned install inputs
         run: python3 tests/test_release_inputs.py
 

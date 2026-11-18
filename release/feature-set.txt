@@ -1,0 +1,14 @@
+# Runtime files that make up the Email Log feature (one manifest path per line).
+# Used by verify-candidate.sh and the release-safeguard regression test so a manifest
+# that silently drops the feature cannot be bundled or promoted. Paths are matched as
+# substrings of the manifest's source column.
+src/opnsense/scripts/OPNsense/DeviceMonitor/EmailLog.php
+src/opnsense/scripts/OPNsense/DeviceMonitor/EmailLogAggregate.php
+src/opnsense/scripts/OPNsense/DeviceMonitor/EmailTransport.php
+src/opnsense/scripts/OPNsense/DeviceMonitor/PeerClient.php
+src/opnsense/scripts/OPNsense/DeviceMonitor/NodeIdentity.php
+src/opnsense/scripts/OPNsense/DeviceMonitor/PluginTimestamps.php
+src/opnsense/scripts/OPNsense/DeviceMonitor/observe_email_log.php
+src/opnsense/scripts/OPNsense/DeviceMonitor/prune_email_log.php
+src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/emaillog.volt
+src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/EmaillogController.php

@@ -40,6 +40,23 @@ LIST=${DM_BUNDLE_LIST:-/tmp/dm-bundle-list.txt}
 
 cd "$REPO"
 
+# 0. Candidate identity: the tree must descend from the integration branch and its
+#    manifest must carry the Email Log feature set. A candidate cut from a stale main
+#    once reached a testbed with a manifest that had silently lost the whole feature.
+FEATURE_ARGS=""
+if [ -f "$REPO/release/feature-set.txt" ]; then
+    set -f
+    for feature in $(grep -v '^#' "$REPO/release/feature-set.txt" | awk 'NF {print $1}'); do
+        FEATURE_ARGS="$FEATURE_ARGS --min-features $feature"
+    done
+    set +f
+fi
+# shellcheck disable=SC2086
+/bin/sh "$REPO/release/verify-candidate.sh" --ancestor "${DM_CANDIDATE_ANCESTOR:-main}" $FEATURE_ARGS >/dev/null || {
+    echo 'ABORT: candidate identity check failed' >&2
+    exit 1
+}
+
 # 1. Manifest payload: the hash-verified install targets.
 awk '{print $3}' "$MANIFEST" > "$LIST"
 
