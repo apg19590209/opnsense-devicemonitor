@@ -134,6 +134,8 @@
 #       (review build before the final acceptance-input pins were regenerated)
 #   4187a952f5d1e7cf96cd3b869ee328ca7a9c4dbb22af3634d0bba4f4f28b3a05  12552146 bytes
 #       (pre-package export metadata; superseded because export-modes.txt was absent)
-version 2.14.0
+#   be2b64caa5bb317f9ffef506beba8f5266babfab1c68f14b7b96d2fa7d51689b  12554194 bytes
+#       (2.14.0 release-tool candidate; superseded by the 2.15.0 Email Log release cut)
+version 2.15.0
 bytes 12554194
-sha256 be2b64caa5bb317f9ffef506beba8f5266babfab1c68f14b7b96d2fa7d51689b
+sha256 aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f
