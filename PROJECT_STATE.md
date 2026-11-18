@@ -2,6 +2,15 @@
 
 ## Current state
 
+**Authenticated `.23` recovery verification and safeguards-candidate checks — PARTIAL (18 November 2026).**
+The currently installed recovery payload `038f44c` passed authenticated `.23` reads, message retrieval,
+export and restricted-peer checks without record mutation; temporary test accounts and credential files
+were removed and verified. Safeguards candidate `4983c58`/bundle `e3ded6f…` was installed and checked on
+`.23` only, with 70/70 runtime targets unchanged and retained backups. Candidate-bound `.252` acceptance
+is still the remaining gate; no HA candidate deployment, genuine-record deletion, email, push, tag or
+publication occurred. Tony's screenshots remain scoped visual evidence of the recovered `.23` build only.
+Report: `.cline-reports/REPORT-20261118-205100-testbed-acceptance-closeout.md`.
+
 **Recovery verification, `.253` catalogue repair and release safeguards — PARTIAL (18 November 2026).**
 `.252` and `.253` pass authenticated reciprocal peer reads and restricted mutation denial; `.253`'s nine
 core catalogues were rebuilt from shipped pristine baselines with a retained rollback backup, and its
