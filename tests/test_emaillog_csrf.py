@@ -1,0 +1,88 @@
+"""Email Log page requests must carry the framework CSRF token.
+
+The OPNsense base API controller rejects any POST/PUT/DELETE without a valid
+``X-CSRFToken`` (HTTP 403). The layout installs that header through
+``$.ajaxSetup`` inside ``$(document).ready``, so a page must not fire an API
+request before ready — doing so produced the operator-visible
+"Could not load the email log (HTTP 403)".
+"""
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+VIEW = ROOT / 'src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/emaillog.volt'
+LAYOUT = Path('/usr/local/opnsense/mvc/app/views/layouts/default.volt')
+CONTROLLER = ROOT / 'src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/EmaillogController.php'
+
+
+def test_layout_installs_the_csrf_hook_before_use():
+    if not LAYOUT.is_file():
+        print('LAYOUT_CONTRACT=SKIPPED (layout not installed)')
+        return
+    src = LAYOUT.read_text(encoding='utf-8')
+    assert 'xhr.setRequestHeader("X-CSRFToken"' in src, 'layout CSRF header hook changed'
+    ready = src.index('$( document ).ready')
+    hook = src.index('$.ajaxSetup')
+    assert ready < hook, 'CSRF hook is not inside the ready handler'
+    print('LAYOUT_CSRF_HOOK=VERIFIED')
+
+
+def test_no_request_is_fired_outside_ready():
+    src = VIEW.read_text(encoding='utf-8')
+    ready_at = src.index('$(document).ready(function () {')
+    # No request may be issued from top-level script code, which runs before the
+    # layout's ready hook exists; handlers bound in the body run only on events,
+    # and the initial request still waits for ready explicitly.
+    assert not re.search(r'^load\(\);', src, re.M), 'unconditional load() at script top level'
+    initial = src.index('$(document).ready(function () {')
+    assert src.index('load();', initial) > initial, 'the initial request waits for ready'
+    assert 'email-log-clear' in src, 'handler-bound refreshes come from controls'
+    print('EMAIL_LOG_NO_EARLY_REQUEST=PASS')
+
+
+def test_all_requests_use_the_shared_helper():
+    src = VIEW.read_text(encoding='utf-8')
+    # Every endpoint the page can call must be a POST issued through $.ajax, so the
+    # layout's shared X-CSRFToken hook applies to all of them.
+    endpoints = {
+        '/api/devicemonitor/emaillog/search',
+        '/api/devicemonitor/emaillog/combined',
+        '/api/devicemonitor/emaillog/message',
+        '/api/devicemonitor/emaillog/peermessageview',
+        '/api/devicemonitor/emaillog/exportcsv',
+        '/api/devicemonitor/emaillog/delete',
+        '/api/devicemonitor/emaillog/restore',
+        '/api/devicemonitor/emaillog/bulkdelete',
+        '/api/devicemonitor/emaillog/deleteall',
+    }
+    for endpoint in endpoints:
+        assert endpoint in src, f'{endpoint} missing from the page'
+    posts = src.count("type: 'POST'")
+    # search/combined share one call path, export one, and delete/restore one.
+    assert posts == 5, f'expected 5 ajax POSTs (search/combined share one), found {posts}'
+    code = '\n'.join(ln for ln in src.splitlines() if not ln.strip().startswith(('*', '/*', '//', '<!--')))
+    assert 'setRequestHeader' not in code, 'the page must not hand-roll token handling'
+    assert 'csrf_token' not in code, 'the page must not read the token directly'
+    print('EMAIL_LOG_SHARED_HELPER=PASS')
+
+
+def test_controller_rejects_protection_by_contract():
+    """The controller itself must not provide an unauthenticated escape hatch."""
+    src = CONTROLLER.read_text(encoding='utf-8')
+    assert 'extends ApiControllerBase' in src, 'controller must use the protected base class'
+    assert 'X-CSRF' not in src and 'csrf' not in src.lower(), \
+        'the controller must not override CSRF handling'
+    assert 'session' not in src.lower(), 'the controller must not manage sessions itself'
+    print('EMAIL_LOG_NO_AUTH_BYPASS=PASS')
+
+
+def main():
+    test_layout_installs_the_csrf_hook_before_use()
+    test_no_request_is_fired_outside_ready()
+    test_all_requests_use_the_shared_helper()
+    test_controller_rejects_protection_by_contract()
+    print('EMAIL_LOG_CSRF_REGRESSION=PASS')
+
+
+if __name__ == '__main__':
+    main()

@@ -2,6 +2,318 @@
 
 ## Current state
 
+**Email Log formatting verified with a genuine record; PR #9 final review (18 November 2026).**
+A new test email from `.252` (record `a14af952…`, 2026-11-18 02:43:32 UTC, subject "Test -
+OPNsense Device Monitor") stored `Server:` / `Time:` / `To:` as compact label/value lines and is
+**Relay accepted** (queue `82CAC5179F`, `dsn=2.0.0`, `250 2.0.0 OK`); inbox receipt is not
+asserted and awaits Tony. PR head `9cd1398` (code head `51fcaf4`, CI `44223883558` success) is OPEN
+and MERGEABLE with no code blockers; automated checks pass and visual acceptance covers the Local
+table, the subject-opened popup and the new `.252` email at 13:43:32 AEDT (compact label/value
+lines, paragraph spacing, Relay accepted display). Inbox receipt is operator-confirmed for record
+`a14af952…` in `arnhem05.alerts@gmail.com`, completing end-to-end delivery acceptance for that test. Manual certificate renewal is due before 2026-12-17;
+webhook and USB findings unchanged. Report:
+`.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
+
+**Email Log HTML-to-text conversion corrected (18 November 2026).** Captured bodies were split
+label/value lines because tag indentation left whitespace before each newline; conversion is now
+structural — a table row is one compact line (`Server: OPNsense.home.arpa`), real block boundaries
+keep one blank line, and nothing is stripped for resembling metadata. Historical stored bodies keep
+their old formatting (no migration). Code `51fcaf4`, CI `44223883558`; installed on `.23`, `.252`
+and `.253` with configuration, records, certificates and CARP preserved. Report:
+`.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
+
+**PR #9 final review (18 November 2026).** Reviewed head `0754bb5` (code head `ea79659`, CI
+`44218707777` success; later commits are documentation only). PR is OPEN and MERGEABLE; no confirmed
+defects in access control, credential handling, migrations, retention or packaging. The user manual
+now documents the Email Log (§16.9: relay status meaning, peer setup, clickable subject, soft
+deletion and restoration). Operator visual PASS is recorded for the Local table and the
+subject-opened popup only. Manual certificate renewal remains due before 2026-12-17; webhook and USB
+findings unchanged. Report:
+`.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
+
+**Email Log bulk selection and soft deletion (18 November 2026).** The shared table layout is
+integrated on `.23`, `.252` and `.253`; local rows are selectable with a header checkbox and
+"Delete selected (n)" / "Delete all local entries" use the standard confirmation dialogs (delete-all
+covers entries outside the current filters and page and needs an explicit checkbox). Backend bulk
+actions run behind the explicit write privilege, validate ownership, are transactional and report
+the real affected count; only visibility changes. Remote rows cannot be selected. Message metadata
+shows "Role when sent" only when a role was recorded. Code `9fa1b9e`, CI `44211502506`; installed
+from `install-v214.{Ru223K,obfmEu,VwGIfL}`. Screenshot fixes (`3768c82`): bulk controls moved into a wrapping toolbar, action buttons wrap, `unknown` historical roles are omitted, and the confirmation dialog is ~480px, viewport-bound and names the owning node.
+The subject is now the row action (clickable, keyboard-operable, "No subject" when empty), the Actions column is gone (seven columns, Subject 25%), inline Restore remains in the Deleted view, and text wraps at word boundaries (`ea79659`).
+Report: `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
+
+**HA peer access, Email Log and genuine-record verification (18 November 2026).** One labelled test
+email was sent from each node to `arnhem05.alerts@gmail.com`; both records show **Relay accepted**
+with genuine queue IDs (`.252` `C34A74FBE9`, `.253` `08A9439034`) and verify Local/Peer/All, distinct
+identities, remote content/timelines, filters, ordering and CSV on both appliances. A stale `latest.log`
+on `.252` had hidden the relay evidence; the reader now reads dated siblings and skips stale files
+(`cbd3754`, CI `44200893168`). The Local/Peer/All tabs now drive the request scope and rows carry their true origin
+(`d267519`, CI `44202158065`), verified on both appliances. Node headers now read `hostname — management IP — role` with This node/Peer labels, the management
+address comes from configuration, and rows keep their historical recorded role (`48d459a`).
+Pagination remains fixture-tested only. Both nodes serve signed
+CSRs with verified chains (`.252` expires 2026-12-17 22:53:06Z, `.253` 23:06:55Z; renewal manual).
+A live probe proved the "read-only" peer account could reach Delete/Restore; a dedicated
+`page-services-devicemonitor-peer` privilege (peerpage + peermessage only) and an explicit write
+gate fix it, verified live on `.23`, `.252` and `.253` (`403` before action). Email Log installed
+on both HA nodes with settings, databases and CARP unchanged; reciprocal peer settings configured
+with verified TLS and empty-state aggregation confirmed. Populated aggregation remains unproven.
+Report: `.cline-reports/REPORT-20261117-233000-ha-peer-acl.md`.
+
+**HA peer deployment paused on ACME validation reachability (18 November 2026).** `.252`'s ACME order for
+`opnsense.home.arpa` + VIP `.254` + node IP `.252` returned `201`, then the CA refused the first
+(DNS) authorization; the IP authorizations were never tested. A probe proved the challenge server
+serves the token locally but port 80 cannot reach it because of OPNsense's anti-lockout rule.
+The HTTP-01 validation now lists `.252` as an additional address. `.252`'s alt names now include `.252`, but its live certificate is still expired and
+unchanged; `.253` untouched; candidate `d99cc0b1…` not installed. Diagnosis:
+`.cline-reports/REPORT-20261117-105844-ca-diagnosis.md`.
+
+**HA peer deployment prepared, not applied (17 November 2026).** Candidate
+`d99cc0b1…` (1,997,997 bytes) from `07bae2a`; `.252` shows the pre-feature `EmaillogController`
+and a 0-byte placeholder log, so neither HA node runs the Email Log feature yet. Read-only peer
+API, TLS verification and row identity reviewed. Read-only API accounts, CA trust and reciprocal
+peer settings remain to be created and await approval. Report:
+`.cline-reports/REPORT-20261117-085542-ha-peer-prep.md`.
+
+**Email Log labels corrected (17 November 2026).** The time column heading is derived from the same
+browser timezone that formats its values (local, following AEDT/AEST), and `accepted` displays as
+**Relay accepted** in the table, popup and timeline, under the translated static **Time (local)**
+heading (no script rewrites it; each value carries its own zone suffix); internal values and CSV
+(UTC) are unchanged.
+Code `6cb3807`, CI `44045533409` success, installed from
+`/var/backups/devicemonitor/pre-static-heading-20261117T082257Z`. The table's Relay accepted label
+is visually confirmed; the heading awaits confirmation.
+Report: `.cline-reports/REPORT-20261117-081143-labels.md`.
+
+**Email Log delivery status resolved from Postfix evidence (17 November 2026).** The `.23` test email
+of 18:10:39 AEDT (row `a49b2e4a…`, queue `02FA4B055F`) now shows **Relay accepted** — DSN 2.0.0,
+`250 2.0.0 OK` — after the observer correlated the stored Message-ID with Postfix's cleanup record
+and per-recipient smtp outcome; the earlier sender and observation events are retained. Generic
+`.23` email delivery is operator-confirmed end-to-end PASS (screenshot). Webhook (no destination;
+TLS verification disabled in `sendWebhook()`) and live peer integration remain open. Code
+`069f08b`, CI `44040829833` success, installed from
+`/var/backups/devicemonitor/pre-delivery-tracking-20261117T074818Z`. Close-out rule amended in
+`AGENTS.md`; Decision 74. Canonical report:
+`.cline-reports/REPORT-20261117-074840.md`.
+
+**`.23` email transport configured through the Postfix plugin (17 November 2026).** After a root
+cleanup (below) freed space, `os-postfix` (`postfix 3.11.7_5,1`) was installed from the supported
+repository — the same proven method as `.252`. The plugin's `General` model now mirrors `.253`'s
+relay: `relayhost smtp.gmail.com:587`, SASL enabled with the credential transferred privately from
+`.253` (hash-identical `smtp_auth`, `8f50…`), `smtpclient_security may`, `mynetworks` loopback,
+`inet_interfaces localhost`, `myhostname OPSENSE-DM23` for RFC-5322 identification only, and
+`smtpd_sasl_auth_enable` from the plugin template. Templates rendered by `configctl template
+reload OPNsense/Postfix`; all map databases compiled by the plugin's `setup.sh` (with its own
+`/usr/local/sbin` on PATH); Postfix running with listeners only on `127.0.0.1:25` and `[::1]:25`.
+Device Monitor keeps `email_method=sendmail`; its configuration is byte-identical
+(`cecb403f…`), and `enabled`, `monitored_interfaces`, HA settings and webhooks are unchanged.
+**The authorised labelled test email has NOT yet been sent** — it is held by the price gate (see
+below). Backups: `/var/backups/devicemonitor/pre-postfix-20261117T030617Z` (config.xml, Device
+Monitor config, package inventory) and `pre-postfix-model-20261117T063822Z` (config.xml
+`4d222512…` before the model save; the saved file is `0b6a10b8…`).
+
+**Price gate corrected to the provider's UTC schedule (17 November 2026).** The gate had carried a
+Sydney wall-clock definition (`11:00–14:00`, `16:00–20:00`) taken from the generic Cline rule, while
+DeepSeek publishes UTC windows (Mon–Fri 01:00–04:00 and 06:00–10:00, Chinese public holidays
+excluded). The conversion was correct; the configured window was not, and its label read as
+provider pricing. The gate now evaluates UTC, labels Sydney for display only, reads an explicit
+holiday calendar (absent = none excluded) and is pinned by `tests/test_price_gate.py`. Decision 73.
+
+**Root filesystem recovered (17 November 2026).** Root reached 100% with negative free space,
+which blocked the package install and even Python bytecode writes. The reproducible
+`/usr/ports/distfiles` cache (4.2 GB) was verified as downloads only (no build running, nothing
+written for 30 minutes) and deleted in place, keeping the directory's mode and ownership: root is
+now **3.9 GB free**. Backups, evidence, source checkouts, databases, credentials and the Go/Zig
+caches were untouched. A 15 GB USB stick (`DNXTNKV80W22UDP6PV9Z`) was formatted as UFS
+(`gpt/dmarchive`) for archive use, but its filesystem corrupted under a sustained 4 GB copy and
+the device is parked, unmounted and classified unsuitable for backups pending full verification; a
+destructive address-dependent test verified only the first 1 GiB of its advertised 15 GB.
+
+**Email Log Clear filters, soft delete/restore, visibility filter and themed dialog header (17 November 2026).**
+Clear filters resets search, type and status, returns to page one and refreshes once while
+preserving the Local/Peer/All scope. Delete is soft only: schema version 3 adds `deleted_utc`
+additively, so message content, event id, transport status and the full timeline stay, and the
+unchanged 30-day retention still expires deleted entries. An Active/Deleted/All filter (default
+Active) is applied by one shared clause to the list, combined view, peer page and CSV export.
+Delete/Restore are POST actions behind authentication, ACL and token checks plus a
+`user-config-readonly` refusal; peer rows disable the action with an explanation and the peer
+endpoints stay read-only. Delivery events read "1 event"/"N events". The message dialog header
+reuses the framework `panel-heading` class so the theme supplies its subtle background and text
+colour in light and dark themes (Decision 72). Source `ae5dd8a`; exact-head CI `43982826593`
+passed; bundle `38f77108…` (1 980 077 bytes). Installed on `.23` with backup
+`/var/backups/devicemonitor/pre-visibility-20261116T235141Z`: four files hash-verified against the
+manifest; the live database upgraded to schema v3 with `integrity_check ok`, 20/20 rows Active,
+28 timeline events and the preview record intact; Device Monitor settings (`cecb403f…`) and
+OPNsense config (`e86a7058…`) unchanged; daemon running. **Not verified:** authenticated browser
+use of the new controls (no session available); the webhook and email configuration work stopped
+before any change (see the inspection report — no webhook destination and no `.23` SMTP credential).
+
+**Email Log one-message view, visible dialog header and literal `\t` correction (17 November 2026).**
+The View message dialog no longer opens under the fixed navigation: the overlay paints above the
+70px `.page-head`, the dialog starts below it and only `.modal-body` scrolls inside a viewport-capped
+flex column, so the subject, close control and footer stay visible; long subjects wrap clear of a
+floated close control and narrow layouts stay inside the viewport. **View message is the only row
+action** — the separate Timeline button and inline timeline row are removed — and it opens
+metadata, content and the full delivery timeline for Local, Peer and All rows, with retrieval errors
+shown inside the dialog. **Delivery details** is one native-button disclosure showing the recorded
+count ("Delivery details (3 events)"), collapsed on open, with `aria-expanded`, chevron and panel
+sharing one state, keyboard activation, readable chronological event rows and "No delivery details
+recorded" (no control) when empty. Legacy rows keep their delivery record and still report the
+missing content. Opening or expanding sends no mail. The literal `\t` after Server, Time and To
+was caused by `EmailLog::htmlToText()` using a single-quoted `'\t'`; the converter now emits a real
+cell separator, drops trailing tabs before newlines and normalises CRLF. Genuine backslashes and
+plain-text bodies are untouched and no stored row was rewritten (Decision 71). Source is `514e2bb`;
+exact-head CI `43979095101` passed. Installed on `.23` with backup
+`/var/backups/devicemonitor/pre-dialog-20261116T232524Z` (predecessors `6ee1c010…` EmailLog.php,
+`5d9ab6c8…` emaillog.volt); post-install hashes match the manifest
+(`b84d0ddc…` / `a2702590…`), conversion of the test-email shape is clean on the installed code,
+settings are untouched and all 20 rows (3 with content, including preview `210c1c39…`) and 28
+timeline events are intact. **Not done:** visual browser acceptance of the new dialog, and new
+captured content containing a genuine backslash sequence (no test email was sent). **Residual:** the
+three already-stored bodies keep their historical literal `\t`; they are not migrated.
+
+**Email Log View message dialog — presentation pass (17 November 2026).** The dialog now follows the
+settled specification: the email subject is the heading; a compact aligned metadata block shows
+recipient, node, UTC timestamp, type and status, wrapping long values and stacking labels above values
+below 767px; 24px separates metadata, message and delivery sections; the message sits in a 20px-padded
+theme-font reading area at 1.5 line spacing with paragraph breaks preserved and no horizontal overflow;
+delivery history is collapsed under "Delivery details" and expands to one row per event; a standard
+footer Close button accompanies the header close control, with Escape dismissal and focus return from
+Bootstrap. Dialog width targets 800px and never comes within 16px of the viewport edge. Scrolling remains
+core `.modal-body` only — no fixed content heights, nested scrollbars or excess empty space. Body
+rendering is still `.text()`-only. Candidate `cec84948…` installed on `.23` with settings
+(`cecb403f…`) and all 20 email-log rows preserved, including preview `210c1c39…`; 49/49 targets verify.
+Exact-head CI `43976338471` at `317623f` passed. **Visual acceptance is pending the operator's review.**
+
+
+**Email log feature — `.23` installation and UI acceptance pass (17 November 2026).** Candidate
+`ae091bfa…` (source `2a50811`, CI `43972141418` success) installed with `INSTALL_OK files=68
+core_locales=9 pruned=0`; all 49 manifest targets verify. **Settings were preserved, not restored to
+the old disabled baseline:** config `cebc403f…` was identical before and after, with monitoring and
+email enabled and a single configured operator recipient (guard verified, address never printed) as
+the operator authorised for this window. Both databases passed `integrity_check`; the email log kept
+its 20 rows (10 test, 9 new-device, 1 preview) at schema v2, including preview
+`210c1c39a10f9d4de5f44bacab912b20`. Verified on the installed tree: the View message dialog carries
+`aria-labelledby`, returns focus on close, renders plain text only, and the body relies on core modal
+scrolling; peer tabs, selectpicker controls and three POST endpoints are present; the preview and a
+captured row both return content with timelines; long content is bounded at 20 KB with the
+truncation flag set (temporary database). **Not verified:** authenticated API responses and live peer
+aggregation (no session or API key exists, and peer access stays disabled), plus the operator's
+on-screen consolidated pass. Peer aggregation remains fixture-validated only.
+
+
+**Captured-body browser acceptance — operator-confirmed PASS (17 November 2026).** Following the
+raw-JSON response fix and repair install, the operator confirmed via the supplied preview screenshot
+that the captured body renders correctly in the modal, including `<tag>`, a single `&`, quotes and the
+preserved literal `&amp;`, with line breaks intact. This closes captured-body rendering as an
+operator-attested PASS (not independent inspection). The preview record
+`210c1c39a10f9d4de5f44bacab912b20` is retained until its evidence is formally recorded.
+
+
+**Captured-message double-encoding corrected (17 November 2026).** The preview modal displayed
+`&amp;amp;` and `&amp;` where `&` and a literal `&amp;` were intended. Tracing storage → API → modal
+showed storage was already correct and the modal's `.text()` adds no escaping: the corruption was the
+framework's `safe_output=false` path, which runs `htmlspecialchars()` over the JSON array response.
+The message endpoint now calls `setContent(..., true)`, matching core controllers, so the body is
+delivered as raw JSON text and exactly one escaping step remains at render time. Conversion, storage,
+JSON delivery and render are pinned by an exact round-trip regression using the preview body; the
+literal `&amp;` is preserved, scripts and image sources remain stripped, and the old unsafe path is
+asserted to still alter the text so the test would catch a regression. Exact-head CI `43877601000` at
+`f6e95ee` passed; repair install `INSTALL_OK files=66 pruned=0`
+(`/var/backups/devicemonitor/install-v214.l85Sl8`), 18 records preserved including the preview. Modal
+opening and line breaks are recorded as **observed PASS**; special-character rendering was **FAILED**
+before this correction and is pending the operator's re-check.
+
+
+**Email Log View message — operator-confirmed PARTIAL PASS (17 November 2026).** The operator
+confirmed that the legacy-row modal opens and correctly reports "Message content unavailable"; the
+*View message* action is recorded as **PASS for legacy rows only**. **Captured-body rendering is not
+claimed** — no row with a real captured body has been viewed yet. A disposable preview row
+(`210c1c39a10f9d4de5f44bacab912b20`, type `preview`, subject `[PREVIEW ONLY] Message content rendering
+sample`) was created through the recorder only, with no sender or transport contact, to exercise
+plain-text conversion, line breaks and escaped characters; it is labelled as a preview with no
+delivery claimed and is separate from automated tests, which keep using temporary databases. Existing
+records were preserved (17 → 18 rows).
+
+
+**Email Log "View message" action hidden on every row (17 November 2026).** The operator saw only
+Timeline buttons. The installed template matched the PR source, so the action was deployed but
+**conditionally rendered** — `if (row.has_content)` — and every row on `.23` predates content capture,
+so the condition was never true. The action is now rendered for **every** row; a row without captured
+content opens the modal and reports "Message content unavailable" instead of the button vanishing. The
+button carries a per-row identifier and an accessible label. Regression coverage asserts the action is
+present for content and legacy rows and that the unavailable state is reachable; the installed
+template was re-checked after deployment (no gate, action emitted per row). Exact-head CI
+`43875310588` at `89a378d` passed; repair install `INSTALL_OK files=66 pruned=0`
+(`/var/backups/devicemonitor/install-v214.x2f2sg`), 17 records preserved, schema v2. **Browser
+acceptance remains PENDING until the operator reloads.**
+
+
+**Email log message content capture and View message action (17 November 2026).** Each logical Device
+Monitor email now retains the body the transport carried — test, new-device, service and failover via the
+handler wrappers, scan results via their own sender — stored as readable plain text (HTML stripped,
+scripts/styles/image sources discarded) and bounded at 20 KB with truncation flagged. Rows predating
+capture keep NULL and the UI reports "Message content unavailable"; nothing is reconstructed. The
+schema upgrade is versioned (`PRAGMA user_version` 1→2, additive, repeatable) and the live `.23` log
+upgraded in place with its existing rows preserved (integrity `ok`, perms 0640). A read-only
+`emaillog/message` endpoint plus a View message action render the body through `.text()` only — no
+HTML execution and no remote images. Sending behaviour, recipients, transports and return values are
+unchanged; every recording path is fail-open. A test-isolation defect was also fixed: the wrapper
+suite could write fixtures into a host's live log, so it now binds a temporary database and guards
+against leakage; 24 fixture rows it had left on `.23` were removed and the 17 real rows kept.
+Exact-head CI `43874071258` at `05fa3cd` passed; repair install `INSTALL_OK files=66 pruned=0`
+(`/var/backups/devicemonitor/install-v214.k9H9XO`). **Browser acceptance of the View message modal
+remains PENDING until the operator reloads.**
+
+
+**Email Log authenticated 403 — cause and fix (16 November 2026).** The page rendered but its data
+request returned 403. The base API controller rejects POST/PUT/DELETE without a valid `X-CSRFToken`
+(`ApiControllerBase::doAuth`), and the layout installs that header only through `$.ajaxSetup` inside
+`$(document).ready` (`layouts/default.volt`). The Email Log view fired its first request synchronously
+during script evaluation, before that hook existed, so the POST was unprotected and refused. The ACL
+pattern (`api/devicemonitor/*`) matches the URI and was not the cause. Fixed by starting the request
+from the ready handler; search, timeline and CSV export all share the same mechanism, with CSRF
+neither disabled nor bypassed and no extra privileges. New `tests/test_emaillog_csrf.py` verifies the
+layout hook ordering, that no request precedes ready, that both API calls use the shared mechanism,
+and that the controller keeps the protected base class. Exact-head CI `43868646092` at `77de347`
+passed; the repair install reported `INSTALL_OK files=66 pruned=0` with all 29 email-log rows and
+`config.json` `027594eb…` unchanged. **Browser acceptance remains PENDING until the operator reloads
+the page successfully**; no functional API or visual claim is made yet.
+
+
+**Email log feature — testbed install and API-routing repair (16 November 2026).** First install of
+the PR #9 candidate was **PARTIAL**: target files installed (`files=66`), but the API returned
+`404 {"errorMessage":"Endpoint not found"}`. Cause was proven from the installed dispatcher:
+`OPNsense\Mvc\Router::parsePath` derives the controller filename with
+`str_replace('_','',ucwords($segment,'_')) . 'Controller'`, so `/api/devicemonitor/emaillog/...`
+resolves to `EmaillogController`, while the plugin shipped `EmailLogController`. The UI page route was
+unaffected. Fixed plugin-side by renaming the file and class to `EmaillogController` (no core routing
+or authentication change) and adding `tests/test_emaillog_routing.py`, which encodes the dispatcher
+contract and checks every API controller is reachable from its URI segment. The repair install
+reported `INSTALL_OK files=66 core_locales=9 pruned=1` (the stale controller was pruned), all 47
+targets verify, `config.json` remained `027594eb…`, `email_log.db` integrity `ok` with the **29
+existing rows preserved** at mode 0640, and `/api/devicemonitor/emaillog/search` now returns **302**
+(login redirect, matching `config/get`). **Authenticated response shape, grant/deny and browser
+rendering remain untested** — no credentials or browser are available in this environment. Rollback:
+`/var/backups/devicemonitor/install-v214.9ARNwU` and `/var/backups/devicemonitor/install-v214.bToX7q`.
+
+
+**Device Monitor email log — feature branch `feat/dm-email-log-20261116` (16 November 2026, not merged).**
+A Local **Email Log** page records every Device Monitor email attempt in a dedicated SQLite database
+(`/var/db/devicemonitor/email_log.db`), never in `devices.db` and never in the Postfix queue. Capture
+is central where it can be: `NotificationHandler::sendCustomEmail()` and `sendEmail()` are wrapped by
+best-effort shims whose original implementations are untouched, and `notify_scan_email.php` is hooked
+separately in both transport branches. One logical email is one row; transport outcomes update it, so
+multi-step sends never duplicate records. Status distinguishes submitted, queued/deferred, relay
+accepted, failed and unknown, and the UI states that relay acceptance is not inbox receipt. Rows carry
+UTC timestamps, node identity/role and an advisory Postfix queue reference; no bodies or credentials
+are stored. Thirty-day retention is a separate action that deletes only log rows. Peer and All-nodes
+tabs are deliberately disabled: no secure peer access exists yet, and the API reports
+`peer_status.available=false`. Tests cover single-row semantics, classification, sanitisation,
+escaping, filtering, pagination bounds, retention, repeated writes, a logging-failure path and the
+absence of a body column. Candidate `dm-email-log.tar.gz` `b87952df…` (1,836,195 bytes) passed
+installer `--check` (`files=65`) and the affected suites; **nothing was installed, merged or published**.
+
+
 **Node email delivery end-to-end confirmed (16 November 2026, operator-confirmed PASS).** One test
 message was sent from `.252` (`[DM TEST] .252 BACKUP — 20261116T104211Z`) and one from `.253`
 (`[DM TEST] .253 MASTER — 20261116T104307Z`), each to the single authorised recipient. `.253` was

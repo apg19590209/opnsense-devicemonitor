@@ -1407,6 +1407,139 @@ identity-conflict email count after the fix is **zero**, the identity/Nmap and l
 remain **UNTESTED**, D1 remains recorded, and publication stays **NO-GO**.
 
 ## Deployment verification notes
+**Email Log View message dialog — presentation pass (17 November 2026).** The dialog now follows the
+settled specification: the email subject is the heading; a compact aligned metadata block shows
+recipient, node, UTC timestamp, type and status, wrapping long values and stacking labels above values
+below 767px; 24px separates metadata, message and delivery sections; the message sits in a 20px-padded
+theme-font reading area at 1.5 line spacing with paragraph breaks preserved and no horizontal overflow;
+delivery history is collapsed under "Delivery details" and expands to one row per event; a standard
+footer Close button accompanies the header close control, with Escape dismissal and focus return from
+Bootstrap. Dialog width targets 800px and never comes within 16px of the viewport edge. Scrolling remains
+core `.modal-body` only — no fixed content heights, nested scrollbars or excess empty space. Body
+rendering is still `.text()`-only. Candidate `cec84948…` installed on `.23` with settings
+(`cecb403f…`) and all 20 email-log rows preserved, including preview `210c1c39…`; 49/49 targets verify.
+Exact-head CI `43976338471` at `317623f` passed. **Visual acceptance is pending the operator's review.**
+
+**Email log feature — `.23` installation and UI acceptance pass (17 November 2026).** Candidate
+`ae091bfa…` (source `2a50811`, CI `43972141418` success) installed with `INSTALL_OK files=68
+core_locales=9 pruned=0`; all 49 manifest targets verify. **Settings were preserved, not restored to
+the old disabled baseline:** config `cebc403f…` was identical before and after, with monitoring and
+email enabled and a single configured operator recipient (guard verified, address never printed) as
+the operator authorised for this window. Both databases passed `integrity_check`; the email log kept
+its 20 rows (10 test, 9 new-device, 1 preview) at schema v2, including preview
+`210c1c39a10f9d4de5f44bacab912b20`. Verified on the installed tree: the View message dialog carries
+`aria-labelledby`, returns focus on close, renders plain text only, and the body relies on core modal
+scrolling; peer tabs, selectpicker controls and three POST endpoints are present; the preview and a
+captured row both return content with timelines; long content is bounded at 20 KB with the
+truncation flag set (temporary database). **Not verified:** authenticated API responses and live peer
+aggregation (no session or API key exists, and peer access stays disabled), plus the operator's
+on-screen consolidated pass. Peer aggregation remains fixture-validated only.
+
+**Captured-body browser acceptance — operator-confirmed PASS (17 November 2026).** Following the
+raw-JSON response fix and repair install, the operator confirmed via the supplied preview screenshot
+that the captured body renders correctly in the modal, including `<tag>`, a single `&`, quotes and the
+preserved literal `&amp;`, with line breaks intact. This closes captured-body rendering as an
+operator-attested PASS (not independent inspection). The preview record
+`210c1c39a10f9d4de5f44bacab912b20` is retained until its evidence is formally recorded.
+
+**Captured-message double-encoding corrected (17 November 2026).** The preview modal displayed
+`&amp;amp;` and `&amp;` where `&` and a literal `&amp;` were intended. Tracing storage → API → modal
+showed storage was already correct and the modal's `.text()` adds no escaping: the corruption was the
+framework's `safe_output=false` path, which runs `htmlspecialchars()` over the JSON array response.
+The message endpoint now calls `setContent(..., true)`, matching core controllers, so the body is
+delivered as raw JSON text and exactly one escaping step remains at render time. Conversion, storage,
+JSON delivery and render are pinned by an exact round-trip regression using the preview body; the
+literal `&amp;` is preserved, scripts and image sources remain stripped, and the old unsafe path is
+asserted to still alter the text so the test would catch a regression. Exact-head CI `43877601000` at
+`f6e95ee` passed; repair install `INSTALL_OK files=66 pruned=0`
+(`/var/backups/devicemonitor/install-v214.l85Sl8`), 18 records preserved including the preview. Modal
+opening and line breaks are recorded as **observed PASS**; special-character rendering was **FAILED**
+before this correction and is pending the operator's re-check.
+
+**Email Log View message — operator-confirmed PARTIAL PASS (17 November 2026).** The operator
+confirmed that the legacy-row modal opens and correctly reports "Message content unavailable"; the
+*View message* action is recorded as **PASS for legacy rows only**. **Captured-body rendering is not
+claimed** — no row with a real captured body has been viewed yet. A disposable preview row
+(`210c1c39a10f9d4de5f44bacab912b20`, type `preview`, subject `[PREVIEW ONLY] Message content rendering
+sample`) was created through the recorder only, with no sender or transport contact, to exercise
+plain-text conversion, line breaks and escaped characters; it is labelled as a preview with no
+delivery claimed and is separate from automated tests, which keep using temporary databases. Existing
+records were preserved (17 → 18 rows).
+
+**Email Log "View message" action hidden on every row (17 November 2026).** The operator saw only
+Timeline buttons. The installed template matched the PR source, so the action was deployed but
+**conditionally rendered** — `if (row.has_content)` — and every row on `.23` predates content capture,
+so the condition was never true. The action is now rendered for **every** row; a row without captured
+content opens the modal and reports "Message content unavailable" instead of the button vanishing. The
+button carries a per-row identifier and an accessible label. Regression coverage asserts the action is
+present for content and legacy rows and that the unavailable state is reachable; the installed
+template was re-checked after deployment (no gate, action emitted per row). Exact-head CI
+`43875310588` at `89a378d` passed; repair install `INSTALL_OK files=66 pruned=0`
+(`/var/backups/devicemonitor/install-v214.x2f2sg`), 17 records preserved, schema v2. **Browser
+acceptance remains PENDING until the operator reloads.**
+
+**Email log message content capture and View message action (17 November 2026).** Each logical Device
+Monitor email now retains the body the transport carried — test, new-device, service and failover via the
+handler wrappers, scan results via their own sender — stored as readable plain text (HTML stripped,
+scripts/styles/image sources discarded) and bounded at 20 KB with truncation flagged. Rows predating
+capture keep NULL and the UI reports "Message content unavailable"; nothing is reconstructed. The
+schema upgrade is versioned (`PRAGMA user_version` 1→2, additive, repeatable) and the live `.23` log
+upgraded in place with its existing rows preserved (integrity `ok`, perms 0640). A read-only
+`emaillog/message` endpoint plus a View message action render the body through `.text()` only — no
+HTML execution and no remote images. Sending behaviour, recipients, transports and return values are
+unchanged; every recording path is fail-open. A test-isolation defect was also fixed: the wrapper
+suite could write fixtures into a host's live log, so it now binds a temporary database and guards
+against leakage; 24 fixture rows it had left on `.23` were removed and the 17 real rows kept.
+Exact-head CI `43874071258` at `05fa3cd` passed; repair install `INSTALL_OK files=66 pruned=0`
+(`/var/backups/devicemonitor/install-v214.k9H9XO`). **Browser acceptance of the View message modal
+remains PENDING until the operator reloads.**
+
+**Email Log authenticated 403 — cause and fix (16 November 2026).** The page rendered but its data
+request returned 403. The base API controller rejects POST/PUT/DELETE without a valid `X-CSRFToken`
+(`ApiControllerBase::doAuth`), and the layout installs that header only through `$.ajaxSetup` inside
+`$(document).ready` (`layouts/default.volt`). The Email Log view fired its first request synchronously
+during script evaluation, before that hook existed, so the POST was unprotected and refused. The ACL
+pattern (`api/devicemonitor/*`) matches the URI and was not the cause. Fixed by starting the request
+from the ready handler; search, timeline and CSV export all share the same mechanism, with CSRF
+neither disabled nor bypassed and no extra privileges. New `tests/test_emaillog_csrf.py` verifies the
+layout hook ordering, that no request precedes ready, that both API calls use the shared mechanism,
+and that the controller keeps the protected base class. Exact-head CI `43868646092` at `77de347`
+passed; the repair install reported `INSTALL_OK files=66 pruned=0` with all 29 email-log rows and
+`config.json` `027594eb…` unchanged. **Browser acceptance remains PENDING until the operator reloads
+the page successfully**; no functional API or visual claim is made yet.
+
+**Email log feature — testbed install and API-routing repair (16 November 2026).** First install of
+the PR #9 candidate was **PARTIAL**: target files installed (`files=66`), but the API returned
+`404 {"errorMessage":"Endpoint not found"}`. Cause was proven from the installed dispatcher:
+`OPNsense\Mvc\Router::parsePath` derives the controller filename with
+`str_replace('_','',ucwords($segment,'_')) . 'Controller'`, so `/api/devicemonitor/emaillog/...`
+resolves to `EmaillogController`, while the plugin shipped `EmailLogController`. The UI page route was
+unaffected. Fixed plugin-side by renaming the file and class to `EmaillogController` (no core routing
+or authentication change) and adding `tests/test_emaillog_routing.py`, which encodes the dispatcher
+contract and checks every API controller is reachable from its URI segment. The repair install
+reported `INSTALL_OK files=66 core_locales=9 pruned=1` (the stale controller was pruned), all 47
+targets verify, `config.json` remained `027594eb…`, `email_log.db` integrity `ok` with the **29
+existing rows preserved** at mode 0640, and `/api/devicemonitor/emaillog/search` now returns **302**
+(login redirect, matching `config/get`). **Authenticated response shape, grant/deny and browser
+rendering remain untested** — no credentials or browser are available in this environment. Rollback:
+`/var/backups/devicemonitor/install-v214.9ARNwU` and `/var/backups/devicemonitor/install-v214.bToX7q`.
+
+**Device Monitor email log — feature branch `feat/dm-email-log-20261116` (16 November 2026, not merged).**
+A Local **Email Log** page records every Device Monitor email attempt in a dedicated SQLite database
+(`/var/db/devicemonitor/email_log.db`), never in `devices.db` and never in the Postfix queue. Capture
+is central where it can be: `NotificationHandler::sendCustomEmail()` and `sendEmail()` are wrapped by
+best-effort shims whose original implementations are untouched, and `notify_scan_email.php` is hooked
+separately in both transport branches. One logical email is one row; transport outcomes update it, so
+multi-step sends never duplicate records. Status distinguishes submitted, queued/deferred, relay
+accepted, failed and unknown, and the UI states that relay acceptance is not inbox receipt. Rows carry
+UTC timestamps, node identity/role and an advisory Postfix queue reference; no bodies or credentials
+are stored. Thirty-day retention is a separate action that deletes only log rows. Peer and All-nodes
+tabs are deliberately disabled: no secure peer access exists yet, and the API reports
+`peer_status.available=false`. Tests cover single-row semantics, classification, sanitisation,
+escaping, filtering, pagination bounds, retention, repeated writes, a logging-failure path and the
+absence of a body column. Candidate `dm-email-log.tar.gz` `b87952df…` (1,836,195 bytes) passed
+installer `--check` (`files=65`) and the affected suites; **nothing was installed, merged or published**.
+
 **Node email delivery end-to-end confirmed (16 November 2026, operator-confirmed PASS).** One test
 message was sent from `.252` (`[DM TEST] .252 BACKUP — 20261116T104211Z`) and one from `.253`
 (`[DM TEST] .253 MASTER — 20261116T104307Z`), each to the single authorised recipient. `.253` was
@@ -1675,3 +1808,47 @@ normally. This did not change the Device Monitor payload or its configuration.
 No Device Monitor or service check failed. Rollback was not invoked, `FRESH=1` remains untested,
 the OPNsense-generated configuration backup remains under `/conf/backup/`, and real-host
 `FRESH=1` remains tracked as **DM-BL-012**.
+
+## Price gate corrected to the provider's UTC schedule (17 November 2026)
+
+**Description:** `tests/price_gate.py` defined the premium windows as Sydney wall-clock hours,
+`((11, 14), (16, 20))`, inherited from the generic Cline rule. DeepSeek publishes UTC windows,
+Monday-Friday 01:00–04:00 and 06:00–10:00, excluding Chinese public holidays; in AEDT those are
+noon–15:00 and 17:00–21:00. The gate was therefore an hour early at both edges under daylight
+saving and emitted a misleading "Mon-Fri 11:00-14:00 AEDT" label, which an operator could read as
+provider pricing. The cause was an **outdated, locally configured window definition**
+(`PEAK_WINDOWS` + Sydney-wall-clock evaluation), not the timezone conversion, which correctly used
+`zoneinfo('Australia/Sydney')`; the misleading text was the wall-clock label.
+
+**Benefit:** the gate now matches provider pricing exactly, and CI or a harness cannot silently run
+past a real premium boundary.
+
+**Implemented:** windows are evaluated in UTC (`PEAK_WINDOWS_UTC = ((1, 4), (6, 10))`), with Sydney
+labels computed only for display; an explicit holiday calendar
+(`DEEPSEEK_HOLIDAYS_FILE`, default `tests/deepseek_holidays.json`, absent = nothing excluded);
+and `tests/test_price_gate.py` covering UTC, AEDT, AEST, weekday/weekend and configured-holiday
+boundaries. No billing setting is touched, and the `y` confirmation with the abort on anything
+else is unchanged. CI and local tests are unaffected by token billing; the gate governs
+premium *spend* only.
+
+## Email Log delivery status from Postfix evidence (resolved 17 November 2026)
+
+**Description:** the Email Log reported `unknown` for a message Gmail had accepted, because
+observation only looked at the Postfix queue, which empties as soon as a working relay forwards.
+**Status: resolved** by Decision 74: exact Message-ID → queue ID → per-recipient log outcome, with
+`Relay accepted` semantics, idempotent appends, bounded rotated-log reads and `unknown` retained
+when evidence is missing. Covered by `tests/test_email_log_delivery_tracking.php`.
+
+## Email Log peer privilege separation (resolved 18 November 2026)
+
+**Status: resolved.** Peer accounts carried the full Device Monitor privilege, so the "read-only"
+account could enter Delete/Restore. A dedicated `page-services-devicemonitor-peer` privilege
+(peerpage/peermessage only) plus an explicit write-privilege gate now deny mutations at the
+framework layer; verified live on `.23`, `.252` and `.253`.
+
+## Email Log bulk soft deletion (resolved 18 November 2026)
+
+**Status: resolved.** Local entries can be selected (page-scoped header checkbox) and removed
+with "Delete selected (n)" or "Delete all local entries" through standard confirmations. Bulk
+actions require the write privilege, validate ownership server-side, run in one transaction and
+report the affected count; entries stay restorable until normal retention.

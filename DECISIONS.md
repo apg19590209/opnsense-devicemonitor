@@ -3226,3 +3226,162 @@ preserved under `/root/dm-validation-2140/dm-bl-013-timestamp-r2-20261112/` and
 This defect is tracked under **DM-BL-013 / ageing**. Historical monitoring-activation attribution
 remains **UNKNOWN**, not a confirmed automatic-activation defect. DM-BL-012 remains **CLOSED** on
 the explicit operator acceptance recorded on 12 November 2026.
+
+## 71. Email-log captured text is byte-faithful and the View message dialog is the single message view
+
+### Decision
+
+Captured email bodies are converted once, at the storage write, by `EmailLog::htmlToText()` (HTML)
+or `EmailLog::sanitiseNewlines()` (text), and stored as plain text. Conversion must not introduce
+escape text into the stored body:
+
+- the `</td>`/`</th>` cell separator is a real tab, never a literal backslash sequence;
+- trailing whitespace before a newline is removed, so a cell separator cannot survive as a stray
+  tab at the start of the next line;
+- CRLF and bare CR are normalised to LF before tag processing.
+
+Backslash sequences that genuinely occur in the message text are preserved, and bodies submitted
+as plain text are stored verbatim. Historical rows that already contain conversion artefacts are
+not rewritten, bulk-replaced or migrated; a global replacement of backslash sequences is
+forbidden because it cannot distinguish an artefact from genuine message text.
+
+The Email Log table offers exactly one row action, **View message**, which opens the subject,
+metadata, plain-text content and the complete delivery timeline. There is no separate Timeline
+action and no inline table expansion. The delivery timeline is presented under a **Delivery
+details** disclosure that states the recorded event count, starts collapsed on every open, exposes
+its state through `aria-expanded` (which also drives the chevron and the panel), and is replaced by
+"No delivery details recorded" when no events exist. Rows without captured content keep their
+delivery record and explain the missing body.
+
+The dialog overlay is positioned for the OPNsense layout: it paints above the fixed `.page-head`,
+starts below it, and caps its content to the viewport as a flex column so that only the body
+scrolls and the header, close control and footer remain reachable. Opening or expanding the dialog
+performs read-only lookup requests only and never sends or retries mail. Retrieval failures are
+reported in the dialog with the HTTP status or the API reason.
+
+### Reason
+
+The dialog's first presentation opened under the fixed navigation because core `.modal-dialog`
+uses a 62px top margin while `.page-head` is 70px, and the navbar (`z-index: 1030`) paints above
+`.modal` (1050) because the modal is a transformed, later document-order list item. Separately, a
+single-quoted `'\t'` in `htmlToText()` stored a literal backslash-t after every table cell, so the
+operator saw `Server:\t` and `To:\t` in the rendered message. Both defects are visible on real
+records and had to be fixed at their cause rather than hidden at render time.
+
+### Tests and evidence
+
+`tests/test_email_log_roundtrip.php` pins clean cell conversion, absence of literal backslash-t,
+raw tabs and carriage returns, preservation of genuine backslashes and plain-text bodies, and the
+JSON/render round trip. `tests/test_emaillog_dialog.py` pins header clearance, flex scrolling,
+one row action, the disclosure count and state synchronisation, the no-events statement, legacy
+content retention and dialog-level retrieval errors; it also asserts that none of the message
+lookup actions send mail. `tests/test_emaillog_message_action.py` asserts the single row action.
+Installed on `.23` on 17 November 2026 (candidate `a2702590…` volt / `b84d0ddc…` php) with the
+operator's settings and all 20 email-log rows preserved, including preview
+`210c1c39a10f9d4de5f44bacab912b20`.
+
+## 72. Email-log entries are soft-deleted, visibility-bounded and peer rows are read-only
+
+### Decision
+
+The Email Log list offers Clear filters (resetting search, type and status, page one, a single
+refresh) without changing the Local/Peer/All scope or the visibility choice.
+
+Deleting an entry is **soft**: the recorder sets a `deleted_utc` marker (schema version 3, added
+additively when absent). The message content, event id, transport status and every timeline event
+remain in storage, and the normal 30-day retention policy is unchanged — a deleted entry expires
+with its retained rows exactly like an active one. It is not an archive. Restore clears the marker.
+Repeated or conflicting operations are refused with a message.
+
+The Active / Deleted / All visibility filter defaults to Active and is applied by the same shared
+filter clause in the list query, the combined view, the peer page and the CSV export, so search,
+type, status, visibility and pagination always bound the same set. An unknown visibility value
+falls back to Active.
+
+Delete and Restore are POST actions behind the framework's authentication, page ACL
+(`api/devicemonitor/*`) and per-request token check, plus an explicit refusal for users holding
+`user-config-readonly`; a read-only account or API key cannot change an entry. Remote (peer) rows
+are never mutated from this node: the actions are disabled with an explanation, because no secure
+cross-node mutation capability exists. The peer endpoints remain read-only. No mutation touches
+Postfix queues, mailboxes or delivery behaviour.
+
+### Reason
+
+Operators need to remove an entry from the working view without losing the evidence needed to
+investigate a delivery, and without the UI implying that deleted entries are kept indefinitely.
+Applying one visibility clause to every read path prevents a count, page or export from
+disagreeing with the list.
+
+### Tests and evidence
+
+`tests/test_email_log_visibility.php` covers delete/restore persistence, retention of content,
+status and timeline, every visibility/search/type/status combination, filtered pagination without
+overlap, repeated and invalid operations, pruning of deleted entries under the unchanged policy,
+and the additive repeatable upgrade. `tests/test_emaillog_visibility_api.py` covers visibility on
+every read path, the closed value set, the write gate ordering, the read-only peer endpoints,
+no mail is touched, and remote rows staying disabled. `tests/test_emaillog_dialog.py` covers Clear
+filters, the visibility control, the confirmation wording and the event-count pluralisation.
+
+## 73. The peak-price gate mirrors the provider's UTC schedule
+
+### Decision
+
+`tests/price_gate.py` evaluates the premium windows in **UTC**, Monday–Friday 01:00–04:00 and
+06:00–10:00 (start inclusive, end exclusive). Sydney labels are computed only for display, so a
+daylight-saving change alters the label and never the boundary. The provider's additional
+exclusion of Chinese public holidays is configuration, read from `DEEPSEEK_HOLIDAYS_FILE`
+(default `tests/deepseek_holidays.json`); an absent or empty calendar excludes nothing and no
+holiday dates are invented in code.
+
+The gate keeps its premium-spend contract: a window prints a warning and requires an explicit `y`;
+anything else aborts. Bypass remains the operator's option only. The gate says nothing about whether
+CI or local tests consume provider tokens.
+
+### Reason
+
+The earlier Sydney wall-clock windows (`11:00–14:00`, `16:00–20:00`) were copied from a generic rule
+and ran an hour early at both edges under daylight saving, while the status text named those local
+hours in a way that read as provider pricing. UTC evaluation removes the conversion as a source of
+drift.
+
+### Tests and evidence
+
+`tests/test_price_gate.py` pins UTC boundaries, AEDT and AEST local boundaries, the DST label change
+with a fixed UTC window, weekdays never peaking, weekends never peaking, and holidays only when
+configured.
+
+## 74. Delivery outcomes come from the exact Message-ID and Postfix's own records
+
+### Decision
+
+Out-of-band observation correlates a recorded email with Postfix by the **exact Message-ID
+Postfix wrote for it** (`postfix/cleanup` `message-id=<…>` line → queue ID), and then reads the
+per-recipient `postfix/smtp` outcome lines for that queue ID: `status=sent` with a `2.x.y.z` DSN is
+recorded as **Relay accepted**, `status=deferred` as queued, `status=bounced` as failed. Subject,
+recipient and approximate time are never used as the link.
+
+Messages that leave the queue before observation are resolved from the processing log within a
+bounded lookback (`OBSERVE_MAX_AGE_SECONDS`), reading at most a fixed number of rotated log files
+and bytes, newest first, from `latest.log`/`mail.log`/`maillog` and their rotated siblings.
+Observation runs only from the scheduled maintenance path, never from the send path, and repeated
+passes append nothing when the latest event already records the same outcome. Missing evidence —
+including a queue file that simply disappeared, or a rotated log that no longer covers the instant
+— remains `unknown`.
+
+Mixed per-recipient outcomes are never summarised as complete success; they are recorded as
+`unknown` (or `failed` when every recipient bounced) with each recipient's outcome named in the
+detail. Relay acceptance is never described as inbox delivery.
+
+Fail-open sending, soft deletion, retention and read-only peer access are unchanged.
+
+### Reason
+
+The `.23` test email of 17 November 2026 was accepted by Gmail (`250 2.0.0 OK`) yet stayed
+`unknown`, because the log was not consulted at all once the queue file was gone. The queue file
+is inherently short-lived for a working relay, so the processing log is the durable evidence.
+
+### Tests and evidence
+
+`tests/test_email_log_delivery_tracking.php` covers fast queue disappearance, exact matching,
+unrelated concurrent mail, deferred and bounced outcomes, mixed recipients, repeated processing,
+rotated and missing logs, and preservation of the earlier timeline.

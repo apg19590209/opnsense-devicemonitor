@@ -33,6 +33,11 @@
                 </a>
             </li>
             <li role="presentation">
+                <a href="#tab-peers" role="tab" data-toggle="tab" aria-controls="tab-peers" aria-selected="false">
+                    <i class="fa fa-exchange" aria-hidden="true"></i> {{ devicemonitor_t('Email Log Peers') }}
+                </a>
+            </li>
+            <li role="presentation">
                 <a href="#tab-about" role="tab" data-toggle="tab" aria-controls="tab-about" aria-selected="false">
                     <i class="fa fa-info-circle" aria-hidden="true"></i> {{ devicemonitor_t('About') }}
                 </a>
@@ -164,7 +169,7 @@
                         <button type="button" class="dm-info" aria-label="{{ devicemonitor_t('More information') }}: {{ devicemonitor_t('Timing Template') }}" data-content="{{ devicemonitor_t('Nmap timing template. T4 is the default.') }}"><i class="fa fa-info-circle" aria-hidden="true"></i></button>
                     </div>
                     <div class="col-md-9">
-                        <select id="nmap_timing" class="form-control" style="max-width:180px;">
+                        <select id="nmap_timing" class="selectpicker" data-style="btn-default" data-width="180px">
                             <option value="0">T0</option>
                             <option value="1">T1</option>
                             <option value="2">T2</option>
@@ -330,7 +335,7 @@
                             </button>
                         </div>
                         <div class="col-md-9">
-                            <select id="email_method" class="form-control" style="max-width:400px;">
+                            <select id="email_method" class="selectpicker" data-style="btn-default" data-width="400px">
                                 <option value="sendmail">{{ devicemonitor_t('Local Sendmail / Postfix') }}</option>
                                 <option value="smtp">{{ devicemonitor_t('Direct SMTP (built into Device Monitor)') }}</option>
                             </select>
@@ -365,7 +370,7 @@
                                 <label>{{ devicemonitor_t('Encryption') }}:</label>
                             </div>
                             <div class="col-xs-12 col-md-9">
-                                <select id="smtp_encryption" class="form-control" style="width:180px;">
+                                <select id="smtp_encryption" class="selectpicker" data-style="btn-default" data-width="180px">
                                     <option value="starttls">STARTTLS</option>
                                     <option value="ssl">SSL/TLS</option>
                                     <option value="none">{{ devicemonitor_t('None') }}</option>
@@ -664,6 +669,54 @@
             </div>
 
             <!-- TAB 6: HA / CARP -->
+            <div role="tabpanel" class="tab-pane" id="tab-peers">
+                <div class="alert alert-info" style="font-size:12px;">
+                    {{ devicemonitor_t('Read-only peer access to the Device Monitor email log. The peer URL must use https:// and TLS is always verified. Credentials are stored on this node only and are never shown again after saving. Live access stays disabled until you enable it below.') }}
+                </div>
+                <div class="row form-group">
+                    <label class="col-md-3 control-label">{{ devicemonitor_t('Enable peer access') }}</label>
+                    <div class="col-md-9">
+                        <input type="checkbox" id="email_log_peer_enabled" />
+                        <small class="text-muted">{{ devicemonitor_t('Off by default. Combining is attempted only when this is enabled and the settings below validate.') }}</small>
+                    </div>
+                </div>
+                <div class="row form-group">
+                    <label class="col-md-3 control-label" for="email_log_peer_url">{{ devicemonitor_t('Peer URL') }}</label>
+                    <div class="col-md-9">
+                        <input type="text" class="form-control" id="email_log_peer_url"
+                               placeholder="https://192.168.20.252" />
+                        <small class="text-muted">{{ devicemonitor_t('Absolute https URL of the peer firewall. Plain HTTP, credentials in the URL and query strings are refused.') }}</small>
+                    </div>
+                </div>
+                <div class="row form-group">
+                    <label class="col-md-3 control-label" for="email_log_peer_api_key">{{ devicemonitor_t('Peer API key') }}</label>
+                    <div class="col-md-9">
+                        <input type="text" class="form-control" id="email_log_peer_api_key" autocomplete="off" />
+                        <small class="text-muted">{{ devicemonitor_t('Peer user API key with read access to api/devicemonitor/emaillog/*.') }}</small>
+                    </div>
+                </div>
+                <div class="row form-group">
+                    <label class="col-md-3 control-label" for="email_log_peer_api_secret">{{ devicemonitor_t('Peer API secret') }}</label>
+                    <div class="col-md-9">
+                        <input type="password" class="form-control" id="email_log_peer_api_secret" autocomplete="new-password" />
+                        <small class="text-muted" id="email_log_peer_secret_state"></small>
+                    </div>
+                </div>
+                <div class="row form-group">
+                    <label class="col-md-3 control-label" for="email_log_peer_ca_pem">{{ devicemonitor_t('Trusted CA (PEM)') }}</label>
+                    <div class="col-md-9">
+                        <textarea class="form-control" id="email_log_peer_ca_pem" rows="4" placeholder="-----BEGIN CERTIFICATE-----"></textarea>
+                        <small class="text-muted">{{ devicemonitor_t('Paste the certificate authority that signed the peer certificate, or leave empty to use the firewall trust store. Verification cannot be disabled.') }}</small>
+                    </div>
+                </div>
+                <div class="row form-group">
+                    <label class="col-md-3 control-label" for="email_log_peer_timeout">{{ devicemonitor_t('Request timeout (seconds)') }}</label>
+                    <div class="col-md-9">
+                        <input type="number" min="2" max="30" class="form-control" id="email_log_peer_timeout" value="8" style="max-width:120px;" />
+                    </div>
+                </div>
+                <div class="alert alert-warning" id="email_log_peer_validation" style="display:none;font-size:12px;"></div>
+            </div>
             <div role="tabpanel" class="tab-pane" id="tab-ha">
                 <form class="dm-pane-form">
                 <div id="dm-ha-non-ha-note" class="alert alert-info" role="note" style="display:none;">
@@ -1305,6 +1358,7 @@ $().ready(function() {
                     ? d.nmap_timing
                     : 4
             );
+            $('#nmap_timing').selectpicker('refresh');
             $('#nmap_host_timeout').val(d.nmap_host_timeout||45);
             $('#nmap_version_detection').prop(
                 'checked',
@@ -1337,14 +1391,28 @@ $().ready(function() {
             });
             $('#email_from').val(d.email_from||'devicemonitor@opnsense.local');
             $('#email_method').val(d.email_method||'sendmail');
+            $('#email_method').selectpicker('refresh');
             $('#smtp_host').val(d.smtp_host||'');
             $('#smtp_port').val(d.smtp_port||587);
             var smtpEncryptionDefault = (parseInt($('#smtp_port').val(), 10) === 25) ? 'none' : 'starttls';
             $('#smtp_encryption').val(d.smtp_encryption||smtpEncryptionDefault);
+            $('#smtp_encryption').selectpicker('refresh');
             $('#smtp_username').val(d.smtp_username||'');
             $('#smtp_password').val(d.smtp_password||'');
             $('#webhook_enabled').prop('checked', d.webhook_enabled==='1');
             $('#webhook_url').val(d.webhook_url||'');
+            $('#email_log_peer_enabled').prop('checked', d.email_log_peer_enabled==='1');
+            $('#email_log_peer_url').val(d.email_log_peer_url||'');
+            $('#email_log_peer_api_key').val(d.email_log_peer_api_key||'');
+            $('#email_log_peer_ca_pem').val(d.email_log_peer_ca_pem||'');
+            $('#email_log_peer_timeout').val(d.email_log_peer_timeout||8);
+            /* The secret is never returned by the API. Show only whether one is stored,
+             * and leave the field blank unless the operator types a replacement. */
+            $('#email_log_peer_api_secret').val('');
+            var hasSecret = d.email_log_peer_secret_set === true || d.email_log_peer_secret_set === '1';
+            $('#email_log_peer_secret_state').text(hasSecret
+                ? {{ lang.query('A peer API secret is stored. Leave blank to keep it; enter a new value to replace it.')|json_encode(15) }}
+                : {{ lang.query('No peer API secret is stored.')|json_encode(15) }});
             buildVlanCheckList('email-vlan-list',   d.email_vlans   || '');
             buildVlanCheckList('webhook-vlan-list', d.webhook_vlans || '');
             buildMonitoredInterfaceList(d.monitored_interfaces || '');
@@ -1567,7 +1635,7 @@ $().ready(function() {
     $('#monitored-interface-list').on('change', '.monitored-iface-cb', updateMonitoredWarning);
 
     function collectConfigData() {
-        return {
+        var data = {
             enabled:          $('#enabled').is(':checked')?'1':'0',
             adguard_rewrite_enabled: $('#adguard_rewrite_enabled').is(':checked')?'1':'0',
             adguard_url:      $('#adguard_url').val(),
@@ -1610,8 +1678,19 @@ $().ready(function() {
             nmap_host_timeout: $('#nmap_host_timeout').val(),
             nmap_version_detection: $('#nmap_version_detection').is(':checked')?'1':'0',
             nmap_max_per_cycle: $('#nmap_max_per_cycle').val(),
-            sidecar_translation_enabled: $('#sidecar_translation_enabled').is(':checked')?'1':'0'
+            sidecar_translation_enabled: $('#sidecar_translation_enabled').is(':checked')?'1':'0',
+            email_log_peer_enabled: $('#email_log_peer_enabled').is(':checked')?'1':'0',
+            email_log_peer_url: $('#email_log_peer_url').val(),
+            email_log_peer_api_key: $('#email_log_peer_api_key').val(),
+            email_log_peer_ca_pem: $('#email_log_peer_ca_pem').val(),
+            email_log_peer_timeout: $('#email_log_peer_timeout').val()
         };
+        // An empty field means "keep the stored secret"; only send a replacement.
+        var secret = $('#email_log_peer_api_secret').val();
+        if (secret !== '' && secret !== undefined) {
+            data.email_log_peer_api_secret = secret;
+        }
+        return data;
     }
 
     function saveConfig($btn, onSuccess) {

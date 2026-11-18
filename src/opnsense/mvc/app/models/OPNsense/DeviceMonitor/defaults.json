@@ -10,7 +10,8 @@
     "configController": "/usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor",
     "apiBaseUrl": "https://localhost/api/devicemonitor",
     "apiEmailUrl": "https://localhost/api/devicemonitor/config/sendEmail",
-    "apiWebhookUrl": "https://localhost/api/devicemonitor/config/sendWebhook"
+    "apiWebhookUrl": "https://localhost/api/devicemonitor/config/sendWebhook",
+    "emailLogDb": "/var/db/devicemonitor/email_log.db"
   },
   "config": {
     "enabled": "0",
@@ -57,6 +58,12 @@
     "sidecar_translation_enabled": "1",
     "ha_carp_enabled": "1",
     "ha_role_override": "auto",
-    "ha_notify_failover": "0"
+    "ha_notify_failover": "0",
+    "email_log_peer_enabled": "0",
+    "email_log_peer_url": "",
+    "email_log_peer_api_key": "",
+    "email_log_peer_api_secret": "",
+    "email_log_peer_ca_pem": "",
+    "email_log_peer_timeout": "8"
   }
 }

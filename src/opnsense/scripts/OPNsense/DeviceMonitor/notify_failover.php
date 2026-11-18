@@ -71,7 +71,7 @@ $handler = new NotificationHandler();
  * unconfigured channel returns "skipped" and never reaches the network. */
 $result = [
     'result' => 'ok',
-    'email' => $handler->sendCustomEmail($subject, $body),
+    'email' => $handler->sendCustomEmail($subject, $body, \OPNsense\DeviceMonitor\EmailLog::TYPE_FAILOVER),
     'webhook' => $handler->sendWebhook(false, null, [
         'event' => 'carp_failover',
         'hostname' => $hostname,

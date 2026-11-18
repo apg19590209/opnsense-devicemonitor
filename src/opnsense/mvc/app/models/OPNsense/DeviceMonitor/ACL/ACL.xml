@@ -6,4 +6,13 @@
             <pattern>api/devicemonitor/*</pattern>
         </patterns>
     </page-services-devicemonitor>
+    <!-- Dedicated peer-read privilege: only the read-only endpoints a peer needs to
+         serve its email log to another node. No UI, no configuration, no mutations. -->
+    <page-services-devicemonitor-peer>
+        <name>Services: Device Monitor (email log peer read)</name>
+        <patterns>
+            <pattern>api/devicemonitor/emaillog/peerpage</pattern>
+            <pattern>api/devicemonitor/emaillog/peermessage</pattern>
+        </patterns>
+    </page-services-devicemonitor-peer>
 </acl>

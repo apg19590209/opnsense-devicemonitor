@@ -31,6 +31,19 @@ if (($config['email_enabled'] ?? '0') !== '1' || empty($config['email_to'])) {
 $emailTo   = $config['email_to'];
 $emailFrom = $config['email_from'] ?? 'devicemonitor@opnsense.local';
 
+// Scan-result email has its own transport path, so it logs independently. The
+// recorder is best-effort: an unavailable log never changes the exit code below.
+require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailLog.php');
+require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/EmailTransport.php');
+$__dmLog = \OPNsense\DeviceMonitor\EmailLog::instance();
+$__dmMessageId = \OPNsense\DeviceMonitor\EmailLog::newMessageId((string)@gethostname());
+$__dmEvent = $__dmLog->recordSubmission(
+    \OPNsense\DeviceMonitor\EmailLog::TYPE_SCAN_RESULT,
+    (string)$emailTo,
+    (string)($data['ip'] ?? '') !== '' ? ('Scan result for ' . $data['ip']) : 'Scan result',
+    null, null, null, null, $__dmMessageId
+);
+
 $e = static function ($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 };
@@ -138,6 +151,12 @@ $html = <<<HTML
 </html>
 HTML;
 
+/* Attach the body the mail will actually carry. Recording is best-effort and
+ * cannot change the message or its exit code. */
+if ($__dmEvent) {
+    $__dmLog->recordContent($__dmEvent, $html, 'html');
+}
+
 $emailMethod = strtolower($config['email_method'] ?? 'sendmail');
 
 if ($emailMethod === 'smtp') {
@@ -212,9 +231,19 @@ if ($emailMethod === 'smtp') {
         }
 
         fwrite(STDERR, "Direct SMTP error: {$detail}\n");
+        if ($__dmEvent) {
+            $__dmLog->recordTransportEvent($__dmEvent, \OPNsense\DeviceMonitor\EmailLog::STATE_FAILED,
+                \OPNsense\DeviceMonitor\EmailLog::sanitise($detail), null, 'transport:smtp');
+        }
         exit(1);
     }
 
+    if ($__dmEvent) {
+        /* The Direct SMTP helper exits 0 only after the server accepted the
+         * message: that is relay acceptance, never proof of inbox receipt. */
+        $__dmLog->recordTransportEvent($__dmEvent, \OPNsense\DeviceMonitor\EmailLog::STATE_ACCEPTED,
+            'SMTP relay accepted', null, 'transport:smtp');
+    }
     exit(0);
 }
 
@@ -222,6 +251,9 @@ if ($emailMethod === 'smtp') {
 $message  = "From: {$emailFrom}\r\n";
 $message .= "To: {$emailTo}\r\n";
 $message .= "Subject: {$subject}\r\n";
+if (is_string($__dmMessageId) && $__dmMessageId !== '') {
+    $message .= "Message-ID: <{$__dmMessageId}>\r\n";
+}
 $message .= "MIME-Version: 1.0\r\n";
 $message .= "Content-Type: text/html; charset=UTF-8\r\n";
 $message .= "\r\n{$html}";
@@ -250,6 +282,18 @@ $ret = proc_close($proc);
 
 if ($ret !== 0) {
     fwrite(STDERR, $stderr ?: "sendmail exit code {$ret}\n");
+}
+
+if ($__dmEvent) {
+    if ($ret === 0) {
+        $__dmLog->recordTransportEvent($__dmEvent, \OPNsense\DeviceMonitor\EmailLog::STATE_QUEUED,
+            'Queued to local sendmail', null, 'transport:sendmail');
+        /* Submission only: queue correlation runs out of band. */
+    } else {
+        $__dmLog->recordTransportEvent($__dmEvent, \OPNsense\DeviceMonitor\EmailLog::STATE_FAILED,
+            \OPNsense\DeviceMonitor\EmailLog::sanitise($stderr ?: "sendmail exit code {$ret}"),
+            null, 'transport:sendmail');
+    }
 }
 
 exit($ret);

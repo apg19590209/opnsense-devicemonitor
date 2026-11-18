@@ -58,6 +58,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y php-cli gettext sqlite3
 
+      - name: Validate the peak-price gate boundaries
+        run: python3 tests/test_price_gate.py
+
       - name: Compile Python sources
         run: |
           set -eu
@@ -155,6 +158,84 @@ jobs:
       # must reach notification selection; the start-id snapshot precedes the producers.
       - name: Validate identity event capture order
         run: python3 tests/test_identity_event_capture_order.py
+
+      # Email log: real wrapper behaviour, trusted queue paths and export safety. The
+      # runners need PHP's SQLite extension; it is installed here so the suite can
+      # exercise the recorder against a real database.
+      - name: Ensure PHP SQLite support
+        run: |
+          set -eu
+          if ! php -m | grep -qi '^sqlite3$'; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq php-sqlite3
+          fi
+          php -m | grep -qi '^sqlite3$' || { echo 'PHP sqlite3 extension unavailable'; exit 1; }
+
+      - name: Validate email log recorder
+        run: php tests/test_email_log.php
+
+      - name: Validate email log message content capture
+        run: php tests/test_email_log_content.php
+
+      - name: Validate email log HTML-to-text conversion fixtures
+        run: php tests/test_email_log_conversion_fixtures.php
+
+      - name: Validate email log visibility and soft deletion
+        run: php tests/test_email_log_visibility.php
+
+      - name: Validate email log bulk deletion on temporary databases
+        run: php tests/test_email_log_bulk.php
+
+      - name: Validate email log bulk selection and access contract
+        run: python3 tests/test_emaillog_bulk_access.py
+
+      - name: Validate email log timestamps follow the plugin convention
+        run: python3 tests/test_emaillog_timestamps.py
+
+      - name: Validate email log peer privilege boundaries
+        run: python3 tests/test_emaillog_peer_privilege.py
+
+      - name: Validate email log node identity presentation
+        run: python3 tests/test_emaillog_identity_presentation.py
+
+      - name: Validate email log shared table layout and scope banner
+        run: python3 tests/test_emaillog_table_layout.py
+
+      - name: Validate email log delivery tracking from Postfix logs
+        run: php tests/test_email_log_delivery_tracking.php
+
+      - name: Validate email log Delete/Restore access contract
+        run: python3 tests/test_emaillog_visibility_api.py
+
+      - name: Validate email log View message action
+        run: python3 tests/test_emaillog_message_action.py
+
+      - name: Validate email log content round trip
+        run: php tests/test_email_log_roundtrip.php
+
+      - name: Validate email log peer aggregation
+        run: python3 tests/test_email_log_peer.py
+
+      - name: Validate email log View message dialog
+        run: python3 tests/test_emaillog_dialog.py
+
+      - name: Validate email log transport and export safety
+        run: php tests/test_email_log_transport.php
+
+      - name: Validate email log API routing contract
+        run: python3 tests/test_emaillog_routing.py
+
+      - name: Validate email log CSRF handling
+        run: python3 tests/test_emaillog_csrf.py
+
+      - name: Validate email log control alignment
+        run: python3 tests/test_emaillog_layout.py
+
+      - name: Validate settings control round-trip
+        run: python3 tests/test_settings_control_roundtrip.py
+
+      - name: Validate notification wrappers keep delivery behaviour
+        run: php tests/test_notification_wrappers.php
 
       # v2.11 HA safety: the WAN/uplink must never be selectable as a monitored segment.
       - name: Validate monitored interface selection (v2.11)
