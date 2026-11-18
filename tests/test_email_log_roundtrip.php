@@ -17,11 +17,19 @@ $INPUT = "<html><body><h2>Device Monitor preview</h2>"
        . "<p>After the list.</p>"
        . "<img src=\"http://tracker.invalid/pixel.png\"><script>alert(1)</script></body></html>";
 
+/* Blank lines mark real block boundaries (headings, paragraphs, list items);
+ * consecutive list items are separate blocks too, so each is on its own line with
+ * a blank line between, matching how the source marks them. */
 $EXPECTED = "Device Monitor preview\n"
+          . "\n"
           . "Line one with bold and italic.\n"
+          . "\n"
           . "Special characters: <tag> & \"quotes\" &amp;.\n"
+          . "\n"
           . "First bullet\n"
+          . "\n"
           . "Second bullet\n"
+          . "\n"
           . "After the list.";
 
 /* 1. conversion produces exactly the expected text */
@@ -71,8 +79,10 @@ $table = '<p>Test Email</p><table>'
 $converted = EmailLog::htmlToText($table);
 check(strpos($converted, '\\t') === false, 'conversion stores no literal backslash-t');
 check(strpos($converted, "\t") === false, 'no raw tab is kept in the readable text');
-check(strpos($converted, "Test Email\nServer: OPNsense.internal\nTime: 2026-11-17 08:52:21\nTo: apg@example.invalid") === 0,
-    'each table cell becomes one clean line');
+check(strpos($converted, "Test Email\n\nServer: OPNsense.internal\nTime: 2026-11-17 08:52:21\nTo: apg@example.invalid") === 0,
+    'each table row is one compact line, following a single paragraph break');
+check(strpos($converted, "Server: OPNsense.internal") !== false
+    && strpos($converted, "Server:\n") === false, 'label and value stay on one line');
 check(strpos($converted, "\r") === false, 'carriage returns are normalised away');
 
 /* 8. genuine message text keeps its own characters, including a typed \t */

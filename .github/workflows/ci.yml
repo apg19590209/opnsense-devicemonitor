@@ -177,6 +177,9 @@ jobs:
       - name: Validate email log message content capture
         run: php tests/test_email_log_content.php
 
+      - name: Validate email log HTML-to-text conversion fixtures
+        run: php tests/test_email_log_conversion_fixtures.php
+
       - name: Validate email log visibility and soft deletion
         run: php tests/test_email_log_visibility.php
 

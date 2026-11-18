@@ -210,16 +210,36 @@ class EmailLog
     {
         $text = str_replace(["\r\n", "\r"], "\n", (string)$html);
         $text = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', '', $text);
+
+        /* Source indentation is formatting, not content. Without this a tag on its own
+         * indented line leaves a space before each newline, which both splits a label
+         * from its value and produces blank lines no reader expects. */
+        $text = preg_replace('/^[ \t]+(?=<)/m', '', $text);
+        $text = preg_replace('#>\n[ \t]*<#', '><', $text);
+
         $text = preg_replace('#<br\s*/?>#i', "\n", $text);
-        /* Table cells become one line each. Single-quoted '\t' here used to store
-         * a literal backslash-t in every recorded HTML body; a tab is the intended
-         * separator, and the whitespace passes below then collapse it. */
-        $text = preg_replace('#</t[dh]>#i', "\t", $text);
-        $text = preg_replace('#</(p|div|tr|h[1-6]|li|table|thead|tbody|section)>#i', "\n", $text);
+        /* Table rows end a line; cells inside a row are joined with one space so a
+         * label/value pair reads as "Server: host" rather than two lines. */
+        $text = preg_replace('#</tr>#i', "\n", $text);
+        $text = preg_replace('#</t[dh]>#i', ' ', $text);
+
+        /* Blocks: a paragraph, heading, list item, div, table or table body closes a
+         * block. Mark the boundary rather than the whitespace, so adjacent table rows
+         * can be told apart from real paragraph breaks. */
+        $text = preg_replace('#</(p|div|h[1-6]|li|thead|tbody|section|table)>#i', "\n\x02", $text);
+
         $text = strip_tags($text);
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        /* Normalise horizontal whitespace and trailing newlines first. */
         $text = preg_replace('/[ \t]+/', ' ', $text);
-        $text = preg_replace('/[ ]*\n[ \t]*/', "\n", $text);
+        $text = preg_replace('#[ ]*\n[ ]*#', "\n", $text);
+
+        /* A block boundary becomes one blank line, except where it merely follows a
+         * table row (rows of the same table stay compact on consecutive lines). */
+        $text = preg_replace('#\n(\x02)+#', "\n\x02", $text);
+        $text = preg_replace('#\x02#', "\n\n", $text);
+        $text = preg_replace('#(?<=\S)\n\n(?=[^\n]*:) #', "\n", $text);
         $text = preg_replace('/\n{3,}/', "\n\n", $text);
         return trim($text);
     }
