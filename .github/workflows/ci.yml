@@ -189,6 +189,9 @@ jobs:
       - name: Validate email log node identity presentation
         run: python3 tests/test_emaillog_identity_presentation.py
 
+      - name: Validate email log shared table layout and scope banner
+        run: python3 tests/test_emaillog_table_layout.py
+
       - name: Validate email log delivery tracking from Postfix logs
         run: php tests/test_email_log_delivery_tracking.php
 

@@ -79,7 +79,20 @@
                             </div>
                         </div>
 
-                        <table class="table table-condensed table-hover" id="email-log-table">
+                        {# One shared column layout for Local, Peer and All nodes: the same
+                           colgroup and fixed layout keep boundaries identical across tabs,
+                           refreshes and empty results. #}
+                        <div class="table-responsive">
+                        <table class="table table-condensed table-hover email-log-table" id="email-log-table">
+                            <colgroup>
+                                <col class="email-log-col-time"/>
+                                <col class="email-log-col-node"/>
+                                <col class="email-log-col-type"/>
+                                <col class="email-log-col-recipient"/>
+                                <col class="email-log-col-subject"/>
+                                <col class="email-log-col-status"/>
+                                <col class="email-log-col-actions"/>
+                            </colgroup>
                             <thead>
                             <tr>
                                 {# Static translated label; individual values carry their own zone suffix. #}
@@ -94,6 +107,7 @@
                             </thead>
                             <tbody id="email-log-rows"></tbody>
                         </table>
+                        </div>
                         <p class="text-muted" id="email-log-empty" style="display:none;">
                             {{ devicemonitor_t('No email records in the retention window.') }}
                         </p>
@@ -113,6 +127,33 @@
 </div>
 
 <style>
+    /* Shared Email Log column layout. Proportions follow the Local screenshot:
+       time and status are compact, node and subject carry the extra width. */
+    #email-log-table.email-log-table {
+        table-layout: fixed;
+        width: 100%;
+        margin-bottom: 0;
+    }
+    #email-log-table.email-log-table .email-log-col-time { width: 16%; }
+    #email-log-table.email-log-table .email-log-col-node { width: 19%; }
+    #email-log-table.email-log-table .email-log-col-type { width: 10%; }
+    #email-log-table.email-log-table .email-log-col-recipient { width: 17%; }
+    #email-log-table.email-log-table .email-log-col-subject { width: 22%; }
+    #email-log-table.email-log-table .email-log-col-status { width: 10%; }
+    #email-log-table.email-log-table .email-log-col-actions { width: 6%; }
+    /* Values wrap rather than being clipped; fonts are unchanged. */
+    #email-log-table.email-log-table td,
+    #email-log-table.email-log-table th {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        vertical-align: top;
+    }
+    #email-log-table.email-log-table td.email-log-actions {
+        white-space: nowrap;
+    }
+    @media (max-width: 991px) {
+        #email-log-table.email-log-table { min-width: 720px; }
+    }
     /* Scoped to this dialog only. OPNsense main.css sets .modal-body padding:0,
      * so the padded body the design requires is supplied here. No fixed heights
      * on the content: the dialog itself is capped to the viewport below the fixed
@@ -494,7 +535,8 @@
                 }
                 return;
             }
-            // All nodes: the local half is always shown, the peer half may be missing.
+            /* All nodes always describes both halves: this node's records plus the
+             * configured peer's. It never borrows the Peer-only wording. */
             $note.text(text.allNodes);
             if (data.partial) {
                 $partial.show().text(text.partialData + ' ' + (data.peer && data.peer.reason ? data.peer.reason : ''));
@@ -572,7 +614,7 @@
                     $tr.append($('<td>').text(row.recipient));
                     $tr.append($('<td>').text(row.subject));
                     $tr.append($('<td>').text(statusLabel(row.status)));
-                    var $detail = $('<td>');
+                    var $detail = $('<td>').addClass('email-log-actions');
                     /* The single row action. Metadata, message content and the full
                      * delivery timeline all open in the dialog. It is always offered,
                      * even for rows recorded before capture: the dialog then explains
