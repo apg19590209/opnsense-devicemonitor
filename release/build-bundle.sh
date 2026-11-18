@@ -115,6 +115,10 @@ printf '%s\n' \
     release/verify-testbed-acceptance.sh \
     release/testbed-acceptance.sh \
     release/record-acceptance.sh \
+    release/execution-ledger.py \
+    release/verify-execution.py \
+    release/run-host-checks.sh \
+    release/current-task-requirements.txt \
     release/export-modes.txt \
     release/validate-deploy-archive.py \
     release/prune-plan.sh \
