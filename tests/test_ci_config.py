@@ -88,14 +88,19 @@ def test_every_named_suite_exists():
     print('  suites referenced     %d (all present)' % len(names))
 
 
-def test_predecessor_step_requires_ten_passes():
+def test_predecessor_step_requires_every_pass():
+    """CI must require that every accepted predecessor passed with no skips.
+
+    The count grows whenever the installer accepts another predecessor, so the guard
+    checks the shape of the line rather than a fixed number.
+    """
     step = re.search(r'name: Validate every accepted predecessor upgrade\n(.*?)(?=^      - name:)',
                      WORKFLOW, re.M | re.S)
     assert step, 'no predecessor step'
     body = step.group(1)
-    assert "grep -q '^UPGRADE_PREDECESSORS=PASS passed=10 skipped=0$'" in body, body
+    assert re.search(r"grep -qE '\^UPGRADE_PREDECESSORS=PASS passed=\[1-9\]\[0-9\]\* skipped=0\$'", body), body
     assert 'DM_ALLOW_SKIPPED_PREDECESSORS' not in body, body
-    print('  predecessor step      asserts passed=10 skipped=0')
+    print('  predecessor step      asserts every predecessor passed, none skipped')
 
 
 def test_determinism_step_is_wired():
@@ -134,7 +139,7 @@ CASES = [
     test_dm_bl_012_branch_can_be_tested,
     test_existing_branches_are_preserved,
     test_every_named_suite_exists,
-    test_predecessor_step_requires_ten_passes,
+    test_predecessor_step_requires_every_pass,
     test_determinism_step_is_wired,
     test_uninstaller_step_is_wired,
     test_guard_step_requires_thirty_five_tests,
