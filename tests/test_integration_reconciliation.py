@@ -38,7 +38,7 @@ DEFAULTS = (
     / "DeviceMonitor"
     / "defaults.json"
 )
-MANIFEST = ROOT / "release" / "v2.14.0-runtime.manifest"
+MANIFEST = ROOT / "release" / "v2.15.0-runtime.manifest"
 
 IFCONFIG_BACKUP = """re0: flags=1008843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
 \tinet 192.168.20.24 netmask 0xffffff00 broadcast 192.168.20.255
@@ -84,7 +84,7 @@ def test_combined_defaults_and_config_loading():
     defaults = json.loads(DEFAULTS.read_text())
     config = defaults["config"]
 
-    assert defaults["version"] == "2.14.0"
+    assert defaults["version"] == "2.15.0"
     for key in (
         "identity_email_enabled",
         "email_reminder_scan",

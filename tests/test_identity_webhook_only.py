@@ -17,7 +17,7 @@ SOURCE = ROOT / "src/opnsense/scripts/OPNsense/DeviceMonitor/scan_network.py"
 DEFAULTS = ROOT / "src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"
 CONTROLLER = ROOT / "src/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor/Api/ConfigController.php"
 VIEW = ROOT / "src/opnsense/mvc/app/views/OPNsense/DeviceMonitor/settings.volt"
-MANIFEST = ROOT / "release/v2.14.0-runtime.manifest"
+MANIFEST = ROOT / "release/v2.15.0-runtime.manifest"
 
 IFCONFIG_MASTER = """re0: flags=1008843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
 \tinet 192.168.20.1 netmask 0xffffff00 broadcast 192.168.20.255
