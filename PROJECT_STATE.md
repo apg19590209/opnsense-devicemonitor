@@ -2,6 +2,14 @@
 
 ## Current state
 
+**Email Log HTML-to-text conversion corrected (18 November 2026).** Captured bodies were split
+label/value lines because tag indentation left whitespace before each newline; conversion is now
+structural — a table row is one compact line (`Server: OPNsense.home.arpa`), real block boundaries
+keep one blank line, and nothing is stripped for resembling metadata. Historical stored bodies keep
+their old formatting (no migration). Code `51fcaf4`, CI `44223883558`; installed on `.23`, `.252`
+and `.253` with configuration, records, certificates and CARP preserved. Report:
+`.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
+
 **PR #9 final review (18 November 2026).** Reviewed head `0754bb5` (code head `ea79659`, CI
 `44218707777` success; later commits are documentation only). PR is OPEN and MERGEABLE; no confirmed
 defects in access control, credential handling, migrations, retention or packaging. The user manual
