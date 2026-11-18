@@ -2,6 +2,14 @@
 
 ## Current state
 
+**Email Log recovery and release safeguards — COMPLETE for internal acceptance (18 November 2026).**
+Final candidate source `202d6ef` and bundle `b4e388ac…` (12,517,325 bytes) are installed and accepted
+on `.23`, `.253 MASTER` and `.252 BACKUP` in sequence, using the same archive. The deployment gate
+rejects stale source, missing features, altered archives and missing prior-stage acceptance; obsolete
+pruning remains record-driven. Per-host authenticated, database, settings/certificate, role and
+daemon checks pass. Public release still requires approval; no push, merge, tag or publication occurred.
+Report: `.cline-reports/REPORT-20261118-205100-testbed-acceptance-closeout.md`.
+
 **Authenticated `.23` recovery verification and safeguards-candidate checks — PARTIAL (18 November 2026).**
 Staged `.252` acceptance stopped before any write: the candidate is verified and `.252` is healthy, but
 the installer does not independently enforce the candidate/feature guard. See the amended report.
