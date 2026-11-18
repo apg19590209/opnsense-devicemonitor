@@ -53,6 +53,10 @@ if [ -f "$REPO/release/feature-set.txt" ]; then
 fi
 if [ "${DM_SOURCE_EXPORT:-0}" != 1 ] && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     # shellcheck disable=SC2086
+    # A CI PR checkout has no local main, but the integration ref is still authoritative.
+    if [ -z "${DM_CANDIDATE_ANCESTOR:-}" ] && ! git rev-parse --verify --quiet 'main^{commit}' >/dev/null; then
+        DM_CANDIDATE_ANCESTOR=origin/main
+    fi
     /bin/sh "$REPO/release/verify-candidate.sh" --ancestor "${DM_CANDIDATE_ANCESTOR:-main}" $FEATURE_ARGS >/dev/null || {
         echo 'ABORT: candidate identity check failed' >&2
         exit 1
