@@ -9,7 +9,8 @@ OPNsense Device Monitor") stored `Server:` / `Time:` / `To:` as compact label/va
 asserted and awaits Tony. PR head `9cd1398` (code head `51fcaf4`, CI `44223883558` success) is OPEN
 and MERGEABLE with no code blockers; automated checks pass and visual acceptance covers the Local
 table, the subject-opened popup and the new `.252` email at 13:43:32 AEDT (compact label/value
-lines, paragraph spacing, Relay accepted display); inbox receipt remains unconfirmed. Manual certificate renewal is due before 2026-12-17;
+lines, paragraph spacing, Relay accepted display). Inbox receipt is operator-confirmed for record
+`a14af952…` in `arnhem05.alerts@gmail.com`, completing end-to-end delivery acceptance for that test. Manual certificate renewal is due before 2026-12-17;
 webhook and USB findings unchanged. Report:
 `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
 
