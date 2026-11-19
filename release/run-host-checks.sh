@@ -145,7 +145,7 @@ with socket.create_connection(('127.0.0.1',443),5) as sock:
  with s.wrap_socket(sock,server_hostname='OPNsense.home.arpa') as t: assert t.getpeercert(binary_form=True)
 PY
 }
-peer_check() { php -r 'require_once("/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/PeerClient.php"); $c=json_decode(file_get_contents("/var/db/devicemonitor/config.json"),true); $p=["url"=>$c["email_log_peer_url"],"api_key"=>$c["email_log_peer_api_key"],"api_secret"=>$c["email_log_peer_api_secret"],"ca_pem"=>$c["email_log_peer_ca_pem"],"timeout"=>8]; $r=(new \\OPNsense\\DeviceMonitor\\PeerClient($p))->search([],50,0); exit(empty($r["available"])?1:0);'; }
+peer_check() { php -r 'require_once("/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/PeerClient.php"); $c=json_decode(file_get_contents("/var/db/devicemonitor/config.json"),true); $p=["url"=>$c["email_log_peer_url"],"api_key"=>$c["email_log_peer_api_key"],"api_secret"=>$c["email_log_peer_api_secret"],"ca_pem"=>$c["email_log_peer_ca_pem"],"timeout"=>8]; $r=(new \OPNsense\DeviceMonitor\PeerClient($p))->search([],50,0); exit(empty($r["available"])?1:0);'; }
 auth_check() {
     # .23's management name does not serve the verified chain, so its own signed address is used
     # (the certificate carries it). The HA stages use the management name the peer trusts.

@@ -309,7 +309,7 @@ def _fake_host(tmp):
     (host / 'peer.php').write_text('<?php class PeerClient {}')
     sbin = host / 'sbin'
     sbin.mkdir()
-    (sbin / 'php').write_text('#!/bin/sh\ntouch "$(dirname "$0")/auth-call"\nexit 0\n')
+    (sbin / 'php').write_text('#!/bin/sh\ncase "$*" in *acceptance-check.php*) touch "$(dirname "$0")/auth-call" ;; *) exec /usr/local/bin/php "$@" ;; esac\n')
     (sbin / 'php').chmod(0o755)
     def make(db_ok):
         import sqlite3
@@ -435,7 +435,7 @@ def test_auth_checks_choose_the_verified_host_per_stage():
     """`.23` checks its own signed address; HA stages use the management name; an override wins."""
     with tempfile.TemporaryDirectory() as tmp:
         host, make = _fake_host(tmp)
-        (host / 'sbin/php').write_text('#!/bin/sh\nprintf "%s\\n" "$DM_ACCEPTANCE_HOST" >> "' + str(host) + '/hosts"\n')
+        (host / 'sbin/php').write_text('#!/bin/sh\ncase "$*" in *acceptance-check.php*) printf "%s\\n" "$DM_ACCEPTANCE_HOST" >> "' + str(host) + '/hosts" ;; *) exec /usr/local/bin/php "$@" ;; esac\n')
         (host / 'sbin/php').chmod(0o755)
         stage, env = _sandbox_runner(tmp, host, {})
         (host / 'peer.php').unlink()
@@ -452,6 +452,37 @@ def test_auth_checks_choose_the_verified_host_per_stage():
                  '--source', 'a' * 40, '--bundle', 'b' * 64, '--out', str(host / 'h.json')], env=e)
             seen = set((host / 'hosts').read_text().split()) if (host / 'hosts').is_file() else set()
             check(seen == {want}, '%s checks use %s: %s' % (stage_name, want, sorted(seen)))
+
+
+def test_packaged_peer_check_runs_the_archive_php_expression():
+    """Execute the archive's own peer_check invocation, not a rewritten expression.
+
+    The packaged -r program used doubled backslashes inside single quotes, so PHP received literal
+    backslashes and exited 255. The function text is lifted from the extracted archive, only its
+    absolute paths are redirected into the sandbox, and it runs under /bin/sh. A working
+    PeerClient passes; a client reporting a peer failure makes the check fail. Fixture only.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        host, make = _fake_host(tmp)
+        stage, env = _sandbox_runner(tmp, host, {})
+        runner = (stage / 'release/run-host-checks.sh').read_text()
+        fn = runner[runner.index('peer_check() {'):].split('\n', 1)[0] + '\n'
+        bad_escape = 'new ' + chr(92) * 4 + 'OPNsense'
+        check(bad_escape not in fn, 'the packaged peer_check has no doubled namespace escape')
+        text = fn.replace('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/PeerClient.php',
+                          str(host / 'peer.php'))
+        text = text.replace('/var/db/devicemonitor/config.json', str(host / 'db/config.json'))
+        (host / 'fn.sh').write_text(text)
+        for available, want in ((True, 0), (False, 1)):
+            literal = 'true' if available else 'false'
+            (host / 'peer.php').write_text(
+                '<?php namespace OPNsense\\DeviceMonitor;'
+                'class PeerClient { function __construct($p) {}'
+                ' function search($q,$l,$o) { return ["available"=>' + literal + ']; } }')
+            done = run(['/bin/sh', '-c', '. "$1/fn.sh"; peer_check', 'sh', str(host)], env=env)
+            check(done.returncode == want,
+                  'archive peer_check with available=%s exits %d (got %d)'
+                  % (literal, want, done.returncode))
 
 
 def test_runner_does_not_depend_on_its_invoking_directory():
@@ -681,6 +712,7 @@ def main():
     test_local_target_requires_the_testbed_identity()
     test_remote_stage_runs_over_ssh_without_local_install()
     test_packaged_role_check_parses_real_carp_records()
+    test_packaged_peer_check_runs_the_archive_php_expression()
     test_auth_checks_choose_the_verified_host_per_stage()
     test_installer_mode_is_executable_in_archives()
     test_export_mode_map_matches_git_index()
