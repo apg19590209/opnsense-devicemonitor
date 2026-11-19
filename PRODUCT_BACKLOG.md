@@ -1021,13 +1021,14 @@ remains visible: each outcome below is closed, accepted or still actionable on i
 - **DM-BL-013.5 — Direction-A procedure compliance (D1).** Closed as an accepted test deviation with no further action; the A2 write ordering and the undemonstrated single-write A1 path stay in history. CARP weighting was restored.
 - **DM-BL-013.6 — "Failed 5/5" scan statuses.** Closed as the historical `.252` email-transport failure (`sendmail: not found`), repaired with Postfix. Scan history preserved; no retry performed.
 
-**Accepted as unvalidated by Tony — `CLOSED` as an accepted limitation (not PASS)**
+**Accepted limitations — `CLOSED` as accepted unvalidated/UNKNOWN, never PASS**
 - **DM-BL-013.7 — identity-conflict alert delivery.** Closed as accepted-unvalidated by the operator's earlier decision; never claimed as PASS. The only delivery behaviour changed by the webhook-only correction.
+
+- **DM-BL-013.10 — historical monitoring-activation attribution.** CLOSED (19 November 2026) as an **accepted historical UNKNOWN, not PASS**: an un-attributed settings write and one scan, never shown to be an automatic-activation defect. No further investigation required; no attribution claim is made.
 
 **Still unverified — `OPEN`, actionable**
 - **DM-BL-013.8 — live ageing transitions.** Isolated 21/21 does not substitute for live acceptance. Next: run the live ageing check on a staging copy, then record the result.
 - **DM-BL-013.9 — new-device alert delivery and post-repair scan-result email.** Nmap execution succeeds; these deliveries are unexercised. Next: one targeted scan and one new-device event with delivery recorded.
-- **DM-BL-013.10 — historical monitoring-activation attribution.** UNKNOWN, not a demonstrated defect. Next: attribute from the preserved event history if it becomes relevant; otherwise record as unexplainable.
 
 **Confirmed defects — tracked separately**
 - **O4-ageing — stale service state and retirement.** Confirmed behaviour problem with multi-row IPs, tracked as its own OPEN entry below; not part of DM-BL-013's delivery scope.
@@ -1049,7 +1050,7 @@ explicitly and the unresolved obligations stay visible; its statuses are superse
 | Failover email path | **CLOSED — not configured, and now transport-capable on both nodes.** `ha_notify_failover` remains unset on `.252` and `.253`, so neither has an operational failover-email expectation. The earlier `.252` limitation (no local MTA) no longer applies: both nodes now have a working local sendmail/Postfix relay, and generic node email delivery is operator-confirmed PASS end-to-end on both. The automatic **failover-triggered** email itself remains **unverified** — no failover event was generated and the switch is off; that is a separate, unexercised path | email close-out, 16 Nov 2026 |
 | Live ageing transitions | **OPEN — unperformed** (isolated 21/21 is not live acceptance) | ageing-isolated package |
 | Targeted Nmap execution and new-device alert delivery | **OPEN — future coverage only.** Nmap execution itself has succeeded on every recorded attempt. New-device alert delivery and **post-repair scan-result email** are unexercised future coverage, not known defects | identity/Nmap procedure REV1; scan-history investigation, 16 Nov 2026 |
-| Historical monitoring-activation attribution | **OPEN — UNKNOWN**, not a demonstrated defect | PROJECT_STATE event-path entry |
+| Historical monitoring-activation attribution | **CLOSED — accepted historical UNKNOWN** (19 Nov 2026), not PASS; no further investigation | PROJECT_STATE event-path entry |
 
 **"Failed 5/5" scan statuses — CLOSED (16 November 2026): historical email-transport failure.**
 The label is the scan-history email column (`email_sent=0`), not an Nmap failure. On `.252` the ten
