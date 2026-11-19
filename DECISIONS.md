@@ -2363,6 +2363,16 @@ service on it answers, which is the intent here but is a semantic widening worth
 A device that answers one probe and then disappears still looks present for the full
 retirement window, because the probe evidence is timestamped like any other sighting.
 
+**Clarification (19 November 2026).** The decision history above is retained. An active
+verification advances `devices.last_seen` only when the caller supplies a matching
+`presence_assoc` observed with that probe; IP-only evidence, a MAC copied from historical
+inventory, and authoritative/configuration rows record service presence without making a
+device-identity claim. Retirement checks the service row's own recent non-authoritative
+`last_verified` directly, using the same inclusive whole-second cutoff as the device predicate
+and the existing conservative reader for legacy unqualified timestamps. Candidate selection,
+service deletion, and pending-alert cleanup share one `BEGIN IMMEDIATE` transaction; the
+status-ageing update remains a separate earlier commit.
+
 ## 54. Ageing keys on the last observation, not the last success
 
 ### Decision

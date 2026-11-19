@@ -2,6 +2,18 @@
 
 ## Current state
 
+**Service-retirement correction — COMPLETE locally (19 November 2026).** The existing
+`b8de765`/`21f4262`/`2758ac6` correction now uses the device predicate's inclusive,
+whole-second retirement cutoff for service presence even when the injected `now` has
+microseconds, while retaining conservative UTC/local interpretation for legacy timestamps.
+Integrated UTC and Sydney cases cover exact cutoff, one second inside, and one second
+outside with stale per-address inventory and an unrelated fresh host. Deterministic
+two-connection tests pass in DELETE and WAL modes; a prior committed refresh survives,
+refreshes cannot commit between selection and deletion, and injected pending-alert deletion
+failure rolls back the service DELETE while the separately committed status-ageing update
+remains. No push, deployment, packaging, merge, or release occurred. Report:
+`.cline-reports/REPORT-20261119-102514.md`.
+
 **v2.15.0 Email Log release — PUBLISHED 19 November 2026.** PR #14 merged normally as merge commit
 `934779887a880bfb525bd074c4d91fb57a3d8124`; annotated tag `v2.15.0` points to it. Release:
 https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.15.0 with

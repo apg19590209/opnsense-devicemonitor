@@ -681,8 +681,11 @@ def test_responding_service_without_hostwatch_keeps_the_row():
 
     # The window is the configured retirement period from the last success, in its
     # own database per case. Timestamps have one-second resolution and the cutoff is
-    # strict, so a success exactly at it is 30 days old.
-    for seconds, expected in ((-3600, (0, 0)), (-1, (0, 0)), (1, (0, 1))):
+    # inclusive, like the device predicate: a success exactly at it is still fresh.
+    # A service exactly at or inside the cutoff is retained. A service outside it is
+    # retired when an unrelated fresh host exists; in-place deletion of the last row at
+    # an address is covered by test_retirement_guard_boundary_is_inclusive_integrated().
+    for seconds, expected in ((-3600, (0, 0)), (-1, (0, 0)), (0, (0, 0))):
         with tempfile.TemporaryDirectory() as tmp:
             module.DB_FILE = str(Path(tmp) / "devices.db")
             module.init_db()
@@ -703,25 +706,30 @@ def test_responding_service_without_hostwatch_keeps_the_row():
 def test_presence_boundary_follows_legacy_timezone_convention():
     """The guard uses the same conservative `_timestamp_age` as ageing, in any timezone.
 
-    A naive stored success is protected exactly when its conservative age is less than
-    the retirement window. The boundary is strict and identical under UTC and a legacy
-    local zone, and a future-dated value is treated as fresh (no skew policy).
+    A naive stored success is protected when its conservative age is no more than the
+    retirement window after normalizing the injected clock to the whole-second cutoff
+    used by device inventory. The boundary is inclusive and identical under UTC and a
+    legacy local zone, and a future-dated value is treated as fresh (no skew policy).
     """
     from zoneinfo import ZoneInfo
     module = load_module()
     days = module.SERVICE_RETIRE_AFTER_DAYS
-    now = NOW
+    now = NOW + timedelta(microseconds=750000)
+    freshness_now = now.replace(microsecond=0)
 
     def protected(verified, legacy_tz):
-        assert module._timestamp_age(verified, now, legacy_tz) is not None
-        return module._timestamp_age(verified, now, legacy_tz) < timedelta(days=days)
+        age = module._timestamp_age(verified, freshness_now, legacy_tz)
+        return age is not None and age <= timedelta(days=days)
 
     for legacy_tz in (UTC, ZoneInfo("Australia/Sydney")):
         cutoff = (now.astimezone(UTC) - timedelta(days=days)).strftime(STAMP)
-        assert not protected(cutoff, legacy_tz), (legacy_tz, "exact cutoff")
+        assert protected(cutoff, legacy_tz), (legacy_tz, "exact cutoff")
         fresh = (now.astimezone(UTC) - timedelta(days=days)
                  + timedelta(seconds=1)).strftime(STAMP)
         assert protected(fresh, legacy_tz), (legacy_tz, "one second inside")
+        expired = (now.astimezone(UTC) - timedelta(days=days)
+                   - timedelta(seconds=1)).strftime(STAMP)
+        assert not protected(expired, legacy_tz), (legacy_tz, "one second outside")
         future = (now.astimezone(UTC) + timedelta(days=3)).strftime(STAMP)
         assert protected(future, legacy_tz), (legacy_tz, "future-dated")
 
@@ -803,6 +811,266 @@ def test_dry_run_reports_protection_without_writes():
         assert read_row(module, "198.51.100.61") is None
 
     print("AGE_DRY_RUN_RESPECTS_PROTECTION=PASS")
+
+
+def test_retirement_guard_boundary_is_inclusive_integrated():
+    """The real retirement path keeps evidence exactly at the cutoff.
+
+    Each case has stale device inventory at its own address and an unrelated fresh host,
+    so only the service guard can keep the row: the global no-fresh-host refusal and the
+    device `last_seen` predicate never apply. Canonical evidence is read with both UTC
+    and Sydney (the system legacy zone the scheduler uses) using a microsecond-bearing
+    `now`; one second outside retires. Separate legacy-local coverage below retains the
+    conservative ambiguous-domain policy.
+    """
+    module = load_module()
+    days = module.SERVICE_RETIRE_AFTER_DAYS
+    now = NOW + timedelta(microseconds=750000)
+    stale_seen = stamp(-timedelta(days=days + 5))
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, FRESH_MAC, FRESH_IP, stamp(timedelta(hours=-1)))
+            for index, (label, offset) in enumerate((
+                    ("exact", timedelta(0)),
+                    ("inside", timedelta(seconds=1)),
+                    ("outside", -timedelta(seconds=1)),
+            )):
+                mac = "aa:bb:cc:dd:ee:%02x" % (0x70 + index)
+                ip = "198.51.100.%d" % (0x70 + index)
+                add_device(conn, mac, ip, stale_seen)
+                add_service(conn, mac, ip, "available",
+                            (now - timedelta(days=days) + offset).strftime(STAMP))
+            conn.commit()
+
+        aged, retired = module.age_stale_service_state(now=now, legacy_tz=UTC)
+        assert (aged, retired) == (0, 1), (aged, retired)
+        assert read_row(module, "198.51.100.112") is not None
+        assert read_row(module, "198.51.100.113") is not None
+        assert read_row(module, "198.51.100.114") is None
+        assert service_count(module) == 2, service_count(module)
+        assert device_last_seen(module, "198.51.100.112") == stale_seen
+        assert device_last_seen(module, "198.51.100.113") == stale_seen
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+        sydney_stale_seen = (
+            now - timedelta(days=days + 5)
+        ).strftime(STAMP)
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, FRESH_MAC, FRESH_IP, stamp(timedelta(hours=-1)))
+            for index, (label, offset) in enumerate((
+                    ("exact", timedelta(0)),
+                    ("inside", timedelta(seconds=1)),
+                    ("outside", -timedelta(seconds=1)),
+            )):
+                mac = "aa:bb:cc:dd:ee:%02x" % (0x80 + index)
+                ip = "198.51.100.%d" % (0x80 + index)
+                add_device(conn, mac, ip, sydney_stale_seen)
+                add_service(conn, mac, ip, "available",
+                            (now - timedelta(days=days) + offset)
+                            .strftime(STAMP))
+            conn.commit()
+
+        aged, retired = module.age_stale_service_state(now=now, legacy_tz=SYDNEY)
+        assert (aged, retired) == (0, 1), (aged, retired)
+        assert read_row(module, "198.51.100.128") is not None
+        assert read_row(module, "198.51.100.129") is not None
+        assert read_row(module, "198.51.100.130") is None
+        assert device_last_seen(module, "198.51.100.128") == sydney_stale_seen
+        assert device_last_seen(module, "198.51.100.129") == sydney_stale_seen
+
+    print("AGE_RETIREMENT_GUARD_INCLUSIVE_INTEGRATED=PASS")
+
+
+def test_retirement_alert_failure_rolls_back_service_delete():
+    """A post-DELETE pending-alert failure rolls back retirement as one unit.
+
+    The status-ageing update is deliberately committed before the retirement lock, so it
+    remains visible while the service row and its held alert are restored together. Dry
+    run reports both actions but writes neither.
+    """
+    module = load_module()
+    days = module.SERVICE_RETIRE_AFTER_DAYS
+    retired_key = alert_key(module, STALE_MAC, STALE_IP)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, FRESH_MAC, FRESH_IP, stamp(timedelta(hours=-1)))
+            add_device(conn, STALE_MAC, STALE_IP,
+                       stamp(-timedelta(days=days + 5)))
+            add_service(
+                conn, FRESH_MAC, FRESH_IP, "unavailable",
+                stamp(-timedelta(days=module.SERVICE_UNKNOWN_AFTER_DAYS + 1)),
+            )
+            add_service(conn, STALE_MAC, STALE_IP, "available",
+                        stamp(-timedelta(days=days + 2)))
+            conn.execute(
+                "INSERT INTO service_alert_pending "
+                "(service_key, mac, event_json, held_at) VALUES (?, ?, '{}', ?)",
+                (retired_key, STALE_MAC, stamp(-timedelta(hours=1))),
+            )
+            conn.execute(
+                """
+                CREATE TRIGGER fail_pending_alert_delete
+                BEFORE DELETE ON service_alert_pending
+                BEGIN
+                    SELECT RAISE(ABORT, 'injected pending-alert deletion failure');
+                END
+                """
+            )
+            conn.commit()
+
+        assert module.age_stale_service_state(now=NOW, dry_run=True) == (1, 1)
+        assert service_count(module) == 2
+        assert read_row(module, STALE_IP) == ("available", 0)
+        assert pending_keys(module) == {retired_key}
+
+        # The service DELETE succeeds, the pending-alert DELETE fails, and the
+        # retirement transaction restores both rows. Ageing's earlier commit remains.
+        assert module.age_stale_service_state(now=NOW) == (1, 0)
+        assert service_count(module) == 2
+        assert read_row(module, FRESH_IP) == ("unknown", 0)
+        assert read_row(module, STALE_IP) == ("available", 0)
+        assert pending_keys(module) == {retired_key}
+
+        # The dry-run count reflects the committed ageing update but still reports the
+        # rolled-back retirement candidate and itself writes nothing.
+        assert module.age_stale_service_state(now=NOW, dry_run=True) == (0, 1)
+        assert service_count(module) == 2
+        assert pending_keys(module) == {retired_key}
+
+    print("AGE_ALERT_FAILURE_ROLLS_BACK_RETIREMENT=PASS")
+
+
+def test_retirement_transaction_blocks_a_concurrent_refresh():
+    """Selection and deletion are one write transaction, in both journal modes.
+
+    Two connections, a temporary database, no sleeps or threads. The interceptor runs the
+    real function and fires only at the DELETE statement, with the retirement's write
+    lock held. A second connection then has two attempts: refresh the selected service's
+    ``last_verified`` (in place for a delete-mode row) and, once, insert a fresh device at
+    the stale address. Neither can interpose, so the retirement deletes exactly the
+    selected row and its pending alert and leaves both fresh rows intact.
+    """
+    module = load_module()
+    days = module.SERVICE_RETIRE_AFTER_DAYS
+    stale_seen = stamp(-timedelta(days=days + 5))
+    verified = (NOW - timedelta(days=days + 2)).strftime(STAMP)
+
+    class Recorder(sqlite3.Connection):
+        attempts = []
+        fired = False
+
+    def concurrent_writer(conn):
+        def attempt(sql, params):
+            try:
+                conn.execute(sql, params)
+                conn.commit()
+                Recorder.attempts.append("committed")
+            except sqlite3.OperationalError as exc:
+                conn.rollback()
+                Recorder.attempts.append("blocked: %s" % str(exc).split(":", 1)[0])
+        attempt(
+            "UPDATE device_services SET last_verified = ?, last_checked = ? "
+            "WHERE ip = ? AND mac = ?",
+            (stamp(timedelta(0)), stamp(timedelta(0)), STALE_IP, STALE_MAC),
+        )
+        attempt(
+            "INSERT INTO devices (mac, ip, vlan, is_active, last_seen) "
+            "VALUES ('aa:bb:cc:dd:ee:2f', ?, 'VLAN60', 0, ?)",
+            (STALE_IP, stamp(timedelta(hours=-1))),
+        )
+
+    def trace(statement):
+        if (not Recorder.fired
+                and statement.lstrip().upper().startswith("DELETE FROM DEVICE_SERVICES")):
+            Recorder.fired = True
+            concurrent_writer(writer)
+
+    for journal in ("delete", "wal"):
+        with tempfile.TemporaryDirectory() as tmp:
+            module.DB_FILE = str(Path(tmp) / "devices.db")
+            module.init_db()
+            with closing(sqlite3.connect(module.DB_FILE)) as conn:
+                assert conn.execute(f"PRAGMA journal_mode = {journal}").fetchone()[0] == journal
+                add_device(conn, FRESH_MAC, FRESH_IP, stamp(timedelta(hours=-1)))
+                add_service(conn, FRESH_MAC, FRESH_IP, "available", stamp(timedelta(0)))
+                add_device(conn, STALE_MAC, STALE_IP, stale_seen)
+                add_service(conn, STALE_MAC, STALE_IP, "available", verified)
+                conn.executemany(
+                    "INSERT INTO service_alert_pending "
+                    "(service_key, mac, event_json, held_at) VALUES (?, ?, '{}', ?)",
+                    [
+                        (alert_key(module, STALE_MAC, STALE_IP), STALE_MAC, stamp(timedelta(0))),
+                        (alert_key(module, FRESH_MAC, FRESH_IP), FRESH_MAC, stamp(timedelta(0))),
+                    ],
+                )
+                conn.commit()
+
+            Recorder.attempts = []
+            Recorder.fired = False
+            writer = sqlite3.connect(module.DB_FILE, timeout=0.2)
+            writer.execute("PRAGMA busy_timeout = 200")
+            outer = sqlite3.connect(module.DB_FILE, factory=Recorder)
+            outer.set_trace_callback(trace)
+            try:
+                result = module.age_stale_service_state(conn=outer, now=NOW)
+            finally:
+                outer.close()
+                writer.close()
+
+            label = (journal, result, Recorder.attempts)
+            assert Recorder.fired, label
+            assert result == (0, 1), label
+            assert len(Recorder.attempts) == 2, label
+            assert all(a.startswith("blocked") for a in Recorder.attempts), label
+            with closing(sqlite3.connect(module.DB_FILE)) as conn:
+                assert conn.execute(
+                    "SELECT COUNT(*) FROM device_services WHERE ip = ?", (STALE_IP,)
+                ).fetchone()[0] == 0, label
+                assert conn.execute(
+                    "SELECT COUNT(*) FROM service_alert_pending WHERE mac = ?", (STALE_MAC,)
+                ).fetchone()[0] == 0, label
+                assert conn.execute(
+                    "SELECT COUNT(*) FROM device_services WHERE ip = ?", (FRESH_IP,)
+                ).fetchone()[0] == 1, label
+                assert conn.execute(
+                    "SELECT COUNT(*) FROM service_alert_pending WHERE mac = ?", (FRESH_MAC,)
+                ).fetchone()[0] == 1, label
+
+    print("AGE_RETIREMENT_TRANSACTION_BLOCKS_REFRESH=PASS")
+
+
+def test_refresh_committed_before_retirement_selection_is_protected():
+    """A refresh committed before retirement selection is honoured, not deleted."""
+    module = load_module()
+    days = module.SERVICE_RETIRE_AFTER_DAYS
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, FRESH_MAC, FRESH_IP, stamp(timedelta(hours=-1)))
+            add_device(conn, STALE_MAC, STALE_IP,
+                       stamp(-timedelta(days=days + 5)))
+            add_service(conn, STALE_MAC, STALE_IP, "available",
+                        stamp(-timedelta(days=days + 2)))
+            conn.commit()
+        with closing(sqlite3.connect(module.DB_FILE, timeout=5)) as conn:
+            conn.execute(
+                "UPDATE device_services SET last_verified = ?, last_checked = ? WHERE ip = ?",
+                (stamp(-timedelta(hours=1)), stamp(-timedelta(hours=1)), STALE_IP),
+            )
+            conn.commit()
+        assert module.age_stale_service_state(now=NOW) == (0, 0)
+        assert read_row(module, STALE_IP) is not None
+
+    print("AGE_REFRESH_BEFORE_SELECTION_SURVIVES=PASS")
 
 
 def test_authoritative_service_does_not_refresh_device():
@@ -1128,6 +1396,10 @@ def main():
     test_association_must_match_mac_and_ip()
     test_dhcp_success_records_endpoint_but_not_device_presence()
     test_responding_service_without_hostwatch_keeps_the_row()
+    test_retirement_guard_boundary_is_inclusive_integrated()
+    test_retirement_alert_failure_rolls_back_service_delete()
+    test_retirement_transaction_blocks_a_concurrent_refresh()
+    test_refresh_committed_before_retirement_selection_is_protected()
     test_presence_boundary_follows_legacy_timezone_convention()
     test_non_qualifying_verification_does_not_protect()
     test_dry_run_reports_protection_without_writes()
@@ -1210,8 +1482,6 @@ def test_retirement_drops_address_with_only_stale_rows():
         assert read_row(module, STALE_IP) is None
 
     print("RETIRE_DROPS_ADDRESS_WITH_ONLY_STALE_ROWS=PASS")
-
-
 
 
 def read_checked(module, ip, port=22):

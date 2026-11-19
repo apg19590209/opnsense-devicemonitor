@@ -474,17 +474,22 @@ refreshes `devices.last_seen` from an IP-only answer: `upsert_device_service()` 
 `presence_assoc=(mac, ip)` and `touch_device_last_seen()` matches both the MAC and the IP, forward
 only. No current caller supplies a contemporaneous association (DHCP ownership is newest-row
 heuristic, NTP/SSH/WEB candidate MACs come from the devices table or copied service rows), so no
-path refreshes device presence today; endpoint presence remains on the service row. Retirement
-semantics, service-row ownership assignment and alert identity are unchanged. Not pushed or
-deployed; live ageing acceptance is still outstanding.
+path refreshes device presence today; endpoint presence remains on the service row. Matching-
+inventory ownership and alert identity are unchanged; retirement now evaluates that service-row
+presence directly. Not pushed or deployed; live ageing acceptance is still outstanding.
 
 **Retirement presence guard — implemented locally (19 November 2026).** A retirement candidate whose
 own `last_verified` records a successful non-authoritative probe inside `SERVICE_RETIRE_AFTER_DAYS`
 is retained; `last_checked` (failed attempts) never qualifies, nor do authoritative rows or missing/
 unparseable timestamps. The DELETE now removes only the rows that failed this guard (previously its
 `unseen_host` predicate would have ignored the split). This preserves Decision 53's protection
-without a device-identity claim. Retirement window, matching-inventory rule, global no-fresh-host
-refusal, alert keys and history are unchanged.
+without a device-identity claim. The cutoff is inclusive and whole-second, matching the device
+predicate even when `now` carries microseconds; legacy timestamps retain the conservative UTC/local
+reader. Candidate selection, service deletion, and pending-alert cleanup run under one
+`BEGIN IMMEDIATE` transaction after the separately committed status-ageing update. A pending-alert
+delete failure rolls back both retirement deletes. Integrated UTC/Sydney boundary tests and
+two-connection DELETE/WAL lock tests pass. The retirement window, matching-inventory rule, global
+no-fresh-host refusal, alert keys and history are unchanged.
 
 **Still unresolved:** shared-IP retention of a stale-owner row (E1b) and the DHCP newest-row
 ownership heuristic; deletion churn in the `retired 12` cycle is recorded reasoning (Decision 53)
