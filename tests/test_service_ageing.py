@@ -284,7 +284,7 @@ def test_retirement_boundary():
             add_service(conn, "aa:bb:cc:dd:ee:23", boundary_ip, "available",
                         stamp(-retire_after))
             add_service(conn, "aa:bb:cc:dd:ee:24", old_ip, "available",
-                        stamp(-retire_after))
+                        stamp(-retire_after - timedelta(days=1)))
             conn.commit()
 
         aged, retired = module.age_stale_service_state(now=NOW)
@@ -361,7 +361,8 @@ def test_dry_run_writes_nothing():
                 conn, FRESH_MAC, FRESH_IP, "unavailable",
                 stamp(-timedelta(days=module.SERVICE_UNKNOWN_AFTER_DAYS + 1)),
             )
-            add_service(conn, STALE_MAC, STALE_IP, "available", stamp(timedelta(0)))
+            add_service(conn, STALE_MAC, STALE_IP, "available",
+                        stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 2)))
             conn.commit()
 
         aged, retired = module.age_stale_service_state(now=NOW, dry_run=True)
@@ -394,7 +395,8 @@ def test_pending_alert_removed_with_retired_row():
             add_device(conn, STALE_MAC, STALE_IP,
                        stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 1)))
             add_service(conn, FRESH_MAC, FRESH_IP, "available", stamp(timedelta(0)))
-            add_service(conn, STALE_MAC, STALE_IP, "available", stamp(timedelta(0)))
+            add_service(conn, STALE_MAC, STALE_IP, "available",
+                        stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 2)))
             conn.execute(
                 "INSERT INTO service_alert_pending "
                 "(service_key, mac, event_json, held_at) VALUES (?, ?, '{}', ?)",
@@ -427,7 +429,8 @@ def test_retirement_writes_no_activity_event():
             add_device(conn, STALE_MAC, STALE_IP,
                        stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 1)))
             # Retired by DELETE: the status trigger is UPDATE-only, so no event.
-            add_service(conn, STALE_MAC, STALE_IP, "available", stamp(timedelta(0)))
+            add_service(conn, STALE_MAC, STALE_IP, "available",
+                        stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 2)))
             # Aged by UPDATE: one history-only SERVICE_CHANGED, never emailed.
             add_service(
                 conn, FRESH_MAC, FRESH_IP, "unavailable",
@@ -645,6 +648,125 @@ def test_dhcp_success_records_endpoint_but_not_device_presence():
         module.subprocess.run = original_run
 
     print("AGE_DHCP_DOES_NOT_REFRESH_DEVICE=PASS")
+
+
+def test_responding_service_without_hostwatch_keeps_the_row():
+    """Decision 53's protection without a device-identity claim (service-only presence)."""
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        stale_seen = stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 5))
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, STALE_MAC, STALE_IP, stale_seen)
+            add_device(conn, FRESH_MAC, FRESH_IP, stamp(timedelta(hours=-1)))
+            add_service(conn, STALE_MAC, STALE_IP, "available", stamp(timedelta(hours=-1)))
+            conn.commit()
+
+        # Repeated successful service-only observations keep the row, and the
+        # device timestamp is never claimed as fresh.
+        for offset in (5, 10, 15):
+            assert module.age_stale_service_state(
+                now=NOW + timedelta(hours=offset)) == (0, 0)
+            assert device_last_seen(module, STALE_IP) == stale_seen
+            with closing(sqlite3.connect(module.DB_FILE)) as conn:
+                module.upsert_device_service(
+                    conn, STALE_MAC, STALE_IP, "VLAN60", "SSH", 22, "tcp",
+                    "ssh_banner", "verified", stamp(timedelta(hours=offset)),
+                )
+                conn.commit()
+            assert device_last_seen(module, STALE_IP) == stale_seen
+
+    # The window is the configured retirement period from the last success, in its
+    # own database per case. Timestamps have one-second resolution and the cutoff is
+    # strict, so a success exactly at it is 30 days old.
+    for seconds, expected in ((-3600, (0, 0)), (-1, (0, 0)), (1, (0, 1))):
+        with tempfile.TemporaryDirectory() as tmp:
+            module.DB_FILE = str(Path(tmp) / "devices.db")
+            module.init_db()
+            at = NOW + timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS,
+                                 hours=-1, seconds=seconds)
+            keeper = (at.astimezone(UTC) - timedelta(days=1)).strftime(STAMP)
+            with closing(sqlite3.connect(module.DB_FILE)) as conn:
+                add_device(conn, STALE_MAC, STALE_IP, stale_seen)
+                add_device(conn, FRESH_MAC, FRESH_IP, keeper)
+                add_service(conn, STALE_MAC, STALE_IP, "available",
+                            stamp(timedelta(hours=-1)))
+                conn.commit()
+            assert module.age_stale_service_state(now=at) == expected, (seconds, expected)
+
+    print("AGE_RESPONDING_SERVICE_KEEPS_ROW=PASS")
+
+
+def test_non_qualifying_verification_does_not_protect():
+    """Authoritative, miss-only, stale-Nmap and malformed timestamps are not presence."""
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        stale = stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 5))
+        fresh = stamp(timedelta(hours=-1))
+        cases = []
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, FRESH_MAC, FRESH_IP, fresh)
+            for index, (method, confidence, verified) in enumerate((
+                    ("authoritative", "authoritative", fresh),
+                    ("ssh_banner", "verified", stale),
+                    ("nmap_service", "discovered",
+                     stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 60))),
+                    ("ssh_banner", "verified", "not-a-timestamp"),
+                    ("ssh_banner", "verified", ""),
+            )):
+                mac = "aa:bb:cc:dd:ee:%02x" % (0x40 + index)
+                ip = "198.51.100.%d" % (40 + index)
+                add_device(conn, mac, ip, stale)
+                conn.execute(
+                    "INSERT INTO device_services (mac, ip, interface, service_type, port,"
+                    " protocol, status, detection_method, confidence, product, version,"
+                    " first_detected, last_verified, last_checked, miss_count)"
+                    " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0)",
+                    (mac, ip, 'em0', 'SSH', 22, 'tcp', 'available', method,
+                     confidence, '', '', fresh, verified, fresh))
+                cases.append((mac, ip))
+            conn.commit()
+
+        aged, retired = module.age_stale_service_state(now=NOW)
+        assert retired == len(cases), (aged, retired)
+        for _mac, ip in cases:
+            assert read_row(module, ip) is None, ip
+
+    print("AGE_NON_QUALIFYING_VERIFICATION_NOT_PROTECTED=PASS")
+
+
+def test_dry_run_reports_protection_without_writes():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        stale = stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 5))
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, FRESH_MAC, FRESH_IP, stamp(timedelta(hours=-1)))
+            add_device(conn, STALE_MAC, STALE_IP, stale)
+            add_device(conn, "aa:bb:cc:dd:ee:61", "198.51.100.61", stale)
+            add_service(conn, STALE_MAC, STALE_IP, "available", stamp(timedelta(hours=-1)))
+            add_service(conn, "aa:bb:cc:dd:ee:61", "198.51.100.61", "available",
+                        stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 2)))
+            conn.commit()
+
+        assert module.age_stale_service_state(now=NOW, dry_run=True) == (0, 1)
+        assert service_count(module) == 2
+        assert module.age_stale_service_state(now=NOW) == (0, 1)
+        assert service_count(module) == 1
+        assert read_row(module, STALE_IP) is not None
+        assert read_row(module, "198.51.100.61") is None
+
+    print("AGE_DRY_RUN_RESPECTS_PROTECTION=PASS")
 
 
 def test_authoritative_service_does_not_refresh_device():
@@ -969,6 +1091,9 @@ def main():
     test_verified_service_refreshes_device_last_seen()
     test_association_must_match_mac_and_ip()
     test_dhcp_success_records_endpoint_but_not_device_presence()
+    test_responding_service_without_hostwatch_keeps_the_row()
+    test_non_qualifying_verification_does_not_protect()
+    test_dry_run_reports_protection_without_writes()
     test_authoritative_service_does_not_refresh_device()
     test_refresh_never_invents_or_rewinds_device()
     test_utc11_and_utc_writers_store_the_same_instant()
@@ -1038,7 +1163,8 @@ def test_retirement_drops_address_with_only_stale_rows():
             add_device(conn, STALE_MAC, STALE_IP, stale_seen)
             add_device(conn, "aa:bb:cc:dd:ee:29", STALE_IP, stale_seen)
             add_device(conn, FRESH_MAC, FRESH_IP, stamp(timedelta(hours=-1)))
-            add_service(conn, STALE_MAC, STALE_IP, "available", stamp(timedelta(0)))
+            add_service(conn, STALE_MAC, STALE_IP, "available",
+                        stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 2)))
             conn.commit()
 
         aged, retired = module.age_stale_service_state(now=NOW)

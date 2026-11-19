@@ -3436,7 +3436,7 @@ def age_stale_service_state(conn=None, now=None, dry_run=False, legacy_tz=None):
         rows = conn.execute(
             f'''
             SELECT mac, ip, interface, service_type, port, protocol,
-                   detection_method
+                   detection_method, last_verified, confidence
             FROM device_services
             WHERE {unseen_host}
             ''',
@@ -3446,8 +3446,26 @@ def age_stale_service_state(conn=None, now=None, dry_run=False, legacy_tz=None):
         log(f"[SERVICES] Retirement candidates failed: {e}")
         return aged, 0
 
-    if not rows:
+    # Decision 53's protection without a device-identity claim: a row whose own
+    # last_verified shows a successful probe inside the retirement window is a
+    # responding endpoint, even when hostwatch never reported the host. The window
+    # is the existing retirement grace period. Authoritative/configuration rows and
+    # rows with a missing or unparseable timestamp are not protected, and
+    # `last_checked` is not consulted, so failed attempts never qualify.
+    def responding(row):
+        if (str(row[6] or '').strip().lower() == 'authoritative'
+                or str(row[8] or '').strip().lower() == 'authoritative'):
+            return False
+        age = _timestamp_age(row[7], now, legacy_tz)
+        return age is not None and age < timedelta(days=SERVICE_RETIRE_AFTER_DAYS)
+
+    retiring = [row for row in rows if not responding(row)]
+
+    if not retiring:
         return aged, 0
+
+    if dry_run:
+        return aged, len(retiring)
 
     if dry_run:
         return aged, len(rows)
@@ -3462,18 +3480,23 @@ def age_stale_service_state(conn=None, now=None, dry_run=False, legacy_tz=None):
             'interface': interface,
             'detection_method': detection_method,
         })
-        for mac, ip, interface, service_type, port, protocol, detection_method
-        in rows
+        for mac, ip, interface, service_type, port, protocol, detection_method, _, _
+        in retiring
     ]
 
     try:
-        retired = conn.execute(
-            f'''
-            DELETE FROM device_services
-            WHERE {unseen_host}
-            ''',
-            (retire_cutoff,)
-        ).rowcount
+        # Delete only the rows that failed the presence guard.
+        before_changes = conn.total_changes
+        if retiring:
+            conn.executemany(
+                "DELETE FROM device_services "
+                "WHERE ip = ? AND service_type = ? AND port = ? AND protocol = ? "
+                "  AND detection_method = ? AND interface = ? "
+                "  AND COALESCE(mac, '') = COALESCE(?, '')",
+                [(row[1], row[3], row[4], row[5], row[6], row[2], row[0])
+                 for row in retiring],
+            )
+        retired = conn.total_changes - before_changes
 
         if keys:
             conn.executemany(

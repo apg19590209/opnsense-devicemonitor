@@ -9,8 +9,9 @@ Corrected outcomes after the presence-attribution change:
   E1  - the service row advances its own timestamps and its MAC is reassigned by the
         ordering heuristic; no device row is refreshed. aged=0, retired=0.
   E1b - no probe: the stale-owner row ages to unknown and is RETAINED because another
-        device at the IP is fresh. aged=1, retired=0. This retention is the unresolved
-        backlog item; deletion semantics are unchanged.
+        device at the IP is fresh (and its own last success is far outside the
+        retirement window, so the presence guard does not apply either). aged=1,
+        retired=0. Shared-IP retention remains the unresolved backlog item.
   E2  - owner moved to another IP, no fresh device at the old IP: aged=1, retired=1.
   E3  - the DHCP path still assigns the newest device at the IP; no device refresh.
 These are fixture results, not host acceptance.
