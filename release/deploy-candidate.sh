@@ -102,7 +102,8 @@ if [ "$REMOTE" = 1 ]; then
     # The role is a prerequisite, not just a post-install result: run the staged packaged check
     # on the host before the remote gate writes anything.
     # shellcheck disable=SC2086
-    $SSH_CMD "$HOST" "TMPDIR=/var/tmp /usr/local/bin/python3 - '$REMOTE_DIR/release/run-host-checks.sh' '$DEPLOY_STAGE'" <<'ROLE_CHECK' || {
+    # The remote login shell may be csh, which rejects VAR=value command; run it through sh.
+    $SSH_CMD "$HOST" "/bin/sh -c 'TMPDIR=/var/tmp /usr/local/bin/python3 - \"\$1\" \"\$2\"' sh '$REMOTE_DIR/release/run-host-checks.sh' '$DEPLOY_STAGE'" <<'ROLE_CHECK' || {
 import os, re, subprocess, sys, tempfile
 src = open(sys.argv[1], encoding='utf-8').read()
 start = src.index('role_check() {')
