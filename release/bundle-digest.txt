@@ -148,6 +148,7 @@
 version 2.15.0
 bytes 12556754
 sha256 c3b6a723f20969ec63c25032abf2dfbd235345ea0c28891185cbe41929c7f16c
+# source = 589ed0001fa4ed428805f19e02c42af3c3487fdb
 #   Bytes measured from the committed tree (source b0e8355 plus the measurement commit) under
 #   the declared build conditions: export-sourced build, TZ=UTC0, canonical ustar with fixed
 #   ownership and mtime, the deterministic stored-block gzip. 96 members; the builder is not an
