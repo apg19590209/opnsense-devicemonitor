@@ -182,17 +182,17 @@ def test_gate_and_sequence():
         check(out.returncode != 0 and '.252 acceptance missing' in out.stderr,
               'MASTER is refused before BACKUP acceptance')
         out = gate(repo, archive, identity, '192.168.20.252', source, extra_env=noop_ssh(tmp))
-        check(out.returncode != 0 and out.stderr.strip().endswith('remote toolchain staging failed'),
-              '.252 after .23 reaches SSH staging and stops when ssh refuses')
+        check(out.returncode != 0 and 'remote orchestration is out of service' in out.stderr,
+              '.252 is refused while remote orchestration is frozen')
         r = isolated_accept(repo, identity, source, '.252')
         check(r.returncode == 0, '.252 acceptance is recorded')
         out = gate(repo, archive, identity, '192.168.20.253', source,
                    extra_env=noop_ssh(tmp) | {'DM_SSH': None} if False else {})
-        check(out.returncode != 0 and 'DM_SSH' in out.stderr,
-              '.253 without DM_SSH aborts (remote stages never run locally)')
+        check(out.returncode != 0 and 'remote orchestration is out of service' in out.stderr,
+              '.253 is refused while orchestration is frozen')
         out = gate(repo, archive, identity, '192.168.20.253', source, extra_env=noop_ssh(tmp))
-        check(out.returncode != 0 and 'remote toolchain staging failed' in out.stderr,
-              '.253 with .23 only reaches SSH staging and stops there')
+        check(out.returncode != 0 and 'remote orchestration is out of service' in out.stderr,
+              '.253 is refused while remote orchestration is frozen')
 
 
 def test_local_target_requires_the_testbed_identity():
@@ -256,11 +256,11 @@ def test_remote_stage_runs_over_ssh_without_local_install():
         isolated_accept(repo, identity, source, '.23')
         no_ssh = gate(repo, archive, identity, '192.168.20.252', source, check=False,
                       extra_env={'DM_REMOTE_LEDGER': '/var/tmp/ledger.jsonl'})
-        check(no_ssh.returncode != 0 and 'DM_SSH' in no_ssh.stderr,
-              'a remote stage without DM_SSH aborts without a write')
+        check(no_ssh.returncode != 0 and 'remote orchestration is out of service' in no_ssh.stderr,
+              'a remote stage is refused while orchestration is frozen')
         out = gate(repo, archive, identity, '192.168.20.252', source, check=False, extra_env=env)
         calls = log.read_text() if log.exists() else ''
-        check('192.168.20.252' in calls, 'the remote stage was reached through SSH')
+        check(not calls, 'the frozen remote path runs no SSH command')
         check(str(tmp) not in calls or 'install-unattended' not in calls,
               'the local installer was not invoked for a remote stage')
         check(out.returncode == 0 or 'REMOTE_TOOLS_READY' in out.stdout or out.returncode != 0,

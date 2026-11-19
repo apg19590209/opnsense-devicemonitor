@@ -42,6 +42,26 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     [ "$(git rev-parse HEAD)" = "$SOURCE" ] || { echo 'ABORT: worktree is not the declared source' >&2; exit 1; }
     [ -z "$(git status --porcelain)" ] || { echo 'ABORT: worktree is dirty' >&2; exit 1; }
 fi
+# Candidate ancestry and required features, using the existing verifier. Git-only checks run
+# here on the control host; a production host needs no checkout. The ancestor must be named
+# explicitly (fetch origin/main first) so a stale local main cannot pass.
+FEATURE_ARGS=
+if [ -f release/feature-set.txt ]; then
+    set -f
+    for feature in $(grep -v '^#' release/feature-set.txt | awk 'NF {print $1}'); do
+        FEATURE_ARGS="$FEATURE_ARGS --min-features $feature"
+    done
+    set +f
+fi
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    ANCESTOR=${DM_CANDIDATE_ANCESTOR:-}
+    [ -n "$ANCESTOR" ] || { echo 'ABORT: DM_CANDIDATE_ANCESTOR (fetched origin/main) is required' >&2; exit 1; }
+    set -f
+    /bin/sh release/verify-candidate.sh --ancestor "$ANCESTOR" $FEATURE_ARGS >/dev/null || {
+        echo 'ABORT: candidate ancestry or feature check failed' >&2; exit 1; }
+    set +f
+    [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo 'ABORT: worktree has tracked changes' >&2; exit 1; }
+fi
 STAGE=$(mktemp -d /tmp/dm_deploy_candidate.XXXXXX)
 trap 'rm -rf "$STAGE"' EXIT
 tar -xzf "$ARCHIVE" -C "$STAGE"
@@ -87,8 +107,14 @@ case "$DEPLOY_STAGE" in
     .253) [ -f "$REPO/release/acceptance/.252-$IDENT_SHA.passed" ] || { echo 'ABORT: .252 acceptance missing for this candidate' >&2; exit 1; } ;;
 esac
 SSH_CMD=${DM_SSH:-}
-# Remote reachability is checked only after the local prior-stage gate above has passed.
 if [ "$REMOTE" = 1 ]; then
+    # Remote orchestration is frozen and out of service pending rework; the supported procedure
+    # installs and verifies on each node directly. Refuse after the prior-stage gate above and
+    # before any SSH (the code below is preserved unchanged).
+    if [ "${DM_ALLOW_FROZEN_REMOTE_ORCHESTRATION:-0}" != 1 ]; then
+        echo 'ABORT: remote orchestration is out of service; use the per-node procedure' >&2
+        exit 1
+    fi
     [ -n "$SSH_CMD" ] || { echo 'ABORT: remote deployment requires DM_SSH (an ssh command with its identity and host-key options)' >&2; exit 1; }
     [ -n "${DM_REMOTE_LEDGER:-}" ] || { echo 'ABORT: DM_REMOTE_LEDGER (remote ledger path) is required' >&2; exit 1; }
     REMOTE_ROOT=/var/tmp/dm-release-tools
