@@ -2,15 +2,14 @@
 
 ## Current state
 
-**v2.15.0 Email Log release — changed archive awaiting approval (19 November 2026).** The earlier
-approved archive `aa1270ed…` (source `b0e8355`) could not produce generated acceptance: its packaged runner
-aborted under `set -u`, and the committed follow-up resolved helpers outside `release/` and aborted on a FAIL.
-`3dac69c` also pinned `release/build-bundle.sh` while removing it from the archive allow-list, which failed
-`verify-release-inputs.sh` (CI `44419526545`). Commit `f86d2b8` fixes the runner, keeps the builder out of the
-archive and makes it an optional-but-pinned input; local preflight PASS, packaged-path sandbox checks PASS and
-the replacement archive `3a2dacc2…` (12,557,266 bytes, 96 members, source `d2e3c4f`) awaits approval; the approved `c3b6a723…` cut could not fail a wrong CARP advskew and is superseded. Nothing was installed from it; hosts remain on
-the accepted runtime. CI 44430535745 passed at b7e3550. This session runs on `.23`, where the gate now dispatches `--host local` to `.23` after checking the hostname and management address (`32f8872`); installation is held pending approval of the replacement identity. No host was changed, merged, tagged or published. Approval package:
-`release/RELEASE-APPROVAL-PACKAGE-2.15.0-20261119.md`.
+**v2.15.0 Email Log release — PUBLISHED 19 November 2026.** PR #14 merged normally as merge commit
+`934779887a880bfb525bd074c4d91fb57a3d8124`; annotated tag `v2.15.0` points to it. Release:
+https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.15.0 with
+`dm-v2.15.0-runtime.tar.gz` (12,558,290 bytes, SHA-256
+`f71fd8b70ec9cd94190f8f9c2977991a8817af658ff01379fe10d34993f23246`, 96 members, build source
+`657636b`) and `SHA256SUMS`. The downloaded assets were verified byte-identical to the accepted
+archive; CI `44466485934` passed at `8a1925f`. Staged acceptance is COMPLETE on `.23`, `.252` and
+`.253`; the earlier `aa1270ed…` candidate remains recorded as defective, with no build-source line.
 
 **Release and deployment safeguards merged into `main` (19 November 2026).** PR #11 merged reviewed
 head `294caa3` normally as merge commit `5b5f51b`; CI `44404713134` passed at that head. The merged
