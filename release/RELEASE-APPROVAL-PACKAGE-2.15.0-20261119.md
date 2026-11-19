@@ -1,6 +1,28 @@
 # FINAL REPORT — Email Log release approval package
 
-**Status: APPROVED for installation — CARP-corrected candidate frozen, not installed.** The bounded CARP-parser correction (`9b9f23f`) replaced the approved `role_check`: FreeBSD prints `carp: ROLE vhid N advbase N advskew N`, so the previous adjacency match could never pass `.252`/`.253`. The corrected tool runs the same packaged check before installation as well as during acceptance. The earlier approval for `3a2dacc2…`/`0f17f282…` is superseded by this correction, which was authorised explicitly; the new identity below needs no further approval to install. Nothing has been installed.
+**Status: ACCEPTED — v2.15.0 peer-corrected archive installed and accepted on `.23`, `.252` and `.253`.** Ready for publication approval; merge, tag and publication are not yet performed.
+
+## Current state (authoritative)
+
+- Accepted archive: **`dm-v2.15.0-runtime.tar.gz`**, **12,558,290 bytes**, SHA-256 **`f71fd8b70ec9cd94190f8f9c2977991a8817af658ff01379fe10d34993f23246`**, 96 members (+ `.identity`). It is the release asset and is not rebuilt during close-out.
+- Build source: **`657636beb96ea072d50bbb337229cfef064d7d3f`** (`release/bundle-digest.txt` `# source` line; the archive's `.identity` names the same commit).
+- Records: `release/v2.15.0-checksums.txt` and `release/bundle-digest.txt` carry this identity; `release/v2.15.0-runtime.manifest` is the 51-row runtime identity (unchanged by the corrections).
+- CI: `44462157712` passed at `4356f6a` — the last code/pin change. Later commits on the branch are these records plus the committed acceptance markers, the ledger and the handoff; they touch no packaged input and the tip rebuilds to the same `f71fd8b7…`.
+- Staged acceptance for this archive: `.23` 12/12, `.252` 13/13 (peer included), `.253` 13/13; markers `release/acceptance/.{23,252,253}-f71fd8b7….passed`; ledger `OVERALL_STATUS=COMPLETE` for source `657636b`/bundle `f71fd8b7…`.
+- Retained evidence: `/var/backups/devicemonitor/evidence-f71fd8b7/` with `MANIFEST.sha256` (16/16 verify) and `LEDGER-CORRECTION.md`.
+- Deployment tool used: `release/deploy-candidate.sh` (checkout tool; the `.23` run was through the enforced gate, `.252`/`.253` by the authorised per-node installer procedure).
+
+**Limits carried forward:** `aa1270ed…` was recorded without a `# source` line and its exact build tree cannot be re-derived; the `248cd104…` `.23` marker names `7f7175a`, whose installer is byte-identical; both remain historical. Permanent-credential cleanup is verified on all three hosts.
+
+## Superseded candidates (history — not installable)
+
+- `aa1270ed…` (source `b0e8355`): defective packaged runner (`RESULT_ARGS` unset); never installable.
+- `c3b6a723…` (source `f86d2b8`): `role_check` ignored `advskew`; superseded by the CARP parser correction.
+- `3a2dacc2…` (source `d2e3c4f`) and `dbab6d25…` (source `9b9f23f`): approved at their time; superseded by later packaged corrections. The prior status text below is kept as history.
+
+## Historical status and corrections (preserved)
+
+**Historical status (at 19 Nov 2026, superseded): APPROVED for installation — CARP-corrected candidate frozen, not installed.** The bounded CARP-parser correction (`9b9f23f`) replaced the approved `role_check`: FreeBSD prints `carp: ROLE vhid N advbase N advskew N`, so the previous adjacency match could never pass `.252`/`.253`. The corrected tool runs the same packaged check before installation as well as during acceptance. The earlier approval for `3a2dacc2…`/`0f17f282…` is superseded by this correction, which was authorised explicitly; the new identity below needs no further approval to install. Nothing has been installed.
 
 **Earlier status (preserved): BLOCKED (APPROVED ARCHIVE DEFECT; NO PROMOTION).** The v2.15.0 approval package and exact-head CI are complete. An unauthorised ad hoc `.252` move of `email_log.db` was reconciled: the original file was restored from the pre-incident consistent snapshot and verified byte-identical (`de99a51c…`, two records/five events), with authenticated reads and integrity checks passing. The approved archive was then installed on `.23`; the post-install result collector exposed a separate tooling bug, so host acceptance is not yet recorded and `.252`/`.253` promotion has not begun. No tag or publication occurred.
 
@@ -151,8 +173,9 @@ remains MASTER/0. No promotion, merge, tag or publication was performed.
 the fixed runner and acceptance helper, then authorise its fresh sequential `.23` → `.252` → `.253`
 acceptance. The approved `aa1270ed…` identity must not be silently substituted.
 
-## Approval and next step
+## Publication approval requested
 
-Proposed: **v2.15.0 at archive `3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5` (source `d2e3c4f16415f8c70a769c3ddc927c9cfb124541`)** — awaiting Tony's explicit approval. Approved and still valid: `c3b6a723…` was approved, but it is superseded and must not be installed. Not installable: `aa1270ed…`. Next after approval: verified snapshots, installation and generated acceptance on `.23`, then `.252`, then `.253`.
+Approve merge, tag and publication of **v2.15.0 at archive `f71fd8b70ec9cd94190f8f9c2977991a8817af658ff01379fe10d34993f23246` (12,558,290 bytes, source `657636beb96ea072d50bbb337229cfef064d7d3f`)**:
+merge PR #14 into `main` as a merge commit, tag the merge commit `v2.15.0`, and publish it with `dm-v2.15.0-runtime.tar.gz` plus `release/v2.15.0-checksums.txt`. Do not rebuild or substitute the archive.
 
 END OF REPORT
