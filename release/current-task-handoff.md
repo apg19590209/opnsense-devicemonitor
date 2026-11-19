@@ -12,7 +12,7 @@ Approved candidate: 3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a78
 - .252: no acceptance for the approved archive; incident reconciled, records preserved
 - .253: no acceptance for the approved archive; MASTER/0 unchanged
 
-Outstanding checks: push and CI at the final head; then sequential generated acceptance per host for the approved hash, then `python3 release/execution-ledger.py status`.
+Outstanding checks: `.23` access (established key refused); then sequential generated acceptance per host for the approved hash, then `python3 release/execution-ledger.py status`. CI 44430176957 passed at ada0f8e.
 
 Stop conditions: price gate premium without approval; missing access; unsafe verification failure; any archive or source substitution.
 

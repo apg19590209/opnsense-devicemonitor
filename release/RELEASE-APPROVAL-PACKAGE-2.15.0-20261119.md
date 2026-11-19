@@ -17,6 +17,10 @@ The corrected candidate is a tooling-only change; no runtime application file ch
 - The deployment gate accepts this identity for `.23` (`DEPLOYMENT_CHECK_OK`) and refuses `.252` before `.23` acceptance exists for it.
 - Pinned builder: `release/build-bundle.sh` is not an archive member and not an install prerequisite in `verify-release-inputs.sh`; absent is `OPTIONAL_INPUT_ABSENT`, present must match the pin, and a symlink is refused.
 
+**CI:** exact-head CI run `44430176957` (workflow_dispatch on `release/v2.15.0-email-log-20261119`) passed at pushed head `ada0f8e`. The final tree rebuilds byte-identically to the approved archive (`BUNDLE_VERIFIED sha256=3a2dacc2…`), so the documentation commits do not alter it; the deployment gate for `.23` accepts the identity (`DEPLOYMENT_CHECK_OK`).
+
+**Acceptance:** not started. Host `192.168.20.23` refuses the established key (`Permission denied (publickey,password,keyboard-interactive)`), and no other authorised credential is available here. Sequential acceptance waits on access; `.252` and `.253` were not contacted with the candidate and remain unchanged.
+
 **Approved:** Tony approved archive `3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5` (source `f86d2b88b0dd7bd6efd6d4e4cd51b9d85cfd03c4`) and authorised its guarded sequential `.23` → `.252` → `.253` readiness, deployment and generated acceptance, on 19 November 2026.
 
 ## Proposed version
@@ -144,6 +148,6 @@ acceptance. The approved `aa1270ed…` identity must not be silently substituted
 
 ## Approval and next step
 
-Approved: **v2.15.0 at archive `3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5` (source `f86d2b88b0dd7bd6efd6d4e4cd51b9d85cfd03c4`)**. Superseded and not installable: `aa1270ed…` and `c3b6a723…`. Next: push and required CI at the final head, then guarded `.23` → `.252` → `.253` generated acceptance for this identity only.
+Approved: **v2.15.0 at archive `3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5` (source `f86d2b88b0dd7bd6efd6d4e4cd51b9d85cfd03c4`)**. Superseded and not installable: `aa1270ed…` and `c3b6a723…`. CI passed at `ada0f8e`. Next (blocked on `.23` access): guarded `.23` → `.252` → `.253` generated acceptance for this identity only.
 
 END OF REPORT
