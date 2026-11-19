@@ -11,6 +11,15 @@ https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.15.0 with
 archive; CI `44466485934` passed at `8a1925f`. Staged acceptance is COMPLETE on `.23`, `.252` and
 `.253`; the earlier `aa1270ed…` candidate remains recorded as defective, with no build-source line.
 
+**Historical evidence limitations — accepted by Tony (19 November 2026).** Tony accepted the
+previously documented historical evidence limitations: superseded candidates keep their recorded
+provenance limits (notably `aa1270ed…`, recorded without a `# source` line, whose exact build tree
+cannot be re-derived), and the DM-BL-011 physical database-byte limitation and DM-BL-012 `.23`
+lifecycle outcome remain closed as previously recorded. Acceptance does not turn missing evidence
+into verified evidence: no historical byte identity, build source or unperformed test is claimed.
+The investigative work on these points is closed; incident history, the ledger-correction record
+and rollback evidence are preserved unchanged.
+
 **Release and deployment safeguards merged into `main` (19 November 2026).** PR #11 merged reviewed
 head `294caa3` normally as merge commit `5b5f51b`; CI `44404713134` passed at that head. The merged
 changes are release/install tooling and tests only—no runtime application-file changes. The final
@@ -65,7 +74,8 @@ artifacts. No HA candidate deployment, push, tag or publication occurred. Report
 `038f44c`, last code change `51fcaf4` (CI `44223883558` success) — only documentation followed.
 Open limitations: pagination fixture-tested only; Peer/All nodes, Deleted/All and dialog screens not
 visually confirmed; manual certificate renewal before 2026-12-17; webhook (no destination, TLS
-verification disabled) and parked USB findings unchanged. Report:
+verification disabled) remains open. The USB stick was retired as unsuitable and is no longer
+tracked. Report:
 `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
 
 **Email Log formatting verified with a genuine record; PR #9 final review (18 November 2026).**
@@ -76,8 +86,8 @@ asserted and awaits Tony. PR head `9cd1398` (code head `51fcaf4`, CI `4422388355
 and MERGEABLE with no code blockers; automated checks pass and visual acceptance covers the Local
 table, the subject-opened popup and the new `.252` email at 13:43:32 AEDT (compact label/value
 lines, paragraph spacing, Relay accepted display). Inbox receipt is operator-confirmed for record
-`a14af952…` in `arnhem05.alerts@gmail.com`, completing end-to-end delivery acceptance for that test. Manual certificate renewal is due before 2026-12-17;
-webhook and USB findings unchanged. Report:
+`a14af952…` in `arnhem05.alerts@gmail.com`, completing end-to-end delivery acceptance for that test. Manual certificate renewal is due before
+2026-12-17; webhook remains open (the USB stick was retired as unsuitable). Report:
 `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
 
 **Email Log HTML-to-text conversion corrected (18 November 2026).** Captured bodies were split
@@ -93,8 +103,8 @@ and `.253` with configuration, records, certificates and CARP preserved. Report:
 defects in access control, credential handling, migrations, retention or packaging. The user manual
 now documents the Email Log (§16.9: relay status meaning, peer setup, clickable subject, soft
 deletion and restoration). Operator visual PASS is recorded for the Local table and the
-subject-opened popup only. Manual certificate renewal remains due before 2026-12-17; webhook and USB
-findings unchanged. Report:
+subject-opened popup only. Manual certificate renewal remains due before 2026-12-17; webhook
+remains open (the USB stick was retired as unsuitable). Report:
 `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
 
 **Email Log bulk selection and soft deletion (18 November 2026).** The shared table layout is
@@ -193,6 +203,9 @@ caches were untouched. A 15 GB USB stick (`DNXTNKV80W22UDP6PV9Z`) was formatted 
 (`gpt/dmarchive`) for archive use, but its filesystem corrupted under a sustained 4 GB copy and
 the device is parked, unmounted and classified unsuitable for backups pending full verification; a
 destructive address-dependent test verified only the first 1 GiB of its advertised 15 GB.
+**Disposition (19 November 2026): retired.** The USB-backup investigation is closed as retired
+and unsuitable for backup use; no further capacity tests are planned and it is no longer tracked
+as outstanding work. The physical device and all backup/evidence files are untouched.
 
 **Email Log Clear filters, soft delete/restore, visibility filter and themed dialog header (17 November 2026).**
 Clear filters resets search, type and status, returns to page one and refreshes once while

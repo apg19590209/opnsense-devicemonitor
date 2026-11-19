@@ -29,6 +29,12 @@ Report: `.cline-reports/REPORT-20261118-205100-testbed-acceptance-closeout.md`.
 
 ### DM-BL-008a — Dutch (nl_NL) is not selectable in the GUI language list: **`CLOSED`**
 
+**Deferred upstream (19 November 2026).** Dutch remains deferred pending OPNsense core support:
+`get_locale_list()` must offer `nl_NL` and a Dutch core catalogue must ship. It is not an active
+release blocker and `nl_NL` is **not** a supported, selectable locale. Existing translation sources
+stay in the repository and remain the source for revisiting; no installer, manifest or catalogue
+change is made by this note.
+
 **Description:** Make the Dutch Device Monitor catalogue usable through the normal
 OPNsense language setting, or withdraw Dutch from the delivered language set until
 that is possible. The nine DM-BL-008 languages are selected in
@@ -1001,11 +1007,34 @@ code-blocked because the host has no `vmm`, `/dev/vmm` or `vm-bhyve`.
 `verification/PHASE3-DISPOSABLE-OPNSENSE-VM-PLAN-20261107.md`,
 `verification/DM-BL-012-FRESH-23-ATTEMPT-20261108.md` and `PROJECT_STATE.md`.
 
-### DM-BL-013 — full monitoring lifecycle, HA/CARP and delivery-path validation: **`OPEN`**
+### DM-BL-013 — full monitoring lifecycle, HA/CARP and delivery-path validation: **`OPEN` (umbrella; closure by outcome below)**
 
-**Subcriteria status (consolidated 16 November 2026).** Tracked here so completed work is closed
-explicitly and the unresolved obligations stay visible. Historical entries below are preserved
-verbatim; this table is the current summary.
+**Reconciled by outcome (19 November 2026).** The umbrella is not closed while unverified scope
+remains visible: each outcome below is closed, accepted or still actionable on its own. The
+16 November table further down is preserved verbatim as history.
+
+**Delivered and verified — `CLOSED`**
+- **DM-BL-013.1 — authenticated UI rendering and browser checks.** Closed on operator-attested PASS for U1–U8 and for the observed U9 workflow; U10 screenshot files and hashes matched. Evidence: `dm-bl-013-ui-attestation-20261115T011305Z`.
+- **DM-BL-013.2 — daemon-triggered CARP failover webhook, both nodes and both legs.** Closed as demonstrated: four frames (demotion `.253`/`.252`, return `.252`/`.253`), isolated capture, full restoration. Sealed `c6007d34…` plus `ADDENDUM-1-RECO…`. Obtained under accepted procedure deviation D1; it is a real PASS, not a clean procedural qualification.
+- **DM-BL-013.3 — generic email and generic webhook delivery.** Closed on operator-confirmed PASS (attestation; unchanged code path, not re-tested this cycle).
+- **DM-BL-013.4 — failover email expectation.** Closed by configuration classification: `ha_notify_failover` is unset on `.252`/`.253`, so no operational expectation exists. `.253` is transport-capable; `.252` has no local MTA, which the plan expected (zero demotion emails). Not a defect, not a webhook issue.
+- **DM-BL-013.5 — Direction-A procedure compliance (D1).** Closed as an accepted test deviation with no further action; the A2 write ordering and the undemonstrated single-write A1 path stay in history. CARP weighting was restored.
+- **DM-BL-013.6 — "Failed 5/5" scan statuses.** Closed as the historical `.252` email-transport failure (`sendmail: not found`), repaired with Postfix. Scan history preserved; no retry performed.
+
+**Accepted as unvalidated by Tony — `CLOSED` as an accepted limitation (not PASS)**
+- **DM-BL-013.7 — identity-conflict alert delivery.** Closed as accepted-unvalidated by the operator's earlier decision; never claimed as PASS. The only delivery behaviour changed by the webhook-only correction.
+
+**Still unverified — `OPEN`, actionable**
+- **DM-BL-013.8 — live ageing transitions.** Isolated 21/21 does not substitute for live acceptance. Next: run the live ageing check on a staging copy, then record the result.
+- **DM-BL-013.9 — new-device alert delivery and post-repair scan-result email.** Nmap execution succeeds; these deliveries are unexercised. Next: one targeted scan and one new-device event with delivery recorded.
+- **DM-BL-013.10 — historical monitoring-activation attribution.** UNKNOWN, not a demonstrated defect. Next: attribute from the preserved event history if it becomes relevant; otherwise record as unexplainable.
+
+**Confirmed defects — tracked separately**
+- **O4-ageing — stale service state and retirement.** Confirmed behaviour problem with multi-row IPs, tracked as its own OPEN entry below; not part of DM-BL-013's delivery scope.
+
+**Historical subcriteria table (16 November 2026, preserved verbatim).** Tracked so completed work is closed
+explicitly and the unresolved obligations stay visible; its statuses are superseded above.
+
 
 | Subcriterion | Status | Evidence |
 |---|---|---|
