@@ -2,14 +2,14 @@
 
 ## Current state
 
-**v2.15.0 Email Log release — approved archive under staged acceptance (19 November 2026).** The earlier
+**v2.15.0 Email Log release — changed archive awaiting approval (19 November 2026).** The earlier
 approved archive `aa1270ed…` (source `b0e8355`) could not produce generated acceptance: its packaged runner
 aborted under `set -u`, and the committed follow-up resolved helpers outside `release/` and aborted on a FAIL.
 `3dac69c` also pinned `release/build-bundle.sh` while removing it from the archive allow-list, which failed
 `verify-release-inputs.sh` (CI `44419526545`). Commit `f86d2b8` fixes the runner, keeps the builder out of the
 archive and makes it an optional-but-pinned input; local preflight PASS, packaged-path sandbox checks PASS and
-the approved archive is `3a2dacc2…`, 12,557,266 bytes, 96 members, source `f86d2b8` (the earlier `c3b6a723…` cut could not fail a wrong CARP advskew and is superseded). Nothing was installed from it; hosts remain on
-the accepted runtime. CI 44430176957 passed at pushed head ada0f8e; acceptance is blocked because `.23` refuses the established key. No host was changed, merged, tagged or published. Approval package:
+the replacement archive `3a2dacc2…` (12,557,266 bytes, 96 members, source `d2e3c4f`) awaits approval; the approved `c3b6a723…` cut could not fail a wrong CARP advskew and is superseded. Nothing was installed from it; hosts remain on
+the accepted runtime. CI 44430535745 passed at b7e3550. This session runs on `.23`, where the gate now dispatches `--host local` to `.23` after checking the hostname and management address (`32f8872`); installation is held pending approval of the replacement identity. No host was changed, merged, tagged or published. Approval package:
 `release/RELEASE-APPROVAL-PACKAGE-2.15.0-20261119.md`.
 
 **Release and deployment safeguards merged into `main` (19 November 2026).** PR #11 merged reviewed

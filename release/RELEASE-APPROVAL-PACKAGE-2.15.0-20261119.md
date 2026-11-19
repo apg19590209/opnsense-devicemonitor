@@ -1,6 +1,6 @@
 # FINAL REPORT — Email Log release approval package
 
-**Status: APPROVED — STAGED ACCEPTANCE IN PROGRESS.** The earlier approved archive `aa1270ed…` was defective and must not be installed. A corrected archive is frozen at `3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5` (source `f86d2b88b0dd7bd6efd6d4e4cd51b9d85cfd03c4`) and passed the packaged-path checks and the local preflight; see "Corrected archive" below. Exact-head CI remains required at the pushed head. Nothing has been installed from the corrected archive, and no promotion, merge, tag or publication occurred.
+**Status: PROPOSED — CHANGED ARCHIVE, AWAITING APPROVAL; NOT INSTALLED.** Tony's visible approval covers `c3b6a723…` (source `f86d2b8`), not the replacement below. The approved archive was superseded because its role check ignored the CARP advskew; the replacement `3a2dacc2…` waits for its own explicit approval. Nothing was installed from it and no promotion, merge, tag or publication occurred.
 
 **Earlier status (preserved): BLOCKED (APPROVED ARCHIVE DEFECT; NO PROMOTION).** The v2.15.0 approval package and exact-head CI are complete. An unauthorised ad hoc `.252` move of `email_log.db` was reconciled: the original file was restored from the pre-incident consistent snapshot and verified byte-identical (`de99a51c…`, two records/five events), with authenticated reads and integrity checks passing. The approved archive was then installed on `.23`; the post-install result collector exposed a separate tooling bug, so host acceptance is not yet recorded and `.252`/`.253` promotion has not begun. No tag or publication occurred.
 
@@ -19,9 +19,9 @@ The corrected candidate is a tooling-only change; no runtime application file ch
 
 **CI:** exact-head CI run `44430176957` (workflow_dispatch on `release/v2.15.0-email-log-20261119`) passed at pushed head `ada0f8e`. The final tree rebuilds byte-identically to the approved archive (`BUNDLE_VERIFIED sha256=3a2dacc2…`), so the documentation commits do not alter it; the deployment gate for `.23` accepts the identity (`DEPLOYMENT_CHECK_OK`).
 
-**Acceptance:** not started. Host `192.168.20.23` refuses the established key (`Permission denied (publickey,password,keyboard-interactive)`), and no other authorised credential is available here. Sequential acceptance waits on access; `.252` and `.253` were not contacted with the candidate and remain unchanged.
+**Acceptance:** not started; installation is held pending approval of this identity. This session runs on `.23` (`OPNsense.internal`, `192.168.20.23`), where SSH to itself is refused; the deployment gate now maps `--host local` to `.23` only when the hostname and management address both match (`32f8872`), so installation, backups and checks run locally through the same gate. The authorised scoped account passed authenticated search, message, CSV and mutation denial against `https://192.168.20.23` and was then removed (`ACCOUNT_REMOVED`, zero `dm-test-*` users, credential moved out). `.252` and `.253` remain unchanged and SSH-only.
 
-**Approved:** Tony approved archive `3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5` (source `f86d2b88b0dd7bd6efd6d4e4cd51b9d85cfd03c4`) and authorised its guarded sequential `.23` → `.252` → `.253` readiness, deployment and generated acceptance, on 19 November 2026.
+**Approval required:** approve archive `3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5` (source `d2e3c4f16415f8c70a769c3ddc927c9cfb124541`) and authorise the guarded `.23` → `.252` → `.253` readiness, deployment and generated acceptance. No approval reference exists for this identity.
 
 ## Proposed version
 
@@ -148,6 +148,6 @@ acceptance. The approved `aa1270ed…` identity must not be silently substituted
 
 ## Approval and next step
 
-Approved: **v2.15.0 at archive `3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5` (source `f86d2b88b0dd7bd6efd6d4e4cd51b9d85cfd03c4`)**. Superseded and not installable: `aa1270ed…` and `c3b6a723…`. CI passed at `ada0f8e`. Next (blocked on `.23` access): guarded `.23` → `.252` → `.253` generated acceptance for this identity only.
+Proposed: **v2.15.0 at archive `3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5` (source `d2e3c4f16415f8c70a769c3ddc927c9cfb124541`)** — awaiting Tony's explicit approval. Approved and still valid: `c3b6a723…` was approved, but it is superseded and must not be installed. Not installable: `aa1270ed…`. Next after approval: verified snapshots, installation and generated acceptance on `.23`, then `.252`, then `.253`.
 
 END OF REPORT
