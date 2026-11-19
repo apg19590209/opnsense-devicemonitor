@@ -96,8 +96,9 @@ if [ "$REMOTE" = 1 ]; then
     # The extraction holds the payload; the gate scripts are shipped separately so the node cannot
     # run a stale gate. The list is the sender's own archive allow-list without its payload.
     GATE_ARCHIVE=$STAGE/gate-tools.tar.gz
-    tar -czf "$GATE_ARCHIVE" -C "$STAGE" $(tar -tzf "$ARCHIVE" | grep -v '^src/') || {
-        echo 'ABORT: cannot stage the gate scripts' >&2; exit 1; }
+    tar -czf "$GATE_ARCHIVE" -C "$REPO" release/deploy-candidate.sh release/execution-ledger.py \
+        release/results-file.py release/record-acceptance.sh release/install-unattended.sh \
+        install-unattended.sh || { echo 'ABORT: cannot stage the gate scripts' >&2; exit 1; }
     GATE_DIR=$REMOTE_DIR.gate
     # The verified toolchain (this archive's own release/ files, the bytes
     # validate-deploy-archive.py has just checked) is unpacked atomically at a source-stamped
