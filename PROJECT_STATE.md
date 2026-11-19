@@ -2,7 +2,7 @@
 
 ## Current state
 
-**v2.15.1 service-retirement candidate — ACCEPTED on `.23` (19 November 2026).**
+**v2.15.1 service-retirement candidate — ACCEPTED on `.23`, `.252` and `.253` (19 November 2026).**
 PR #17 preserves the reviewed `b8de765`/`21f4262`/`2758ac6`/`b01712c` correction on
 `fix/service-retirement-atomic-20261119`. The forward `bbfc69f` identity cut adds version
 2.15.1, matching runtime/baseline manifests, the 2.15.0 upgrade predecessor and refreshed
@@ -11,12 +11,14 @@ installer/release-input pins without changing the retirement logic. The determin
 `5391535a9f64792ddfc23f096b437293ce37daf47fd60dad4a49b90a47bf20ab`, built from
 `bbfc69fdd2a713825f17ad070c6a72d774388ed1`. Wrapper revision `5cdfc5d` (SHA-256
 `0c41b1dd3e50e45ef919665a056d88eed6653dd68b9507c114f19e346da44c6b`) passed CI
-`44515852385` and installed locally on `.23` with 70 targets, zero prunes, 68 unchanged and
-two corrected targets; all generated and authenticated checks passed. Installer backup:
-`/var/backups/devicemonitor/install-v214.pLnRXe`. Data counts, Device Monitor settings, functional
-OPNsense configuration and the served certificate remained preserved; the temporary account and
-credential were removed. `.252`/`.253` were not contacted. No merge, tag or publication occurred.
-Report: `.cline-reports/REPORT-20261119-114533.md`.
+`44515852385` and installed with 70 targets, zero prunes, 68 unchanged and two corrected targets
+on each node. `.23`, `.252 BACKUP/100` and `.253 MASTER/0` all passed generated host and
+authenticated checks; reciprocal peer reads passed after both HA stages. Installer backups are
+`/var/backups/devicemonitor/install-v214.pLnRXe` (`.23`), `install-v214.HrmR8F` (`.252`) and
+`install-v214.6wmHxZ` (`.253`). Data counts, Device Monitor settings, functional OPNsense
+configuration and served certificates remained preserved; each temporary account/key and
+credential file was removed. No merge, tag or publication occurred. Report:
+`.cline-reports/REPORT-20261119-120543.md`.
 
 **Lesson — HA direct-evidence reuse (19 November 2026).** The v2.15.1 HA deployment delay
 came from overlooking the successful v2.15.0 per-node evidence path and interpreting

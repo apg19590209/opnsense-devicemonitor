@@ -492,11 +492,11 @@ delete failure rolls back both retirement deletes. Integrated UTC/Sydney boundar
 two-connection DELETE/WAL lock tests pass. The retirement window, matching-inventory rule, global
 no-fresh-host refusal, alert keys and history are unchanged.
 
-**v2.15.1 packaging identity accepted on `.23` (19 November 2026).** PR #17 carries a separate
-2.15.1 runtime/baseline identity and a 2.15.0 upgrade predecessor. Archive `5391535a…` passed
-candidate-bound `.23` installation and generated acceptance after the local-dispatch wrapper was
-corrected at `5cdfc5d`. The published v2.15.0 release artifacts remain unchanged. No `.252` or
-`.253` acceptance is claimed, and this record does not close the live ageing item.
+**v2.15.1 packaging identity accepted on all nodes (19 November 2026).** PR #17 carries a
+separate 2.15.1 runtime/baseline identity and a 2.15.0 upgrade predecessor. Archive `5391535a…`
+passed candidate-bound `.23`, `.252 BACKUP/100` and `.253 MASTER/0` installation and generated
+acceptance; reciprocal peer reads passed after both HA stages. The published v2.15.0 release
+artifacts remain unchanged. This record does not close the live ageing item.
 
 **Still unresolved:** shared-IP retention of a stale-owner row (E1b) and the DHCP newest-row
 ownership heuristic; deletion churn in the `retired 12` cycle is recorded reasoning (Decision 53)
