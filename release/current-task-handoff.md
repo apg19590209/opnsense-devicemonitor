@@ -12,8 +12,8 @@ Proposed candidate (awaiting approval): 3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3b
 - .252: no acceptance for 3a2dacc2...; incident reconciled, records preserved
 - .253: no acceptance for 3a2dacc2...; MASTER/0 unchanged
 
-Outstanding checks: explicit approval of 3a2dacc2...; snapshots then `--host local` installation on .23, then .252/.253 over SSH, then `python3 release/execution-ledger.py status`. CI 44430535745 passed at b7e3550; the local-target dispatcher correction (32f8872) needs CI. API account: dm-test-202611191013 removed, cleanup verified.
+Outstanding checks: explicit approval of 3a2dacc2...; snapshots then `--host local` installation on .23, then .252/.253 over SSH, then `python3 release/execution-ledger.py status`. CI 44430535745 passed at b7e3550; the local/SSH deployment tool (32f8872 onwards) needs CI at the final head. API account dm-test-202611191013 removed and its credential file deleted (absent from its path, /root and /tmp).
 
 Stop conditions: price gate premium without approval; missing access; unsafe verification failure; any archive or source substitution.
 
-Deployment order: .23, then .252, then .253. Rollback: the prepared supported rollback plus the per-host installer backups.
+Deployment order: .23 (`--host local`, identity-checked), then .252/.253 (SSH via DM_SSH, verified toolchain at /var/tmp/dm-release-tools/<source>). Snapshot each host first. Rollback: the prepared supported rollback plus the per-host installer backups.
