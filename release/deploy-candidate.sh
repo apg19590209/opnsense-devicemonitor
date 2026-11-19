@@ -103,7 +103,7 @@ if [ "$REMOTE" = 1 ]; then
     # validate-deploy-archive.py has just checked) is unpacked atomically at a source-stamped
     # directory; the archive itself goes with it so the remote gate re-checks everything.
     # shellcheck disable=SC2086
-    $SSH_CMD "$HOST" "mkdir -p '$REMOTE_ROOT' && rm -rf '$REMOTE_DIR.new' && mkdir -p '$REMOTE_DIR.new' && tar -xzf - -C '$REMOTE_DIR.new' && mv '$REMOTE_DIR.new' '$REMOTE_DIR' && echo REMOTE_TOOLS_READY=$REMOTE_DIR" < "$ARCHIVE" || {
+    $SSH_CMD "$HOST" "mkdir -p '$REMOTE_ROOT' && rm -rf '$REMOTE_DIR.new' && mkdir -p '$REMOTE_DIR.new' && tar -xzf - -C '$REMOTE_DIR.new' && rm -rf '$REMOTE_DIR/$SOURCE.new' && mv '$REMOTE_DIR.new' '$REMOTE_DIR' && echo REMOTE_TOOLS_READY=$REMOTE_DIR" < "$ARCHIVE" || {
         echo 'ABORT: remote toolchain staging failed' >&2; exit 1; }
     # The role is a prerequisite, not just a post-install result: run the staged packaged check
     # on the host before the remote gate writes anything.
