@@ -1,7 +1,7 @@
 # Device Monitor v2.15.0 release checksums
 # Archive identity from source f86d2b88b0dd7bd6efd6d4e4cd51b9d85cfd03c4; the record is release/bundle-digest.txt.
 # Not installable: aa1270ed... (defective runner) and c3b6a723... (role check ignored advskew). 3a2dacc2... awaits approval.
-dbab6d2595982dbcb1d5a75987cccb5c32d80b55d0edebc93f161fb3a1492e7d  dm-v2.15.0-runtime.tar.gz
+84b69474324ce7fa068a42fd5e552b9b67f086e1ab7c584eee90c781c7edab6c  dm-v2.15.0-runtime.tar.gz
 f13359b5cf0f41c478c93c70a8c327a2ba129453deeb6ed95eabe8d8c030bd70  release/v2.15.0-runtime.manifest
 8483f4ade0be732125c3c2136c13b9a030d07e846a13f2887248b75bfe66de72  release/v2.15.0-notes.md
 561da83edabb52b5cfb48c0303405f433e7dc328491e64f2501160400ed67020  release/v2.15.0-acceptance-requirements.md
