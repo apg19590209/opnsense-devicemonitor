@@ -179,6 +179,40 @@ def test_gate_and_sequence():
         check(out.returncode == 0, '.253 is allowed after .252')
 
 
+def test_local_target_requires_the_testbed_identity():
+    """`--host local` maps to .23 only on the .23 testbed itself; other hosts are refused.
+
+    The session runs on .23, where SSH to itself was refused. The dispatcher must identify the
+    local target from the hostname and the management address, not from a self-connection.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, archive, identity, payload, source, feature = make_tree(tmp)
+        ifconfig = Path(tmp) / 'ifconfig.txt'
+        wrong = Path(tmp) / 'ifconfig-wrong.txt'
+        ifconfig.write_text('re0: flags=1\n\tinet 192.168.20.23 netmask 0xffffff00\n')
+        wrong.write_text('re0: flags=1\n\tinet 192.168.20.24 netmask 0xffffff00\n')
+        env = {'DM_HOSTNAME': '/bin/echo', 'DM_IFCONFIG': 'cat ' + str(ifconfig)}
+        # /bin/echo plus the identity: a tiny hostname stand-in would need a script.
+        hostname = Path(tmp) / 'hostname'
+        hostname.write_text('#!/bin/sh\necho OPNsense.internal\n')
+        hostname.chmod(0o755)
+        env['DM_HOSTNAME'] = str(hostname)
+        ok = gate(repo, archive, identity, 'local', source, extra_env=env)
+        check(ok.returncode == 0 and 'stage=.23' in ok.stdout and 'local=1' in ok.stdout,
+              'the local target is accepted as .23 on the testbed identity')
+        env['DM_IFCONFIG'] = 'cat ' + str(wrong)
+        wrong_target = gate(repo, archive, identity, 'local', source, extra_env=env)
+        check(wrong_target.returncode != 0 and 'not the .23 testbed' in wrong_target.stderr,
+              'a local target is refused without the .23 management address')
+        env['DM_IFCONFIG'] = 'cat ' + str(ifconfig)
+        hostname.write_text('#!/bin/sh\necho OPNsense.home.arpa\n')
+        wrong_host = gate(repo, archive, identity, 'local', source, extra_env=env)
+        check(wrong_host.returncode != 0, 'a local target is refused without the .23 hostname')
+        remote = gate(repo, archive, identity, '192.168.20.252', source, extra_env=env)
+        check(remote.returncode != 0 and '.23 acceptance missing' in remote.stderr,
+              'remote stages keep their prior-stage acceptance gate')
+
+
 def test_evidence_for_another_candidate_is_refused():
     with tempfile.TemporaryDirectory() as tmp:
         repo, archive, identity, payload, source, feature = make_tree(tmp)
@@ -547,6 +581,7 @@ def main():
     test_runner_does_not_depend_on_its_invoking_directory()
     test_archive_does_not_ship_a_second_builder()
     test_recorded_identity_is_pinned_bound()
+    test_local_target_requires_the_testbed_identity()
     test_packaged_role_check_accepts_correct_carp_and_rejects_wrong_role()
     test_installer_mode_is_executable_in_archives()
     test_export_mode_map_matches_git_index()

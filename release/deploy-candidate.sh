@@ -55,6 +55,7 @@ case "$HOST" in
     192.168.20.252) DEPLOY_STAGE=.252 ;;
     192.168.20.253) DEPLOY_STAGE=.253 ;;
     OPNsense.internal) DEPLOY_STAGE=.23 ;;
+    local|localhost|127.0.0.1) DEPLOY_STAGE=LOCAL ;;
     OPNsense.home.arpa)
         case "${DM_DEPLOY_STAGE:-}" in
             .252|.253) DEPLOY_STAGE=$DM_DEPLOY_STAGE ;;
@@ -62,6 +63,18 @@ case "$HOST" in
         esac ;;
     *) echo "ABORT: unsupported host $HOST" >&2; exit 1 ;;
 esac
+# A local target is only valid when this process is the .23 testbed itself: the hostname and the
+# management address on a local interface must both agree. SSH to the node from itself was the
+# previous failure mode; the installer and its checks run directly here, through the same gate.
+LOCAL=0
+if [ "$DEPLOY_STAGE" = LOCAL ]; then
+    LOCAL=1
+    HERE=$(${DM_HOSTNAME:-/bin/hostname})
+    HERE_IP=$(${DM_IFCONFIG:-ifconfig} | awk '$1 == "inet" && $2 == "192.168.20.23" { print $2; exit }')
+    [ "$HERE" = OPNsense.internal ] && [ "$HERE_IP" = 192.168.20.23 ] ||
+        { echo "ABORT: local target is not the .23 testbed (hostname=$HERE address=${HERE_IP:-none})" >&2; exit 1; }
+    DEPLOY_STAGE=.23
+fi
 case "$DEPLOY_STAGE" in
     .252) [ -f "$REPO/release/acceptance/.23-$IDENT_SHA.passed" ] || { echo 'ABORT: .23 acceptance missing for this candidate' >&2; exit 1; } ;;
     .253) [ -f "$REPO/release/acceptance/.252-$IDENT_SHA.passed" ] || { echo 'ABORT: .252 acceptance missing for this candidate' >&2; exit 1; } ;;
@@ -84,7 +97,7 @@ record_deploy() {
     [ "$result" = PASS ]
 }
 if [ "$CHECK" = 1 ]; then
-    echo "DEPLOYMENT_CHECK_OK source=$SOURCE bundle_sha256=$IDENT_SHA host=$HOST stage=$DEPLOY_STAGE"
+    echo "DEPLOYMENT_CHECK_OK source=$SOURCE bundle_sha256=$IDENT_SHA host=$HOST stage=$DEPLOY_STAGE local=$LOCAL"
     exit 0
 fi
 
@@ -101,6 +114,13 @@ fi
     exit "$INSTALL_RESULT"
 }
 cat "$STAGE/install.log"
+if [ "$LOCAL" = 1 ]; then
+    # Local execution must be provable after the write, not merely intended before it.
+    INSTALLED_AT=$(stat -f '%Su' /var/db/devicemonitor/installed-manifest.txt 2>/dev/null || echo unknown)
+    echo "LOCAL_EXECUTION host=$HERE address=$HERE_IP stage=$DEPLOY_STAGE manifest_owner=$INSTALLED_AT"
+    [ "$(stat -f '%Su' /var/db/devicemonitor/installed-manifest.txt)" = root ] ||
+        { echo 'ABORT: local manifest is not root-owned' >&2; exit 1; }
+fi
 # Every required functional, database and settings check runs after the installer under the
 # supported entry point. A failure aborts; acceptance remains a separate ledger-derived step.
 HOST_EVIDENCE=$(mktemp /tmp/dm-host-evidence.XXXXXX)
