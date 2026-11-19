@@ -93,6 +93,12 @@ if [ "$REMOTE" = 1 ]; then
     [ -n "${DM_REMOTE_LEDGER:-}" ] || { echo 'ABORT: DM_REMOTE_LEDGER (remote ledger path) is required' >&2; exit 1; }
     REMOTE_ROOT=/var/tmp/dm-release-tools
     REMOTE_DIR=$REMOTE_ROOT/$SOURCE
+    # The extraction holds the payload; the gate scripts are shipped separately so the node cannot
+    # run a stale gate. The list is the sender's own archive allow-list without its payload.
+    GATE_ARCHIVE=$STAGE/gate-tools.tar.gz
+    tar -czf "$GATE_ARCHIVE" -C "$STAGE" $(tar -tzf "$ARCHIVE" | grep -v '^src/') || {
+        echo 'ABORT: cannot stage the gate scripts' >&2; exit 1; }
+    GATE_DIR=$REMOTE_DIR.gate
     # The verified toolchain (this archive's own release/ files, the bytes
     # validate-deploy-archive.py has just checked) is unpacked atomically at a source-stamped
     # directory; the archive itself goes with it so the remote gate re-checks everything.
@@ -167,7 +173,10 @@ fi
 INSTALL_RESULT=0
 if [ "$REMOTE" = 1 ]; then
     # shellcheck disable=SC2086
-    $SSH_CMD "$HOST" "cd '$REMOTE_DIR' && ./release/deploy-candidate.sh '$REMOTE_DIR/dm-v2.15.0-runtime.tar.gz' '$REMOTE_DIR/dm-v2.15.0-runtime.tar.gz.identity' --host local --source '$SOURCE'" > "$STAGE/install.log" 2>&1 || INSTALL_RESULT=$?
+    $SSH_CMD "$HOST" "rm -rf '$GATE_DIR' && mkdir -p '$GATE_DIR' && tar -xzf - -C '$GATE_DIR'" < "$GATE_ARCHIVE" || {
+        echo 'ABORT: remote gate staging failed' >&2; exit 1; }
+    # shellcheck disable=SC2086
+    $SSH_CMD "$HOST" "/bin/sh -c 'cd \"\$1\" && /bin/sh release/deploy-candidate.sh \"\$2\" \"\$3\" --host local --source \"\$4\"' sh '$GATE_DIR' '$REMOTE_DIR/dm-v2.15.0-runtime.tar.gz' '$REMOTE_DIR/dm-v2.15.0-runtime.tar.gz.identity' '$SOURCE'" > "$STAGE/install.log" 2>&1 || INSTALL_RESULT=$?
 else
     cp "$ARCHIVE" "$STAGE/dm-v2.15.0-runtime.tar.gz"
     cp "$IDENTITY" "$STAGE/dm-v2.15.0-runtime.tar.gz.identity"
