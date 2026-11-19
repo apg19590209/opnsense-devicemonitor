@@ -199,7 +199,8 @@ def test_local_target_requires_the_testbed_identity():
     """`--host local` maps to .23 only on the .23 testbed itself; other hosts are refused.
 
     The session runs on .23, where SSH to itself was refused. The dispatcher must identify the
-    local target from the hostname and the management address, not from a self-connection.
+    local target from the hostname and the management address, not from a self-connection. After
+    validation, the installer receives the validated hostname rather than the local alias.
     """
     with tempfile.TemporaryDirectory() as tmp:
         repo, archive, identity, payload, source, feature = make_tree(tmp)
@@ -214,8 +215,9 @@ def test_local_target_requires_the_testbed_identity():
         hostname.chmod(0o755)
         env['DM_HOSTNAME'] = str(hostname)
         ok = gate(repo, archive, identity, 'local', source, extra_env=env)
-        check(ok.returncode == 0 and 'stage=.23' in ok.stdout and 'local=1' in ok.stdout,
-              'the local target is accepted as .23 on the testbed identity')
+        check(ok.returncode == 0 and 'stage=.23' in ok.stdout and 'local=1' in ok.stdout and
+              'host=OPNsense.internal' in ok.stdout,
+              'the local target is normalised to the .23 installer hostname')
         env['DM_IFCONFIG'] = 'cat ' + str(wrong)
         wrong_target = gate(repo, archive, identity, 'local', source, extra_env=env)
         check(wrong_target.returncode != 0 and 'not the .23 testbed' in wrong_target.stderr,
@@ -227,6 +229,48 @@ def test_local_target_requires_the_testbed_identity():
         remote = gate(repo, archive, identity, '192.168.20.252', source, extra_env=env)
         check(remote.returncode != 0 and '.23 acceptance missing' in remote.stderr,
               'remote stages keep their prior-stage acceptance gate')
+
+
+def test_local_install_dispatches_the_validated_hostname():
+    """The local install path records exactly `--host OPNsense.internal`, never `local`."""
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, archive, identity, payload, source, feature = make_tree(tmp)
+        installer_log = Path(tmp) / 'installer.log'
+        installer = payload / 'install-unattended.sh'
+        installer.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > ' + str(installer_log) + '\nexit 64\n')
+        installer.chmod(0o755)
+        for helper in ('run-host-checks.sh', 'acceptance-check.php', 'results-file.py'):
+            dest = payload / 'release' / helper
+            shutil.copy2(ROOT / 'release' / helper, dest)
+        with tarfile.open(archive, 'w:gz', format=tarfile.USTAR_FORMAT) as tar:
+            for path in sorted(x for x in payload.rglob('*') if x.is_file()):
+                tar.add(path, arcname=str(path.relative_to(payload)))
+        identity.write_text(
+            f'version=2.14.0\nsource={source}\nbytes={archive.stat().st_size}\nsha256={sha(archive)}\n'
+        )
+        ifconfig = Path(tmp) / 'ifconfig.txt'
+        ifconfig.write_text('re0: flags=1\n\tinet 192.168.20.23 netmask 0xffffff00\n')
+        hostname = Path(tmp) / 'hostname'
+        hostname.write_text('#!/bin/sh\necho OPNsense.internal\n')
+        hostname.chmod(0o755)
+        env = {'DM_HOSTNAME': str(hostname), 'DM_IFCONFIG': 'cat ' + str(ifconfig)}
+
+        check_only = gate(repo, archive, identity, 'local', source, extra_env=env)
+        check(check_only.returncode == 0 and not installer_log.exists(),
+              'the local precheck accepts .23 without invoking the installer')
+
+        installed = gate(repo, archive, identity, 'local', source, check=False, extra_env=env)
+        args = installer_log.read_text().splitlines() if installer_log.exists() else []
+        check(args == ['--host', 'OPNsense.internal'],
+              'installation passes the validated hostname to the installer')
+        check(installed.returncode != 0,
+              'the recording installer stops the gate before host checks')
+
+        installer_log.unlink(missing_ok=True)
+        env['DM_IFCONFIG'] = 'printf "re0: flags=1\\n\\tinet 192.168.20.24 netmask 0xffffff00\\n"'
+        wrong = gate(repo, archive, identity, 'local', source, check=False, extra_env=env)
+        check(wrong.returncode != 0 and not installer_log.exists(),
+              'a wrong local address refuses before installer invocation')
 
 
 def test_remote_stage_runs_over_ssh_without_local_install():
@@ -710,6 +754,7 @@ def main():
     test_archive_does_not_ship_a_second_builder()
     test_recorded_identity_is_pinned_bound()
     test_local_target_requires_the_testbed_identity()
+    test_local_install_dispatches_the_validated_hostname()
     test_remote_stage_runs_over_ssh_without_local_install()
     test_packaged_role_check_parses_real_carp_records()
     test_packaged_peer_check_runs_the_archive_php_expression()

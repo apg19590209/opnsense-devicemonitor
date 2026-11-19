@@ -96,6 +96,8 @@ elif [ "$DEPLOY_STAGE" = LOCAL ]; then
     HERE_IP=$(${DM_IFCONFIG:-ifconfig} | awk '$1 == "inet" && $2 == "192.168.20.23" { print $2; exit }')
     [ "$HERE" = OPNsense.internal ] && [ "$HERE_IP" = 192.168.20.23 ] ||
         { echo "ABORT: local target is not the .23 testbed (hostname=$HERE address=${HERE_IP:-none})" >&2; exit 1; }
+    # The installer takes the validated hostname, not the local dispatch alias.
+    HOST=$HERE
     DEPLOY_STAGE=.23
 fi
 # Remote stages run through SSH only. The verified toolchain (this archive's own release/ files,
