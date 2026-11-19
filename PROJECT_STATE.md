@@ -2,16 +2,16 @@
 
 ## Current state
 
-**Service-retirement correction — COMPLETE locally (19 November 2026).** The existing
-`b8de765`/`21f4262`/`2758ac6` correction now uses the device predicate's inclusive,
-whole-second retirement cutoff for service presence even when the injected `now` has
-microseconds, while retaining conservative UTC/local interpretation for legacy timestamps.
-Integrated UTC and Sydney cases cover exact cutoff, one second inside, and one second
-outside with stale per-address inventory and an unrelated fresh host. Deterministic
-two-connection tests pass in DELETE and WAL modes; a prior committed refresh survives,
-refreshes cannot commit between selection and deletion, and injected pending-alert deletion
-failure rolls back the service DELETE while the separately committed status-ageing update
-remains. No push, deployment, packaging, merge, or release occurred. Report:
+**Unreleased v2.15.1 service-retirement candidate — CUT locally (19 November 2026).**
+PR #17 preserves the reviewed `b8de765`/`21f4262`/`2758ac6`/`b01712c` correction on
+`fix/service-retirement-atomic-20261119`. The forward `bbfc69f` identity cut adds version
+2.15.1, matching runtime/baseline manifests, the 2.15.0 upgrade predecessor and refreshed
+installer/release-input pins without changing the retirement logic. The deterministic
+96-member candidate is 12,562,386 bytes with SHA-256
+`5391535a9f64792ddfc23f096b437293ce37daf47fd60dad4a49b90a47bf20ab`, built from
+`bbfc69fdd2a713825f17ad070c6a72d774388ed1`; worktree and clean-export builds were
+byte-identical. Published v2.15.0 manifests, notes and checksums remain unchanged. No
+candidate-bound host acceptance, deployment, merge, tag or publication is claimed. Report:
 `.cline-reports/REPORT-20261119-102514.md`.
 
 **v2.15.0 Email Log release — PUBLISHED 19 November 2026.** PR #14 merged normally as merge commit

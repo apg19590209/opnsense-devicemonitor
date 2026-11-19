@@ -476,7 +476,8 @@ only. No current caller supplies a contemporaneous association (DHCP ownership i
 heuristic, NTP/SSH/WEB candidate MACs come from the devices table or copied service rows), so no
 path refreshes device presence today; endpoint presence remains on the service row. Matching-
 inventory ownership and alert identity are unchanged; retirement now evaluates that service-row
-presence directly. Not pushed or deployed; live ageing acceptance is still outstanding.
+presence directly. Pushed for review on PR #17; not deployed, and live ageing acceptance is still
+outstanding.
 
 **Retirement presence guard — implemented locally (19 November 2026).** A retirement candidate whose
 own `last_verified` records a successful non-authoritative probe inside `SERVICE_RETIRE_AFTER_DAYS`
@@ -490,6 +491,11 @@ reader. Candidate selection, service deletion, and pending-alert cleanup run und
 delete failure rolls back both retirement deletes. Integrated UTC/Sydney boundary tests and
 two-connection DELETE/WAL lock tests pass. The retirement window, matching-inventory rule, global
 no-fresh-host refusal, alert keys and history are unchanged.
+
+**Unreleased v2.15.1 packaging identity (19 November 2026).** The corrections are carried on
+PR #17 with a separate 2.15.1 runtime/baseline identity and a 2.15.0 upgrade predecessor. The
+published v2.15.0 release artifacts remain unchanged. Candidate-bound host acceptance is not
+claimed; this record does not close the live ageing item.
 
 **Still unresolved:** shared-IP retention of a stale-owner row (E1b) and the DHCP newest-row
 ownership heuristic; deletion churn in the `retired 12` cycle is recorded reasoning (Decision 53)
