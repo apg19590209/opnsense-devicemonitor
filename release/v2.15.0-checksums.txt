@@ -8,4 +8,4 @@ f13359b5cf0f41c478c93c70a8c327a2ba129453deeb6ed95eabe8d8c030bd70  release/v2.15.
 46d9478e597f4d8fd0dd7a6a476136da68d0cf45edd25c8fedaa902f82078b49  release/release-inputs.sha256
 bdde41ccdc908b79046d4e4532a97fa9d7a1a445937af19a01cd03aa68d24a65  release/manifests/v2.15.0-runtime.manifest
 c9f1f8553f3a1220d8aaa9dac531f6afbb04880698f6baa1e33745bec217a42f  src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
-7748cd836e23460f0c4762a608bc9cf7ee0fdbe4f4ece88eb4d823c7219c36e3  release/RELEASE-APPROVAL-PACKAGE-2.15.0-20261119.md
+39b6f796f79e24a046c69d7a0d47ad532994bbaead95f680b55ae137b036bb82  release/RELEASE-APPROVAL-PACKAGE-2.15.0-20261119.md

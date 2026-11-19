@@ -1,6 +1,6 @@
 # FINAL REPORT — Email Log release approval package
 
-**Status: PROPOSED — FROZEN, VERIFIED, AWAITING INSTALL APPROVAL; NOT INSTALLED.** Tony's visible approval covers `c3b6a723…` (source `f86d2b8`), not the replacement below. The approved archive was superseded because its role check ignored the CARP advskew; the replacement `3a2dacc2…` waits for its own explicit approval. Nothing was installed from it and no promotion, merge, tag or publication occurred.
+**Status: APPROVED — INSTALLATION BLOCKED BEFORE .23 WRITE (ROLE-CHECK FORMAT DEFECT).** Approval for archive `3a2dacc2…` (source `d2e3c4f`) with tool `0f17f282…` was granted on 19 November 2026. Pre-install snapshotting was done on `.23`; no installation ran and no acceptance exists. The shipped `role_check` matches `carp: (BACKUP|MASTER) vhid N advskew N`, but FreeBSD prints `carp: BACKUP vhid 1 advbase 1 advskew 100`, so the approved deployment identity would FAIL the `.252` role check. Promotion was stopped; the tool must not be changed under this approval.
 
 **Earlier status (preserved): BLOCKED (APPROVED ARCHIVE DEFECT; NO PROMOTION).** The v2.15.0 approval package and exact-head CI are complete. An unauthorised ad hoc `.252` move of `email_log.db` was reconciled: the original file was restored from the pre-incident consistent snapshot and verified byte-identical (`de99a51c…`, two records/five events), with authenticated reads and integrity checks passing. The approved archive was then installed on `.23`; the post-install result collector exposed a separate tooling bug, so host acceptance is not yet recorded and `.252`/`.253` promotion has not begun. No tag or publication occurred.
 
@@ -23,7 +23,7 @@ The corrected candidate is a tooling-only change; no runtime application file ch
 
 **Acceptance:** not started; installation is held pending approval of this identity. This session runs on `.23` (`OPNsense.internal`, `192.168.20.23`), where SSH to itself is refused; the deployment gate now maps `--host local` to `.23` only when the hostname and management address both match (`32f8872`), so installation, backups and checks run locally through the same gate. The authorised scoped account passed authenticated search, message, CSV and mutation denial against `https://192.168.20.23` and was then removed (`ACCOUNT_REMOVED`, zero `dm-test-*` users, credential file deleted, absent from its path and from /root and /tmp). `.252` and `.253` remain unchanged and SSH-only.
 
-**Approval request:** approve installation of archive `3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5` (build source `d2e3c4f16415f8c70a769c3ddc927c9cfb124541`) with deployment tool `0f17f282…`, sequenced `.23` (local) → `.252` (SSH, BACKUP/100) → `.253` (SSH, MASTER/0), each with verified snapshots first and generated acceptance; no approval reference exists yet for a different hash or tool.
+**Approved:** installation and staged acceptance of `3a2dacc2…` (source `d2e3c4f`) with tool `0f17f282…` (revision `19b44e3`), `.23` local → `.252` BACKUP/100 → `.253` MASTER/0 (Tony, 19 November 2026). Held pending a corrected role check and a new approval reference.
 
 ## Proposed version
 
