@@ -2,17 +2,21 @@
 
 ## Current state
 
-**Unreleased v2.15.1 service-retirement candidate — CUT locally (19 November 2026).**
+**v2.15.1 service-retirement candidate — ACCEPTED on `.23` (19 November 2026).**
 PR #17 preserves the reviewed `b8de765`/`21f4262`/`2758ac6`/`b01712c` correction on
 `fix/service-retirement-atomic-20261119`. The forward `bbfc69f` identity cut adds version
 2.15.1, matching runtime/baseline manifests, the 2.15.0 upgrade predecessor and refreshed
 installer/release-input pins without changing the retirement logic. The deterministic
 96-member candidate is 12,562,386 bytes with SHA-256
 `5391535a9f64792ddfc23f096b437293ce37daf47fd60dad4a49b90a47bf20ab`, built from
-`bbfc69fdd2a713825f17ad070c6a72d774388ed1`; worktree and clean-export builds were
-byte-identical. Published v2.15.0 manifests, notes and checksums remain unchanged. No
-candidate-bound host acceptance, deployment, merge, tag or publication is claimed. Report:
-`.cline-reports/REPORT-20261119-102514.md`.
+`bbfc69fdd2a713825f17ad070c6a72d774388ed1`. Wrapper revision `5cdfc5d` (SHA-256
+`0c41b1dd3e50e45ef919665a056d88eed6653dd68b9507c114f19e346da44c6b`) passed CI
+`44515852385` and installed locally on `.23` with 70 targets, zero prunes, 68 unchanged and
+two corrected targets; all generated and authenticated checks passed. Installer backup:
+`/var/backups/devicemonitor/install-v214.pLnRXe`. Data counts, Device Monitor settings, functional
+OPNsense configuration and the served certificate remained preserved; the temporary account and
+credential were removed. `.252`/`.253` were not contacted. No merge, tag or publication occurred.
+Report: `.cline-reports/REPORT-20261119-114533.md`.
 
 **v2.15.0 Email Log release — PUBLISHED 19 November 2026.** PR #14 merged normally as merge commit
 `934779887a880bfb525bd074c4d91fb57a3d8124`; annotated tag `v2.15.0` points to it. Release:
