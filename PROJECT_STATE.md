@@ -9,7 +9,7 @@ aborted under `set -u`, and the committed follow-up resolved helpers outside `re
 `verify-release-inputs.sh` (CI `44419526545`). Commit `f86d2b8` fixes the runner, keeps the builder out of the
 archive and makes it an optional-but-pinned input; local preflight PASS, packaged-path sandbox checks PASS and
 the approved archive is `3a2dacc2…`, 12,557,266 bytes, 96 members, source `f86d2b8` (the earlier `c3b6a723…` cut could not fail a wrong CARP advskew and is superseded). Nothing was installed from it; hosts remain on
-the accepted runtime. No push, HA write, merge, tag or publication occurred. Approval package:
+the accepted runtime. CI 44430176957 passed at pushed head ada0f8e; acceptance is blocked because `.23` refuses the established key. No host was changed, merged, tagged or published. Approval package:
 `release/RELEASE-APPROVAL-PACKAGE-2.15.0-20261119.md`.
 
 **Release and deployment safeguards merged into `main` (19 November 2026).** PR #11 merged reviewed
