@@ -11,6 +11,15 @@ https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.15.0 with
 archive; CI `44466485934` passed at `8a1925f`. Staged acceptance is COMPLETE on `.23`, `.252` and
 `.253`; the earlier `aa1270ed…` candidate remains recorded as defective, with no build-source line.
 
+**Historical evidence limitations — accepted by Tony (19 November 2026).** Tony accepted the
+previously documented historical evidence limitations: superseded candidates keep their recorded
+provenance limits (notably `aa1270ed…`, recorded without a `# source` line, whose exact build tree
+cannot be re-derived), and the DM-BL-011 physical database-byte limitation and DM-BL-012 `.23`
+lifecycle outcome remain closed as previously recorded. Acceptance does not turn missing evidence
+into verified evidence: no historical byte identity, build source or unperformed test is claimed.
+The investigative work on these points is closed; incident history, the ledger-correction record
+and rollback evidence are preserved unchanged.
+
 **Release and deployment safeguards merged into `main` (19 November 2026).** PR #11 merged reviewed
 head `294caa3` normally as merge commit `5b5f51b`; CI `44404713134` passed at that head. The merged
 changes are release/install tooling and tests only—no runtime application-file changes. The final
@@ -65,7 +74,7 @@ artifacts. No HA candidate deployment, push, tag or publication occurred. Report
 `038f44c`, last code change `51fcaf4` (CI `44223883558` success) — only documentation followed.
 Open limitations: pagination fixture-tested only; Peer/All nodes, Deleted/All and dialog screens not
 visually confirmed; manual certificate renewal before 2026-12-17; webhook (no destination, TLS
-verification disabled) and parked USB findings unchanged. Report:
+verification disabled) remains open. Report:
 `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
 
 **Email Log formatting verified with a genuine record; PR #9 final review (18 November 2026).**
@@ -76,8 +85,8 @@ asserted and awaits Tony. PR head `9cd1398` (code head `51fcaf4`, CI `4422388355
 and MERGEABLE with no code blockers; automated checks pass and visual acceptance covers the Local
 table, the subject-opened popup and the new `.252` email at 13:43:32 AEDT (compact label/value
 lines, paragraph spacing, Relay accepted display). Inbox receipt is operator-confirmed for record
-`a14af952…` in `arnhem05.alerts@gmail.com`, completing end-to-end delivery acceptance for that test. Manual certificate renewal is due before 2026-12-17;
-webhook and USB findings unchanged. Report:
+`a14af952…` in `arnhem05.alerts@gmail.com`, completing end-to-end delivery acceptance for that test. Manual certificate renewal is due before
+2026-12-17; webhook remains open. Report:
 `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
 
 **Email Log HTML-to-text conversion corrected (18 November 2026).** Captured bodies were split
@@ -93,8 +102,8 @@ and `.253` with configuration, records, certificates and CARP preserved. Report:
 defects in access control, credential handling, migrations, retention or packaging. The user manual
 now documents the Email Log (§16.9: relay status meaning, peer setup, clickable subject, soft
 deletion and restoration). Operator visual PASS is recorded for the Local table and the
-subject-opened popup only. Manual certificate renewal remains due before 2026-12-17; webhook and USB
-findings unchanged. Report:
+subject-opened popup only. Manual certificate renewal remains due before 2026-12-17; webhook
+remains open. Report:
 `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
 
 **Email Log bulk selection and soft deletion (18 November 2026).** The shared table layout is
@@ -189,11 +198,7 @@ which blocked the package install and even Python bytecode writes. The reproduci
 `/usr/ports/distfiles` cache (4.2 GB) was verified as downloads only (no build running, nothing
 written for 30 minutes) and deleted in place, keeping the directory's mode and ownership: root is
 now **3.9 GB free**. Backups, evidence, source checkouts, databases, credentials and the Go/Zig
-caches were untouched. A 15 GB USB stick (`DNXTNKV80W22UDP6PV9Z`) was formatted as UFS
-(`gpt/dmarchive`) for archive use, but its filesystem corrupted under a sustained 4 GB copy and
-the device is parked, unmounted and classified unsuitable for backups pending full verification; a
-destructive address-dependent test verified only the first 1 GiB of its advertised 15 GB.
-
+caches were untouched.
 **Email Log Clear filters, soft delete/restore, visibility filter and themed dialog header (17 November 2026).**
 Clear filters resets search, type and status, returns to page one and refreshes once while
 preserving the Local/Peer/All scope. Delete is soft only: schema version 3 adds `deleted_utc`
@@ -753,7 +758,7 @@ matrix was separately validated on 7 November. The live run had no sparse-header
 | Physical DB byte identity (`c17874a7…` → `796d28c7…`) | **Closed: DM-BL-011** (13 November 2026) — explicit operator acceptance of the historical physical-byte limitation; recurrence is corrected in the guard | Logical digest, schema, integrity and row counts match, so data integrity is not in question. The live replacement is traced to the historical guard's `796d28c7…` snapshot and its `08:32:04Z` recovery copy; that guard's physical expectation was the snapshot hash, not the original live hash. The original `c17874a7…` bytes were never retained, leaving the internal header/page delta unverifiable. A 7 November disposable Phase 2A rehearsal found and fixed a snapshot-side-effect defect, then passed separate DB/WAL/SHM capture, mutation detection, exact-byte restore, snapshot-equivalence rejection and post-state archiving; all 35 guard tests pass. A repeat search of retained `/root` and `/var/backups/devicemonitor` database files found no `c17874a7…` copy. The guard protects future runs but cannot retroactively prove the completed exercise. Closure accepts this historical limitation and makes no byte-identity claim. |
 | Live `FRESH=1` and real OPNsense plugin registration/lifecycle | **Closed: DM-BL-012** (12 November 2026) | The disposable jail and copy-only fixtures prove call boundaries, not reboot persistence. A real-host fresh install on `.23` passed registration and startup on 8 November 2026 but was aborted before reboot after monitoring was enabled, then recovered. On 12 November 2026 the operator explicitly superseded the disposable-VM gate and accepted the residual risk. The `772a6660…` menu-cache/`php-fpm` candidate completed uninstall, fresh-state reinstall, registration, one reboot, cache/menu regeneration, data persistence and operator-attested authenticated UI checks on `.23`. The `3675c7271…` residual-cleanup candidate then repeated uninstall/reinstall and was directly tested; reboot persistence remains reused from the preceding candidate because the delta affects uninstall cleanup only. This is lifecycle testing on an existing development host, not a pristine VM. Historical monitoring activation remains **UNKNOWN**; this is an un-attributed settings write, not a confirmed automatic-activation defect, and no documented criterion requires its attribution. |
 | Full reminder/ageing/CARP and daemon-generated notification/service-discovery paths | **Open: DM-BL-013** | Scheduled service discovery and ageing remain unexercised, and helper emails were direct PHP calls. **P1 run 2 (15 November 2026)** produced genuine daemon-triggered CARP failover webhooks on both nodes and both legs — 4 frames (demotion `.253` BACKUP `2026-11-14T23:59:57Z` / `.252` MASTER `2026-11-15T00:00:02Z`; return `.252` BACKUP `00:09:50Z` / `.253` MASTER `00:10:28Z`), 0 on the stable cycle — with isolated capture and full restoration. **Deviation D1:** direction A applied the A2 `.252 100→0` write after A1 had already transferred the VIP, which `P1-PROCEDURE-REV1.md` §2.5 did not authorise; the four-frame notification evidence stands but is recorded as obtained under a procedure deviation, not as a clean qualification, and the single-write A1 path remains unproven. Email delivery is **NOT EXERCISED**; identity/new-device alerts, targeted Nmap, ageing transitions and external delivery remain outstanding, and authenticated UI checks are **operator-attested PASS** for rendering, detected/effective roles, CARP awareness, Automatic override, monitoring state and device counts on `.253` MASTER and `.252` BACKUP (browser-console errors **U9: PASS for the observed workflow 15 November 2026 — operator capture visually reviewed in the originating ChatGPT conversation, Errors and Warnings enabled with no text filter, no visible messages on the four captures; operator-attested, not independent inspection, no continuous monitoring claimed**; screenshot files/hashes **U10: PASS 15 November 2026 — all four files and SHA-256 values match the operator expectations and the operator supplied per-file content observations; operator-content-attested, not independently inspected (shell/text-only, no image viewer or OCR); package `dm-bl-013-ui-screenshots-verified-20261115T020427Z`, manifest `13f73a82…`**). A 15 November read-only pass revalidated roles/health in place (`.253` MASTER, `.252` BACKUP) and found current ageing state consistent with the code (0 ageing, 0 retirement candidates; `.253` 76/50/0 available/unavailable/unknown, `.252` 71/28/11); boundary-crossing ageing transitions are now covered by an **isolated integration validation** (21/21 per node on disposable SQLite snapshots of the installed `cd82a60c…` code, injected clock, no live daemon cycle), not by live acceptance. |
-| Daemon-triggered attribution of the `notified_at` migration | **Open: DM-BL-013** — not a blocker for the observed live mutation | The column was observed live-present after direct discovery and before restoration; the caller beyond the direct-discovery path was not separately instrumented. |
+| Daemon-triggered attribution of the `notified_at` migration | **Closed: DM-BL-013.10** (19 Nov 2026) — accepted historical UNKNOWN, not PASS; not a blocker for the observed live mutation | The column was observed live-present after direct discovery and before restoration; the caller beyond the direct-discovery path was not separately instrumented. |
 | External SMTP, webhook, AdGuard/Pi-hole and targeted-Nmap delivery | **Open: DM-BL-013** — intentionally excluded from the prior scope | These paths were prohibited by the authorised scope; only the loopback SMTP sink was used. |
 
 ### Release 2.13.2 — the production/CARP field line

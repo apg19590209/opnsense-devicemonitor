@@ -79,7 +79,7 @@ Fresh acceptance is required for archive **`aa1270ed…`**. The installed hosts 
 4. Record acceptance from generated host results and complete the independent close-out audit; confirm temporary credentials are gone.
 5. Obtain explicit release approval, then tag, publish and attach the archive plus checksums.
 
-Manual certificate renewal remains due before 2026-12-17. Webhook destination/TLS and the parked USB finding are unchanged. No host deployment, tag or publication is included in this package.
+Manual certificate renewal remains due before 2026-12-17. Webhook destination/TLS remains unchanged. No host deployment, tag or publication is included in this package.
 
 ## Incident reconciliation and staged acceptance (19 November 2026)
 
