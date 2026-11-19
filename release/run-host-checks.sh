@@ -90,7 +90,16 @@ for lang in ('ru_RU','de_DE'):
  with open(f'/usr/local/share/locale/{lang}/LC_MESSAGES/OPNsense.mo','rb') as f: gettext.GNUTranslations(f)._catalog
 PY
 }
-role_check() { case "$STAGE" in .252) ifconfig | grep -q 'carp: BACKUP' ;; .253) ifconfig | grep -q 'carp: MASTER' ;; *) true ;; esac; }
+role_check() {
+    # The role and its advskew must agree: BACKUP at 100, MASTER at 0. DM_IFCONFIG exists so the
+    # packaged-path sandbox can exercise both directions; the host uses the real ifconfig.
+    carp=$(${DM_IFCONFIG:-ifconfig} | grep -Eo 'carp: (BACKUP|MASTER) vhid [0-9]+ advskew [0-9]+' | head -n 1)
+    case "$STAGE" in
+        .252) [ "$carp" = 'carp: BACKUP vhid 1 advskew 100' ] ;;
+        .253) [ "$carp" = 'carp: MASTER vhid 1 advskew 0' ] ;;
+        *) true ;;
+    esac
+}
 certificate_check() { python3 - <<'PY'
 import ssl,socket
 s=ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT); s.check_hostname=False; s.verify_mode=ssl.CERT_NONE

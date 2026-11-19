@@ -296,6 +296,37 @@ def test_packaged_runner_executes_and_records_every_check():
         check(done.returncode == 1, 'a recorded FAIL makes the runner exit non-zero')
 
 
+def test_packaged_role_check_accepts_correct_carp_and_rejects_wrong_role():
+    """The packaged role check must pass BACKUP/100 and MASTER/0 and fail any mismatch.
+
+    Exercised through the packaged runner in the sandbox, with DM_IFCONFIG standing in for the
+    node's ifconfig output. These are fixture results, not host acceptance.
+    """
+    ifconfig = 'cat\n'
+    with tempfile.TemporaryDirectory() as tmp:
+        host, make = _fake_host(tmp)
+        (host / 'sbin/cat').write_text('#!/bin/sh\nexec /bin/cat "$@"\n')
+        (host / 'sbin/cat').chmod(0o755)
+        stage, env = _sandbox_runner(tmp, host, {})
+        for stage_name, text, want in (
+                ('.252', 'carp: BACKUP vhid 1 advskew 100\n', 'PASS'),
+                ('.252', 'carp: MASTER vhid 1 advskew 0\n', 'FAIL'),
+                ('.252', 'carp: BACKUP vhid 1 advskew 0\n', 'FAIL'),
+                ('.253', 'carp: MASTER vhid 1 advskew 0\n', 'PASS'),
+                ('.253', 'carp: BACKUP vhid 1 advskew 100\n', 'FAIL'),
+                ('.253', 'carp: MASTER vhid 1 advskew 100\n', 'FAIL')):
+            (host / 'ifconfig.txt').write_text(text)
+            make(True)
+            out = host / 'role.json'
+            out.unlink(missing_ok=True)
+            env['DM_IFCONFIG'] = str(host / 'sbin/cat') + ' ' + str(host / 'ifconfig.txt')
+            done = run(['/bin/sh', str(stage / 'release/run-host-checks.sh'), '--stage', stage_name,
+                        '--source', 'a' * 40, '--bundle', 'b' * 64, '--out', str(out)], env=env)
+            checks = json.loads(out.read_text())['checks'] if out.is_file() else {}
+            check(checks.get('role') == want,
+                  '%s %s records role=%s' % (stage_name, text.strip(), want))
+
+
 def test_runner_does_not_depend_on_its_invoking_directory():
     """HELPER_DIR is host-absolute; a relative lookup would pass here but fail on an installed host."""
     text = (ROOT / 'release/run-host-checks.sh').read_text()
@@ -516,6 +547,7 @@ def main():
     test_runner_does_not_depend_on_its_invoking_directory()
     test_archive_does_not_ship_a_second_builder()
     test_recorded_identity_is_pinned_bound()
+    test_packaged_role_check_accepts_correct_carp_and_rejects_wrong_role()
     test_installer_mode_is_executable_in_archives()
     test_export_mode_map_matches_git_index()
     test_prior_stage_is_required()
