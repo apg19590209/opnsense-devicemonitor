@@ -149,6 +149,20 @@ if [ "$CHECK" = 1 ]; then
 fi
 
 cd "$STAGE"
+# The host-check runner reads its pinned helpers from /var/tmp/dm-release-tools (scoped by source)
+# and falls back to its own directory. Stage only those pinned files from the verified archive
+# extraction, at the fixed path the runner names, so the helper's own 0600/root-owner credential
+# rule and the API checks behave identically on every host.
+HELPER_DIR=/var/tmp/dm-release-tools
+if [ ! -f "$HELPER_DIR/results-file.py" ]; then
+    mkdir -p "$HELPER_DIR"
+    for helper in run-host-checks.sh acceptance-check.php results-file.py; do
+        cp "$STAGE/release/$helper" "$HELPER_DIR/$helper"
+        chmod 755 "$HELPER_DIR/$helper"
+        [ "$(sha256 -q "$STAGE/release/$helper")" = "$(sha256 -q "$HELPER_DIR/$helper")" ] ||
+            { echo "ABORT: helper copy differs: $helper" >&2; exit 1; }
+    done
+fi
 INSTALL_RESULT=0
 if [ "$REMOTE" = 1 ]; then
     # shellcheck disable=SC2086
