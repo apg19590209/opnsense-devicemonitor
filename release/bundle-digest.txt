@@ -147,8 +147,8 @@
 #        verify-release-inputs.sh fail, superseded by this cut)
 version 2.15.0
 bytes 12558290
-sha256 84b69474324ce7fa068a42fd5e552b9b67f086e1ab7c584eee90c781c7edab6c
-# source = 801745eb91ac1e42db1946e8516e3c9ddf3cf9cc
+sha256 248cd1041ee4da5317ae72b660eb4877e52cf019e350ab6f76307a3c7eba3da5
+# source = 7f7175adf672eb7ed016cf463b1d3397865c1360
 #   Bytes measured from the committed tree at the source commit named above (b0e8355 plus the
 #   runner, builder and verifier corrections) under the declared build conditions:
 #   export-sourced build, TZ=UTC0, canonical ustar with fixed ownership and mtime, the
