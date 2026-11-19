@@ -35,8 +35,31 @@ This file is the shared project instruction file for Codex and Cline. It supplem
 - Before planning, analysing, editing, testing, committing, or deploying, read `PROJECT_RULES.md`, `PROJECT_STATE.md`, `DECISIONS.md`, `SYSTEM_MAP.md`, `PRODUCT_BACKLOG.md` when relevant, and the applicable `.clinerules/*.md` files.
 - The current explicit user instruction determines the requested task and scope. Factual and architectural truth follows the authority order in `PROJECT_RULES.md`; do not treat one project-control file as automatically outranking another.
 - Do not apply instructions, assumptions, architecture, paths, rules, or context from the EPL Predictions or EPL Competition projects.
-- Out-of-scope work is blocked by default, including read-only reconnaissance, unless the operator explicitly authorises that specific task in the current instruction. Session history, standing approval, credentials on disk, and resemblance to project work are not authorisation. Stop at the planning step and report the scope conflict.
+- Out-of-scope work is blocked by default, including read-only reconnaissance, unless the operator explicitly authorises that specific task in the current instruction. Session history, standing approval, credentials on disk, and resemblance to project work are not authorisation. Stop at the planning step (see *Workflow*) and report the scope conflict.
 - If the expected starting state differs materially from the actual state, stop and report the discrepancy before making changes.
+
+## Workflow: PLAN → REVIEW → EXECUTE
+
+- **PLAN.** Before implementing new work, do only the bounded read-only inspection needed for a
+  concrete plan: no edits, state-changing tests, installs, deployments or publication. Return a
+  plan titled `# WORK PLAN — <plain-English task name>` with the sections below, scaled to the
+  task, ending `END OF WORK PLAN`, then stop. The plan is not approval: wait for Tony to return
+  it reviewed with an execution instruction. An already authorised task is not interrupted to
+  apply this step.
+- **Plan sections:** intended outcome and acceptance criteria; verified current state with
+  assumptions and missing evidence; scope, exclusions and affected files/hosts; proposed steps and
+  existing tools to reuse (no speculative frameworks or repeated historical reports); validation
+  including packaged-path checks where applicable; backups, rollback and production effects;
+  estimated time, costly steps and price-gate implications; exact authority requested and genuine
+  stop conditions.
+- **REVIEW.** Tony reviews the plan and issues the execution instruction; only that instruction
+  authorises EXECUTE.
+- **EXECUTE.** Run the approved scope unattended. Approval covers routine implementation and
+  bounded corrections that preserve the agreed scope, risk and acceptance requirements. Return
+  for review if a change materially expands scope, affects additional hosts or data, weakens
+  acceptance, exceeds the spending authority or needs a new consequential action; do not re-ask for
+  routine steps already covered. Keep one compact handoff and one final report (see *Validation and
+  reporting*), stating observed results and unresolved limitations accurately.
 
 ## Workspace and repository protection
 
@@ -88,7 +111,7 @@ This file is the shared project instruction file for Codex and Cline. It supplem
 - Documentation edits are batched into one final pass and keep historical records intact; do not expand them into historical cleanup.
 - **Operator handoffs are framed explicitly.** Any step handed to the operator starts with `**START OF HANDOFF — <task>**`, then `**Status: WAITING FOR OPERATOR SIGNING**` (or the applicable waiting state), and ends with `**END OF HANDOFF**`. Commands must be complete and executable with confirmed absolute paths — never placeholders — and must include a verification guard (e.g. a CSR signature check) before any signing step. No secrets, passwords or private keys are requested or printed in the handoff or the transcript.
 - **Every final report starts with a title and status.** First line: `# FINAL REPORT — <task name>`. Immediately below: `**Status: COMPLETE**`, `**Status: PARTIAL**` or `**Status: BLOCKED**`, followed by the outcome. Progress updates during the task stay separate from this final report. The report ends with `**END OF REPORT**` on its own line.
-- The final answer states the outcome, validation, remaining work and a rollback reference, linking to the report rather than repeating it. For consequential or multi-part work, use the full report structure in `.clinerules/10-workflow-and-finalisation.md`.
+- The final answer states the outcome, validation, remaining work and a rollback reference, linking to the report rather than repeating it. Workflow phases and the single handoff/report obligation are specified under *Workflow: PLAN → REVIEW → EXECUTE*. For consequential or multi-part work, use the full report structure in `.clinerules/10-workflow-and-finalisation.md`.
 - After producing the final report, stop. Do not begin another phase, make another edit, commit, deploy, or act on the recommended next step until the user explicitly instructs it.
 
 ## Known configuration discrepancies
