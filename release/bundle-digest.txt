@@ -146,9 +146,9 @@
 #        that combined pin was never independently verified and its packaged builder made
 #        verify-release-inputs.sh fail, superseded by this cut)
 version 2.15.0
-bytes 12556754
-sha256 c3b6a723f20969ec63c25032abf2dfbd235345ea0c28891185cbe41929c7f16c
-# source = 589ed0001fa4ed428805f19e02c42af3c3487fdb
+bytes 12557266
+sha256 3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5
+# source = d2e3c4f16415f8c70a769c3ddc927c9cfb124541
 #   Bytes measured from the committed tree at the source commit named above (b0e8355 plus the
 #   runner, builder and verifier corrections) under the declared build conditions:
 #   export-sourced build, TZ=UTC0, canonical ustar with fixed ownership and mtime, the
