@@ -67,7 +67,10 @@ esac
 # management address on a local interface must both agree. SSH to the node from itself was the
 # previous failure mode; the installer and its checks run directly here, through the same gate.
 LOCAL=0
-if [ "$DEPLOY_STAGE" = LOCAL ]; then
+REMOTE=0
+if [ "$DEPLOY_STAGE" = .252 ] || [ "$DEPLOY_STAGE" = .253 ]; then
+    REMOTE=1
+elif [ "$DEPLOY_STAGE" = LOCAL ]; then
     LOCAL=1
     HERE=$(${DM_HOSTNAME:-/bin/hostname})
     HERE_IP=$(${DM_IFCONFIG:-ifconfig} | awk '$1 == "inet" && $2 == "192.168.20.23" { print $2; exit }')
@@ -75,10 +78,39 @@ if [ "$DEPLOY_STAGE" = LOCAL ]; then
         { echo "ABORT: local target is not the .23 testbed (hostname=$HERE address=${HERE_IP:-none})" >&2; exit 1; }
     DEPLOY_STAGE=.23
 fi
+# Remote stages run through SSH only. The verified toolchain (this archive's own release/ files,
+# the same bytes validate-deploy-archive.py has just checked) is copied to a source-stamped
+# directory, and the candidate archive goes alongside it; the remote gate then proves the local
+# target before installing. A missing DM_SSH aborts before any remote write.
 case "$DEPLOY_STAGE" in
     .252) [ -f "$REPO/release/acceptance/.23-$IDENT_SHA.passed" ] || { echo 'ABORT: .23 acceptance missing for this candidate' >&2; exit 1; } ;;
     .253) [ -f "$REPO/release/acceptance/.252-$IDENT_SHA.passed" ] || { echo 'ABORT: .252 acceptance missing for this candidate' >&2; exit 1; } ;;
 esac
+SSH_CMD=${DM_SSH:-}
+# Remote reachability is checked only after the local prior-stage gate above has passed.
+if [ "$REMOTE" = 1 ]; then
+    [ -n "$SSH_CMD" ] || { echo 'ABORT: remote deployment requires DM_SSH (an ssh command with its identity and host-key options)' >&2; exit 1; }
+    [ -n "${DM_REMOTE_LEDGER:-}" ] || { echo 'ABORT: DM_REMOTE_LEDGER (remote ledger path) is required' >&2; exit 1; }
+    REMOTE_ROOT=/var/tmp/dm-release-tools
+    REMOTE_DIR=$REMOTE_ROOT/$SOURCE
+    # The verified toolchain (this archive's own release/ files, the bytes
+    # validate-deploy-archive.py has just checked) is unpacked atomically at a source-stamped
+    # directory; the archive itself goes with it so the remote gate re-checks everything.
+    # shellcheck disable=SC2086
+    $SSH_CMD "$HOST" "mkdir -p '$REMOTE_ROOT' && rm -rf '$REMOTE_DIR.new' && mkdir -p '$REMOTE_DIR.new' && tar -xzf - -C '$REMOTE_DIR.new' && mv '$REMOTE_DIR.new' '$REMOTE_DIR' && echo REMOTE_TOOLS_READY=$REMOTE_DIR" < "$ARCHIVE" || {
+        echo 'ABORT: remote toolchain staging failed' >&2; exit 1; }
+    if [ "$DEPLOY_STAGE" = .253 ]; then
+        # shellcheck disable=SC2086
+        $SSH_CMD "$HOST" "python3 - '$DM_REMOTE_LEDGER' '$SOURCE'" <<'REMOTE_CHECK' || {
+import json, sys
+rows = [json.loads(line) for line in open(sys.argv[1], encoding='utf-8') if line.strip()]
+ok = any(r.get('stage') == '.252' and r.get('phase') == 'acceptance' and r.get('result') == 'PASS'
+         and r.get('source') == sys.argv[2] for r in rows)
+raise SystemExit(0 if ok else 1)
+REMOTE_CHECK
+            echo 'ABORT: remote .253 requires a passing .252 acceptance record for this source' >&2; exit 1; }
+    fi
+fi
 LEDGER=$REPO/release/execution-ledger.jsonl
 DEPLOY_HOST=$(case "$DEPLOY_STAGE" in .23) echo 192.168.20.23;; .252) echo 192.168.20.252;; .253) echo 192.168.20.253;; esac)
 record_deploy() {
@@ -103,7 +135,14 @@ fi
 
 cd "$STAGE"
 INSTALL_RESULT=0
-/bin/sh install-unattended.sh --host "$HOST" > "$STAGE/install.log" 2>&1 || INSTALL_RESULT=$?
+if [ "$REMOTE" = 1 ]; then
+    # shellcheck disable=SC2086
+    $SSH_CMD "$HOST" "cd '$REMOTE_DIR' && ./release/deploy-candidate.sh '$REMOTE_DIR/dm-v2.15.0-runtime.tar.gz' '$REMOTE_DIR/dm-v2.15.0-runtime.tar.gz.identity' --host local --source '$SOURCE'" > "$STAGE/install.log" 2>&1 || INSTALL_RESULT=$?
+else
+    cp "$ARCHIVE" "$STAGE/dm-v2.15.0-runtime.tar.gz"
+    cp "$IDENTITY" "$STAGE/dm-v2.15.0-runtime.tar.gz.identity"
+    /bin/sh install-unattended.sh --host "$HOST" > "$STAGE/install.log" 2>&1 || INSTALL_RESULT=$?
+fi
 if ! record_deploy "$([ "$INSTALL_RESULT" = 0 ] && echo PASS || echo FAIL)" "$STAGE/install.log"; then
     cat "$STAGE/install.log" >&2
     exit 1

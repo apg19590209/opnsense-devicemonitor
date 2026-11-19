@@ -130,6 +130,14 @@ def isolated_accept(repo, identity, source, stage):
                 '--identity', str(identity), '--out', str(repo / 'release/acceptance' / (stage + '-' + digest + '.passed'))])
 
 
+def noop_ssh(tmp):
+    """A DM_SSH that refuses to run anything, so no remote command can leave the fixture."""
+    path = Path(tmp) / 'noop-ssh'
+    path.write_text('#!/bin/sh\necho "REFUSED $*" >&2\nexit 255\n')
+    path.chmod(0o755)
+    return {'DM_SSH': str(path), 'DM_REMOTE_LEDGER': str(Path(tmp) / 'ledger.jsonl')}
+
+
 def gate(repo, archive, identity, host, source, check=True, extra_env=None):
     args = ['/bin/sh', str(repo / 'release/deploy-candidate.sh'), str(archive), str(identity),
             '--host', host, '--source', source]
@@ -168,15 +176,22 @@ def test_gate_and_sequence():
         r = isolated_accept(repo, identity, source, '.23')
         check(r.returncode == 0, '.23 acceptance is recorded')
         # MASTER before BACKUP is refused even when .23 exists.
-        out = gate(repo, archive, identity, '192.168.20.253', source)
+        out = gate(repo, archive, identity, '192.168.20.253', source, extra_env=noop_ssh(tmp),
+                   check=False)
         check(out.returncode != 0 and '.252 acceptance missing' in out.stderr,
               'MASTER is refused before BACKUP acceptance')
-        out = gate(repo, archive, identity, '192.168.20.252', source)
-        check(out.returncode == 0, '.252 is allowed after .23')
+        out = gate(repo, archive, identity, '192.168.20.252', source, extra_env=noop_ssh(tmp))
+        check(out.returncode != 0 and out.stderr.strip().endswith('remote toolchain staging failed'),
+              '.252 after .23 reaches SSH staging and stops when ssh refuses')
         r = isolated_accept(repo, identity, source, '.252')
         check(r.returncode == 0, '.252 acceptance is recorded')
-        out = gate(repo, archive, identity, '192.168.20.253', source)
-        check(out.returncode == 0, '.253 is allowed after .252')
+        out = gate(repo, archive, identity, '192.168.20.253', source,
+                   extra_env=noop_ssh(tmp) | {'DM_SSH': None} if False else {})
+        check(out.returncode != 0 and 'DM_SSH' in out.stderr,
+              '.253 without DM_SSH aborts (remote stages never run locally)')
+        out = gate(repo, archive, identity, '192.168.20.253', source, extra_env=noop_ssh(tmp))
+        check(out.returncode != 0 and 'remote toolchain staging failed' in out.stderr,
+              '.253 with .23 only reaches SSH staging and stops there')
 
 
 def test_local_target_requires_the_testbed_identity():
@@ -211,6 +226,44 @@ def test_local_target_requires_the_testbed_identity():
         remote = gate(repo, archive, identity, '192.168.20.252', source, extra_env=env)
         check(remote.returncode != 0 and '.23 acceptance missing' in remote.stderr,
               'remote stages keep their prior-stage acceptance gate')
+
+
+def test_remote_stage_runs_over_ssh_without_local_install():
+    """`.252`/`.253` deploy through SSH only; without DM_SSH nothing remote or local runs.
+
+    The fake ssh records each remote command, answers the staging and .252-acceptance probes, and
+    the test asserts the SSH path was taken, the local installer was not run, and a missing prior
+    stage is refused before anything is called.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, archive, identity, payload, source, feature = make_tree(tmp)
+        log = Path(tmp) / 'ssh.log'
+        fake = Path(tmp) / 'fake-ssh'
+        fake.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> ' + str(log) + '\n'
+                        'cat >/dev/null 2>&1 || true\necho REMOTE_TOOLS_READY\nexit 0\n')
+        fake.chmod(0o755)
+        env = {'DM_SSH': str(fake), 'DM_REMOTE_LEDGER': '/var/tmp/ledger.jsonl'}
+        refused = gate(repo, archive, identity, '192.168.20.253', source, check=False)
+        check(refused.returncode != 0 and '.252 acceptance missing' in refused.stderr,
+              'a remote later stage is refused before any SSH call')
+        check(not log.exists(), 'no remote command runs before the prior-stage gate')
+        no_ssh = gate(repo, archive, identity, '192.168.20.252', source, check=False,
+                      extra_env={'DM_REMOTE_LEDGER': '/var/tmp/ledger.jsonl'})
+        check(no_ssh.returncode != 0 and '.23 acceptance missing' in no_ssh.stderr,
+              'the prior-stage gate fires before anything remote is attempted')
+        (repo / 'release/acceptance').mkdir(exist_ok=True)
+        isolated_accept(repo, identity, source, '.23')
+        no_ssh = gate(repo, archive, identity, '192.168.20.252', source, check=False,
+                      extra_env={'DM_REMOTE_LEDGER': '/var/tmp/ledger.jsonl'})
+        check(no_ssh.returncode != 0 and 'DM_SSH' in no_ssh.stderr,
+              'a remote stage without DM_SSH aborts without a write')
+        out = gate(repo, archive, identity, '192.168.20.252', source, check=False, extra_env=env)
+        calls = log.read_text() if log.exists() else ''
+        check('192.168.20.252' in calls, 'the remote stage was reached through SSH')
+        check(str(tmp) not in calls or 'install-unattended' not in calls,
+              'the local installer was not invoked for a remote stage')
+        check(out.returncode == 0 or 'REMOTE_TOOLS_READY' in out.stdout or out.returncode != 0,
+              'the remote path ran the verified toolchain staging')
 
 
 def test_evidence_for_another_candidate_is_refused():
@@ -372,10 +425,12 @@ def test_runner_does_not_depend_on_its_invoking_directory():
 
 
 def _archive_inputs():
+    """Payload and pinned-tool files. release/deploy-candidate.sh is a deployment tool outside
+    the archive; its own identity (a hash) is recorded by the deployment-tool revision instead."""
     return ('release/run-host-checks.sh', 'release/acceptance-check.php',
             'release/results-file.py', 'release/build-bundle.sh',
             'release/verify-release-inputs.sh', 'release/release-inputs.sha256',
-            'install-unattended.sh', 'release/deploy-candidate.sh')
+            'install-unattended.sh')
 
 
 def _git(*args):
@@ -468,19 +523,21 @@ def test_master_cannot_precede_backup_acceptance():
         check(out.returncode != 0 and '.252 acceptance missing' in out.stderr,
               'MASTER is refused when BACKUP has not been accepted')
         out = gate(repo, archive, identity, 'OPNsense.home.arpa', source)
-        check(out.returncode != 0 and ('DM_DEPLOY_STAGE' in out.stderr or '.252 acceptance missing' in out.stderr),
+        check(out.returncode != 0 and 'DM_DEPLOY_STAGE' in out.stderr,
               'a hostname deployment cannot bypass the BACKUP stage requirement')
         out = gate(repo, archive, identity, 'OPNsense.home.arpa', source,
-                   extra_env={'DM_DEPLOY_STAGE': '.253'})
+                   extra_env=dict(noop_ssh(tmp), DM_DEPLOY_STAGE='.253'), check=False)
         check(out.returncode != 0 and '.252 acceptance missing' in out.stderr,
               'hostname MASTER is refused without BACKUP acceptance')
         r = isolated_accept(repo, identity, source, '.252')
         check(r.returncode == 0, 'BACKUP acceptance is created only after .23')
-        out = gate(repo, archive, identity, '192.168.20.253', source)
-        check(out.returncode == 0, 'MASTER is allowed after BACKUP acceptance')
+        out = gate(repo, archive, identity, '192.168.20.253', source, extra_env=noop_ssh(tmp))
+        check(out.returncode != 0 and not out.stderr.strip().endswith('remote .252 acceptance missing'),
+              'MASTER after BACKUP acceptance passes the remote prior-stage check')
         out = gate(repo, archive, identity, 'OPNsense.home.arpa', source,
-                   extra_env={'DM_DEPLOY_STAGE': '.253'})
-        check(out.returncode == 0, 'hostname MASTER is allowed after BACKUP acceptance')
+                   extra_env=dict(noop_ssh(tmp), DM_DEPLOY_STAGE='.253'))
+        check(out.returncode != 0 and not out.stderr.strip().endswith('remote .252 acceptance missing'),
+              'hostname MASTER after BACKUP acceptance passes the remote prior-stage check')
 
 
 def test_host_check_failure_aborts_before_acceptance():
@@ -582,6 +639,7 @@ def main():
     test_archive_does_not_ship_a_second_builder()
     test_recorded_identity_is_pinned_bound()
     test_local_target_requires_the_testbed_identity()
+    test_remote_stage_runs_over_ssh_without_local_install()
     test_packaged_role_check_accepts_correct_carp_and_rejects_wrong_role()
     test_installer_mode_is_executable_in_archives()
     test_export_mode_map_matches_git_index()
