@@ -1,17 +1,13 @@
 # Current task handoff
 
-Objective: complete v2.15.0 staged acceptance for the frozen archive 248cd104... and stop promotion only on a real failure.
+Objective: v2.15.0 staged acceptance — COMPLETE for the peer-corrected archive.
 
-Authority: Option B confirmed: the supported installer runs locally on each HA node; the .23-only deploy-candidate wrapper is not used on .252/.253. No new automation, emails, merge, tag or publication.
+Frozen candidate: archive f71fd8b70ec9cd94190f8f9c2977991a8817af658ff01379fe10d34993f23246, 12558290 bytes, 96 members, source 657636beb96ea072d50bbb337229cfef064d7d3f; installer 9d198b1c..., inputs 9136054a.... CI 44462157712 passed at 4356f6a.
 
-Frozen candidate: archive 248cd1041ee4da5317ae72b660eb4877e52cf019e350ab6f76307a3c7eba3da5, source b4e28e42518994e9232b23cd329d062505a9b934, 12558290 bytes, 96 members; installer 62ccd757..., inputs a81f0d7e..., verifier fe189b33....
+- .23: gate install (INSTALL_OK, backup install-v214.hw43BI), 12/12 checks; acceptance recorded.
+- .252: Option B install (INSTALL_OK, backup install-v214.yIaiD6), 13/13 checks incl. peer; acceptance recorded.
+- .253: Option B install (INSTALL_OK, backup install-v214.TQRHba), 13/13 checks; acceptance recorded; MASTER/0.
 
-- .23: installed (7f7175a installer run; byte-identical installer); acceptance marker for 248cd104 names source 7f7175a; fresh 12/12 read-only checks PASS at b4e28e4.
-- .252: INSTALLER RAN (Option B, INSTALL_OK backup /var/backups/devicemonitor/install-v214.1Wv8AO); 12/13 checks PASS; peer FAIL exit 255 is a packaged-runner defect (doubled backslashes in the -r program). No acceptance recorded; STOPPED promotion.
-- .253: unchanged (2.14.0, MASTER/0). No candidate installed.
+Ledger: COMPLETE for the source/bundle above. Correction: two .252 deploy rows I created manually from a hand-made evidence file were removed; the pre-removal ledger and a note are at /var/backups/devicemonitor/evidence-f71fd8b7/.
 
-Blocked on: the peer_check quoting defect, which changes the archive; needs a bounded fix, a new archive identity, and approval.
-
-Backups: .23 /var/backups/devicemonitor/pre-install-3a2da/20261119T021909Z and install-v214.QfUimT; .252 /var/backups/devicemonitor/pre-install-248cd/20261119T043251Z and install-v214.1Wv8AO.
-
-Accounts: dm-test-202611191529 and dm-test-202611191532 removed on .252; all hosts have 0 dm-test users and no account.env.
+Remaining gates: merge, tag and publication are not authorised. Accounts: 0 dm-test users and no account.env on all three hosts.
