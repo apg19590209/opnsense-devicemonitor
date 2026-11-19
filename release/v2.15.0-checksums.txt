@@ -1,11 +1,11 @@
 # Device Monitor v2.15.0 release checksums
 # Archive identity from source f86d2b88b0dd7bd6efd6d4e4cd51b9d85cfd03c4; the record is release/bundle-digest.txt.
 # The superseded aa1270ed... archive must not be installed.
-c3b6a723f20969ec63c25032abf2dfbd235345ea0c28891185cbe41929c7f16c  dm-v2.15.0-runtime.tar.gz
+3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5  dm-v2.15.0-runtime.tar.gz
 f13359b5cf0f41c478c93c70a8c327a2ba129453deeb6ed95eabe8d8c030bd70  release/v2.15.0-runtime.manifest
 8483f4ade0be732125c3c2136c13b9a030d07e846a13f2887248b75bfe66de72  release/v2.15.0-notes.md
 561da83edabb52b5cfb48c0303405f433e7dc328491e64f2501160400ed67020  release/v2.15.0-acceptance-requirements.md
 46d9478e597f4d8fd0dd7a6a476136da68d0cf45edd25c8fedaa902f82078b49  release/release-inputs.sha256
 bdde41ccdc908b79046d4e4532a97fa9d7a1a445937af19a01cd03aa68d24a65  release/manifests/v2.15.0-runtime.manifest
 c9f1f8553f3a1220d8aaa9dac531f6afbb04880698f6baa1e33745bec217a42f  src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
-de3b240d132ddd9d805119fb557b79baa6e311f2550be664311e1bbc3f9d31ff  release/RELEASE-APPROVAL-PACKAGE-2.15.0-20261119.md
+ecbd51a0b80e0d186987377c4d2fc10fafdd34c79eddac0840df15bec03c6e51  release/RELEASE-APPROVAL-PACKAGE-2.15.0-20261119.md
