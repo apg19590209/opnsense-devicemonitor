@@ -331,51 +331,46 @@ def test_archive_does_not_ship_a_second_builder():
           'the current builder does not list itself in the archive allow-list')
 
 
-def _recorded_identity():
-    """Return the pinned commit for the current digest, or None when the record is unusable."""
+def _recorded_source():
+    """Return the ``# source = <sha>`` line of the digest record, or None when absent."""
     code, text = _git('show', 'HEAD:release/bundle-digest.txt')
     if code != 0:
         return None
-    digest = re.search(r'^sha256 ([0-9a-f]{64})$', text, re.M)
-    if not digest:
-        return None
-    code, commit = _git('log', '-1', '--format=%H', '-S' + digest.group(1), '--',
-                        'release/bundle-digest.txt')
-    return commit.strip() if code == 0 and commit.strip() else None
+    found = re.search(r'^# source = ([0-9a-f]{40})$', text, re.M)
+    return found.group(1) if found else None
 
 
-def test_pinning_commit_carries_no_archive_change():
-    """The commit that pins the identity must not change an archive input.
+def test_recorded_identity_is_pinned_bound():
+    """Re-pinning an unchanged archive must be a commit, and must name its source.
 
-    The cut is measured from the state it pins; a record commit that also changes an archive
-    input names bytes that were never built from it. Records and archive content therefore live
-    in separate commits, the content first.
+    Identical digest lines are not a git diff, so -S/-G cannot see a re-pin that changes only the
+    source line: 264dc08 re-pinned the identity but was invisible, and the earlier
+    aa1270ed... record named no source at all. The record now carries ``# source = <sha>``, that
+    line changes with every re-pin, and it must equal the commit that last changed an archive
+    input (the commit downstream of it that does not itself change one).
     """
-    pinning = _recorded_identity()
-    check(bool(pinning), 'the recorded identity has a pinning commit')
-    if not pinning:
+    source = _recorded_source()
+    check(bool(source) and re.fullmatch(r'[0-9a-f]{40}', source or ''),
+          'the digest record names its source commit')
+    if not source:
         return
-    code, changed = _git('diff', '--name-only', pinning + '^', pinning, '--', *_archive_inputs())
-    check(code == 0, 'the pinning commit is inspectable')
-    check(not changed.strip(),
-          'the pinning commit changes no archive input itself: ' + ','.join(changed.split()))
-
-
-def test_recorded_identity_names_its_own_source():
-    """At least one commit after the pin must change archive inputs.
-
-    A record-only cut says WHICH identity was measured; a following content commit says FROM WHAT.
-    Without one, the record describes bytes no commit on this branch produced (the shape
-    aa1270ed... had when its replacement archive was recorded one commit too early).
-    """
-    pinning = _recorded_identity()
-    check(bool(pinning), 'the recorded identity has a pinning commit')
-    if not pinning:
+    code, present = _git('cat-file', '-e', source + ':release/build-bundle.sh')
+    check(code == 0, 'the recorded source exists in this repository')
+    if code != 0:
         return
-    code, sources = _git('log', pinning + '..HEAD', '--format=%H', '--', *_archive_inputs())
-    check(code == 0, 'archive inputs after the pin are inspectable')
-    check(bool(sources.strip()),
-          'a commit after the pin changed archive inputs: the identity names its own source')
+    # The source commit must precede the commit that re-pinned it, with no archive change between.
+    code, pin = _git('log', '-1', '--format=%H', '-S# source = ' + source, '--',
+                     'release/bundle-digest.txt')
+    check(code == 0 and bool(pin.strip()), 'the source line is recorded by a commit')
+    if not pin.strip():
+        return
+    code, between = _git('diff', '--name-only', pin.strip(), source, '--', *_archive_inputs())
+    check(code == 0 and not between.strip(),
+          'the recorded source is downstream of its pin without archive changes: '
+          + ','.join((between or '').split()))
+    code, after = _git('log', source + '..HEAD', '--format=%H', '--', *_archive_inputs())
+    check(code == 0 and not after.strip(),
+          'no archive input changed after the recorded source: ' + ','.join((after or '').split()))
 
 
 def test_stale_ancestry_is_refused():
@@ -524,8 +519,7 @@ def main():
     test_packaged_runner_executes_and_records_every_check()
     test_runner_does_not_depend_on_its_invoking_directory()
     test_archive_does_not_ship_a_second_builder()
-    test_pinning_commit_carries_no_archive_change()
-    test_recorded_identity_names_its_own_source()
+    test_recorded_identity_is_pinned_bound()
     test_installer_mode_is_executable_in_archives()
     test_export_mode_map_matches_git_index()
     test_prior_stage_is_required()
