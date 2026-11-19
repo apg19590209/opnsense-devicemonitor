@@ -91,14 +91,52 @@ for lang in ('ru_RU','de_DE'):
 PY
 }
 role_check() {
-    # The role and its advskew must agree: BACKUP at 100, MASTER at 0. DM_IFCONFIG exists so the
-    # packaged-path sandbox can exercise both directions; the host uses the real ifconfig.
-    carp=$(${DM_IFCONFIG:-ifconfig} | grep -Eo 'carp: (BACKUP|MASTER) vhid [0-9]+ advskew [0-9]+' | head -n 1)
-    case "$STAGE" in
-        .252) [ "$carp" = 'carp: BACKUP vhid 1 advskew 100' ] ;;
-        .253) [ "$carp" = 'carp: MASTER vhid 1 advskew 0' ] ;;
-        *) true ;;
-    esac
+    # One CARP record, parsed on its own fields: FreeBSD prints "carp: ROLE vhid N advbase N
+    # advskew N", so field adjacency cannot be assumed. The stage must find exactly one record
+    # with vhid 1 and the required role and advskew; anything missing, malformed, ambiguous or
+    # different fails closed. .23 has no CARP record by design and does not check.
+    [ "$STAGE" = .23 ] && return 0
+    ${DM_IFCONFIG:-ifconfig} > "${TMPDIR:-/tmp}/dm-role.$$.out" 2>/dev/null || return 1
+    python3 - "$STAGE" "${TMPDIR:-/tmp}/dm-role.$$.out" <<'PY'
+import sys
+stage, path = sys.argv[1], sys.argv[2]
+want = {'.252': ('BACKUP', 100), '.253': ('MASTER', 0)}[stage]
+roles = ('BACKUP', 'MASTER', 'INIT', 'DISABLED')
+records, malformed = [], 0
+for line in open(path, encoding='utf-8', errors='replace'):
+    fields = line.split()
+    if 'carp:' not in fields:
+        continue
+    if fields[0] != 'carp:':
+        malformed += 1
+        continue
+    values, i = {}, 1
+    while i < len(fields):
+        key = fields[i]
+        if key in roles and 'role' not in values:
+            values['role'] = key
+            i += 1
+            continue
+        if key in ('vhid', 'advbase', 'advskew'):
+            if key in values or i + 1 >= len(fields) or not fields[i + 1].isdigit():
+                malformed += 1
+                break
+            values[key] = int(fields[i + 1])
+            i += 2
+            continue
+        i += 1
+    if 'role' in values and 'vhid' in values and 'advskew' in values:
+        records.append(values)
+    else:
+        malformed += 1
+if malformed or len(records) != 1:
+    raise SystemExit(1)
+r = records[0]
+raise SystemExit(0 if (r['role'], r['vhid'], r['advskew']) == (want[0], 1, want[1]) else 1)
+PY
+    rc=$?
+    rm -f "${TMPDIR:-/tmp}/dm-role.$$.out"
+    return "$rc"
 }
 certificate_check() { python3 - <<'PY'
 import ssl,socket

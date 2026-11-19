@@ -14,8 +14,8 @@ export LC_ALL
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 REPO=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 cd "$REPO"
-INSTALLER_SHA=281d6aa8324709d52c7028a591aaec40f2001eb19bfeb79da2b583b2fc4b2a3c
-INPUTS_SHA=0df444171b4525fdb7a6260c1977de1815b960346ad25de4ae2bc6ce112d8eb9
+INSTALLER_SHA=8b0468bd5cfbf7fc0a06d188059fbb2ac1ff4f024bb7735c3d03eb0d07c622be
+INPUTS_SHA=60a05a9757f15201a4ba8356a5da3958278d5d22b455b028c11403354a2ba03d
 [ "$#" -ge 2 ] || { echo 'usage: deploy-candidate.sh ARCHIVE IDENTITY --host HOST --source SHA [--check]' >&2; exit 2; }
 ARCHIVE=$1
 IDENTITY=$2
@@ -99,6 +99,21 @@ if [ "$REMOTE" = 1 ]; then
     # shellcheck disable=SC2086
     $SSH_CMD "$HOST" "mkdir -p '$REMOTE_ROOT' && rm -rf '$REMOTE_DIR.new' && mkdir -p '$REMOTE_DIR.new' && tar -xzf - -C '$REMOTE_DIR.new' && mv '$REMOTE_DIR.new' '$REMOTE_DIR' && echo REMOTE_TOOLS_READY=$REMOTE_DIR" < "$ARCHIVE" || {
         echo 'ABORT: remote toolchain staging failed' >&2; exit 1; }
+    # The role is a prerequisite, not just a post-install result: run the staged packaged check
+    # on the host before the remote gate writes anything.
+    # shellcheck disable=SC2086
+    $SSH_CMD "$HOST" "TMPDIR=/var/tmp /usr/local/bin/python3 - '$REMOTE_DIR/release/run-host-checks.sh' '$DEPLOY_STAGE'" <<'ROLE_CHECK' || {
+import os, re, subprocess, sys, tempfile
+src = open(sys.argv[1], encoding='utf-8').read()
+start = src.index('role_check() {')
+end = src.index('\n}\n', start) + 3
+fd, path = tempfile.mkstemp(prefix='dm-role-prereq.', suffix='.sh')
+with os.fdopen(fd, 'w') as stream:
+    stream.write('STAGE=%s\nDM_IFCONFIG=ifconfig\n' % sys.argv[2] + src[start:end] + '\nrole_check\n')
+raise SystemExit(subprocess.run(['/bin/sh', path]).returncode)
+ROLE_CHECK
+        echo 'ABORT: role prerequisite failed before installation' >&2; exit 1; }
+    echo "ROLE_PREREQUISITE_OK stage=$DEPLOY_STAGE"
     if [ "$DEPLOY_STAGE" = .253 ]; then
         # shellcheck disable=SC2086
         $SSH_CMD "$HOST" "python3 - '$DM_REMOTE_LEDGER' '$SOURCE'" <<'REMOTE_CHECK' || {

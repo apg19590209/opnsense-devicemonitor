@@ -383,35 +383,51 @@ def test_packaged_runner_executes_and_records_every_check():
         check(done.returncode == 1, 'a recorded FAIL makes the runner exit non-zero')
 
 
-def test_packaged_role_check_accepts_correct_carp_and_rejects_wrong_role():
-    """The packaged role check must pass BACKUP/100 and MASTER/0 and fail any mismatch.
+CARP_FIXTURES = ROOT / 'tests/fixtures/carp'
 
-    Exercised through the packaged runner in the sandbox, with DM_IFCONFIG standing in for the
-    node's ifconfig output. These are fixture results, not host acceptance.
+
+def test_packaged_role_check_parses_real_carp_records():
+    """The packaged role check parses role/vhid/advskew from one record and fails closed.
+
+    Fixtures are the captured read-only ifconfig output of .252 and .253 (FreeBSD prints
+    "carp: BACKUP vhid 1 advbase 1 advskew 100"). Correct roles pass, the wrong role or skew,
+    missing fields, ambiguous records and malformed values fail, and .23 ignores CARP entirely.
+    These are fixture results, not host acceptance.
     """
-    ifconfig = 'cat\n'
+    def ifconfig_text(name, text):
+        (host / name).write_text(text)
+        return str(host / 'sbin/cat') + ' ' + str(host / name)
+
     with tempfile.TemporaryDirectory() as tmp:
         host, make = _fake_host(tmp)
         (host / 'sbin/cat').write_text('#!/bin/sh\nexec /bin/cat "$@"\n')
         (host / 'sbin/cat').chmod(0o755)
         stage, env = _sandbox_runner(tmp, host, {})
-        for stage_name, text, want in (
-                ('.252', 'carp: BACKUP vhid 1 advskew 100\n', 'PASS'),
-                ('.252', 'carp: MASTER vhid 1 advskew 0\n', 'FAIL'),
-                ('.252', 'carp: BACKUP vhid 1 advskew 0\n', 'FAIL'),
-                ('.253', 'carp: MASTER vhid 1 advskew 0\n', 'PASS'),
-                ('.253', 'carp: BACKUP vhid 1 advskew 100\n', 'FAIL'),
-                ('.253', 'carp: MASTER vhid 1 advskew 100\n', 'FAIL')):
-            (host / 'ifconfig.txt').write_text(text)
+        busy = (CARP_FIXTURES / 'ifconfig-192.168.20.252.txt').read_text()
+        primary = (CARP_FIXTURES / 'ifconfig-192.168.20.253.txt').read_text()
+        cases = [
+            ('.252', busy, 'PASS'), ('.253', primary, 'PASS'),
+            ('.252', primary, 'FAIL'), ('.253', busy, 'FAIL'),
+            ('.252', 'carp: BACKUP vhid 1 advbase 1 advskew 0\n', 'FAIL'),
+            ('.253', 'carp: MASTER vhid 1 advbase 1 advskew 100\n', 'FAIL'),
+            ('.252', 'carp: BACKUP advbase 1 advskew 100\n', 'FAIL'),
+            ('.252', 'carp: BACKUP vhid 1 advbase 1\n', 'FAIL'),
+            ('.252', 'carp: BACKUP vhid 1 advbase 1 advskew x\n', 'FAIL'),
+            ('.252', 'carp: BACKUP vhid 1 advskew 100\ncarp: MASTER vhid 2 advbase 1 advskew 0\n', 'FAIL'),
+            ('.252', 'carp: INIT vhid 1 advbase 1 advskew 100\n', 'FAIL'),
+            ('.252', '', 'FAIL'),
+            ('.23', busy, 'PASS'),
+        ]
+        for index, (stage_name, text, want) in enumerate(cases):
             make(True)
             out = host / 'role.json'
             out.unlink(missing_ok=True)
-            env['DM_IFCONFIG'] = str(host / 'sbin/cat') + ' ' + str(host / 'ifconfig.txt')
-            done = run(['/bin/sh', str(stage / 'release/run-host-checks.sh'), '--stage', stage_name,
-                        '--source', 'a' * 40, '--bundle', 'b' * 64, '--out', str(out)], env=env)
+            env['DM_IFCONFIG'] = ifconfig_text('ifconfig-%d.txt' % index, text)
+            run(['/bin/sh', str(stage / 'release/run-host-checks.sh'), '--stage', stage_name,
+                 '--source', 'a' * 40, '--bundle', 'b' * 64, '--out', str(out)], env=env)
             checks = json.loads(out.read_text())['checks'] if out.is_file() else {}
-            check(checks.get('role') == want,
-                  '%s %s records role=%s' % (stage_name, text.strip(), want))
+            label = text.strip().splitlines()[0][:44] if text.strip() else '(no carp record)'
+            check(checks.get('role') == want, '%s %r records role=%s' % (stage_name, label, want))
 
 
 def test_runner_does_not_depend_on_its_invoking_directory():
@@ -640,7 +656,7 @@ def main():
     test_recorded_identity_is_pinned_bound()
     test_local_target_requires_the_testbed_identity()
     test_remote_stage_runs_over_ssh_without_local_install()
-    test_packaged_role_check_accepts_correct_carp_and_rejects_wrong_role()
+    test_packaged_role_check_parses_real_carp_records()
     test_installer_mode_is_executable_in_archives()
     test_export_mode_map_matches_git_index()
     test_prior_stage_is_required()
