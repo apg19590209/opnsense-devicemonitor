@@ -4,17 +4,20 @@ Objective: prepare the v2.15.0 Email Log release approval package; no deployment
 
 Authority: local commits and release-candidate construction only. Hosts remain on the separately accepted runtime archive; no stage is authorised in this package.
 
-Pinned hosted archive: b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72; v2.15.0 candidate: aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f (source b0e8355)
-Source: 202d6efd4c126f85393116e569e72931d936efdc
+Pinned hosted archive: b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72 (hosts stay on it)
+Superseded candidate: aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f (source b0e8355) - defective runner; never install
+Corrected candidate: c3b6a723f20969ec63c25032abf2dfbd235345ea0c28891185cbe41929c7f16c, 12556754 bytes, 96 members (source 589ed0001fa4ed428805f19e02c42af3c3487fdb)
 
 - .23: historical acceptance marker exists; no generated-evidence ledger record
 - .252: historical acceptance marker exists; no generated-evidence ledger record
 - .253: historical acceptance marker exists; no generated-evidence ledger record
 
-Outstanding checks: the current execution ledger has no generated evidence for a fresh host
-acceptance, so a new COMPLETE claim must not be made from the prior manually summarized records.
-Run the supported checks on each authorised host and then `python3 release/execution-ledger.py
-status` (requirements file and consolidated report).
+Outstanding checks: exact-head CI after a push (needs explicit instruction); generated acceptance
+per host for c3b6a723...; then `python3 release/execution-ledger.py status`. Nothing is installed
+from the corrected archive and no COMPLETE claim may rest on the older markers.
+
+Decision required: approve c3b6a723... and authorise guarded .23 -> .252 -> .253 acceptance;
+see release/RELEASE-APPROVAL-PACKAGE-2.15.0-20261119.md.
 
 Stop conditions: price gate premium without approval; missing access; unsafe verification failure; action outside authority.
 

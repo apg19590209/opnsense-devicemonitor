@@ -1,6 +1,23 @@
 # FINAL REPORT — Email Log release approval package
 
-**Status: BLOCKED (APPROVED ARCHIVE DEFECT; NO PROMOTION).** The v2.15.0 approval package and exact-head CI are complete. An unauthorised ad hoc `.252` move of `email_log.db` was reconciled: the original file was restored from the pre-incident consistent snapshot and verified byte-identical (`de99a51c…`, two records/five events), with authenticated reads and integrity checks passing. The approved archive was then installed on `.23`; the post-install result collector exposed a separate tooling bug, so host acceptance is not yet recorded and `.252`/`.253` promotion has not begun. No tag or publication occurred.
+**Status: AWAITING APPROVAL (CORRECTED ARCHIVE FROZEN; NOT INSTALLED).** The earlier approved archive `aa1270ed…` was defective and must not be installed. A corrected archive is frozen at `c3b6a723…` (source `589ed00`) and passed the packaged-path checks and the local preflight; see "Corrected archive" below. Exact-head CI is still required after the branch is pushed. Nothing has been installed from the corrected archive, and no promotion, merge, tag or publication occurred.
+
+**Status (superseded record): BLOCKED (APPROVED ARCHIVE DEFECT; NO PROMOTION).** The v2.15.0 approval package and exact-head CI are complete. An unauthorised ad hoc `.252` move of `email_log.db` was reconciled: the original file was restored from the pre-incident consistent snapshot and verified byte-identical (`de99a51c…`, two records/five events), with authenticated reads and integrity checks passing. The approved archive was then installed on `.23`; the post-install result collector exposed a separate tooling bug, so host acceptance is not yet recorded and `.252`/`.253` promotion has not begun. No tag or publication occurred.
+
+## Corrected archive (19 November 2026)
+
+The approved `aa1270ed…` archive cannot produce generated acceptance. It was reproduced byte-for-byte from its own source `b0e8355`, and its packaged runner aborts under `set -u` with `RESULT_ARGS: parameter not set`. The later committed fix was incomplete: it resolved its helpers beside the invoking script (outside `release/` on an installed host) and returned a failing check's status under `set -e`, which aborted before the evidence file was written. Separately, `3dac69c` pinned `release/build-bundle.sh` in `release-inputs.sha256` while removing it from the archive allow-list, so every such archive failed `verify-release-inputs.sh` (CI run `44419526545`).
+
+The corrected candidate is a tooling-only change; no runtime application file changed.
+
+- Candidate source: **`589ed0001fa4ed428805f19e02c42af3c3487fdb`** (branch `release/v2.15.0-email-log-20261119`, on top of `cb24bf3`).
+- Archive: **`dm-v2.15.0-runtime.tar.gz`**, **12,556,754 bytes**, SHA-256 **`c3b6a723f20969ec63c25032abf2dfbd235345ea0c28891185cbe41929c7f16c`**, 96 members, builder not packaged.
+- Frozen from a clean archive export of that commit with the merged bundler under the declared build conditions (`TZ=UTC0`, canonical ustar, fixed ownership and mtime, deterministic gzip). The identity equals `release/bundle-digest.txt`, is reproduced by two independent clean checkouts (`BUNDLE_DETERMINISM=PASS`), and equals the export build from the local full preflight (`PREFLIGHT=PASS`).
+- Packaged-path checks (isolated sandbox; no host contacted): the runner executed straight from the frozen archive's bytes. `.23` recorded 12 of 12 PASS — installed hashes, records, database integrity, settings, certificates, role, daemon, catalogue, authenticated search/message/CSV and mutation denial. `.252` recorded 13 of 13 checks with `peer` PASS; only `role` FAILs because the fixture has no CARP interface. The runner records a genuine FAIL and exits non-zero without losing the evidence file.
+- The deployment gate accepts this exact identity for `.23` (`DEPLOYMENT_CHECK_OK`) and correctly refuses `.252` before `.23` acceptance exists for it.
+- Pinned builder changed: `release/build-bundle.sh` is no longer an archive member and is no longer treated as an install prerequisite in `verify-release-inputs.sh`: absent is reported as `OPTIONAL_INPUT_ABSENT`, present must match the pin, and a symlink is refused.
+
+**Decision required:** approve this exact archive identity and authorise its fresh, guarded `.23` → `.252` → `.253` deployment and generated acceptance. The earlier `aa1270ed…` approval does not transfer to this identity.
 
 ## Proposed version
 
@@ -127,6 +144,6 @@ acceptance. The approved `aa1270ed…` identity must not be silently substituted
 
 ## Action for Tony to approve
 
-Approve **v2.15.0 at archive `aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f`**, and authorise the guarded sequential `.23` → `.252` → `.253` deployment and generated acceptance required before any tag or publication.
+Approve **v2.15.0 at corrected archive `c3b6a723f20969ec63c25032abf2dfbd235345ea0c28891185cbe41929c7f16c` (source `589ed00`)** and authorise the guarded sequential `.23` → `.252` → `.253` deployment and generated acceptance for that identity. The superseded archive `aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f` must not be installed or used to complete acceptance.
 
 END OF REPORT

@@ -1,10 +1,11 @@
 # Device Monitor v2.15.0 release checksums
-# Bundle identity from source 83be9d4; source b0e8355 adds only release-package records. Identical bytes.
-aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f  dm-v2.15.0-runtime.tar.gz
-f13359b5cf0f41c478c93c70a8c327a2ba129453deeb6ed95eabe8d8c030bd70  v2.15.0-runtime.manifest
-8483f4ade0be732125c3c2136c13b9a030d07e846a13f2887248b75bfe66de72  v2.15.0-notes.md
-561da83edabb52b5cfb48c0303405f433e7dc328491e64f2501160400ed67020  v2.15.0-acceptance-requirements.md
-7a8556d8755e4b421932e9c45c8555c3fb8bc720dd083c5c8c6cdfb57f8c2347  release/release-inputs.sha256
+# Archive identity from source 589ed0001fa4ed428805f19e02c42af3c3487fdb; the record is release/bundle-digest.txt.
+# The superseded aa1270ed... archive must not be installed.
+c3b6a723f20969ec63c25032abf2dfbd235345ea0c28891185cbe41929c7f16c  dm-v2.15.0-runtime.tar.gz
+f13359b5cf0f41c478c93c70a8c327a2ba129453deeb6ed95eabe8d8c030bd70  release/v2.15.0-runtime.manifest
+8483f4ade0be732125c3c2136c13b9a030d07e846a13f2887248b75bfe66de72  release/v2.15.0-notes.md
+561da83edabb52b5cfb48c0303405f433e7dc328491e64f2501160400ed67020  release/v2.15.0-acceptance-requirements.md
+46d9478e597f4d8fd0dd7a6a476136da68d0cf45edd25c8fedaa902f82078b49  release/release-inputs.sha256
 bdde41ccdc908b79046d4e4532a97fa9d7a1a445937af19a01cd03aa68d24a65  release/manifests/v2.15.0-runtime.manifest
 c9f1f8553f3a1220d8aaa9dac531f6afbb04880698f6baa1e33745bec217a42f  src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
-cb94975316589db0d5f02085fdf3e7ac281c6fb3eb76f0d291e8244c7500009c  RELEASE-APPROVAL-PACKAGE-2.15.0-20261119.md
+9f65bc1d7275c90d1455ef5ef8ca55e6c3b5f41a1281b603788ceb6b935113c6  release/RELEASE-APPROVAL-PACKAGE-2.15.0-20261119.md

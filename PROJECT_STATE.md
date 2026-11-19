@@ -2,6 +2,16 @@
 
 ## Current state
 
+**v2.15.0 Email Log release — awaiting approval of the corrected archive (19 November 2026).** The earlier
+approved archive `aa1270ed…` (source `b0e8355`) could not produce generated acceptance: its packaged runner
+aborted under `set -u`, and the committed follow-up resolved helpers outside `release/` and aborted on a FAIL.
+`3dac69c` also pinned `release/build-bundle.sh` while removing it from the archive allow-list, which failed
+`verify-release-inputs.sh` (CI `44419526545`). Commit `589ed00` fixes the runner, keeps the builder out of the
+archive and makes it an optional-but-pinned input; local preflight PASS, packaged-path sandbox checks PASS and
+the frozen archive is `c3b6a723…`, 12,556,754 bytes, 96 members. Nothing was installed from it; hosts remain on
+the accepted runtime. No push, HA write, merge, tag or publication occurred. Approval package:
+`release/RELEASE-APPROVAL-PACKAGE-2.15.0-20261119.md`.
+
 **Release and deployment safeguards merged into `main` (19 November 2026).** PR #11 merged reviewed
 head `294caa3` normally as merge commit `5b5f51b`; CI `44404713134` passed at that head. The merged
 changes are release/install tooling and tests only—no runtime application-file changes. The final
