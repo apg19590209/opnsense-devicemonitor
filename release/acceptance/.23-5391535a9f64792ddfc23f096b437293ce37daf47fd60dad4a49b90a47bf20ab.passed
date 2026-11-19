@@ -1,0 +1,9 @@
+version=2.15.1
+source=bbfc69fdd2a713825f17ad070c6a72d774388ed1
+bundle_sha256=5391535a9f64792ddfc23f096b437293ce37daf47fd60dad4a49b90a47bf20ab
+host=192.168.20.23
+stage=.23
+result=PASS
+after=
+evidence=execution-ledger:/var/backups/devicemonitor/acceptance-v2.15.1-20261119T112218Z/tooling-5cdfc5d/release/execution-ledger.jsonl
+accepted_at=2026-11-19T11:45:04Z

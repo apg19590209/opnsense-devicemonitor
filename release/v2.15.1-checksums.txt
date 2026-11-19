@@ -1,0 +1,16 @@
+# Device Monitor v2.15.1 release checksums
+# Accepted archive: 5391535a9f64792ddfc23f096b437293ce37daf47fd60dad4a49b90a47bf20ab
+#   dm-v2.15.1-runtime.tar.gz, 12562386 bytes, 96 members, build source bbfc69fdd2a713825f17ad070c6a72d774388ed1
+# Verify the release asset using its own dm-v2.15.1-runtime.tar.gz.identity file.
+5391535a9f64792ddfc23f096b437293ce37daf47fd60dad4a49b90a47bf20ab  dm-v2.15.1-runtime.tar.gz
+5eb9f3a3a1f495eb9bac2c74dbd0ee8e2fccfbe00df9b43defb67b2876a83523  release/v2.15.1-runtime.manifest
+c10f74344c3dbb32cd31c1f09c3b8fed23e69ad6636fe80229597d361e84221c  release/v2.15.1-notes.md
+af1fa31bfa646fb002964d1c7664a1663aa58fe89fbc0aadb72b889bdeba8ebb  release/RELEASE-APPROVAL-PACKAGE-2.15.1-20261119.md
+f062971e3eb543e003a2fb8935d2966855b1746cd218ecd34efafa36b4f9d2b5  release/release-inputs.sha256
+5eb9f3a3a1f495eb9bac2c74dbd0ee8e2fccfbe00df9b43defb67b2876a83523  release/manifests/v2.15.1-runtime.manifest
+6d6730b6c523fcb9b8e29abfa3816abf6076f0cd35b19a5ac07a82df60f5bbb3  src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
+0c41b1dd3e50e45ef919665a056d88eed6653dd68b9507c114f19e346da44c6b  release/deploy-candidate.sh
+b17ef916ea729dcd5b989cba00812edc85b89670fd5b65744e40f255350ecc34  release/execution-ledger.jsonl
+2112d590349f1c1a83d670ec9e4910a7bf70854dcdbc14c86eb881b99c0fb155  release/acceptance/.23-5391535a9f64792ddfc23f096b437293ce37daf47fd60dad4a49b90a47bf20ab.passed
+e221e90e195038e47a1d8ce93d659ee5e4c5c12cb55b2531183cb6215db597fa  release/acceptance/.252-5391535a9f64792ddfc23f096b437293ce37daf47fd60dad4a49b90a47bf20ab.passed
+f2fffc3c42653032fab3c01da7f7d66c05be78109b6e931cc606c26515c5b3f2  release/acceptance/.253-5391535a9f64792ddfc23f096b437293ce37daf47fd60dad4a49b90a47bf20ab.passed

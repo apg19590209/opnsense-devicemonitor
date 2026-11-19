@@ -469,6 +469,39 @@ confirmation only.
 
 ## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `OPEN` (deployed; retirement churns on multi-row IPs)
 
+**Presence-attribution correction — implemented locally (19 November 2026).** Discovery no longer
+refreshes `devices.last_seen` from an IP-only answer: `upsert_device_service()` accepts an explicit
+`presence_assoc=(mac, ip)` and `touch_device_last_seen()` matches both the MAC and the IP, forward
+only. No current caller supplies a contemporaneous association (DHCP ownership is newest-row
+heuristic, NTP/SSH/WEB candidate MACs come from the devices table or copied service rows), so no
+path refreshes device presence today; endpoint presence remains on the service row. Matching-
+inventory ownership and alert identity are unchanged; retirement now evaluates that service-row
+presence directly. Pushed for review on PR #17; not deployed, and live ageing acceptance is still
+outstanding.
+
+**Retirement presence guard — implemented locally (19 November 2026).** A retirement candidate whose
+own `last_verified` records a successful non-authoritative probe inside `SERVICE_RETIRE_AFTER_DAYS`
+is retained; `last_checked` (failed attempts) never qualifies, nor do authoritative rows or missing/
+unparseable timestamps. The DELETE now removes only the rows that failed this guard (previously its
+`unseen_host` predicate would have ignored the split). This preserves Decision 53's protection
+without a device-identity claim. The cutoff is inclusive and whole-second, matching the device
+predicate even when `now` carries microseconds; legacy timestamps retain the conservative UTC/local
+reader. Candidate selection, service deletion, and pending-alert cleanup run under one
+`BEGIN IMMEDIATE` transaction after the separately committed status-ageing update. A pending-alert
+delete failure rolls back both retirement deletes. Integrated UTC/Sydney boundary tests and
+two-connection DELETE/WAL lock tests pass. The retirement window, matching-inventory rule, global
+no-fresh-host refusal, alert keys and history are unchanged.
+
+**v2.15.1 packaging identity accepted on all nodes (19 November 2026).** PR #17 carries a
+separate 2.15.1 runtime/baseline identity and a 2.15.0 upgrade predecessor. Archive `5391535a…`
+passed candidate-bound `.23`, `.252 BACKUP/100` and `.253 MASTER/0` installation and generated
+acceptance; reciprocal peer reads passed after both HA stages. The published v2.15.0 release
+artifacts remain unchanged. This record does not close the live ageing item.
+
+**Still unresolved:** shared-IP retention of a stale-owner row (E1b) and the DHCP newest-row
+ownership heuristic; deletion churn in the `retired 12` cycle is recorded reasoning (Decision 53)
+and remains unproven; DM-BL-013.8 live ageing acceptance is not completed by these tests.
+
 **Identifier note:** `PROJECT_STATE.md` and `DECISIONS.md` 52 use `O4` for this item. The `O4`
 above (sidecar text-domain view migration, `CLOSED` 28 September 2026) is a different workstream;
 neither references the other in the original records, so the ageing work is named

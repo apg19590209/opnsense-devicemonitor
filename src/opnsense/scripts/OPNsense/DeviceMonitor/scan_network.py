@@ -281,9 +281,9 @@ SERVICE_MISS_THRESHOLD = 2
 # evidence of an outage and ages to `unknown`.
 SERVICE_UNKNOWN_AFTER_DAYS = 7
 
-# A host not seen for this long has no service inventory worth keeping, so its
-# rows are retired. Keyed on `devices.last_seen`, never on `devices.is_active`:
-# a stopped hostwatch would otherwise empty the inventory.
+# A host not seen for this long has no service inventory worth keeping, so stale
+# rows are retired. Device freshness uses `devices.last_seen`, never
+# `devices.is_active`; a row's own recent successful probe is also presence.
 SERVICE_RETIRE_AFTER_DAYS = 30
 
 # RFC1918 space. A gateway interface inside these ranges is an internal segment
@@ -2330,7 +2330,7 @@ def is_device_active(last_seen_str, ip, was_active=False):
         pass
     return was_active and is_recently_seen(last_seen_str, minutes=30)
 
-def touch_device_last_seen(conn, ip, seen_at=None):
+def touch_device_last_seen(conn, ip, seen_at=None, mac=None):
     """Advance `devices.last_seen` for an address that just answered.
 
     O4 refinement (DECISIONS.md 53). `devices.last_seen` is maintained by
@@ -2349,6 +2349,19 @@ def touch_device_last_seen(conn, ip, seen_at=None):
         return 0
 
     stamp = utc_timestamp(seen_at)
+    mac = (mac or '').strip().lower()
+
+    if mac:
+        return conn.execute(
+            '''
+            UPDATE devices
+            SET last_seen = ?
+            WHERE LOWER(COALESCE(mac, '')) = ?
+              AND ip = ?
+              AND COALESCE(last_seen, '') < ?
+            ''',
+            (stamp, mac, key, stamp)
+        ).rowcount
 
     return conn.execute(
         '''
@@ -2374,13 +2387,16 @@ def upsert_device_service(
     verified_at,
     status='available',
     product='',
-    version=''
+    version='',
+    presence_assoc=None
 ):
     """Insert or refresh one infrastructure-service endpoint.
 
-    A successful active verification is also presence evidence for the address, so
-    an existing `devices` row has its `last_seen` advanced (DECISIONS.md 53). An
-    `authoritative` row is configuration, not an answer, and does not count.
+    A successful active verification is presence evidence for the service row. It
+    advances an existing `devices.last_seen` only when the caller supplies a matching
+    `presence_assoc` observed with that probe (DECISIONS.md 53 and its clarification).
+    An IP-only answer, a historical MAC guess, or an `authoritative` row is not a
+    device-presence claim.
     """
     mac = (mac or '').strip().lower() or None
     ip = (ip or '').strip()
@@ -2449,11 +2465,19 @@ def upsert_device_service(
         )
     )
 
+    # Device presence (`devices.last_seen`) advances only for an association the caller
+    # observed with this probe: a `presence_assoc` of the form (mac, ip) whose ip equals
+    # the probed ip. An IP-only response, a MAC guessed from a historical row, an empty
+    # MAC or no association records endpoint presence in the service row only.
     if (
         str(status or '').strip().lower() == 'available'
         and detection_method.lower() != 'authoritative'
+        and presence_assoc
     ):
-        touch_device_last_seen(conn, ip, verified_at)
+        assoc_mac, assoc_ip = presence_assoc
+        assoc_mac = (assoc_mac or '').strip().lower()
+        if assoc_mac and (assoc_ip or '').strip() == str(ip or '').strip():
+            touch_device_last_seen(conn, ip, verified_at, mac=assoc_mac)
 
     return True
 
@@ -3298,17 +3322,19 @@ def age_stale_service_state(conn=None, now=None, dry_run=False, legacy_tz=None):
         `last_checked`, which both a success and a miss advance, so an endpoint
         that is still being probed and failing is never aged; `last_verified`
         keeps its meaning of last known-good (Decision 54);
-      * rows whose host address has not been seen in `devices.last_seen` for
+      * rows whose address has no fresh `devices.last_seen` and whose own successful
+        non-authoritative verification is no longer inside
         SERVICE_RETIRE_AFTER_DAYS are deleted: the inventory of a host that no
         longer exists is not an observation of anything.
 
-    Retirement keys on `last_seen`, never on `is_active`, because `is_active` is
+    Device freshness uses `last_seen`, never `is_active`, because `is_active` is
     hostwatch's opinion and a stopped hostwatch would make every host look
-    inactive (DECISIONS.md 48). The whole retirement pass is refused when no
-    device at all was seen inside the window - the signature of a broken
-    hostwatch rather than of a dead network. Rows whose address has no `devices`
-    record (gateway, firewall, untracked server) are never retired: missing
-    inventory is not evidence of absence, the rule
+    inactive (DECISIONS.md 48). A service row's own recent successful probe keeps it
+    when no device claim exists (DECISIONS.md 53's protection without a device-identity
+    claim). The whole retirement pass is refused when no device at all was seen inside
+    the window - the signature of a broken hostwatch rather than of a dead network.
+    Rows whose address has no `devices` record (gateway, firewall, untracked server)
+    are never retired: missing inventory is not evidence of absence, the rule
     `service_endpoint_host_gate()` already applies to outage verdicts.
 
     The ageing UPDATE also clears `miss_count`: the old streak describes the
@@ -3390,6 +3416,22 @@ def age_stale_service_state(conn=None, now=None, dry_run=False, legacy_tz=None):
     if not dry_run:
         conn.commit()
 
+    # Retirement selection and deletion run under one write transaction that is
+    # taken before the global pre-check. A concurrent writer therefore cannot
+    # refresh a row after it was selected and before it is deleted: it either
+    # commits first (the fresh value is selected and protected) or waits for the
+    # retirement transaction to finish. Dry runs stay in the surrounding
+    # snapshot and take no lock.
+    if not dry_run and conn.in_transaction:
+        conn.commit()
+
+    if not dry_run:
+        try:
+            conn.execute('BEGIN IMMEDIATE')
+        except sqlite3.Error as e:
+            log(f"[SERVICES] Retirement lock failed: {e}")
+            return aged, 0
+
     try:
         fresh_hosts = conn.execute(
             '''
@@ -3400,10 +3442,14 @@ def age_stale_service_state(conn=None, now=None, dry_run=False, legacy_tz=None):
             (retire_cutoff,)
         ).fetchone()[0]
     except sqlite3.Error as e:
+        if not dry_run:
+            conn.rollback()
         log(f"[SERVICES] Retirement pre-check failed: {e}")
         return aged, 0
 
     if fresh_hosts == 0:
+        if not dry_run:
+            conn.commit()
         log(
             "[SERVICES] Refusing retirement: no device seen within "
             f"{SERVICE_RETIRE_AFTER_DAYS} days (hostwatch suspect)"
@@ -3414,21 +3460,53 @@ def age_stale_service_state(conn=None, now=None, dry_run=False, legacy_tz=None):
         rows = conn.execute(
             f'''
             SELECT mac, ip, interface, service_type, port, protocol,
-                   detection_method
+                   detection_method, last_verified, confidence
             FROM device_services
             WHERE {unseen_host}
             ''',
             (retire_cutoff,)
         ).fetchall()
     except sqlite3.Error as e:
+        if not dry_run:
+            conn.rollback()
         log(f"[SERVICES] Retirement candidates failed: {e}")
         return aged, 0
 
-    if not rows:
+    # Decision 53's protection without a device-identity claim: a row whose own
+    # last_verified shows a successful probe inside the retirement window is a
+    # responding endpoint, even when hostwatch never reported the host. The window
+    # is the existing retirement grace period. Authoritative/configuration rows and
+    # rows with a missing or unparseable timestamp are not protected, and
+    # `last_checked` is not consulted, so failed attempts never qualify.
+    #
+    # Device freshness compares against a whole-second cutoff, so normalize the
+    # injected clock before computing the conservative age. Without this, a caller
+    # whose `now` has microseconds makes evidence at the displayed cutoff appear one
+    # fraction of a second outside the window. `_timestamp_age` retains the existing
+    # nearest UTC/local interpretation for legacy unqualified timestamps.
+    freshness_now = now.replace(microsecond=0)
+
+    def responding(row):
+        if (str(row[6] or '').strip().lower() == 'authoritative'
+                or str(row[8] or '').strip().lower() == 'authoritative'):
+            return False
+        age = _timestamp_age(row[7], freshness_now, legacy_tz)
+        # Inclusive, like the device predicate (`last_seen >= retire_cutoff`): evidence
+        # exactly at the cutoff is still fresh.
+        return (
+            age is not None
+            and age <= timedelta(days=SERVICE_RETIRE_AFTER_DAYS)
+        )
+
+    retiring = [row for row in rows if not responding(row)]
+
+    if not retiring:
+        if not dry_run:
+            conn.commit()
         return aged, 0
 
     if dry_run:
-        return aged, len(rows)
+        return aged, len(retiring)
 
     keys = [
         service_alert_key({
@@ -3440,18 +3518,23 @@ def age_stale_service_state(conn=None, now=None, dry_run=False, legacy_tz=None):
             'interface': interface,
             'detection_method': detection_method,
         })
-        for mac, ip, interface, service_type, port, protocol, detection_method
-        in rows
+        for mac, ip, interface, service_type, port, protocol, detection_method, _, _
+        in retiring
     ]
 
     try:
-        retired = conn.execute(
-            f'''
-            DELETE FROM device_services
-            WHERE {unseen_host}
-            ''',
-            (retire_cutoff,)
-        ).rowcount
+        # Delete only the rows that failed the presence guard.
+        before_changes = conn.total_changes
+        if retiring:
+            conn.executemany(
+                "DELETE FROM device_services "
+                "WHERE ip = ? AND service_type = ? AND port = ? AND protocol = ? "
+                "  AND detection_method = ? AND interface = ? "
+                "  AND COALESCE(mac, '') = COALESCE(?, '')",
+                [(row[1], row[3], row[4], row[5], row[6], row[2], row[0])
+                 for row in retiring],
+            )
+        retired = conn.total_changes - before_changes
 
         if keys:
             conn.executemany(
@@ -3461,6 +3544,7 @@ def age_stale_service_state(conn=None, now=None, dry_run=False, legacy_tz=None):
 
         conn.commit()
     except sqlite3.Error as e:
+        conn.rollback()
         log(f"[SERVICES] Retirement failed: {e}")
         return aged, 0
 
