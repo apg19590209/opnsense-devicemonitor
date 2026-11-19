@@ -700,6 +700,42 @@ def test_responding_service_without_hostwatch_keeps_the_row():
     print("AGE_RESPONDING_SERVICE_KEEPS_ROW=PASS")
 
 
+def test_presence_boundary_follows_legacy_timezone_convention():
+    """The guard uses the same conservative `_timestamp_age` as ageing, in any timezone.
+
+    A naive stored success is protected exactly when its conservative age is less than
+    the retirement window. The boundary is strict and identical under UTC and a legacy
+    local zone, and a future-dated value is treated as fresh (no skew policy).
+    """
+    from zoneinfo import ZoneInfo
+    module = load_module()
+    days = module.SERVICE_RETIRE_AFTER_DAYS
+    now = NOW
+
+    def protected(verified, legacy_tz):
+        assert module._timestamp_age(verified, now, legacy_tz) is not None
+        return module._timestamp_age(verified, now, legacy_tz) < timedelta(days=days)
+
+    for legacy_tz in (UTC, ZoneInfo("Australia/Sydney")):
+        cutoff = (now.astimezone(UTC) - timedelta(days=days)).strftime(STAMP)
+        assert not protected(cutoff, legacy_tz), (legacy_tz, "exact cutoff")
+        fresh = (now.astimezone(UTC) - timedelta(days=days)
+                 + timedelta(seconds=1)).strftime(STAMP)
+        assert protected(fresh, legacy_tz), (legacy_tz, "one second inside")
+        future = (now.astimezone(UTC) + timedelta(days=3)).strftime(STAMP)
+        assert protected(future, legacy_tz), (legacy_tz, "future-dated")
+
+    # A naive legacy-local value written 30 days ago in AEDT is 29d13h old under the
+    # nearest-interpretation rule, so it is protected; this is the same up-to-offset
+    # slack the ageing reader already has, not a guard-specific tolerance.
+    sydney = ZoneInfo("Australia/Sydney")
+    legacy_local = (now.astimezone(sydney) - timedelta(days=days)).replace(
+        tzinfo=None).strftime(STAMP)
+    assert protected(legacy_local, sydney)
+
+    print("AGE_PRESENCE_BOUNDARY_LEGACY_TZ=PASS")
+
+
 def test_non_qualifying_verification_does_not_protect():
     """Authoritative, miss-only, stale-Nmap and malformed timestamps are not presence."""
     module = load_module()
@@ -1092,6 +1128,7 @@ def main():
     test_association_must_match_mac_and_ip()
     test_dhcp_success_records_endpoint_but_not_device_presence()
     test_responding_service_without_hostwatch_keeps_the_row()
+    test_presence_boundary_follows_legacy_timezone_convention()
     test_non_qualifying_verification_does_not_protect()
     test_dry_run_reports_protection_without_writes()
     test_authoritative_service_does_not_refresh_device()
