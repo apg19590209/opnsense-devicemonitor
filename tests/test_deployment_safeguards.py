@@ -99,9 +99,10 @@ def isolated_accept(repo, identity, source, stage):
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     host = {'.23': '192.168.20.23', '.252': '192.168.20.252', '.253': '192.168.20.253'}[stage]
     checks = ('deploy,installed-hashes,records,authenticated-search,authenticated-message,'
-              'authenticated-csv,mutation-denial,database-integrity,settings,daemon,catalogue')
+              'authenticated-csv,mutation-denial,database-integrity,settings,certificates,role,'
+              'daemon,catalogue')
     if stage != '.23':
-        checks += ',certificates,role,peer'
+        checks += ',peer'
     ledger = repo / 'release/execution-ledger.jsonl'
     evidence = repo / ('release/evidence-' + stage + '.json')
     args = ['python3', str(repo / 'release/results-file.py'), '--out', str(evidence)]

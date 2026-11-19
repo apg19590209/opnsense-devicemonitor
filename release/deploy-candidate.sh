@@ -14,8 +14,8 @@ export LC_ALL
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 REPO=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 cd "$REPO"
-INSTALLER_SHA=2ebaaec5ab26c75944f3e1f5a4a82fe04e3c59f29ad2841c157ff21a8d15a419
-INPUTS_SHA=f02c4a7145dc75e54ccfee1f1eee901574faab2b15d58f9cc753d3e5ea972934
+INSTALLER_SHA=62ccd75741e7e5c75dd52209518f4b099b502ca1ec94ced8312925dc3732b084
+INPUTS_SHA=a81f0d7e07d1deedea5d7f5d49d8be1a8d201e0ac9c96c1ad9820c49bf282cee
 [ "$#" -ge 2 ] || { echo 'usage: deploy-candidate.sh ARCHIVE IDENTITY --host HOST --source SHA [--check]' >&2; exit 2; }
 ARCHIVE=$1
 IDENTITY=$2

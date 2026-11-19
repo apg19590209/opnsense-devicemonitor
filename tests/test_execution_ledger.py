@@ -80,6 +80,13 @@ def test_missing_checks_block_acceptance():
              'authenticated-message', 'authenticated-csv', 'mutation-denial',
              'database-integrity', 'settings', 'daemon', 'catalogue'])
         result = accept(ledger, '.23', '192.168.20.23', source, digest, identity, out)
+        check(result.returncode != 0 and not out.exists(),
+              'a .23 record without certificates and role is refused')
+        rec(ledger, '.23', '192.168.20.23', source, digest,
+            ['deploy', 'installed-hashes', 'records', 'authenticated-search',
+             'authenticated-message', 'authenticated-csv', 'mutation-denial',
+             'database-integrity', 'settings', 'certificates', 'role', 'daemon', 'catalogue'])
+        result = accept(ledger, '.23', '192.168.20.23', source, digest, identity, out)
         check(result.returncode == 0 and out.exists(), 'a complete .23 record creates acceptance')
 
 
@@ -96,7 +103,7 @@ def test_verify_testbed_acceptance_requires_both_stages():
         ledger = p / 'ledger.jsonl'
         rec(ledger, '.23', '192.168.20.23', source, digest,
             ['deploy', 'installed-hashes', 'records', 'authenticated-search', 'authenticated-message',
-             'authenticated-csv', 'mutation-denial', 'database-integrity', 'settings', 'daemon', 'catalogue'])
+             'authenticated-csv', 'mutation-denial', 'database-integrity', 'settings', 'certificates', 'role', 'daemon', 'catalogue'])
         out = accept(ledger, '.23', '192.168.20.23', source, digest, identity, p / '.23')
         check(out.returncode == 0, '.23 acceptance appears only after complete .23 checks')
         # The acceptance marker name follows the host-stage convention used by the gate.

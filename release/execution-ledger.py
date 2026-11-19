@@ -24,9 +24,12 @@ STAGES = ('.23', '.252', '.253')
 HOSTS = {'.23': '192.168.20.23', '.252': '192.168.20.252', '.253': '192.168.20.253'}
 PREREQUISITE = {'.23': None, '.252': '.23', '.253': '.252'}
 REQUIRED = {
+    # The runner has always reported certificates and role on .23 (the role check is a no-op
+    # there); they were missing here, so a .23 run could never record its complete evidence.
     '.23': ('deploy', 'installed-hashes', 'records', 'authenticated-search',
             'authenticated-message', 'authenticated-csv', 'mutation-denial',
-            'database-integrity', 'settings', 'daemon', 'catalogue'),
+            'database-integrity', 'settings', 'certificates', 'role', 'daemon',
+            'catalogue'),
     '.252': ('deploy', 'installed-hashes', 'records', 'authenticated-search',
              'authenticated-message', 'authenticated-csv', 'mutation-denial',
              'database-integrity', 'settings', 'certificates', 'role', 'peer',
