@@ -1,0 +1,21 @@
+# Device Monitor v2.15.0 release checksums
+# Accepted archive: f71fd8b70ec9cd94190f8f9c2977991a8817af658ff01379fe10d34993f23246
+#   dm-v2.15.0-runtime.tar.gz, 12558290 bytes, 96 members, build source 657636beb96ea072d50bbb337229cfef064d7d3f
+# Recorded from source/bundle reconciliation in release/bundle-digest.txt. CI 44462157712 passed at 4356f6a;
+# later commits only add these records and the acceptance markers, which change no packaged input.
+# Verify the release asset by its own identity file (dm-v2.15.0-runtime.tar.gz.identity), not from this list.
+f71fd8b70ec9cd94190f8f9c2977991a8817af658ff01379fe10d34993f23246  dm-v2.15.0-runtime.tar.gz
+f13359b5cf0f41c478c93c70a8c327a2ba129453deeb6ed95eabe8d8c030bd70  release/v2.15.0-runtime.manifest
+8483f4ade0be732125c3c2136c13b9a030d07e846a13f2887248b75bfe66de72  release/v2.15.0-notes.md
+561da83edabb52b5cfb48c0303405f433e7dc328491e64f2501160400ed67020  release/v2.15.0-acceptance-requirements.md
+9136054a7b9dc8dd8dbf5c6240539f4bb3767b2b295f1b7d0aa09ee649b2ae54  release/release-inputs.sha256
+bdde41ccdc908b79046d4e4532a97fa9d7a1a445937af19a01cd03aa68d24a65  release/manifests/v2.15.0-runtime.manifest
+c9f1f8553f3a1220d8aaa9dac531f6afbb04880698f6baa1e33745bec217a42f  src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json
+492d1898f8af83906eecf29ecd4a4d73ea07d0ac5874fd032d3efde8125a5391  release/RELEASE-APPROVAL-PACKAGE-2.15.0-20261119.md
+# Superseded identities (history; not installable):
+#   84b69474324ce7fa068a42fd5e552b9b67f086e1ab7c584eee90c781c7edab6c  12558290 bytes  source 801745e  (auth host fix; superseded by the CARP parser correction)
+#   248cd1041ee4da5317ae72b660eb4877e52cf019e350ab6f76307a3c7eba3da5  12558290 bytes  source b4e28e4  (CARP parser fix; superseded by the peer_check fix)
+#   3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5  12557266 bytes  source d2e3c4f  (role/advskew check; superseded)
+#   dbab6d2595982dbcb1d5a75987cccb5c32d80b55d0edebc93f161fb3a1492e7d  12558290 bytes  source 9b9f23f  (CARP correction; superseded)
+#   c3b6a723f20969ec63c25032abf2dfbd235345ea0c28891185cbe41929c7f16c  12556754 bytes  source f86d2b8  (APPROVED at the time; not installable - role check ignored advskew)
+#   aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f  12554194 bytes  source b0e8355  (NOT INSTALLABLE - defective packaged runner)

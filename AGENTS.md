@@ -2,6 +2,33 @@
 
 This file is the shared project instruction file for Codex and Cline. It supplements, and does not replace, the authoritative project-control files. If this file conflicts with `PROJECT_RULES.md`, `PROJECT_STATE.md`, `DECISIONS.md`, `SYSTEM_MAP.md`, or an applicable `.clinerules` file, report the conflict rather than silently choosing one.
 
+## Evidence before changes
+
+- **Diagnose before editing.** Record the actual failing command, its exit status and the relevant
+  error. Separate observed facts from hypotheses, and read the current source and the test's
+  contract before changing either.
+- **Preserve test purpose.** Never change an expectation because current output differs. First
+  establish why the expectation is wrong, then keep its behavioural coverage; a new check that
+  fails before the correction is evidence, a relaxed or re-aimed check is not. Do not swap an
+  execution test for a source-text or grammar assertion that proves less.
+- **Keep verification claims distinct.** A pinned digest checks expected identity; reproducibility
+  compares independent builds; syntax, unit, packaged-path and live acceptance prove different
+  things. One never substitutes for another.
+- **Track running work.** Before waiting or polling, confirm the process or session exists and
+  identify where its output goes; retain its exit status. Never assume a build is running.
+- **Avoid blind retries.** Retry a failed operation only after a relevant change or evidence of a
+  transient failure. After two failures with the same unresolved cause, stop that approach and
+  reassess while independent work continues.
+- **Verify edits immediately.** Make one logical correction at a time from current inspected
+  content. Run the smallest meaningful check first and the full preflight once the related
+  corrections are complete; reuse unaffected results.
+- **Bound output and preserve continuity.** Summarise failures, keep full logs on disk, and update
+  the compact handoff at meaningful boundaries and before a fresh session. Do not refill context
+  with historical reports.
+- **Report only demonstrated completion.** Check results against the original task. Unexecuted
+  required checks and unresolved failures stay explicit; a hypothesis is not a root cause, and a
+  partly tested safeguard is not complete.
+
 ## Scope and authority
 
 - This workspace is exclusively for the OPNsense Device Monitor project.
@@ -52,8 +79,7 @@ This file is the shared project instruction file for Codex and Cline. It supplem
 
 ## Validation and reporting
 
-- After each logical change, inspect the diff, run the most focused relevant test or check first, run broader regression or static checks when appropriate, verify actual behaviour where runtime validation is required, and check for unintended changes. Do not claim success from an edit or a tool's assertion alone. If validation fails, stop progression, diagnose the failure, and report it.
-- After two identical failed attempts, stop retrying. Report the cause, the evidence collected, and the next diagnostic step instead of looping autonomously.
+- After each logical change, inspect the diff, verify actual behaviour where runtime validation is required, and check for unintended changes. Focused-then-broad checks and the two-failure stop are specified under *Evidence before changes*.
 - Do not rerun commands, tests, Git checks, hash checks, or source inspection merely to restate a final report when those results were already verified in the current task or session. Run a fresh command only for genuinely missing, materially stale, or explicitly required validation data.
 - **One canonical task report is the authoritative record.** Write it under `.cline-reports/` as `REPORT-YYYYMMDD-HHMMSS.md`, containing the outcome, commit/candidate identity, meaningful test results, installation and rollback details, and unresolved items. State the report path in the final response. Any further detail belongs in that report, not in a second report.
 - **Records are brief and point at the report.** `PROJECT_STATE.md` gets a short current-state summary linking to the canonical report. Update `PRODUCT_BACKLOG.md` only when an item's scope, status or acceptance changes, and `DECISIONS.md` only for a substantive policy, architecture or behaviour decision — not for routine implementation fixes.
@@ -82,8 +108,7 @@ This file is the shared project instruction file for Codex and Cline. It supplem
 - **Use `SYSTEM_MAP.md` to guide targeted searches.** `git status`/`git diff` and bounded directory
   inspection are expected for baseline protection and verification; unrestricted repository scans
   are not a substitute for reading the relevant file.
-- **Match verification to the claim.** A linter or syntax check proves syntax only. Behavioural
-  assertions prove the cases they exercise. Fixture tests do not prove live deployment, browser
-  acceptance or peer connectivity.
+- **Match verification to the claim.** Syntax, behavioural, packaged-path and live acceptance
+  checks each prove only their own case (see *Evidence before changes*).
 - **Review every changed file before completion.** Preserve unrelated work and justify any generated
   file or record update rather than leaving it as an unexplained side effect.

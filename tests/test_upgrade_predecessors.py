@@ -1,6 +1,6 @@
 """Every accepted predecessor upgrades in place to the current schema, losing nothing.
 
-The installer accepts `2.8 ... 2.13.3` as predecessors, including the published 2.12.1
+The installer accepts `2.8 ... 2.14.0` as predecessors, including the published 2.12.1
 repair release, so a firewall on any of those
 lines installs the current bundle directly instead of stepping through the intermediate
 releases. That claim rests on three properties, and this test pins them against a
@@ -46,6 +46,7 @@ PREDECESSORS = [
     ('2.13.1', 'v2.13.1'),
     ('2.13.2', 'v2.13.2'),
     ('2.13.3', 'b2c74fc5b3fdec645cff22baf5f709d772ee4976'),
+    ('2.14.0', 'v2.14.0'),
 ]
 
 
@@ -109,7 +110,7 @@ def upgrade_one(version, tag):
             before = columns(conn, 'device_services')
             # The v2.12.1 repair release backported the ageing work, as did 2.13.1
             # onward; 2.13 and earlier ship without it.
-            if version in ('2.12.1', '2.13.1', '2.13.2', '2.13.3'):
+            if version in ('2.12.1', '2.13.1', '2.13.2', '2.13.3', '2.14.0'):
                 assert 'last_checked' in before, (version, before)
             else:
                 assert 'last_checked' not in before, (version, before)
@@ -200,8 +201,7 @@ def test_every_predecessor_upgrades():
     if allowed:
         assert passed > 0, results
     else:
-        # Ten accepted predecessors, ten passes, no skips: the deployment plan and the
-        # CI step both rely on this exact number.
+        # Every accepted predecessor must pass, and the CI step asserts the exact count.
         assert passed == len(PREDECESSORS), (passed, len(PREDECESSORS), results)
         assert skipped == 0, results
     print('UPGRADE_PREDECESSORS=PASS passed=%d skipped=%d' % (passed, skipped))

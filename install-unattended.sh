@@ -1,5 +1,5 @@
 #!/bin/sh
-# Guarded Device Monitor v2.14 installation on OPNsense/FreeBSD.
+# Guarded Device Monitor v2.15 installation on OPNsense/FreeBSD.
 set -eu
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 EXPECTED_HOST=
@@ -32,7 +32,7 @@ NMAP_MISSING=0
 command -v nmap >/dev/null 2>&1 || NMAP_MISSING=1
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 cd "$SCRIPT_DIR"
-VERSION=2.14.0
+VERSION=2.15.0
 MANIFEST=release/v${VERSION}-runtime.manifest
 PRUNE_HELPER=release/prune-plan.sh
 LEGACY_EVIDENCE=release/legacy-targets.txt
@@ -43,9 +43,9 @@ VERIFIER=release/verify-release-inputs.sh
 # file inline here, and the inputs file pins the manifest, the prune helper, the legacy
 # ownership evidence and the catalogue merge helper. A tampered helper can therefore never
 # decide which files get removed.
-MANIFEST_SHA=bdde41ccdc908b79046d4e4532a97fa9d7a1a445937af19a01cd03aa68d24a65
-RELEASE_INPUTS_SHA=dd9422af0df25bd57ef13fa921f927dab768d3a1cafee8b6ea197d00c9177b34
-VERIFIER_SHA=68b93f2a08f0808b67b6bd2ca76dca33a6cc5c159de4b61353b721eaefbb583d
+MANIFEST_SHA=f13359b5cf0f41c478c93c70a8c327a2ba129453deeb6ed95eabe8d8c030bd70
+RELEASE_INPUTS_SHA=9136054a7b9dc8dd8dbf5c6240539f4bb3767b2b295f1b7d0aa09ee649b2ae54
+VERIFIER_SHA=fe189b338c571172b04f151748ddfabeea5ea43b5023c8b7a61e2a2f2d45de64
 [ -f "$MANIFEST" ] && [ ! -L "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = "$MANIFEST_SHA" ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 51 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }
 [ "$(python3 -c 'import json; print(json.load(open("src/opnsense/mvc/app/models/OPNsense/DeviceMonitor/defaults.json"))["version"])')" = "$VERSION" ] || { echo 'ABORT: source version' >&2; exit 1; }
@@ -65,7 +65,7 @@ PY
     # the digest observed before the run, an unchanged target (old == new) is left exactly
     # as it is - content, mode, owner and mtime - and only the rest is rewritten. The prune
     # plan still runs, so a repair also re-asserts the target set this install owns.
-    case "$installed" in 2.8|2.9|2.10|2.11|2.12|2.12.1|2.13|2.13.1|2.13.2|2.13.3|"$VERSION") :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
+    case "$installed" in 2.8|2.9|2.10|2.11|2.12|2.12.1|2.13|2.13.1|2.13.2|2.13.3|2.14.0|"$VERSION") :;; *) echo "ABORT: unsupported predecessor $installed" >&2; exit 1;; esac
 elif [ -d /usr/local/opnsense/mvc/app/controllers/OPNsense/DeviceMonitor ]; then
     echo 'ABORT: partial existing installation' >&2; exit 1
 else

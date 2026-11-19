@@ -1,22 +1,13 @@
 # Current task handoff
 
-Objective: complete Email Log recovery and release safeguards; prevention review closed.
+Objective: v2.15.0 staged acceptance — COMPLETE for the peer-corrected archive.
 
-Authority: local commits only; no push, merge, tag or publication; deploy only to the authorised stage.
+Frozen candidate: archive f71fd8b70ec9cd94190f8f9c2977991a8817af658ff01379fe10d34993f23246, 12558290 bytes, 96 members, source 657636beb96ea072d50bbb337229cfef064d7d3f; installer 9d198b1c..., inputs 9136054a.... CI 44462157712 passed at 4356f6a.
 
-Pinned hosted archive: b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72; release-tool candidate: be2b64caa5bb317f9ffef506beba8f5266babfab1c68f14b7b96d2fa7d51689b
-Source: 202d6efd4c126f85393116e569e72931d936efdc
+- .23: gate install (INSTALL_OK, backup install-v214.hw43BI), 12/12 checks; acceptance recorded.
+- .252: Option B install (INSTALL_OK, backup install-v214.yIaiD6), 13/13 checks incl. peer; acceptance recorded.
+- .253: Option B install (INSTALL_OK, backup install-v214.TQRHba), 13/13 checks; acceptance recorded; MASTER/0.
 
-- .23: historical acceptance marker exists; no generated-evidence ledger record
-- .252: historical acceptance marker exists; no generated-evidence ledger record
-- .253: historical acceptance marker exists; no generated-evidence ledger record
+Ledger: COMPLETE for the source/bundle above. Correction: two .252 deploy rows I created manually from a hand-made evidence file were removed; the pre-removal ledger and a note are at /var/backups/devicemonitor/evidence-f71fd8b7/.
 
-Outstanding checks: the current execution ledger has no generated evidence for a fresh host
-acceptance, so a new COMPLETE claim must not be made from the prior manually summarized records.
-Run the supported checks on each authorised host and then `python3 release/execution-ledger.py
-status` (requirements file and consolidated report).
-
-Stop conditions: price gate premium without approval; missing access; unsafe verification failure; action outside authority.
-
-Deployment order: .23, then .252, then .253; the earlier report text was corrected without redeployment.
-Current correction: the accepted host archive is b4e388ac; the prevention-tool archive f02bc9a8 is not deployed.
+Remaining gates: merge, tag and publication are not authorised. Accounts: 0 dm-test users and no account.env on all three hosts.

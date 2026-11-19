@@ -134,6 +134,28 @@
 #       (review build before the final acceptance-input pins were regenerated)
 #   4187a952f5d1e7cf96cd3b869ee328ca7a9c4dbb22af3634d0bba4f4f28b3a05  12552146 bytes
 #       (pre-package export metadata; superseded because export-modes.txt was absent)
-version 2.14.0
-bytes 12554194
-sha256 be2b64caa5bb317f9ffef506beba8f5266babfab1c68f14b7b96d2fa7d51689b
+#   be2b64caa5bb317f9ffef506beba8f5266babfab1c68f14b7b96d2fa7d51689b  12554194 bytes
+#       (2.14.0 release-tool candidate; superseded by the 2.15.0 Email Log release cut)
+#   aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f  12554194 bytes
+#       (approved candidate; superseded because it packaged a stale host-check runner and
+#        acceptance helper, preventing generated `.23` acceptance)
+#   aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f  12554194 bytes
+#       (approved host payload; its packaged acceptance runner prevented generated host checks)
+#   77554e6db794fab4c7ef51e9a78713c8b386a490e5bfdb6ebc9b0ac457296cfc  12570066 bytes
+#       (recorded at 6c322f6 from source b0e8355 with release/build-bundle.sh in the allow-list;
+#        that combined pin was never independently verified and its packaged builder made
+#        verify-release-inputs.sh fail, superseded by this cut)
+version 2.15.0
+bytes 12558290
+sha256 f71fd8b70ec9cd94190f8f9c2977991a8817af658ff01379fe10d34993f23246
+# source = 657636beb96ea072d50bbb337229cfef064d7d3f
+#   Bytes measured from the committed tree at the source commit named above (b0e8355 plus the
+#   runner, builder and verifier corrections) under the declared build conditions:
+#   export-sourced build, TZ=UTC0, canonical ustar with fixed ownership and mtime, the
+#   deterministic stored-block gzip. 96 members; the builder is not an archive member because it
+#   is a pinned release tool, not an install prerequisite.
+#   Measured independently by the full-tree build (in-worktree and export-sourced), the shimmed
+#   GNU-grammar build and two clean checkouts. The content revision this record supersedes,
+#   release/run-host-checks.sh ab2e6e8d..., measured 493a4865... at the same 12556754 bytes; the
+#   archive contract pads every member to 512-byte boundaries, so those two revisions produce
+#   identical archives. The manifest still pins the current runner revision's bytes.

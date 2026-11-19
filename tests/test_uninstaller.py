@@ -24,7 +24,7 @@ CONFIG_XML = '/conf/config.xml'
 RC_LOCAL = '/etc/rc.conf.local'
 LOCALE_INC = '/usr/local/etc/inc/devicemonitor_locale.inc'
 ACTION_UPDATE = '/usr/local/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf'
-PLUGIN_MANIFEST = ROOT / 'release/v2.14.0-runtime.manifest'
+PLUGIN_MANIFEST = ROOT / 'release/v2.15.0-runtime.manifest'
 
 
 def script(body):

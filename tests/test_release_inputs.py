@@ -215,6 +215,34 @@ def test_generator_is_atomic():
         assert not (tree / 'release/release-inputs.sha256.new').exists()
 
 
+
+def test_pinned_builder_is_optional_but_verified_when_present():
+    """The builder is a pinned release tool, not an install prerequisite.
+
+    CI run 44419526545 built the 3dac69c archive (96 members, no builder) and then failed in
+    verify-release-inputs.sh with "VERIFY_FAILED=release/build-bundle.sh (missing or not a
+    regular file)". The builder is pinned here, so absent is allowed for installation; when it
+    is present it must match the pin, and a symlink must never be accepted.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tree = Path(tmpdir)
+        shutil.copytree(ROOT / 'release', tree / 'release', symlinks=True)
+        builder = tree / 'release/build-bundle.sh'
+        builder.unlink()
+        absent = verify(tree)
+        assert absent.returncode == 0, (absent.stdout, absent.stderr)
+        assert 'OPTIONAL_INPUT_ABSENT=release/build-bundle.sh' in absent.stdout, absent.stdout
+        builder.write_text('tampered\n')
+        present = verify(tree)
+        assert present.returncode != 0, present.stdout
+        assert 'VERIFY_FAILED=release/build-bundle.sh (digest)' in present.stderr, present.stderr
+        builder.unlink()
+        builder.symlink_to(ROOT / 'release/build-bundle.sh')
+        linked = verify(tree)
+        assert linked.returncode != 0, linked.stdout
+        assert 'VERIFY_FAILED=release/build-bundle.sh' in linked.stderr, linked.stderr
+
+
 CASES = [
     test_pins_are_consistent,
     test_manifest_guards_match_target_derivation,
@@ -223,6 +251,7 @@ CASES = [
     test_corrupted_helper_is_refused,
     test_verification_precedes_execution,
     test_generator_is_atomic,
+    test_pinned_builder_is_optional_but_verified_when_present,
 ]
 
 

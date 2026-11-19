@@ -1,0 +1,9 @@
+version=2.15.0
+source=7f7175adf672eb7ed016cf463b1d3397865c1360
+bundle_sha256=248cd1041ee4da5317ae72b660eb4877e52cf019e350ab6f76307a3c7eba3da5
+host=192.168.20.23
+stage=.23
+result=PASS
+after=
+evidence=execution-ledger:/tmp/dm-gate-7f7.V8FqsJ/release/execution-ledger.jsonl
+accepted_at=2026-11-19T03:07:40Z
