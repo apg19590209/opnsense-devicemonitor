@@ -44,7 +44,7 @@ VERIFIER=release/verify-release-inputs.sh
 # ownership evidence and the catalogue merge helper. A tampered helper can therefore never
 # decide which files get removed.
 MANIFEST_SHA=f13359b5cf0f41c478c93c70a8c327a2ba129453deeb6ed95eabe8d8c030bd70
-RELEASE_INPUTS_SHA=60a05a9757f15201a4ba8356a5da3958278d5d22b455b028c11403354a2ba03d
+RELEASE_INPUTS_SHA=f02c4a7145dc75e54ccfee1f1eee901574faab2b15d58f9cc753d3e5ea972934
 VERIFIER_SHA=fe189b338c571172b04f151748ddfabeea5ea43b5023c8b7a61e2a2f2d45de64
 [ -f "$MANIFEST" ] && [ ! -L "$MANIFEST" ] && [ "$(sha256 -q "$MANIFEST")" = "$MANIFEST_SHA" ] || { echo 'ABORT: release manifest mismatch' >&2; exit 1; }
 [ "$(wc -l < "$MANIFEST" | tr -d ' ')" = 51 ] || { echo 'ABORT: release manifest count' >&2; exit 1; }

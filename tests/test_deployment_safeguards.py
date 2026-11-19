@@ -430,6 +430,29 @@ def test_packaged_role_check_parses_real_carp_records():
             check(checks.get('role') == want, '%s %r records role=%s' % (stage_name, label, want))
 
 
+def test_auth_checks_choose_the_verified_host_per_stage():
+    """`.23` checks its own signed address; HA stages use the management name; an override wins."""
+    with tempfile.TemporaryDirectory() as tmp:
+        host, make = _fake_host(tmp)
+        (host / 'sbin/php').write_text('#!/bin/sh\nprintf "%s\\n" "$DM_ACCEPTANCE_HOST" >> "' + str(host) + '/hosts"\n')
+        (host / 'sbin/php').chmod(0o755)
+        stage, env = _sandbox_runner(tmp, host, {})
+        (host / 'peer.php').unlink()
+        for stage_name, want, extra in (('.23', '192.168.20.23', {}),
+                                        ('.252', 'OPNsense.home.arpa', {}),
+                                        ('.253', 'OPNsense.home.arpa', {}),
+                                        ('.23', '198.51.100.7', {'DM_ACCEPTANCE_HOST': '198.51.100.7'})):
+            make(True)
+            (host / 'hosts').unlink(missing_ok=True)
+            e = dict(env, **extra)
+            if stage_name != '.23':
+                (host / 'peer.php').write_text('<?php class PeerClient {}')
+            run(['/bin/sh', str(stage / 'release/run-host-checks.sh'), '--stage', stage_name,
+                 '--source', 'a' * 40, '--bundle', 'b' * 64, '--out', str(host / 'h.json')], env=e)
+            seen = set((host / 'hosts').read_text().split()) if (host / 'hosts').is_file() else set()
+            check(seen == {want}, '%s checks use %s: %s' % (stage_name, want, sorted(seen)))
+
+
 def test_runner_does_not_depend_on_its_invoking_directory():
     """HELPER_DIR is host-absolute; a relative lookup would pass here but fail on an installed host."""
     text = (ROOT / 'release/run-host-checks.sh').read_text()
@@ -657,6 +680,7 @@ def main():
     test_local_target_requires_the_testbed_identity()
     test_remote_stage_runs_over_ssh_without_local_install()
     test_packaged_role_check_parses_real_carp_records()
+    test_auth_checks_choose_the_verified_host_per_stage()
     test_installer_mode_is_executable_in_archives()
     test_export_mode_map_matches_git_index()
     test_prior_stage_is_required()
