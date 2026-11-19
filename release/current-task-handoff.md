@@ -1,19 +1,17 @@
 # Current task handoff
 
-Objective: deliver the corrected v2.15.0 Email Log acceptance package and run its staged acceptance.
+Objective: complete v2.15.0 staged acceptance for the frozen archive 248cd104... and stop promotion only on a real failure.
 
-Authority: Tony approved c3b6a723... (source f86d2b8); push and CI were authorised. The replacement 3a2dacc2... has no approval and must not be installed until explicitly approved. c3b6a723... is superseded (role check ignored advskew) and must not be installed.
+Authority: Option B confirmed: the supported installer runs locally on each HA node; the .23-only deploy-candidate wrapper is not used on .252/.253. No new automation, emails, merge, tag or publication.
 
-Pinned hosted archive: b4e388ac86f03e0bead0cceae0f74a7b2a480457eb26d20998183ea59f208e72 (hosts stay on it)
-Superseded candidate: aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f (source b0e8355) - defective runner; never install
-Proposed candidate (awaiting approval): 3a2dacc256b92977e5cc9f2fbb1f22186b8c0b3ba8b3589940e8f66e4a782dd5, 12557266 bytes, 96 members (source f86d2b88b0dd7bd6efd6d4e4cd51b9d85cfd03c4)
+Frozen candidate: archive 248cd1041ee4da5317ae72b660eb4877e52cf019e350ab6f76307a3c7eba3da5, source b4e28e42518994e9232b23cd329d062505a9b934, 12558290 bytes, 96 members; installer 62ccd757..., inputs a81f0d7e..., verifier fe189b33....
 
-- .23: this session runs on .23; no acceptance for 3a2dacc2...; install held pending approval (local filesystem and API verification available)
-- .252: no acceptance for 3a2dacc2...; incident reconciled, records preserved
-- .253: no acceptance for 3a2dacc2...; MASTER/0 unchanged
+- .23: installed (7f7175a installer run; byte-identical installer); acceptance marker for 248cd104 names source 7f7175a; fresh 12/12 read-only checks PASS at b4e28e4.
+- .252: INSTALLER RAN (Option B, INSTALL_OK backup /var/backups/devicemonitor/install-v214.1Wv8AO); 12/13 checks PASS; peer FAIL exit 255 is a packaged-runner defect (doubled backslashes in the -r program). No acceptance recorded; STOPPED promotion.
+- .253: unchanged (2.14.0, MASTER/0). No candidate installed.
 
-Outstanding checks: explicit approval of 3a2dacc2...; snapshots then `--host local` installation on .23, then .252/.253 over SSH, then `python3 release/execution-ledger.py status`. CI 44430535745 passed at b7e3550; the local/SSH deployment tool (32f8872 onwards) needs CI at the final head. API account dm-test-202611191013 removed and its credential file deleted (absent from its path, /root and /tmp).
+Blocked on: the peer_check quoting defect, which changes the archive; needs a bounded fix, a new archive identity, and approval.
 
-Stop conditions: price gate premium without approval; missing access; unsafe verification failure; any archive or source substitution.
+Backups: .23 /var/backups/devicemonitor/pre-install-3a2da/20261119T021909Z and install-v214.QfUimT; .252 /var/backups/devicemonitor/pre-install-248cd/20261119T043251Z and install-v214.1Wv8AO.
 
-Deployment order: .23 (`--host local`, identity-checked), then .252/.253 (SSH via DM_SSH, verified toolchain at /var/tmp/dm-release-tools/<source>). Snapshot each host first. Rollback: the prepared supported rollback plus the per-host installer backups.
+Accounts: dm-test-202611191529 and dm-test-202611191532 removed on .252; all hosts have 0 dm-test users and no account.env.
