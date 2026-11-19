@@ -18,7 +18,9 @@ authenticated checks; reciprocal peer reads passed after both HA stages. Install
 `install-v214.6wmHxZ` (`.253`). Data counts, Device Monitor settings, functional OPNsense
 configuration and served certificates remained preserved; each temporary account/key and
 credential file was removed. No merge, tag or publication occurred. Report:
-`.cline-reports/REPORT-20261119-120543.md`.
+`.cline-reports/REPORT-20261119-120905.md`. Release notes, checksums and the approval package
+are `release/v2.15.1-notes.md`, `release/v2.15.1-checksums.txt` and
+`release/RELEASE-APPROVAL-PACKAGE-2.15.1-20261119.md`.
 
 **Lesson — HA direct-evidence reuse (19 November 2026).** The v2.15.1 HA deployment delay
 came from overlooking the successful v2.15.0 per-node evidence path and interpreting
