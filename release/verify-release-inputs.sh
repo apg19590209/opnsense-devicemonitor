@@ -44,6 +44,12 @@ LIST=$ROOT/release/release-inputs.sha256
 [ -f "$LIST" ] || die "release/release-inputs.sha256 (missing)"
 [ ! -L "$LIST" ] || die "release/release-inputs.sha256 (symlink)"
 
+# The builder is a pinned release tool, not something the installer runs or needs. It is not an
+# install prerequisite, so an archive may omit it (Decision: the archive does not ship a second
+# copy of the builder). Everything else pinned here is required, and a builder that is present
+# must still match its pinned digest.
+BUILDER=release/build-bundle.sh
+
 n=0
 rc=0
 while read -r hash path; do
@@ -56,6 +62,10 @@ while read -r hash path; do
     esac
     file=$ROOT/$path
     if [ -L "$file" ] || [ ! -f "$file" ]; then
+        if [ "$path" = "$BUILDER" ] && [ ! -L "$file" ]; then
+            echo "OPTIONAL_INPUT_ABSENT=$path (not an install prerequisite)"
+            continue
+        fi
         echo "VERIFY_FAILED=$path (missing or not a regular file)" >&2
         rc=1
         continue

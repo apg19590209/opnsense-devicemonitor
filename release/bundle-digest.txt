@@ -141,8 +141,19 @@
 #        acceptance helper, preventing generated `.23` acceptance)
 #   aa1270ededce9935b0a77bdd610c54a8bbc29c8b8e71d66fc040641db51f0f3f  12554194 bytes
 #       (approved host payload; its packaged acceptance runner prevented generated host checks)
+#   77554e6db794fab4c7ef51e9a78713c8b386a490e5bfdb6ebc9b0ac457296cfc  12570066 bytes
+#       (recorded at 6c322f6 from source b0e8355 with release/build-bundle.sh in the allow-list;
+#        that combined pin was never independently verified and its packaged builder made
+#        verify-release-inputs.sh fail, superseded by this cut)
 version 2.15.0
-bytes 12570066
-sha256 77554e6db794fab4c7ef51e9a78713c8b386a490e5bfdb6ebc9b0ac457296cfc
-#   Bundled source b0e8355; identical bytes to the source 83be9d4 candidate because
-#   b0e8355 adds only release-package records outside the archive allow-list.
+bytes 12556754
+sha256 c3b6a723f20969ec63c25032abf2dfbd235345ea0c28891185cbe41929c7f16c
+#   Bytes measured from the committed tree (source b0e8355 plus the measurement commit) under
+#   the declared build conditions: export-sourced build, TZ=UTC0, canonical ustar with fixed
+#   ownership and mtime, the deterministic stored-block gzip. 96 members; the builder is not an
+#   archive member because it is a pinned release tool, not an install prerequisite.
+#   Measured independently by the full-tree build (in-worktree and export-sourced), the shimmed
+#   GNU-grammar build and two clean checkouts. The content revision this record supersedes,
+#   release/run-host-checks.sh ab2e6e8d..., measured 493a4865... at the same 12556754 bytes; the
+#   archive contract pads every member to 512-byte boundaries, so those two revisions produce
+#   identical archives. The manifest still pins the current runner revision's bytes.

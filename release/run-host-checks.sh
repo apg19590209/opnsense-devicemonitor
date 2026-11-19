@@ -16,10 +16,10 @@ BUNDLE=
 OUT=
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        --stage) STAGE=$2; shift 2 ;;
-        --source) SOURCE=$2; shift 2 ;;
-        --bundle) BUNDLE=$2; shift 2 ;;
-        --out) OUT=$2; shift 2 ;;
+        --stage) [ "$#" -ge 2 ] || break; STAGE=$2; shift 2 ;;
+        --source) [ "$#" -ge 2 ] || break; SOURCE=$2; shift 2 ;;
+        --bundle) [ "$#" -ge 2 ] || break; BUNDLE=$2; shift 2 ;;
+        --out) [ "$#" -ge 2 ] || break; OUT=$2; shift 2 ;;
         *) echo "ABORT: unknown argument $1" >&2; exit 2 ;;
     esac
 done
@@ -28,9 +28,18 @@ case "$STAGE" in .23|.252|.253) : ;; *) echo 'ABORT: invalid stage' >&2; exit 2 
 mkdir -p "$(dirname "$OUT")"
 failure=0
 RESULT_ARGS=
+# Installed nodes do not receive release/ from the archive. deploy-candidate.sh passes the
+# pinned helpers' host path; the in-archive copy is only a fallback for a manual run from the
+# unpacked candidate. The previous dirname-of-$0 lookup passed the shell-syntax test but
+# resolved to nothing on an installed host, which is why the packaged runner could not pass.
+HELPER_DIR=/var/tmp/dm-release-tools
+[ -f "$HELPER_DIR/results-file.py" ] || HELPER_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 run() {
-    name=$1
+    # Pass the check name straight through: binding it to a variable called "name" is unsafe
+    # in some shells.
+    check_name=$1
     shift
+    case "$check_name" in ''|*[!a-z0-9-]*) echo "ABORT: invalid check name $check_name" >&2; exit 2 ;; esac
     rc=0
     "$@" >"${TMPDIR:-/tmp}/dm-host-check.$$.log" 2>&1 || rc=$?
     if [ "$rc" = 0 ]; then
@@ -41,7 +50,15 @@ run() {
         note="exit=$rc"
         failure=1
     fi
-    RESULT_ARGS="$RESULT_ARGS --check $name=$result"
+    printf 'check %s %s (%s)\n' "$check_name" "$result" "$note" >&2
+    # One token per --check is the results-file contract; refuse any pathname expansion.
+    set -f
+    RESULT_ARGS="$RESULT_ARGS --check $check_name=$result"
+    set +f
+    # Never return the check's status: `run` is called under `set -e`, so a failing status would
+    # abort before the results file is written. `failure` records the outcome and the final exit
+    # below still fails the run.
+    return 0
 }
 db_check() { python3 - <<'PY'
 import sqlite3
@@ -83,12 +100,13 @@ PY
 }
 peer_check() { php -r 'require_once("/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/PeerClient.php"); $c=json_decode(file_get_contents("/var/db/devicemonitor/config.json"),true); $p=["url"=>$c["email_log_peer_url"],"api_key"=>$c["email_log_peer_api_key"],"api_secret"=>$c["email_log_peer_api_secret"],"ca_pem"=>$c["email_log_peer_ca_pem"],"timeout"=>8]; $r=(new \\OPNsense\\DeviceMonitor\\PeerClient($p))->search([],50,0); exit(empty($r["available"])?1:0);'; }
 auth_check() {
-    # The local management name may not resolve on .23; its own verified address is the same
-    # API endpoint and keeps certificate verification enabled.
+    # The local management name may not resolve on .23; that node's own verified address is
+    # the same API endpoint and keeps certificate verification enabled. The HA stages keep
+    # the management name so the verified TLS chain is the one the peer trusts.
     case "$STAGE" in
-        .23) DM_ACCEPTANCE_HOST=${DM_ACCEPTANCE_HOST:-192.168.20.23} php "$(dirname "$0")/acceptance-check.php" "$1" || return 1 ;;
-        *) php "$(dirname "$0")/acceptance-check.php" "$1" || return 1 ;;
+        .23) DM_ACCEPTANCE_HOST=${DM_ACCEPTANCE_HOST:-192.168.20.23} ;;
     esac
+    php "$HELPER_DIR/acceptance-check.php" "$1"
 }
 run installed-hashes installed_check
 run records records_check
@@ -107,5 +125,7 @@ fi
 for check in authenticated-search authenticated-message authenticated-csv mutation-denial; do
     run "$check" auth_check "$check"
 done
-python3 "$(dirname "$0")/results-file.py" --out "$OUT" $RESULT_ARGS
+set -f
+python3 "$HELPER_DIR/results-file.py" --out "$OUT" $RESULT_ARGS
+set +f
 [ "$failure" = 0 ] || exit 1

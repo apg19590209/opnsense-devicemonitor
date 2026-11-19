@@ -6,6 +6,7 @@ prune path rather than bypassing it.
 """
 import hashlib
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -63,8 +64,12 @@ def make_tree(tmp):
     # copied files: the gate is location-independent.
     gate = repo / 'release/deploy-candidate.sh'
     text = gate.read_text()
-    text = text.replace('__INSTALLER_SHA__', sha(repo / 'install-unattended.sh'))
-    text = text.replace('__INPUTS_SHA__', sha(repo / 'release/release-inputs.sha256'))
+    # The gate carries literal pins; point them at the fixture copies so the positive case
+    # exercises the real gate rather than a placeholder.
+    text = re.sub(r'^INSTALLER_SHA=[0-9a-f]{64}$', 'INSTALLER_SHA=' + sha(repo / 'install-unattended.sh'),
+                  text, count=1, flags=re.M)
+    text = re.sub(r'^INPUTS_SHA=[0-9a-f]{64}$', 'INPUTS_SHA=' + sha(repo / 'release/release-inputs.sha256'),
+                  text, count=1, flags=re.M)
     gate.write_text(text)
     # A small archive mirrors the manifest/feature contract.
     archive = Path(tmp) / 'bundle.tar.gz'
@@ -201,15 +206,117 @@ def test_installer_mode_is_executable_in_archives():
     check(index and index[0] == '100755', 'the installer is executable in the Git index')
 
 
-def test_host_runner_collects_results_under_strict_shell():
-    """The check runner must initialise its collector under set -u and preserve FAIL outcomes."""
+def _fake_host(tmp):
+    """A sandbox with only the paths a host-check run reads, and a stub php for the auth check."""
+    host = Path(tmp)
+    db = host / 'db'
+    db.mkdir()
+    locale = host / 'locale'
+    for lang in ('ru_RU', 'de_DE'):
+        (locale / lang / 'LC_MESSAGES').mkdir(parents=True)
+        shutil.copy2(ROOT / 'release/core-catalogues' / (lang + '.OPNsense.mo'),
+                     locale / lang / 'LC_MESSAGES/OPNsense.mo')
+    (db / 'config.json').write_text('{"email_log_peer_url": "https://192.168.20.253"}\n')
+    (db / 'installed-manifest.txt').write_text('a' * 64 + ' /usr/local/x\n')
+    (host / 'peer.php').write_text('<?php class PeerClient {}')
+    sbin = host / 'sbin'
+    sbin.mkdir()
+    (sbin / 'php').write_text('#!/bin/sh\ntouch "$(dirname "$0")/auth-call"\nexit 0\n')
+    (sbin / 'php').chmod(0o755)
+    def make(db_ok):
+        import sqlite3
+        for name in ('devices.db', 'email_log.db'):
+            (db / name).unlink(missing_ok=True)
+        d = sqlite3.connect(db / 'devices.db')
+        d.execute('create table x(a)')
+        d.commit()
+        d.close()
+        c = sqlite3.connect(db / 'email_log.db')
+        c.executescript('create table email_log(id integer primary key, deleted_utc text);'
+                        'create table email_log_events(id integer);')
+        if db_ok:
+            c.execute("insert into email_log values(1, '')")
+        c.commit()
+        c.close()
+    return host, make
+
+
+def _sandbox_runner(tmp, host, overrides):
+    """Copy the packaged runner and redirect only absolute host prefixes into the sandbox."""
+    stage = Path(tmp) / 'candidate'
+    (stage / 'release').mkdir(parents=True)
+    for name in ('run-host-checks.sh', 'acceptance-check.php', 'results-file.py'):
+        if name in overrides:
+            shutil.copy2(overrides[name], stage / 'release' / name)
+        elif (ROOT / 'release' / name).is_file():
+            shutil.copy2(ROOT / 'release' / name, stage / 'release' / name)
+    runner = stage / 'release/run-host-checks.sh'
+    text = runner.read_text()
+    for target, replacement in (('/var/db/devicemonitor/', str(host) + '/db/'),
+                                ('/usr/local/share/locale/', str(host) + '/locale/'),
+                                ('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/PeerClient.php',
+                                 str(host) + '/peer.php')):
+        text = text.replace(target, replacement)
+    runner.write_text(text)
+    env = dict(os.environ, PATH=str(host / 'sbin') + os.pathsep + os.environ.get('PATH', ''),
+               TMPDIR=str(host))
+    return stage, env
+
+
+def test_packaged_runner_executes_and_records_every_check():
+    """Execute the packaged runner in a sandbox: it must pass under `set -u` and record outcomes.
+
+    The previous revision passed a source-text assertion while the shipped archive could not run at
+    all (an uninitialised collector, then a FAIL aborting before the evidence file existed). A
+    behavioural test is required to prove the packaged path.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        host, make = _fake_host(tmp)
+        stage, env = _sandbox_runner(tmp, host, {})
+        make(True)
+        out = host / 'results.json'
+        done = run(['/bin/sh', str(stage / 'release/run-host-checks.sh'), '--stage', '.23',
+                    '--source', 'a' * 40, '--bundle', 'b' * 64, '--out', str(out)], env=env)
+        check(done.returncode == 0, 'packaged runner exits 0 when every check passes: ' + done.stderr.strip())
+        data = json.loads(out.read_text()) if out.is_file() else {}
+        checks = data.get('checks', {})
+        expected = {'installed-hashes', 'records', 'database-integrity', 'settings', 'certificates',
+                    'role', 'daemon', 'catalogue', 'authenticated-search', 'authenticated-message',
+                    'authenticated-csv', 'mutation-denial'}
+        check(expected <= set(checks), 'every executed check is recorded: ' + ','.join(sorted(set(expected) - set(checks))))
+        check(all(v == 'PASS' for v in checks.values()), 'all sandbox checks are recorded PASS')
+        check((host / 'sbin/auth-call').is_file(), 'the authenticated checks reach the packaged helper')
+        make(False)
+        failed = host / 'failed.json'
+        done = run(['/bin/sh', str(stage / 'release/run-host-checks.sh'), '--stage', '.23',
+                    '--source', 'a' * 40, '--bundle', 'b' * 64, '--out', str(failed)], env=env)
+        data = json.loads(failed.read_text()) if failed.is_file() else {}
+        check(data.get('checks', {}).get('records') == 'FAIL',
+              'a failing check is recorded FAIL instead of aborting the evidence write')
+        check(done.returncode == 1, 'a recorded FAIL makes the runner exit non-zero')
+
+
+def test_runner_does_not_depend_on_its_invoking_directory():
+    """HELPER_DIR is host-absolute; a relative lookup would pass here but fail on an installed host."""
     text = (ROOT / 'release/run-host-checks.sh').read_text()
-    check('\nfailure=0\nRESULT_ARGS=\nrun() {' in text,
-          'the host-check result collector is initialised before use')
-    check('RESULT_ARGS="$RESULT_ARGS --check $name=$result"' in text,
-          'each executed result is added to the generated evidence')
-    check(': > "$OUT"' not in text,
-          'the runner does not seed a plain-text evidence file')
+    check('\nHELPER_DIR=' in text,
+          'the pinned helper directory is initialised explicitly, not inherited')
+    check('php "$(dirname "$0")/acceptance-check.php"' not in text
+          and 'python3 "$(dirname "$0")/results-file.py"' not in text,
+          'packaged helpers are not resolved relative to the invoking directory alone')
+
+
+def test_archive_does_not_ship_a_second_builder():
+    """The builder is a pinned release tool and must not be an archive member.
+
+    CI run 44419526545 showed why: with the builder packaged, verify-release-inputs.sh either
+    sees an unpinned copy (digest failure) or, when it is pinned, a second tool that installs
+    nowhere. The archive identity is pinned separately, so this is a membership rule, not a
+    digest assertion.
+    """
+    builder = (ROOT / 'release/build-bundle.sh').read_text()
+    check('\n    release/build-bundle.sh \\\n' not in builder,
+          'the builder is not listed in the archive allow-list')
 
 
 def test_stale_ancestry_is_refused():
@@ -355,7 +462,9 @@ def main():
     test_host_check_failure_aborts_before_acceptance()
     test_failed_host_checks_cannot_yield_acceptance()
     test_stale_ancestry_is_refused()
-    test_host_runner_collects_results_under_strict_shell()
+    test_packaged_runner_executes_and_records_every_check()
+    test_runner_does_not_depend_on_its_invoking_directory()
+    test_archive_does_not_ship_a_second_builder()
     test_installer_mode_is_executable_in_archives()
     test_export_mode_map_matches_git_index()
     test_prior_stage_is_required()

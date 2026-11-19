@@ -123,7 +123,6 @@ printf '%s\n' \
     release/verify-execution.py \
     release/run-host-checks.sh \
     release/acceptance-check.php \
-    release/build-bundle.sh \
     release/results-file.py \
     release/export-modes.txt \
     release/current-task-requirements.txt \
