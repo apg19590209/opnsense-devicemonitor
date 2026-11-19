@@ -2,9 +2,11 @@
 
 ## Current state
 
-**v2.15.1 service-retirement candidate — ACCEPTED on `.23`, `.252` and `.253` (19 November 2026).**
-PR #17 preserves the reviewed `b8de765`/`21f4262`/`2758ac6`/`b01712c` correction on
-`fix/service-retirement-atomic-20261119`. The forward `bbfc69f` identity cut adds version
+**v2.15.1 service-retirement release — PUBLISHED 19 November 2026.** PR #17 preserved the
+reviewed `b8de765`/`21f4262`/`2758ac6`/`b01712c` correction and merged normally as
+`3168ef88f212605ca8ccde2146133663022eb70a`; annotated tag `v2.15.1` points to that merge.
+The release is https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.15.1.
+The forward `bbfc69f` identity cut adds version
 2.15.1, matching runtime/baseline manifests, the 2.15.0 upgrade predecessor and refreshed
 installer/release-input pins without changing the retirement logic. The deterministic
 96-member candidate is 12,562,386 bytes with SHA-256
@@ -17,9 +19,11 @@ authenticated checks; reciprocal peer reads passed after both HA stages. Install
 `/var/backups/devicemonitor/install-v214.pLnRXe` (`.23`), `install-v214.HrmR8F` (`.252`) and
 `install-v214.6wmHxZ` (`.253`). Data counts, Device Monitor settings, functional OPNsense
 configuration and served certificates remained preserved; each temporary account/key and
-credential file was removed. No merge, tag or publication occurred. Report:
-`.cline-reports/REPORT-20261119-120905.md`. Release notes, checksums and the approval package
-are `release/v2.15.1-notes.md`, `release/v2.15.1-checksums.txt` and
+credential file was removed. Final pre-merge CI `44521306560` passed. The published assets
+`dm-v2.15.1-runtime.tar.gz`, its `.identity`, `v2.15.1-checksums.txt` and `SHA256SUMS` were
+downloaded and verified; the archive is byte-identical to the accepted local candidate and has
+96 members. Report: `.cline-reports/REPORT-20261119-122901.md`. Release notes, checksums and the
+approval package are `release/v2.15.1-notes.md`, `release/v2.15.1-checksums.txt` and
 `release/RELEASE-APPROVAL-PACKAGE-2.15.1-20261119.md`.
 
 **Lesson — HA direct-evidence reuse (19 November 2026).** The v2.15.1 HA deployment delay
