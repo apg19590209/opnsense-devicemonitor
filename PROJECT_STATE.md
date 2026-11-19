@@ -18,6 +18,11 @@ OPNsense configuration and the served certificate remained preserved; the tempor
 credential were removed. `.252`/`.253` were not contacted. No merge, tag or publication occurred.
 Report: `.cline-reports/REPORT-20261119-114533.md`.
 
+**Lesson — HA direct-evidence reuse (19 November 2026).** The v2.15.1 HA deployment delay
+came from overlooking the successful v2.15.0 per-node evidence path and interpreting
+supported recording too narrowly. The reused evidence derivation now requires actual
+installer success and the real `installed-hashes` result rather than assumed checks.
+
 **v2.15.0 Email Log release — PUBLISHED 19 November 2026.** PR #14 merged normally as merge commit
 `934779887a880bfb525bd074c4d91fb57a3d8124`; annotated tag `v2.15.0` points to it. Release:
 https://github.com/apg19590209/opnsense-devicemonitor/releases/tag/v2.15.0 with

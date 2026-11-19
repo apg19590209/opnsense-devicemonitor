@@ -40,6 +40,21 @@ This file is the shared project instruction file for Codex and Cline. It supplem
 
 ## Workflow: PLAN → REVIEW → EXECUTE
 
+- **Reuse before redesign.** This rule specifies how the existing requirements to diagnose
+  before editing, propose existing tools to reuse, and reuse valid evidence apply before declaring
+  a procedure blocked. Inspect the most recent successful execution's actual commands, tool
+  revisions and retained evidence, then classify the difference from the current requirements as:
+  (a) overlooked existing capability; (b) instruction/interpretation conflict; or (c) demonstrated
+  missing functionality. Prefer the smallest compatible reuse or correction. Do not require a
+  particular wrapper merely because it is newer unless an explicit rule requires it. Existing
+  identity, access, sequencing and evidence controls must still be satisfied.
+- Evidence must describe the command actually executed. A direct installer run must not be
+  recorded as a wrapper run. Derive success from the actual exit status and current-run
+  verification results; never hard-code PASS or rely on stale logs or assumed checks. Before
+  requesting deployment approval, establish that the proposed path can complete installation,
+  verification, recording and acceptance using existing tools. If it cannot, resolve the gap
+  before touching hosts. Reopen a proven procedure only when changed requirements, changed tooling
+  or concrete failure evidence justify it.
 - **PLAN.** Before implementing new work, do only the bounded read-only inspection needed for a
   concrete plan: no edits, state-changing tests, installs, deployments or publication. Return a
   plan titled `# WORK PLAN — <plain-English task name>` with the sections below, scaled to the
