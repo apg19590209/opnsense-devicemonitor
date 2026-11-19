@@ -74,8 +74,7 @@ artifacts. No HA candidate deployment, push, tag or publication occurred. Report
 `038f44c`, last code change `51fcaf4` (CI `44223883558` success) — only documentation followed.
 Open limitations: pagination fixture-tested only; Peer/All nodes, Deleted/All and dialog screens not
 visually confirmed; manual certificate renewal before 2026-12-17; webhook (no destination, TLS
-verification disabled) remains open. The USB stick was retired as unsuitable and is no longer
-tracked. Report:
+verification disabled) remains open. Report:
 `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
 
 **Email Log formatting verified with a genuine record; PR #9 final review (18 November 2026).**
@@ -87,7 +86,7 @@ and MERGEABLE with no code blockers; automated checks pass and visual acceptance
 table, the subject-opened popup and the new `.252` email at 13:43:32 AEDT (compact label/value
 lines, paragraph spacing, Relay accepted display). Inbox receipt is operator-confirmed for record
 `a14af952…` in `arnhem05.alerts@gmail.com`, completing end-to-end delivery acceptance for that test. Manual certificate renewal is due before
-2026-12-17; webhook remains open (the USB stick was retired as unsuitable). Report:
+2026-12-17; webhook remains open. Report:
 `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
 
 **Email Log HTML-to-text conversion corrected (18 November 2026).** Captured bodies were split
@@ -104,7 +103,7 @@ defects in access control, credential handling, migrations, retention or packagi
 now documents the Email Log (§16.9: relay status meaning, peer setup, clickable subject, soft
 deletion and restoration). Operator visual PASS is recorded for the Local table and the
 subject-opened popup only. Manual certificate renewal remains due before 2026-12-17; webhook
-remains open (the USB stick was retired as unsuitable). Report:
+remains open. Report:
 `.cline-reports/REPORT-20261118-005500-bulk-selection.md`.
 
 **Email Log bulk selection and soft deletion (18 November 2026).** The shared table layout is
@@ -199,14 +198,7 @@ which blocked the package install and even Python bytecode writes. The reproduci
 `/usr/ports/distfiles` cache (4.2 GB) was verified as downloads only (no build running, nothing
 written for 30 minutes) and deleted in place, keeping the directory's mode and ownership: root is
 now **3.9 GB free**. Backups, evidence, source checkouts, databases, credentials and the Go/Zig
-caches were untouched. A 15 GB USB stick (`DNXTNKV80W22UDP6PV9Z`) was formatted as UFS
-(`gpt/dmarchive`) for archive use, but its filesystem corrupted under a sustained 4 GB copy and
-the device is parked, unmounted and classified unsuitable for backups pending full verification; a
-destructive address-dependent test verified only the first 1 GiB of its advertised 15 GB.
-**Disposition (19 November 2026): retired.** The USB-backup investigation is closed as retired
-and unsuitable for backup use; no further capacity tests are planned and it is no longer tracked
-as outstanding work. The physical device and all backup/evidence files are untouched.
-
+caches were untouched.
 **Email Log Clear filters, soft delete/restore, visibility filter and themed dialog header (17 November 2026).**
 Clear filters resets search, type and status, returns to page one and refreshes once while
 preserving the Local/Peer/All scope. Delete is soft only: schema version 3 adds `deleted_utc`
