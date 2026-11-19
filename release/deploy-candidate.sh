@@ -14,8 +14,8 @@ export LC_ALL
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 REPO=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 cd "$REPO"
-INSTALLER_SHA=9d198b1cbc22b2023148d5133c71c96442c66339c53d8f06975c673f8c6e32ca
-INPUTS_SHA=9136054a7b9dc8dd8dbf5c6240539f4bb3767b2b295f1b7d0aa09ee649b2ae54
+INSTALLER_SHA=af63e177474d39b0acc27005e6d8a023d4e18f361673a7e6e044247e12923c1b
+INPUTS_SHA=f062971e3eb543e003a2fb8935d2966855b1746cd218ecd34efafa36b4f9d2b5
 [ "$#" -ge 2 ] || { echo 'usage: deploy-candidate.sh ARCHIVE IDENTITY --host HOST --source SHA [--check]' >&2; exit 2; }
 ARCHIVE=$1
 IDENTITY=$2
@@ -203,10 +203,10 @@ if [ "$REMOTE" = 1 ]; then
     $SSH_CMD "$HOST" "rm -rf '$GATE_DIR' && mkdir -p '$GATE_DIR' && tar -xzf - -C '$GATE_DIR'" < "$GATE_ARCHIVE" || {
         echo 'ABORT: remote gate staging failed' >&2; exit 1; }
     # shellcheck disable=SC2086
-    $SSH_CMD "$HOST" "/bin/sh -c 'cd \"\$1\" && /bin/sh release/deploy-candidate.sh \"\$2\" \"\$3\" --host local --source \"\$4\"' sh '$GATE_DIR' '$REMOTE_DIR/dm-v2.15.0-runtime.tar.gz' '$REMOTE_DIR/dm-v2.15.0-runtime.tar.gz.identity' '$SOURCE'" > "$STAGE/install.log" 2>&1 || INSTALL_RESULT=$?
+    $SSH_CMD "$HOST" "/bin/sh -c 'cd \"\$1\" && /bin/sh release/deploy-candidate.sh \"\$2\" \"\$3\" --host local --source \"\$4\"' sh '$GATE_DIR' '$REMOTE_DIR/dm-v2.15.1-runtime.tar.gz' '$REMOTE_DIR/dm-v2.15.1-runtime.tar.gz.identity' '$SOURCE'" > "$STAGE/install.log" 2>&1 || INSTALL_RESULT=$?
 else
-    cp "$ARCHIVE" "$STAGE/dm-v2.15.0-runtime.tar.gz"
-    cp "$IDENTITY" "$STAGE/dm-v2.15.0-runtime.tar.gz.identity"
+    cp "$ARCHIVE" "$STAGE/dm-v2.15.1-runtime.tar.gz"
+    cp "$IDENTITY" "$STAGE/dm-v2.15.1-runtime.tar.gz.identity"
     /bin/sh install-unattended.sh --host "$HOST" > "$STAGE/install.log" 2>&1 || INSTALL_RESULT=$?
 fi
 if ! record_deploy "$([ "$INSTALL_RESULT" = 0 ] && echo PASS || echo FAIL)" "$STAGE/install.log"; then

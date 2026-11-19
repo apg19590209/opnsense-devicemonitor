@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 POLICY = ROOT / "release/supported-locales.sh"
 INSTALLER = ROOT / "install-unattended.sh"
 BUNDLER = ROOT / "release/build-bundle.sh"
-MANIFEST = ROOT / "release/v2.15.0-runtime.manifest"
+MANIFEST = ROOT / "release/v2.15.1-runtime.manifest"
 
 
 def policy_locales():

@@ -29,6 +29,7 @@
 100644 release/legacy-targets.txt
 100644 release/manifests/v2.14.0-runtime.manifest
 100644 release/manifests/v2.15.0-runtime.manifest
+100644 release/manifests/v2.15.1-runtime.manifest
 100644 release/merge-opnsense-catalog.sh
 100644 release/normalize-bundle-tar.py
 100644 release/opnsense-devicemonitor28082026_1812.zip
@@ -53,6 +54,7 @@
 100644 release/v2.15.0-acceptance-requirements.md
 100644 release/v2.15.0-notes.md
 100644 release/v2.15.0-runtime.manifest
+100644 release/v2.15.1-runtime.manifest
 100755 release/validate-deploy-archive.py
 100755 release/verify-bundle.py
 100755 release/verify-candidate.sh
