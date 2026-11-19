@@ -469,6 +469,19 @@ confirmation only.
 
 ## O4-ageing — stale `unavailable` rows age to `unknown`; unseen hosts are retired: `OPEN` (deployed; retirement churns on multi-row IPs)
 
+**Presence-attribution correction — implemented locally (19 November 2026).** Discovery no longer
+refreshes `devices.last_seen` from an IP-only answer: `upsert_device_service()` accepts an explicit
+`presence_assoc=(mac, ip)` and `touch_device_last_seen()` matches both the MAC and the IP, forward
+only. No current caller supplies a contemporaneous association (DHCP ownership is newest-row
+heuristic, NTP/SSH/WEB candidate MACs come from the devices table or copied service rows), so no
+path refreshes device presence today; endpoint presence remains on the service row. Retirement
+semantics, service-row ownership assignment and alert identity are unchanged. Not pushed or
+deployed; live ageing acceptance is still outstanding.
+
+**Still unresolved:** the observed retention of a stale-owner service row at an IP shared with a
+fresh device (diagnostic E1b), and the DHCP newest-row ownership heuristic. Deletion semantics
+remain as recorded; deletion churn from the `retired 12` cycle is still unproven.
+
 **Identifier note:** `PROJECT_STATE.md` and `DECISIONS.md` 52 use `O4` for this item. The `O4`
 above (sidecar text-domain view migration, `CLOSED` 28 September 2026) is a different workstream;
 neither references the other in the original records, so the ageing work is named

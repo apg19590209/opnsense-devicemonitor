@@ -2330,7 +2330,7 @@ def is_device_active(last_seen_str, ip, was_active=False):
         pass
     return was_active and is_recently_seen(last_seen_str, minutes=30)
 
-def touch_device_last_seen(conn, ip, seen_at=None):
+def touch_device_last_seen(conn, ip, seen_at=None, mac=None):
     """Advance `devices.last_seen` for an address that just answered.
 
     O4 refinement (DECISIONS.md 53). `devices.last_seen` is maintained by
@@ -2349,6 +2349,19 @@ def touch_device_last_seen(conn, ip, seen_at=None):
         return 0
 
     stamp = utc_timestamp(seen_at)
+    mac = (mac or '').strip().lower()
+
+    if mac:
+        return conn.execute(
+            '''
+            UPDATE devices
+            SET last_seen = ?
+            WHERE LOWER(COALESCE(mac, '')) = ?
+              AND ip = ?
+              AND COALESCE(last_seen, '') < ?
+            ''',
+            (stamp, mac, key, stamp)
+        ).rowcount
 
     return conn.execute(
         '''
@@ -2374,7 +2387,8 @@ def upsert_device_service(
     verified_at,
     status='available',
     product='',
-    version=''
+    version='',
+    presence_assoc=None
 ):
     """Insert or refresh one infrastructure-service endpoint.
 
@@ -2449,11 +2463,19 @@ def upsert_device_service(
         )
     )
 
+    # Device presence (`devices.last_seen`) advances only for an association the caller
+    # observed with this probe: a `presence_assoc` of the form (mac, ip) whose ip equals
+    # the probed ip. An IP-only response, a MAC guessed from a historical row, an empty
+    # MAC or no association records endpoint presence in the service row only.
     if (
         str(status or '').strip().lower() == 'available'
         and detection_method.lower() != 'authoritative'
+        and presence_assoc
     ):
-        touch_device_last_seen(conn, ip, verified_at)
+        assoc_mac, assoc_ip = presence_assoc
+        assoc_mac = (assoc_mac or '').strip().lower()
+        if assoc_mac and (assoc_ip or '').strip() == str(ip or '').strip():
+            touch_device_last_seen(conn, ip, verified_at, mac=assoc_mac)
 
     return True
 

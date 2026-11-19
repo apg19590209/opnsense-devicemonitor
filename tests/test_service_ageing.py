@@ -533,11 +533,27 @@ def test_verified_service_refreshes_device_last_seen():
             add_service(conn, STALE_MAC, STALE_IP, "available", stamp(-timedelta(days=40)))
             conn.commit()
 
-        # A probe that answers is presence evidence: hostwatch alone is not.
+        stale_seen = device_last_seen(module, STALE_IP)
+
+        # A service answer alone records endpoint presence, not device identity.
         with closing(sqlite3.connect(module.DB_FILE)) as conn:
             module.upsert_device_service(
                 conn, STALE_MAC, STALE_IP, "VLAN60", "SSH", 22, "tcp",
                 "ssh_banner", "verified", stamp(timedelta(0)),
+            )
+            conn.commit()
+
+        assert device_last_seen(module, STALE_IP) == stale_seen, (
+            "an unqualified service answer must not refresh device presence")
+        assert read_checked(module, STALE_IP) == stamp(timedelta(0)), (
+            "the service row still records endpoint presence")
+
+        # A current, observed association for this MAC and IP is presence evidence.
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            module.upsert_device_service(
+                conn, STALE_MAC, STALE_IP, "VLAN60", "SSH", 22, "tcp",
+                "ssh_banner", "verified", stamp(timedelta(0)),
+                presence_assoc=(STALE_MAC.upper(), STALE_IP),
             )
             conn.commit()
 
@@ -548,7 +564,87 @@ def test_verified_service_refreshes_device_last_seen():
         assert (aged, retired) == (0, 0), (aged, retired)
         assert read_row(module, STALE_IP) is not None
 
-    print("AGE_VERIFIED_SERVICE_REFRESHES_DEVICE=PASS")
+    print("AGE_PRESENCE_NEEDS_OBSERVED_ASSOCIATION=PASS")
+
+
+def test_association_must_match_mac_and_ip():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.init_db()
+
+        stale_seen = stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 1))
+        other_ip = "198.51.100.30"
+        other_mac = "aa:bb:cc:dd:ee:30"
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            add_device(conn, STALE_MAC, STALE_IP, stale_seen)
+            add_device(conn, FRESH_MAC, STALE_IP, stamp(timedelta(hours=-1)))
+            add_device(conn, other_mac, other_ip, stale_seen)
+            conn.commit()
+
+        cases = (
+            # A different MAC sharing the IP: neither device moves.
+            (other_mac, other_ip, (other_mac, STALE_IP)),
+            # The same MAC at another IP: no device at STALE_IP moves.
+            (STALE_MAC, STALE_IP, (other_mac, other_ip)),
+            # MAC with no device row.
+            (STALE_MAC, STALE_IP, ("aa:bb:cc:dd:ee:99", STALE_IP)),
+            # Empty MAC, as an IP-only answer would supply.
+            (STALE_MAC, STALE_IP, ("", STALE_IP)),
+            # No association at all.
+            (STALE_MAC, STALE_IP, None),
+        )
+        for _mac, _ip, assoc in cases:
+            with closing(sqlite3.connect(module.DB_FILE)) as conn:
+                module.upsert_device_service(
+                    conn, STALE_MAC, STALE_IP, "VLAN60", "SSH", 22, "tcp",
+                    "ssh_banner", "verified", stamp(timedelta(0)),
+                    presence_assoc=assoc,
+                )
+                conn.commit()
+            assert device_last_seen(module, STALE_IP) == stale_seen, assoc
+            assert device_last_seen(module, other_ip) == stale_seen, assoc
+
+    print("AGE_ASSOCIATION_MATCHES_MAC_AND_IP=PASS")
+
+
+def test_dhcp_success_records_endpoint_but_not_device_presence():
+    """Real DHCP discovery: the service row advances; no device timestamp moves."""
+    module = load_module()
+    import ipaddress
+
+    class Result:
+        def __init__(self, stdout=''):
+            self.returncode, self.stdout, self.stderr = 0, stdout, ''
+
+    def fake_run(cmd, **kwargs):
+        if cmd[:2] == ['/sbin/ifconfig', '-l']:
+            return Result('em0\n')
+        return Result('<script output="Server Identifier: %s"/>' % STALE_IP)
+
+    original_run = module.subprocess.run
+    module.subprocess.run = fake_run
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            module.DB_FILE = str(Path(tmp) / "devices.db")
+            module.init_db()
+            stale_seen = stamp(-timedelta(days=module.SERVICE_RETIRE_AFTER_DAYS + 1))
+            with closing(sqlite3.connect(module.DB_FILE)) as conn:
+                add_device(conn, STALE_MAC, STALE_IP, stale_seen)
+                conn.commit()
+            networks = [{'device': 'em0', 'name': 'lan',
+                         'network': ipaddress.ip_network('198.51.100.0/24')}]
+            module.discover_dhcp_servers(networks)
+            assert device_last_seen(module, STALE_IP) == stale_seen, (
+                'DHCP newest-row ownership must not refresh device presence')
+            assert read_checked(module, STALE_IP, port=67) is not None, (
+                'endpoint presence is still recorded on the service row')
+    finally:
+        module.subprocess.run = original_run
+
+    print("AGE_DHCP_DOES_NOT_REFRESH_DEVICE=PASS")
 
 
 def test_authoritative_service_does_not_refresh_device():
@@ -633,11 +729,13 @@ def test_utc11_and_utc_writers_store_the_same_instant():
             module.upsert_device_service(
                 conn, FRESH_MAC, FRESH_IP, "VLAN60", "SSH", 22, "tcp",
                 "ssh_banner", "verified", local_verified,
+                presence_assoc=(FRESH_MAC, FRESH_IP),
             )
             add_device(conn, STALE_MAC, STALE_IP, stamp(-timedelta(days=60)))
             module.upsert_device_service(
                 conn, STALE_MAC, STALE_IP, "VLAN60", "SSH", 22, "tcp",
                 "ssh_banner", "verified", utc_verified,
+                presence_assoc=(STALE_MAC, STALE_IP),
             )
             conn.commit()
 
@@ -869,6 +967,8 @@ def main():
     test_scheduler_runs_ageing()
     test_cli_dry_run()
     test_verified_service_refreshes_device_last_seen()
+    test_association_must_match_mac_and_ip()
+    test_dhcp_success_records_endpoint_but_not_device_presence()
     test_authoritative_service_does_not_refresh_device()
     test_refresh_never_invents_or_rewinds_device()
     test_utc11_and_utc_writers_store_the_same_instant()
