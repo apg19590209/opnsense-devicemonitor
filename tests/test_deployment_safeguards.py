@@ -306,17 +306,76 @@ def test_runner_does_not_depend_on_its_invoking_directory():
           'packaged helpers are not resolved relative to the invoking directory alone')
 
 
+def _archive_inputs():
+    return ('release/run-host-checks.sh', 'release/acceptance-check.php',
+            'release/results-file.py', 'release/build-bundle.sh',
+            'release/verify-release-inputs.sh', 'release/release-inputs.sha256',
+            'install-unattended.sh', 'release/deploy-candidate.sh')
+
+
+def _git(*args):
+    done = run(['git', '-C', str(ROOT)] + list(args))
+    return done.returncode, done.stdout
+
+
 def test_archive_does_not_ship_a_second_builder():
     """The builder is a pinned release tool and must not be an archive member.
 
     CI run 44419526545 showed why: with the builder packaged, verify-release-inputs.sh either
     sees an unpinned copy (digest failure) or, when it is pinned, a second tool that installs
-    nowhere. The archive identity is pinned separately, so this is a membership rule, not a
-    digest assertion.
+    nowhere. The archive identity is pinned separately, so this is a membership rule.
     """
-    builder = (ROOT / 'release/build-bundle.sh').read_text()
-    check('\n    release/build-bundle.sh \\\n' not in builder,
-          'the builder is not listed in the archive allow-list')
+    listing = subprocess.run(['rg', '-q', r'^    release/build-bundle.sh \\$',
+                              str(ROOT / 'release/build-bundle.sh')])
+    check(listing.returncode == 1,
+          'the current builder does not list itself in the archive allow-list')
+
+
+def _recorded_identity():
+    """Return the pinned commit for the current digest, or None when the record is unusable."""
+    code, text = _git('show', 'HEAD:release/bundle-digest.txt')
+    if code != 0:
+        return None
+    digest = re.search(r'^sha256 ([0-9a-f]{64})$', text, re.M)
+    if not digest:
+        return None
+    code, commit = _git('log', '-1', '--format=%H', '-S' + digest.group(1), '--',
+                        'release/bundle-digest.txt')
+    return commit.strip() if code == 0 and commit.strip() else None
+
+
+def test_pinning_commit_carries_no_archive_change():
+    """The commit that pins the identity must not change an archive input.
+
+    The cut is measured from the state it pins; a record commit that also changes an archive
+    input names bytes that were never built from it. Records and archive content therefore live
+    in separate commits, the content first.
+    """
+    pinning = _recorded_identity()
+    check(bool(pinning), 'the recorded identity has a pinning commit')
+    if not pinning:
+        return
+    code, changed = _git('diff', '--name-only', pinning + '^', pinning, '--', *_archive_inputs())
+    check(code == 0, 'the pinning commit is inspectable')
+    check(not changed.strip(),
+          'the pinning commit changes no archive input itself: ' + ','.join(changed.split()))
+
+
+def test_recorded_identity_names_its_own_source():
+    """At least one commit after the pin must change archive inputs.
+
+    A record-only cut says WHICH identity was measured; a following content commit says FROM WHAT.
+    Without one, the record describes bytes no commit on this branch produced (the shape
+    aa1270ed... had when its replacement archive was recorded one commit too early).
+    """
+    pinning = _recorded_identity()
+    check(bool(pinning), 'the recorded identity has a pinning commit')
+    if not pinning:
+        return
+    code, sources = _git('log', pinning + '..HEAD', '--format=%H', '--', *_archive_inputs())
+    check(code == 0, 'archive inputs after the pin are inspectable')
+    check(bool(sources.strip()),
+          'a commit after the pin changed archive inputs: the identity names its own source')
 
 
 def test_stale_ancestry_is_refused():
@@ -465,6 +524,8 @@ def main():
     test_packaged_runner_executes_and_records_every_check()
     test_runner_does_not_depend_on_its_invoking_directory()
     test_archive_does_not_ship_a_second_builder()
+    test_pinning_commit_carries_no_archive_change()
+    test_recorded_identity_names_its_own_source()
     test_installer_mode_is_executable_in_archives()
     test_export_mode_map_matches_git_index()
     test_prior_stage_is_required()
