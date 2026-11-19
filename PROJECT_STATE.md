@@ -6,7 +6,7 @@
 approved archive `aa1270ed…` (source `b0e8355`) could not produce generated acceptance: its packaged runner
 aborted under `set -u`, and the committed follow-up resolved helpers outside `release/` and aborted on a FAIL.
 `3dac69c` also pinned `release/build-bundle.sh` while removing it from the archive allow-list, which failed
-`verify-release-inputs.sh` (CI `44419526545`). Commit `589ed00` fixes the runner, keeps the builder out of the
+`verify-release-inputs.sh` (CI `44419526545`). Commit `f86d2b8` fixes the runner, keeps the builder out of the
 archive and makes it an optional-but-pinned input; local preflight PASS, packaged-path sandbox checks PASS and
 the frozen archive is `c3b6a723…`, 12,556,754 bytes, 96 members. Nothing was installed from it; hosts remain on
 the accepted runtime. No push, HA write, merge, tag or publication occurred. Approval package:

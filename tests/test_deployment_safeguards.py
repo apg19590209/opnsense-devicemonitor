@@ -341,13 +341,14 @@ def _recorded_source():
 
 
 def test_recorded_identity_is_pinned_bound():
-    """Re-pinning an unchanged archive must be a commit, and must name its source.
+    """Re-pinning an unchanged archive must be a commit, and the source must bound the tree.
 
     Identical digest lines are not a git diff, so -S/-G cannot see a re-pin that changes only the
-    source line: 264dc08 re-pinned the identity but was invisible, and the earlier
-    aa1270ed... record named no source at all. The record now carries ``# source = <sha>``, that
-    line changes with every re-pin, and it must equal the commit that last changed an archive
-    input (the commit downstream of it that does not itself change one).
+    source line: 264dc08 re-pinned the identity but was invisible, and the earlier aa1270ed...
+    record named no source at all. The record now carries ``# source = <sha>``, that line changes
+    with every re-pin, and the named source must exist with no archive input changed after it.
+    Later commits may add tests or documentation; the approval package states which build of the
+    named source produced the approved archive.
     """
     source = _recorded_source()
     check(bool(source) and re.fullmatch(r'[0-9a-f]{40}', source or ''),
@@ -358,16 +359,11 @@ def test_recorded_identity_is_pinned_bound():
     check(code == 0, 'the recorded source exists in this repository')
     if code != 0:
         return
-    # The source commit must precede the commit that re-pinned it, with no archive change between.
     code, pin = _git('log', '-1', '--format=%H', '-S# source = ' + source, '--',
                      'release/bundle-digest.txt')
     check(code == 0 and bool(pin.strip()), 'the source line is recorded by a commit')
-    if not pin.strip():
-        return
-    code, between = _git('diff', '--name-only', pin.strip(), source, '--', *_archive_inputs())
-    check(code == 0 and not between.strip(),
-          'the recorded source is downstream of its pin without archive changes: '
-          + ','.join((between or '').split()))
+    ancestors = _git('merge-base', '--is-ancestor', source, 'HEAD')[0] == 0
+    check(ancestors, 'the recorded source is an ancestor of HEAD')
     code, after = _git('log', source + '..HEAD', '--format=%H', '--', *_archive_inputs())
     check(code == 0 and not after.strip(),
           'no archive input changed after the recorded source: ' + ','.join((after or '').split()))
