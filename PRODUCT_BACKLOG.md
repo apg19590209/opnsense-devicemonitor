@@ -15,14 +15,17 @@ or approved for future development.
 
 ## Open backlog
 
-### Infrastructure Services compact visual follow-up: **`OPEN / IMPLEMENTED; BROWSER PENDING`**
+### Infrastructure Services visual follow-up: **`OPEN / SOURCE COMPLETE; PACKAGING + BROWSER PENDING`**
 
-**Description:** Correct two confirmed compact-layout defects:
+**Description:** Complete the confirmed visual follow-up:
 
-1. The **Show archived** checkbox touches its label.
-2. At 200% zoom in a normal Firefox viewport, service-row content passes above
-   and behind the summary/toolbar/tab group, which occupies most of the
-   viewport.
+1. The **Show archived** checkbox is detached from its associated label by
+   roughly 90 px in the latest rendered screenshot.
+2. The original 200% zoom/scroll overlap is observed corrected in the latest
+   screenshot: the local summary/filter/tab stack scrolls away and service
+   content/actions remain visible. Full visual acceptance remains pending.
+3. Infrastructure Services and Device Activity use `dd.mm.YYYY - HH:mm:ss T`
+   instead of the requested common `YYYY-MM-DD HH:mm:ss` display format.
 
 The checkbox correction must use an explicit `id`/`for` association, an 8 px
 gap and vertical centring. The sticky-control correction must let summary,
@@ -30,14 +33,16 @@ toolbar and tabs scroll normally at narrow effective widths or high zoom while
 retaining useful desktop sticky behaviour. Every service field and action must
 remain reachable by page scrolling and keyboard navigation.
 
-**Confirmed evidence:** operator review on `.23` reports both visual defects.
-The zoom/scroll result is normal Firefox rendering, not screenshot-stitching
-uncertainty. The current markup nests the checkbox inside `.checkbox-inline`.
-Inherited OPNsense theme rules set `.checkbox-inline input[type=checkbox]` to
-`position: absolute` with `margin-left: -20px`, set `.checkbox-inline` to
-`padding-left: 20px`, and set general checkbox margins to `4px 0 0`. The local
-toolbar also applies 8 px gaps between its flex items, but no reliable gap
-inside this label.
+**Confirmed evidence:** operator review on `.23` reports the remaining checkbox
+spacing and the partial scroll result. The latest 200% Firefox screenshot is
+normal rendered output, not screenshot-stitching uncertainty. The checkbox now
+uses the intended explicit `id`/`for` relationship and local inline flex, but
+the earlier rule `.infrastructure-toolbar input { width: 230px; }` applies to
+all descendants, including this checkbox. The checkbox is `flex: 0 0 auto`, so
+it reserves a 230 px flex item while painting only the native control at its
+leading edge. The 8 px flex gap therefore begins after the invisible reserved
+remainder. Local margins and padding are already reset; the remaining excess is
+the inherited view-local width.
 
 Source inspection finds that `.infrastructure-sticky-controls` is
 `position: sticky; z-index: 20`, with a runtime-calculated top and an opaque
@@ -57,6 +62,13 @@ values, complete shared-IP inventory details, keyboard Details operation and
 non-activating Archive/Restore label inspection. They remain pending checks,
 not confirmed defects unless the operator reports them as such.
 
+**Timestamp typography correction:** Use one shared display-only formatter with
+`Y-m-d H:i:s T` for proven UTC values after conversion to the OPNsense-configured
+timezone. The event-date abbreviation remains appended. Unknown provenance
+returns the recorded display value unchanged, performs no conversion, and keeps
+the **Timezone unknown** indication. Malformed values remain verbatim. Database
+fields and existing raw API transport fields do not change.
+
 **Benefit:** Improve legibility and pointer targeting while preserving the
 existing native control and filter semantics.
 
@@ -64,7 +76,9 @@ existing native control and filter semantics.
 `7feaabe39c20a1095304a20bf72de98debcb376864e24a9e2335fdd84253560a`
 from source `4c4bb12` and accepted on `.23` on 20 November 2026. Browser
 acceptance remains pending. The prior accepted candidate and rollback evidence
-remain preserved.
+remain preserved. Checkbox spacing and timestamp typography source corrections
+are complete locally but are not part of the installed candidate or packaged
+for installation yet.
 
 ### Deployment-entry-point release safeguards: **`CLOSED`**
 

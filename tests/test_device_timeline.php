@@ -11,6 +11,9 @@ function check($condition, $message)
 $modelPath = getenv('DM_MODEL_PATH');
 $defaultsPath = getenv('DM_DEFAULTS_PATH');
 
+require_once __DIR__ .
+    '/../src/opnsense/scripts/OPNsense/DeviceMonitor/PluginTimestamps.php';
+
 check(
     $modelPath && is_file($modelPath),
     'DM_MODEL_PATH missing or invalid'
@@ -391,7 +394,7 @@ check(
     $activityEvent['timestamp_domain'] === 'utc' &&
     $activityEvent['occurred_at_stored'] === '2026-09-12 09:00:00' &&
     $activityEvent['occurred_at_display'] ===
-        '12.09.2026 - 19:00:00 AEST' &&
+        '2026-09-12 19:00:00 AEST' &&
     $activityEvent['timezone'] === 'Australia/Sydney',
     'activity timestamp provenance or configured zone missing'
 );
@@ -399,7 +402,7 @@ check(
 check(
     $discoveryEvent['timestamp_domain'] === 'utc' &&
     $discoveryEvent['occurred_at_display'] ===
-        '12.09.2026 - 18:30:00 AEST' &&
+        '2026-09-12 18:30:00 AEST' &&
     $discoveryEvent['timezone'] === 'Australia/Sydney',
     'marked service timestamp was not converted'
 );
@@ -411,14 +414,14 @@ check(
     $newYorkTimeline[4]['occurred_at_display'] !==
         $activityEvent['occurred_at_display'] &&
     $newYorkTimeline[4]['occurred_at_display'] ===
-        '12.09.2026 - 05:00:00 EDT' &&
+        '2026-09-12 05:00:00 EDT' &&
     $newYorkTimeline[4]['timezone'] === 'America/New_York',
     'activity timestamp did not follow the configured display zone'
 );
 
 check(
     $newYorkTimeline[7]['occurred_at_display'] ===
-        '12.09.2026 - 04:30:00 EDT' &&
+        '2026-09-12 04:30:00 EDT' &&
     $newYorkTimeline[7]['timestamp_domain'] === 'utc',
     'service timestamp did not follow the configured display zone'
 );
@@ -451,6 +454,67 @@ check(
         50
     ) === [],
     'Timeline leaked rows from another MAC'
+);
+
+$unknownEvent = $timeline[5];
+check(
+    $unknownEvent['timestamp_domain'] === 'unknown' &&
+    $unknownEvent['occurred_at_display'] ===
+        $unknownEvent['occurred_at_stored'] &&
+    $unknownEvent['timezone'] === '',
+    'unknown Device Activity timestamp was converted or relabelled'
+);
+
+$malformedDb = new SQLite3($dbFile);
+check(
+    $malformedDb->exec(
+        "CREATE TABLE IF NOT EXISTS device_activity_events (" .
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, " .
+        "mac TEXT NOT NULL, lifecycle_id INTEGER DEFAULT NULL, " .
+        "event_type TEXT NOT NULL, " .
+        "occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, " .
+        "old_value TEXT DEFAULT NULL, new_value TEXT DEFAULT NULL, " .
+        "details TEXT DEFAULT NULL)"
+    ),
+    'Unable to create malformed Device Activity fixture table: ' .
+        $malformedDb->lastErrorMsg()
+);
+$malformedInserted = $malformedDb->exec(
+        "INSERT INTO device_activity_events " .
+        "(mac, lifecycle_id, event_type, occurred_at, " .
+        "old_value, new_value, details) VALUES (" .
+        "'aa:bb:cc:dd:ee:fe', 1, 'SERVICE_CHANGED', " .
+        "' not-a-timestamp ', 'old', 'new', NULL)"
+    );
+check(
+    $malformedInserted,
+    'Unable to seed malformed Device Activity timestamp: ' .
+        $malformedDb->lastErrorMsg()
+);
+$malformedDb->close();
+$malformedTimeline = $model->getDeviceTimeline('aa:bb:cc:dd:ee:fe', 50);
+check(
+    count($malformedTimeline) === 1,
+    'Malformed Device Activity fixture row missing'
+);
+check(
+    $malformedTimeline[0]['timestamp_domain'] === 'unknown',
+    'Malformed Device Activity timestamp was labelled UTC'
+);
+check(
+    $malformedTimeline[0]['occurred_at_display'] ===
+        ' not-a-timestamp ',
+    'Malformed Device Activity display value was not preserved verbatim: ' .
+        json_encode($malformedTimeline[0]['occurred_at_display'])
+);
+check(
+    $malformedTimeline[0]['occurred_at_stored'] ===
+        'not-a-timestamp',
+    'Existing Device Activity compatibility field changed unexpectedly'
+);
+check(
+    $malformedTimeline[0]['timezone'] === '',
+    'Malformed Device Activity timestamp acquired a timezone'
 );
 
 @unlink($dbFile);

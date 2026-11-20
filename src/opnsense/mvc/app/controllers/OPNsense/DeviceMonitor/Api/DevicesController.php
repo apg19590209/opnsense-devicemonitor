@@ -5,6 +5,9 @@ namespace OPNsense\DeviceMonitor\Api;
 use OPNsense\Base\ApiControllerBase;
 use OPNsense\DeviceMonitor\DeviceMonitor;
 
+require_once __DIR__ .
+    '/../../../../../../scripts/OPNsense/DeviceMonitor/PluginTimestamps.php';
+
 /**
  * DevicesController
  * 
@@ -1775,20 +1778,9 @@ class DevicesController extends ApiControllerBase
     /** Return whether a value is the canonical stored UTC timestamp form. */
     private function isStoredUtcTimestamp($value)
     {
-        $value = trim((string)$value);
-
-        if ($value === '') {
-            return false;
-        }
-
-        $parsed = \DateTimeImmutable::createFromFormat(
-            '!Y-m-d H:i:s',
-            $value,
-            new \DateTimeZone('UTC')
+        return \OPNsense\DeviceMonitor\PluginTimestamps::isStoredUtcTimestamp(
+            $value
         );
-
-        return $parsed !== false &&
-            $parsed->format('Y-m-d H:i:s') === $value;
     }
 
     /**
@@ -1796,27 +1788,10 @@ class DevicesController extends ApiControllerBase
      */
     private function formatConfiguredZone($value)
     {
-        $value = trim((string)$value);
-        $zone = date_default_timezone_get();
-
-        if (
-            !$this->isStoredUtcTimestamp($value) ||
-            $zone === ''
-        ) {
-            return $value;
-        }
-
-        try {
-            return \DateTimeImmutable::createFromFormat(
-                '!Y-m-d H:i:s',
-                $value,
-                new \DateTimeZone('UTC')
-            )
-                ->setTimezone(new \DateTimeZone($zone))
-                ->format('d.m.Y - H:i:s T');
-        } catch (\Throwable $e) {
-            return $value;
-        }
+        return \OPNsense\DeviceMonitor\PluginTimestamps::formatForDisplay(
+            $value,
+            date_default_timezone_get()
+        );
     }
 
     /**
@@ -1824,7 +1799,7 @@ class DevicesController extends ApiControllerBase
      */
     private function serviceTimestampPresentation($value, $marker)
     {
-        $value = trim((string)$value);
+        $value = (string)$value;
         $proven =
             (string)$marker === '1' &&
             $this->isStoredUtcTimestamp($value);

@@ -86,6 +86,8 @@ if (
     !text.includes('gap: 8px;') ||
     !text.includes('align-items: center;') ||
     !text.includes('flex: 0 0 auto;') ||
+    !text.includes('width: auto;') ||
+    !text.includes('min-width: 0;') ||
     !text.includes('margin: 0;')
 ) {
     throw new Error('Show archived control lacks scoped alignment and spacing');
@@ -221,16 +223,16 @@ check(
         first_detected_display: '2026-11-19 22:00:00',
         first_detected_timestamp_domain: 'unknown',
         last_verified: '2026-11-19 23:10:02',
-        last_verified_display: '20.11.2026 - 10:10:02 AEDT',
+        last_verified_display: '2026-11-20 10:10:02 AEDT',
         last_verified_timestamp_domain: 'utc',
         last_checked: '2026-11-20 00:10:02',
-        last_checked_display: '20.11.2026 - 11:10:02 AEDT',
+        last_checked_display: '2026-11-20 11:10:02 AEDT',
         last_checked_timestamp_domain: 'utc',
         timestamp_timezone: 'Australia/Sydney'
     })),
     JSON.stringify([
-        ['Last successful probe', '20.11.2026 - 10:10:02 AEDT', false],
-        ['Last probe attempt', '20.11.2026 - 11:10:02 AEDT', false]
+        ['Last successful probe', '2026-11-20 10:10:02 AEDT', false],
+        ['Last probe attempt', '2026-11-20 11:10:02 AEDT', false]
     ])
 );
 check(

@@ -25,8 +25,12 @@ REC = ROOT / 'src/opnsense/scripts/OPNsense/DeviceMonitor/EmailLog.php'
 SYD = ZoneInfo('Australia/Sydney')
 
 
+def php_raw(code):
+    return subprocess.run(['php', '-r', code], capture_output=True, text=True).stdout
+
+
 def php(code):
-    return subprocess.run(['php', '-r', code], capture_output=True, text=True).stdout.strip()
+    return php_raw(code).strip()
 
 
 def test_recorder_stores_utc():
@@ -69,6 +73,35 @@ def test_fallback_uses_configured_zone_with_dst(tmp=None):
     finally:
         import shutil
         shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_shared_display_formatter():
+    cases = [
+        ('2026-11-20 00:10:02', 'Australia/Sydney', '2026-11-20 11:10:02 AEDT'),
+        ('2026-09-12 09:00:00', 'Australia/Sydney', '2026-09-12 19:00:00 AEST'),
+        ('2026-11-20 00:10:02', 'America/New_York', '2026-11-19 19:10:02 EST'),
+    ]
+    for value, zone, expected in cases:
+        code = (
+            "require '%s'; echo OPNsense\\DeviceMonitor\\PluginTimestamps::"
+            "formatForDisplay(%s, %s);"
+            % (TS, json.dumps(value), json.dumps(zone))
+        )
+        assert php(code) == expected, (value, zone, expected)
+
+    for value in ('not-a-timestamp', '2026-11-20T00:10:02Z', ' 2026-11-20 00:10:02'):
+        valid = php(
+            "require '%s'; echo OPNsense\\DeviceMonitor\\PluginTimestamps::"
+            "isStoredUtcTimestamp(%s) ? '1' : '0';"
+            % (TS, json.dumps(value))
+        )
+        displayed = php_raw(
+            "require '%s'; echo OPNsense\\DeviceMonitor\\PluginTimestamps::"
+            "formatForDisplay(%s, 'Australia/Sydney');"
+            % (TS, json.dumps(value))
+        )
+        assert valid == '0', f'invalid value was treated as proven UTC: {value!r}'
+        assert displayed == value, f'invalid value was normalised: {value!r} -> {displayed!r}'
 
 
 def test_browser_formatter_midnight_and_dst():
@@ -165,6 +198,7 @@ def test_historical_bodies_untouched():
 def main():
     test_recorder_stores_utc()
     test_fallback_uses_configured_zone_with_dst()
+    test_shared_display_formatter()
     test_browser_formatter_midnight_and_dst()
     test_views_render_converted_values()
     test_csv_keeps_utc_with_explicit_header()

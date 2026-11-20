@@ -11,6 +11,9 @@ function check($condition, $message)
 $modelSourcePath = getenv('DM_MODEL_PATH');
 $defaultsSourcePath = getenv('DM_DEFAULTS_PATH');
 
+require_once __DIR__ .
+    '/../src/opnsense/scripts/OPNsense/DeviceMonitor/PluginTimestamps.php';
+
 check(is_string($modelSourcePath) && is_file($modelSourcePath), 'DM_MODEL_PATH is required');
 check(is_string($defaultsSourcePath) && is_file($defaultsSourcePath), 'DM_DEFAULTS_PATH is required');
 

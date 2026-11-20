@@ -3,18 +3,64 @@
  * Plugin-wide timestamp convention for Device Monitor.
  *
  * Timestamps are stored and transported as naive UTC text in
- * "YYYY-MM-DD HH:MM:SS" form. Presentation converts them once, in the
- * browser, using its own timezone rules and abbreviation (the same
- * convention as the Change Summary's formatBrowserLocalTime()), falling back
- * to Python's zoneinfo (the engine behind scan_network.utc_timestamp) when the
- * browser cannot format the value. No offset or abbreviation is hardcoded
- * here, and historical text is never rewritten.
+ * "YYYY-MM-DD HH:MM:SS" form. Infrastructure Services and Device Activity use
+ * the shared server-side display formatter below. Email Log keeps its
+ * browser-local formatter and toConfiguredZone() fallback. No offset or
+ * abbreviation is hardcoded here, and historical text is never rewritten.
  */
 namespace OPNsense\DeviceMonitor;
 
 final class PluginTimestamps
 {
     const FORMAT = 'Y-m-d H:i:s';
+    const DISPLAY_FORMAT = 'Y-m-d H:i:s T';
+
+    /** Validate the exact stored UTC text form without normalising it. */
+    public static function isStoredUtcTimestamp($value)
+    {
+        $value = (string)$value;
+        if ($value === '') {
+            return false;
+        }
+        $dt = \DateTimeImmutable::createFromFormat(
+            '!' . self::FORMAT,
+            $value,
+            new \DateTimeZone('UTC')
+        );
+
+        return $dt !== false && $dt->format(self::FORMAT) === $value;
+    }
+
+    /**
+     * Format a proven UTC value once for display in the configured zone.
+     * Invalid values are returned verbatim so callers cannot normalise
+     * malformed or ambiguous historical text by accident.
+     */
+    public static function formatForDisplay($value, $zone = null)
+    {
+        $value = (string)$value;
+        if (!self::isStoredUtcTimestamp($value)) {
+            return $value;
+        }
+        $zone = $zone === null
+            ? date_default_timezone_get()
+            : trim((string)$zone);
+        if ($zone === '' || !in_array($zone, \DateTimeZone::listIdentifiers(), true)) {
+            return $value;
+        }
+        try {
+            $dt = \DateTimeImmutable::createFromFormat(
+                '!' . self::FORMAT,
+                $value,
+                new \DateTimeZone('UTC')
+            );
+            return $dt
+                ->setTimezone(new \DateTimeZone($zone))
+                ->format(self::DISPLAY_FORMAT);
+        } catch (\Throwable $e) {
+            return $value;
+        }
+    }
 
     /** Validate and normalise an API-supplied timestamp to the stored form. */
     public static function clean($value)

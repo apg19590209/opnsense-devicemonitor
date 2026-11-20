@@ -2,6 +2,11 @@
 
 namespace OPNsense\DeviceMonitor;
 
+if (!class_exists(PluginTimestamps::class, false)) {
+    require_once __DIR__ .
+        '/../../../../../scripts/OPNsense/DeviceMonitor/PluginTimestamps.php';
+}
+
 class DeviceMonitor
 {
     // ================================================================
@@ -36,20 +41,7 @@ class DeviceMonitor
 
     private static function isStoredUtcTimestamp($value)
     {
-        $value = trim((string)$value);
-
-        if ($value === '') {
-            return false;
-        }
-
-        $parsed = \DateTimeImmutable::createFromFormat(
-            '!Y-m-d H:i:s',
-            $value,
-            new \DateTimeZone('UTC')
-        );
-
-        return $parsed !== false &&
-            $parsed->format('Y-m-d H:i:s') === $value;
+        return PluginTimestamps::isStoredUtcTimestamp($value);
     }
 
     private static function formatUtcForDisplay($value)
@@ -1025,7 +1017,8 @@ class DeviceMonitor
             array $data = [],
             $timestampDomain = 'unknown'
         ) use (&$events) {
-            $timestamp = trim((string)$timestamp);
+            $rawTimestamp = (string)$timestamp;
+            $timestamp = trim($rawTimestamp);
 
             if ($timestamp === '') {
                 return;
@@ -1035,14 +1028,17 @@ class DeviceMonitor
 
             if (
                 $timestampDomain === 'utc' &&
-                !self::isStoredUtcTimestamp($timestamp)
+                !self::isStoredUtcTimestamp($rawTimestamp)
             ) {
                 $timestampDomain = 'unknown';
             }
 
             $timestampDisplay = $timestampDomain === 'utc'
-                ? self::formatUtcForDisplay($timestamp)
-                : $timestamp;
+                ? PluginTimestamps::formatForDisplay(
+                    $rawTimestamp,
+                    date_default_timezone_get()
+                )
+                : $rawTimestamp;
 
             $events[] = [
                 'source' => (string)$source,

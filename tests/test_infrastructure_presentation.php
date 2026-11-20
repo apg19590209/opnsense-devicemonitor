@@ -237,14 +237,14 @@ namespace {
             '2026-11-19 22:00:00' &&
         $rows[1]['last_verified_timestamp_domain'] === 'utc' &&
         $rows[1]['last_verified_display'] ===
-            '20.11.2026 - 10:10:02 AEDT' &&
+            '2026-11-20 10:10:02 AEDT' &&
         $rows[1]['last_checked_timestamp_domain'] === 'utc',
         'mixed service timestamp provenance was not preserved per field'
     );
     check_presentation(
         $rows[2]['first_detected_timestamp_domain'] === 'utc' &&
         $rows[2]['first_detected_display'] ===
-            '20.11.2026 - 09:00:00 AEDT' &&
+            '2026-11-20 09:00:00 AEDT' &&
         $rows[2]['timestamp_timezone'] === 'Australia/Sydney',
         'marked first-detection timestamp was not converted'
     );
@@ -316,7 +316,7 @@ namespace {
         $activityChange['timestamp_domain'] === 'utc' &&
         $activityChange['occurred_at_stored'] === '2026-11-20 00:10:02' &&
         $activityChange['occurred_at_display'] ===
-            '20.11.2026 - 11:10:02 AEDT' &&
+            '2026-11-20 11:10:02 AEDT' &&
         $activityChange['timezone'] === 'Australia/Sydney',
         'proven UTC activity timestamp was not converted with the configured zone'
     );
@@ -329,7 +329,7 @@ namespace {
     check_presentation(
         $markedDiscoveryChange['timestamp_domain'] === 'utc' &&
         $markedDiscoveryChange['occurred_at_display'] ===
-            '20.11.2026 - 09:00:00 AEDT' &&
+            '2026-11-20 09:00:00 AEDT' &&
         $markedDiscoveryChange['timezone'] === 'Australia/Sydney',
         'marked service discovery timestamp was not converted'
     );
@@ -355,13 +355,13 @@ namespace {
     }
     check_presentation(
         $newYorkActivity['occurred_at_display'] ===
-            '19.11.2026 - 19:10:02 EST' &&
+            '2026-11-19 19:10:02 EST' &&
         $newYorkActivity['timezone'] === 'America/New_York',
         'activity conversion did not use the configured display timezone'
     );
     check_presentation(
         $newYorkRows[1]['last_verified_display'] ===
-            '19.11.2026 - 18:10:02 EST' &&
+            '2026-11-19 18:10:02 EST' &&
         $newYorkRows[1]['timestamp_timezone'] === 'America/New_York',
         'service timestamp conversion did not use the configured zone'
     );

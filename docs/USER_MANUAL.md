@@ -303,9 +303,10 @@ Shows the device's activity history in a table with columns: **Event Time**, **A
 Activity labels include (among others): **Lifecycle started**, **Lifecycle archived**,
 **Lifecycle relinked**, **Friendly name changed**, **Note created**, **Note edited**,
 and identity changes (IP/hostname/source changes). Proven UTC event times are displayed
-in the OPNsense-configured timezone, with the timezone named beneath the value. Legacy
-values without reliable timezone provenance remain in their stored form and are labelled
-as ambiguous. **Read-only.**
+in the OPNsense-configured timezone as **YYYY-MM-DD HH:mm:ss**, followed by that event
+date's timezone abbreviation and with the timezone named beneath the value. Legacy values
+without reliable timezone provenance remain in their stored form and are labelled as
+ambiguous. **Read-only.**
 
 ---
 
@@ -478,9 +479,10 @@ answered the service probe. They are page-load lookups, not historical ownership
 evidence or a claim of continuous observation. Service-row timestamps are classified
 independently. New first-detection, last-successful-probe and last-attempt values are
 marked as UTC when written by the supported scanner. Each marked value is displayed in
-the OPNsense-configured timezone using that event date's daylight-saving rules. Unmarked
-legacy values and malformed values remain in their stored form and are labelled as
-having no recorded timezone provenance.
+the OPNsense-configured timezone using that event date's daylight-saving rules, in
+**YYYY-MM-DD HH:mm:ss** form followed by the timezone abbreviation. Unmarked legacy
+values and malformed values remain in their stored form and are labelled as having no
+recorded timezone provenance.
 
 Each service table has one timezone explanation above it. A compact **Timezone unknown**
 badge marks an individual stored value whose UTC provenance is unavailable. Values without

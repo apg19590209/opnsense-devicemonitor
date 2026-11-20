@@ -312,6 +312,8 @@
     position: static;
     float: none;
     flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
     margin: 0;
 }
 
