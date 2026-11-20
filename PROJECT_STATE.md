@@ -2,6 +2,19 @@
 
 ## Current state
 
+**v2.15.2 compact-layout candidate — FROZEN, NOT INSTALLED (20 November 2026).**
+The Infrastructure Services sticky/zoom and **Show archived** correction is committed as
+`0ec7d55`; its coherent v2.15.2 pins are `4c4bb12`, with identity record `98c818e`. Two
+independent clean-export builds produced the same 96-member archive from source
+`4c4bb12c1bc880ee372a8d2cf954fe583de0023c`: 12,687,324 bytes, SHA-256
+`7feaabe39c20a1095304a20bf72de98debcb376864e24a9e2335fdd84253560a`. Full
+preflight, manifest/input, reproducibility/determinism and all 13 supported
+predecessor-upgrade checks pass. The candidate is frozen at
+`/root/dm-backups/dm-v2.15.2-layout-candidate-20261120T122055Z`. `.23` remains on
+accepted candidate `6ff6ed45…`, and that candidate's rollback evidence is unchanged. Browser
+visual acceptance for the new candidate remains pending. Report:
+`.cline-reports/REPORT-20261120-232114-v2152-layout-candidate.md`.
+
 **v2.15.2 compact candidate — AUTOMATED `.23` ACCEPTANCE COMPLETE (20 November 2026).**
 Candidate source `c6ec80c`, 12,686,300 bytes, 96 members, SHA-256
 `6ff6ed45c435a21c83ec12edec9f93b541d2dabcabb5cfedbf9d696525e48749`, is installed

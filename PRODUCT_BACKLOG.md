@@ -15,7 +15,7 @@ or approved for future development.
 
 ## Open backlog
 
-### Infrastructure Services compact visual follow-up: **`OPEN / PLANNED`**
+### Infrastructure Services compact visual follow-up: **`OPEN / IMPLEMENTED; BROWSER PENDING`**
 
 **Description:** Correct two confirmed compact-layout defects:
 
@@ -60,8 +60,10 @@ not confirmed defects unless the operator reports them as such.
 **Benefit:** Improve legibility and pointer targeting while preserving the
 existing native control and filter semantics.
 
-**Status:** Planned 20 November 2026. No implementation, package or host change
-has been made for either correction.
+**Status:** Implemented and packaged as frozen candidate
+`7feaabe39c20a1095304a20bf72de98debcb376864e24a9e2335fdd84253560a`
+from source `4c4bb12` on 20 November 2026. Browser acceptance remains pending.
+The candidate is not installed; `.23` remains on the prior accepted candidate.
 
 ### Deployment-entry-point release safeguards: **`CLOSED`**
 
