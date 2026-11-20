@@ -158,9 +158,9 @@
 #       (compact-layout accessibility candidate from source 4c4bb12; installed and accepted on
 #        .23, superseded by the timestamp typography and checkbox spacing cut)
 version 2.15.2
-bytes 12688348
-sha256 59e7bc98a36679627d2410b074ad461f0f7e162ab0f5a2a1a0ce1b28921e67f4
-# source = e9fd166db73a3ff4d056d985097d66161190a652
+bytes 12697564
+sha256 c97039156375e470895ad4d58efb76d30c038e5522489aef28db109fbea81e30
+# source = e5b6d4e006f88dce5adf5e7cb2f70b270b615275
 #   Measured from the committed source above under the declared build conditions:
 #   TZ=UTC0, canonical ustar with fixed ownership and mtime, deterministic stored-block gzip.
 #   96 members; the builder is not an archive member because it is a pinned release tool, not
