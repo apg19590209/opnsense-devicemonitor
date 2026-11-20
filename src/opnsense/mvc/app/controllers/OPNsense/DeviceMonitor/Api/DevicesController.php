@@ -1665,6 +1665,111 @@ class DevicesController extends ApiControllerBase
     }
 
     /**
+     * Convert one current inventory row to a presentation-safe match.
+     */
+    private function inventoryMatchEntry($device)
+    {
+        return [
+            'mac' => strtolower(trim((string)($device['mac'] ?? ''))),
+            'ip' => trim((string)($device['ip'] ?? '')),
+            'hostname' => trim((string)($device['hostname'] ?? '')),
+            'custom_hostname' => trim(
+                (string)($device['custom_hostname'] ?? '')
+            ),
+            'vendor' => trim((string)($device['vendor'] ?? '')),
+            'vlan' => trim((string)($device['vlan'] ?? ''))
+        ];
+    }
+
+    /**
+     * Build deterministic inventory lookup collections for one stored identity.
+     */
+    private function inventoryMatches($mac, $ip, $devicesByMac, $devicesByIp)
+    {
+        $build = function ($devices) {
+            $matches = array_map(
+                function ($device) {
+                    return $this->inventoryMatchEntry($device);
+                },
+                array_values($devices ?? [])
+            );
+
+            usort(
+                $matches,
+                static function ($a, $b) {
+                    $aVlan = strtolower((string)($a['vlan'] ?? ''));
+                    $bVlan = strtolower((string)($b['vlan'] ?? ''));
+
+                    if (($aVlan === '') !== ($bVlan === '')) {
+                        return $aVlan === '' ? 1 : -1;
+                    }
+
+                    $compare = strcmp($aVlan, $bVlan);
+                    if ($compare !== 0) {
+                        return $compare;
+                    }
+
+                    $compare = strcmp(
+                        strtolower((string)($a['mac'] ?? '')),
+                        strtolower((string)($b['mac'] ?? ''))
+                    );
+                    if ($compare !== 0) {
+                        return $compare;
+                    }
+
+                    $aName = ($a['custom_hostname'] ?? '') !== ''
+                        ? $a['custom_hostname']
+                        : ($a['hostname'] ?? '');
+                    $bName = ($b['custom_hostname'] ?? '') !== ''
+                        ? $b['custom_hostname']
+                        : ($b['hostname'] ?? '');
+
+                    return strcmp(
+                        strtolower((string)$aName),
+                        strtolower((string)$bName)
+                    );
+                }
+            );
+
+            return $matches;
+        };
+
+        return [
+            'by_mac' => $build($devicesByMac[$mac] ?? []),
+            'by_ip' => $build($devicesByIp[$ip] ?? [])
+        ];
+    }
+
+    /**
+     * Classify service evidence without implying endpoint ownership.
+     */
+    private function serviceEvidenceKind($confidence, $detectionMethod)
+    {
+        $confidence = strtolower(trim((string)$confidence));
+        $method = strtolower(trim((string)$detectionMethod));
+
+        if (
+            $confidence === 'authoritative' ||
+            strpos($method, 'authoritative') !== false
+        ) {
+            return 'authoritative';
+        }
+
+        if ($confidence === 'verified') {
+            return 'probe';
+        }
+
+        if (
+            $confidence === 'discovered' ||
+            $method === 'nmap_service'
+        ) {
+            return 'discovery';
+        }
+
+        return 'unknown';
+    }
+
+    /**
      * Return discovered infrastructure services.
      * GET /api/devicemonitor/devices/services
      */
@@ -1707,6 +1812,8 @@ class DevicesController extends ApiControllerBase
 
             $deviceByMac = [];
             $deviceByIp = [];
+            $devicesByMac = [];
+            $devicesByIp = [];
 
             $deviceQuery = $db->query(
                 'SELECT mac, ip, hostname, custom_hostname, vendor, vlan ' .
@@ -1727,6 +1834,14 @@ class DevicesController extends ApiControllerBase
                 if ($ip !== '' && !isset($deviceByIp[$ip])) {
                     $deviceByIp[$ip] = $device;
                 }
+
+                if ($mac !== '') {
+                    $devicesByMac[$mac][] = $device;
+                }
+
+                if ($ip !== '') {
+                    $devicesByIp[$ip][] = $device;
+                }
             }
 
             $archiveExists = (int)$db->querySingle(
@@ -1737,6 +1852,7 @@ class DevicesController extends ApiControllerBase
                 'SELECT s.id, s.mac, s.ip, s.interface, s.service_type, s.port, ' .
                 's.protocol, s.status, s.detection_method, s.confidence, ' .
                 's.product, s.version, s.first_detected, s.last_verified, ' .
+                's.last_checked, ' .
                 ($archiveExists
                     ? "CASE WHEN a.archived_at >= (SELECT MAX(v.last_verified) " .
                       "FROM device_services v WHERE v.ip=s.ip AND " .
@@ -1780,6 +1896,16 @@ class DevicesController extends ApiControllerBase
                 $row['custom_hostname'] = '';
                 $row['vendor'] = '';
                 $row['vlan'] = '';
+                $row['inventory_matches'] = $this->inventoryMatches(
+                    $mac,
+                    $ip,
+                    $devicesByMac,
+                    $devicesByIp
+                );
+                $row['evidence_kind'] = $this->serviceEvidenceKind(
+                    $row['confidence'] ?? '',
+                    $row['detection_method'] ?? ''
+                );
 
                 if ($device !== null) {
                     $custom = trim(
@@ -1842,7 +1968,8 @@ class DevicesController extends ApiControllerBase
                     $trustedServiceByKey[$serviceKey] = [
                         'confidence' => $confidence,
                         'product' => (string)($row['product'] ?? ''),
-                        'version' => (string)($row['version'] ?? '')
+                        'version' => (string)($row['version'] ?? ''),
+                        'evidence_kind' => $row['evidence_kind']
                     ];
 
                     $firstDetected = trim(
@@ -1872,6 +1999,7 @@ class DevicesController extends ApiControllerBase
                             'interface' => $interface,
                             'detection_method' => $method,
                             'confidence' => $confidence,
+                            'evidence_kind' => $row['evidence_kind'],
                             'product' => (string)($row['product'] ?? ''),
                             'version' => (string)($row['version'] ?? ''),
                             'old_value' => '',
@@ -1880,7 +2008,8 @@ class DevicesController extends ApiControllerBase
                             'custom_hostname' =>
                                 (string)($row['custom_hostname'] ?? ''),
                             'vendor' => (string)($row['vendor'] ?? ''),
-                            'vlan' => (string)($row['vlan'] ?? '')
+                            'vlan' => (string)($row['vlan'] ?? ''),
+                            'inventory_matches' => $row['inventory_matches']
                         ];
 
                         if (
@@ -2011,6 +2140,8 @@ class DevicesController extends ApiControllerBase
                         'detection_method' => $eventMethod,
                         'confidence' =>
                             (string)($trusted['confidence'] ?? ''),
+                        'evidence_kind' =>
+                            (string)($trusted['evidence_kind'] ?? 'unknown'),
                         'product' =>
                             (string)($trusted['product'] ?? ''),
                         'version' =>
@@ -2032,7 +2163,13 @@ class DevicesController extends ApiControllerBase
                             : '',
                         'vlan' => $eventDevice !== null
                             ? (string)($eventDevice['vlan'] ?? '')
-                            : ''
+                            : '',
+                        'inventory_matches' => $this->inventoryMatches(
+                            $eventMac,
+                            $eventIp,
+                            $devicesByMac,
+                            $devicesByIp
+                        )
                     ];
 
                     if ($change['occurred_at'] === '') {

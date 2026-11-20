@@ -2094,3 +2094,112 @@ msgstr "View message"
 #: settings.volt
 msgid "Peer API key"
 msgstr "Peer API key"
+
+#: infrastructureservices.volt
+msgid "Archive"
+msgstr "Archivovat"
+
+msgid "Authoritative"
+msgstr "Autoritativní"
+
+msgid "Authoritative/configuration evidence"
+msgstr "Autoritativní/konfigurační důkaz"
+
+msgid "By endpoint IP"
+msgstr "Podle IP koncového bodu"
+
+msgid "By stored MAC"
+msgstr "Podle uložené MAC"
+
+msgid "Discovered"
+msgstr "Zjištěno"
+
+msgid "Discovery evidence"
+msgstr "Důkaz zjištění"
+
+msgid "Endpoint not recorded"
+msgstr "Koncový bod není zaznamenán"
+
+msgid "Evidence classification not available"
+msgstr "Klasifikace důkazů není k dispozici"
+
+msgid "Infrastructure services"
+msgstr "Infrastrukturní služby"
+
+msgid "Interface not recorded"
+msgstr "Rozhraní není zaznamenáno"
+
+msgid "Inventory lookups in this response"
+msgstr "Vyhledávání v inventáři v této odpovědi"
+
+msgid "Inventory lookups reflect rows read for this page response. They do not establish endpoint ownership or continuous observation."
+msgstr "Vyhledávání v inventáři odráží řádky načtené pro tuto odpověď stránky. Neprokazuje vlastnictví koncového bodu ani nepřetržité pozorování."
+
+msgid "Last attempted check"
+msgstr "Poslední pokus o kontrolu"
+
+msgid "Last evidence recorded"
+msgstr "Poslední zaznamenaný důkaz"
+
+msgid "Last evidence refresh"
+msgstr "Poslední obnovení důkazů"
+
+msgid "Last successful response"
+msgstr "Poslední úspěšná odpověď"
+
+msgid "No current inventory match"
+msgstr "V aktuálním inventáři není shoda"
+
+msgid "No stored MAC attribution"
+msgstr "Žádné uložené přiřazení MAC"
+
+msgid "Not recorded"
+msgstr "Nezaznamenáno"
+
+msgid "Observation times"
+msgstr "Doby pozorování"
+
+msgid "Open device activity"
+msgstr "Otevřít aktivitu zařízení"
+
+msgid "Probe-verified service"
+msgstr "Služba ověřená sondou"
+
+msgid "Recent service changes"
+msgstr "Nedávné změny služeb"
+
+msgid "Recorded status"
+msgstr "Zaznamenaný stav"
+
+msgid "Recorded status not available"
+msgstr "Zaznamenaný stav není k dispozici"
+
+msgid "Restore"
+msgstr "Obnovit"
+
+msgid "Service changed"
+msgstr "Služba změněna"
+
+msgid "Service type not recorded"
+msgstr "Typ služby není zaznamenán"
+
+msgid "Service-evidence confidence"
+msgstr "Důvěra v důkaz služby"
+
+msgid "Stored MAC / Inventory"
+msgstr "Uložená MAC / inventář"
+
+msgid "Stored MAC attribution"
+msgstr "Uložené přiřazení MAC"
+
+msgid "Used for alert correlation; not proof of endpoint ownership."
+msgstr "Používá se pro korelaci upozornění; neprokazuje vlastnictví koncového bodu."
+
+msgid "Verified"
+msgstr "Ověřeno"
+
+msgid "by endpoint IP"
+msgstr "podle IP koncového bodu"
+
+msgid "by stored MAC"
+msgstr "podle uložené MAC"

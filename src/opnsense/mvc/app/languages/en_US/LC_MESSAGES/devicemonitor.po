@@ -2094,3 +2094,112 @@ msgstr "View message"
 #: settings.volt
 msgid "Peer API key"
 msgstr "Peer API key"
+
+#: infrastructureservices.volt
+msgid "Archive"
+msgstr "Archive"
+
+msgid "Authoritative"
+msgstr "Authoritative"
+
+msgid "Authoritative/configuration evidence"
+msgstr "Authoritative/configuration evidence"
+
+msgid "By endpoint IP"
+msgstr "By endpoint IP"
+
+msgid "By stored MAC"
+msgstr "By stored MAC"
+
+msgid "Discovered"
+msgstr "Discovered"
+
+msgid "Discovery evidence"
+msgstr "Discovery evidence"
+
+msgid "Endpoint not recorded"
+msgstr "Endpoint not recorded"
+
+msgid "Evidence classification not available"
+msgstr "Evidence classification not available"
+
+msgid "Infrastructure services"
+msgstr "Infrastructure services"
+
+msgid "Interface not recorded"
+msgstr "Interface not recorded"
+
+msgid "Inventory lookups in this response"
+msgstr "Inventory lookups in this response"
+
+msgid "Inventory lookups reflect rows read for this page response. They do not establish endpoint ownership or continuous observation."
+msgstr "Inventory lookups reflect rows read for this page response. They do not establish endpoint ownership or continuous observation."
+
+msgid "Last attempted check"
+msgstr "Last attempted check"
+
+msgid "Last evidence recorded"
+msgstr "Last evidence recorded"
+
+msgid "Last evidence refresh"
+msgstr "Last evidence refresh"
+
+msgid "Last successful response"
+msgstr "Last successful response"
+
+msgid "No current inventory match"
+msgstr "No current inventory match"
+
+msgid "No stored MAC attribution"
+msgstr "No stored MAC attribution"
+
+msgid "Not recorded"
+msgstr "Not recorded"
+
+msgid "Observation times"
+msgstr "Observation times"
+
+msgid "Open device activity"
+msgstr "Open device activity"
+
+msgid "Probe-verified service"
+msgstr "Probe-verified service"
+
+msgid "Recent service changes"
+msgstr "Recent service changes"
+
+msgid "Recorded status"
+msgstr "Recorded status"
+
+msgid "Recorded status not available"
+msgstr "Recorded status not available"
+
+msgid "Restore"
+msgstr "Restore"
+
+msgid "Service changed"
+msgstr "Service changed"
+
+msgid "Service type not recorded"
+msgstr "Service type not recorded"
+
+msgid "Service-evidence confidence"
+msgstr "Service-evidence confidence"
+
+msgid "Stored MAC / Inventory"
+msgstr "Stored MAC / Inventory"
+
+msgid "Stored MAC attribution"
+msgstr "Stored MAC attribution"
+
+msgid "Used for alert correlation; not proof of endpoint ownership."
+msgstr "Used for alert correlation; not proof of endpoint ownership."
+
+msgid "Verified"
+msgstr "Verified"
+
+msgid "by endpoint IP"
+msgstr "by endpoint IP"
+
+msgid "by stored MAC"
+msgstr "by stored MAC"

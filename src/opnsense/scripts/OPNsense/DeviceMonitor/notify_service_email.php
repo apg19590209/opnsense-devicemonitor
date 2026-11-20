@@ -1,7 +1,5 @@
 <?php
 
-require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php');
-
 function serviceAlertHtml($value)
 {
     return htmlspecialchars(
@@ -91,9 +89,6 @@ foreach ($events as $index => $event) {
     $protocol        = serviceAlertValue($event['protocol'] ?? '');
     $interface       = serviceAlertValue($event['interface'] ?? '');
     $detectionMethod = serviceAlertValue($event['detection_method'] ?? '');
-    $confidence      = serviceAlertValue($event['confidence'] ?? '');
-    $product         = serviceAlertValue($event['product'] ?? '');
-    $version         = serviceAlertValue($event['version'] ?? '');
     $oldValue        = serviceAlertValue($event['old_value'] ?? '');
     $newValue        = serviceAlertValue($event['new_value'] ?? '');
 
@@ -109,47 +104,35 @@ foreach ($events as $index => $event) {
                     <td style="padding:10px 14px;border-bottom:1px solid #e9ecef;">{$type}</td>
                 </tr>
                 <tr>
-                    <td style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;">Occurred</td>
+                    <th scope="row" style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;text-align:left;">Event time</th>
                     <td style="padding:10px 14px;border-bottom:1px solid #e9ecef;font-family:monospace;">{$occurredAt}</td>
                 </tr>
                 <tr>
-                    <td style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;">Service</td>
+                    <th scope="row" style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;text-align:left;">Service</th>
                     <td style="padding:10px 14px;border-bottom:1px solid #e9ecef;font-family:monospace;">{$serviceType}</td>
                 </tr>
                 <tr>
-                    <td style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;">MAC</td>
+                    <th scope="row" style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;text-align:left;">Stored MAC attribution</th>
                     <td style="padding:10px 14px;border-bottom:1px solid #e9ecef;font-family:monospace;">{$mac}</td>
                 </tr>
                 <tr>
-                    <td style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;">Endpoint</td>
+                    <th scope="row" style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;text-align:left;">Endpoint</th>
                     <td style="padding:10px 14px;border-bottom:1px solid #e9ecef;font-family:monospace;">{$ip}:{$port}/{$protocol}</td>
                 </tr>
                 <tr>
-                    <td style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;">Interface</td>
+                    <th scope="row" style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;text-align:left;">Interface</th>
                     <td style="padding:10px 14px;border-bottom:1px solid #e9ecef;font-family:monospace;">{$interface}</td>
                 </tr>
                 <tr>
-                    <td style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;">Detection</td>
+                    <th scope="row" style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;text-align:left;">Detection method</th>
                     <td style="padding:10px 14px;border-bottom:1px solid #e9ecef;font-family:monospace;">{$detectionMethod}</td>
                 </tr>
                 <tr>
-                    <td style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;">Confidence</td>
-                    <td style="padding:10px 14px;border-bottom:1px solid #e9ecef;font-family:monospace;">{$confidence}</td>
-                </tr>
-                <tr>
-                    <td style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;">Product</td>
-                    <td style="padding:10px 14px;border-bottom:1px solid #e9ecef;font-family:monospace;">{$product}</td>
-                </tr>
-                <tr>
-                    <td style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;">Version</td>
-                    <td style="padding:10px 14px;border-bottom:1px solid #e9ecef;font-family:monospace;">{$version}</td>
-                </tr>
-                <tr>
-                    <td style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;">Previous state</td>
+                    <th scope="row" style="padding:10px 14px;background:#f8f9fa;border-bottom:1px solid #e9ecef;font-weight:600;color:#6c757d;text-align:left;">Previous recorded status</th>
                     <td style="padding:10px 14px;border-bottom:1px solid #e9ecef;font-family:monospace;">{$oldValue}</td>
                 </tr>
                 <tr>
-                    <td style="padding:10px 14px;background:#f8f9fa;font-weight:600;color:#6c757d;">Current state</td>
+                    <th scope="row" style="padding:10px 14px;background:#f8f9fa;font-weight:600;color:#6c757d;text-align:left;">Recorded status after event</th>
                     <td style="padding:10px 14px;font-family:monospace;">{$newValue}</td>
                 </tr>
             </table>
@@ -190,6 +173,8 @@ $html = <<<HTML
         <div style="background:#fff8e1;border-left:4px solid #ffb300;padding:15px;margin-top:20px;border-radius:6px;">
             <strong>Observational alert only.</strong><br>
             Device Monitor did not restart, block, reconfigure, or otherwise remediate any service or device.
+            Stored MAC attribution is used for alert correlation; it is not proof of endpoint ownership.
+            Current inventory lookups and latest check timestamps are not part of this stored event record.
         </div>
 
     </div>
@@ -205,6 +190,17 @@ $html = <<<HTML
 </body>
 </html>
 HTML;
+
+if (getenv('DM_RENDER_ONLY') === '1') {
+    echo json_encode([
+        'result' => 'rendered',
+        'subject' => $subject,
+        'html' => $html,
+    ]) . PHP_EOL;
+    exit(0);
+}
+
+require_once('/usr/local/opnsense/scripts/OPNsense/DeviceMonitor/NotificationHandler.php');
 
 $handler = new NotificationHandler();
 $result = $handler->sendCustomEmail($subject, $html, \OPNsense\DeviceMonitor\EmailLog::TYPE_SERVICE);

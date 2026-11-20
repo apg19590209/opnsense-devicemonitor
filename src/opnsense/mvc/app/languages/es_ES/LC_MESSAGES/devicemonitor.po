@@ -2119,3 +2119,112 @@ msgstr "View message"
 #: settings.volt
 msgid "Peer API key"
 msgstr "Peer API key"
+
+#: infrastructureservices.volt
+msgid "Archive"
+msgstr "Archivar"
+
+msgid "Authoritative"
+msgstr "Autoritativo"
+
+msgid "Authoritative/configuration evidence"
+msgstr "Evidencia autoritativa/de configuración"
+
+msgid "By endpoint IP"
+msgstr "Por IP del endpoint"
+
+msgid "By stored MAC"
+msgstr "Por MAC almacenada"
+
+msgid "Discovered"
+msgstr "Descubierto"
+
+msgid "Discovery evidence"
+msgstr "Evidencia de descubrimiento"
+
+msgid "Endpoint not recorded"
+msgstr "Endpoint no registrado"
+
+msgid "Evidence classification not available"
+msgstr "Clasificación de evidencia no disponible"
+
+msgid "Infrastructure services"
+msgstr "Servicios de infraestructura"
+
+msgid "Interface not recorded"
+msgstr "Interfaz no registrada"
+
+msgid "Inventory lookups in this response"
+msgstr "Búsquedas de inventario en esta respuesta"
+
+msgid "Inventory lookups reflect rows read for this page response. They do not establish endpoint ownership or continuous observation."
+msgstr "Las búsquedas de inventario reflejan las filas leídas para esta respuesta de página. No establecen la propiedad del endpoint ni una observación continua."
+
+msgid "Last attempted check"
+msgstr "Último intento de comprobación"
+
+msgid "Last evidence recorded"
+msgstr "Última evidencia registrada"
+
+msgid "Last evidence refresh"
+msgstr "Última actualización de evidencia"
+
+msgid "Last successful response"
+msgstr "Última respuesta correcta"
+
+msgid "No current inventory match"
+msgstr "No hay coincidencia actual en el inventario"
+
+msgid "No stored MAC attribution"
+msgstr "No hay atribución de MAC almacenada"
+
+msgid "Not recorded"
+msgstr "No registrado"
+
+msgid "Observation times"
+msgstr "Horas de observación"
+
+msgid "Open device activity"
+msgstr "Abrir actividad del dispositivo"
+
+msgid "Probe-verified service"
+msgstr "Servicio verificado por sonda"
+
+msgid "Recent service changes"
+msgstr "Cambios recientes en servicios"
+
+msgid "Recorded status"
+msgstr "Estado registrado"
+
+msgid "Recorded status not available"
+msgstr "Estado registrado no disponible"
+
+msgid "Restore"
+msgstr "Restaurar"
+
+msgid "Service changed"
+msgstr "Servicio modificado"
+
+msgid "Service type not recorded"
+msgstr "Tipo de servicio no registrado"
+
+msgid "Service-evidence confidence"
+msgstr "Confianza en la evidencia del servicio"
+
+msgid "Stored MAC / Inventory"
+msgstr "MAC almacenada / Inventario"
+
+msgid "Stored MAC attribution"
+msgstr "Atribución de MAC almacenada"
+
+msgid "Used for alert correlation; not proof of endpoint ownership."
+msgstr "Se usa para la correlación de alertas; no demuestra la propiedad del endpoint."
+
+msgid "Verified"
+msgstr "Verificado"
+
+msgid "by endpoint IP"
+msgstr "por IP del endpoint"
+
+msgid "by stored MAC"
+msgstr "por MAC almacenada"

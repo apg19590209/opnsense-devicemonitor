@@ -2119,3 +2119,112 @@ msgstr "View message"
 #: settings.volt
 msgid "Peer API key"
 msgstr "Peer API key"
+
+#: infrastructureservices.volt
+msgid "Archive"
+msgstr "归档"
+
+msgid "Authoritative"
+msgstr "权威"
+
+msgid "Authoritative/configuration evidence"
+msgstr "权威/配置证据"
+
+msgid "By endpoint IP"
+msgstr "按端点 IP"
+
+msgid "By stored MAC"
+msgstr "按存储的 MAC"
+
+msgid "Discovered"
+msgstr "已发现"
+
+msgid "Discovery evidence"
+msgstr "发现证据"
+
+msgid "Endpoint not recorded"
+msgstr "端点未记录"
+
+msgid "Evidence classification not available"
+msgstr "证据分类不可用"
+
+msgid "Infrastructure services"
+msgstr "基础设施服务"
+
+msgid "Interface not recorded"
+msgstr "接口未记录"
+
+msgid "Inventory lookups in this response"
+msgstr "此响应中的清单查找"
+
+msgid "Inventory lookups reflect rows read for this page response. They do not establish endpoint ownership or continuous observation."
+msgstr "清单查找反映为此页面响应读取的行。它们不能证明端点所有权或持续观测。"
+
+msgid "Last attempted check"
+msgstr "最后一次检查尝试"
+
+msgid "Last evidence recorded"
+msgstr "最后记录的证据"
+
+msgid "Last evidence refresh"
+msgstr "最后一次证据刷新"
+
+msgid "Last successful response"
+msgstr "最后一次成功响应"
+
+msgid "No current inventory match"
+msgstr "当前清单中无匹配项"
+
+msgid "No stored MAC attribution"
+msgstr "无存储的 MAC 归属"
+
+msgid "Not recorded"
+msgstr "未记录"
+
+msgid "Observation times"
+msgstr "观测时间"
+
+msgid "Open device activity"
+msgstr "打开设备活动"
+
+msgid "Probe-verified service"
+msgstr "探针验证的服务"
+
+msgid "Recent service changes"
+msgstr "最近的服务更改"
+
+msgid "Recorded status"
+msgstr "记录的状态"
+
+msgid "Recorded status not available"
+msgstr "记录的状态不可用"
+
+msgid "Restore"
+msgstr "恢复"
+
+msgid "Service changed"
+msgstr "服务已更改"
+
+msgid "Service type not recorded"
+msgstr "服务类型未记录"
+
+msgid "Service-evidence confidence"
+msgstr "服务证据可信度"
+
+msgid "Stored MAC / Inventory"
+msgstr "存储的 MAC / 清单"
+
+msgid "Stored MAC attribution"
+msgstr "存储的 MAC 归属"
+
+msgid "Used for alert correlation; not proof of endpoint ownership."
+msgstr "用于警报关联；不能证明端点所有权。"
+
+msgid "Verified"
+msgstr "已验证"
+
+msgid "by endpoint IP"
+msgstr "按端点 IP"
+
+msgid "by stored MAC"
+msgstr "按存储的 MAC"

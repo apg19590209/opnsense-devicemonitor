@@ -20,10 +20,6 @@
                         <strong id="services-unavailable">0</strong>
                     </span>
                     <span>
-                        {{ devicemonitor_t('Stale') }}:
-                        <strong id="services-stale">0</strong>
-                    </span>
-                    <span>
                         {{ devicemonitor_t('Unknown') }}:
                         <strong id="services-unknown">0</strong>
                     </span>
@@ -73,9 +69,6 @@
                     </option>
                     <option value="unavailable">
                         {{ devicemonitor_t('Unavailable') }}
-                    </option>
-                    <option value="stale">
-                        {{ devicemonitor_t('Stale') }}
                     </option>
                     <option value="unknown">
                         {{ devicemonitor_t('Unknown') }}
@@ -439,87 +432,162 @@
     margin-bottom: 0;
 }
 
-/* Keep identical column widths across every service group */
 .infrastructure-service-table th:nth-child(1),
 .infrastructure-service-table td:nth-child(1) {
-    width: 13%;
-    white-space: nowrap;
+    width: 24%;
 }
 
 .infrastructure-service-table th:nth-child(2),
 .infrastructure-service-table td:nth-child(2) {
-    width: 13%;
+    width: 12%;
 }
 
 .infrastructure-service-table th:nth-child(3),
 .infrastructure-service-table td:nth-child(3) {
-    width: 8%;
+    width: 16%;
 }
 
 .infrastructure-service-table th:nth-child(4),
 .infrastructure-service-table td:nth-child(4) {
-    width: 10%;
+    width: 18%;
 }
 
 .infrastructure-service-table th:nth-child(5),
 .infrastructure-service-table td:nth-child(5) {
-    width: 11%;
+    width: 20%;
 }
 
 .infrastructure-service-table th:nth-child(6),
 .infrastructure-service-table td:nth-child(6) {
-    width: 12%;
-}
-
-.infrastructure-service-table th:nth-child(7),
-.infrastructure-service-table td:nth-child(7) {
-    width: 9%;
-}
-
-.infrastructure-service-table th:nth-child(8),
-.infrastructure-service-table td:nth-child(8) {
-    width: 13%;
-}
-
-.infrastructure-service-table th:nth-child(9),
-.infrastructure-service-table td:nth-child(9) {
-    width: 11%;
+    width: 10%;
 }
 
 .infrastructure-service-table th,
 .infrastructure-service-table td {
-    overflow-wrap: anywhere;
-}
-
-.infrastructure-service-table th:nth-child(3),
-.infrastructure-service-table td:nth-child(3),
-.infrastructure-service-table th:nth-child(4),
-.infrastructure-service-table td:nth-child(4),
-.infrastructure-service-table th:nth-child(7),
-.infrastructure-service-table td:nth-child(7),
-.infrastructure-service-table th:nth-child(9),
-.infrastructure-service-table td:nth-child(9) {
-    white-space: nowrap;
+    overflow-wrap: break-word;
 }
 
 .infrastructure-service-table td,
 .infrastructure-service-table th {
-    vertical-align: middle !important;
+    vertical-align: top !important;
 }
 
-.infrastructure-service-product {
-    white-space: normal;
-    min-width: 120px;
-}
-
-/* Last Verified timestamp wrapping */
-.infrastructure-service-table th:nth-child(9),
-.infrastructure-service-table td:nth-child(9) {
-    white-space: normal;
+.dm-service-code,
+.dm-service-mac {
+    font-family: monospace;
     overflow-wrap: normal;
     word-break: normal;
+    white-space: nowrap;
+}
+
+.dm-service-sub {
+    display: block;
+    margin-top: 3px;
+    color: #666;
+}
+
+.dm-service-times {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: 8px;
+    row-gap: 3px;
     font-variant-numeric: tabular-nums;
-    font-size: 12px;
+}
+
+.dm-service-times dt,
+.dm-service-times dd {
+    margin: 0;
+}
+
+.dm-service-times dd {
+    font-family: monospace;
+    overflow-wrap: normal;
+    word-break: normal;
+}
+
+.dm-service-attribution {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+
+.dm-service-details-row > td {
+    padding: 0 !important;
+    background: #f7f9fb;
+}
+
+.dm-service-details {
+    padding: 14px 18px;
+    border-top: 1px solid #d9e1e8;
+}
+
+.dm-service-details-grid {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.5fr);
+    gap: 18px;
+}
+
+.dm-service-details h4 {
+    margin: 0 0 6px 0;
+    font-size: inherit;
+    font-weight: 600;
+}
+
+.dm-service-match-list {
+    padding-left: 18px;
+    margin: 0;
+}
+
+.dm-service-match-list li + li {
+    margin-top: 5px;
+}
+
+.dm-service-note {
+    margin: 10px 0 0 0;
+    color: #666;
+}
+
+.dm-service-cell-label {
+    display: none;
+}
+
+@media (max-width: 991px) {
+    .infrastructure-service-table,
+    .infrastructure-service-table tbody,
+    .infrastructure-service-table tr,
+    .infrastructure-service-table td {
+        display: block;
+        width: 100% !important;
+    }
+
+    .infrastructure-service-table thead {
+        display: none;
+    }
+
+    .dm-service-row {
+        padding: 10px 12px;
+        border-top: 1px solid #ddd;
+    }
+
+    .dm-service-row > td {
+        padding: 6px 0 !important;
+        border: 0 !important;
+    }
+
+    .dm-service-cell-label {
+        display: block;
+        margin-bottom: 3px;
+        font-weight: 600;
+    }
+
+    .dm-service-details-row > td {
+        padding: 0 !important;
+    }
+
+    .dm-service-details-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Tabbed Infrastructure Services layout. */
@@ -633,27 +701,102 @@ $(document).ready(function() {
 
         return names[type] || (type + ' Services');
     }
+    function recordedStatusLabel(status) {
+        if (status === 'available') {
+            return {{ lang.query('Available')|json_encode(15) }};
+        }
+
+        if (status === 'unavailable') {
+            return {{ lang.query('Unavailable')|json_encode(15) }};
+        }
+
+        if (status === 'unknown') {
+            return {{ lang.query('Unknown')|json_encode(15) }};
+        }
+
+        return {{ lang.query('Recorded status not available')|json_encode(15) }};
+    }
+
     function statusBadge(status) {
         var className = 'label-default';
-        var label = status || 'Unknown';
 
         if (status === 'available') {
             className = 'label-success';
-            label = 'Available';
         } else if (status === 'unavailable') {
             className = 'label-danger';
-            label = 'Unavailable';
-        } else if (status === 'stale') {
-            className = 'label-warning';
-            label = 'Stale';
         } else if (status === 'unknown') {
             className = 'label-default';
-            label = 'Unknown';
         }
 
         return $('<span>')
             .addClass('label ' + className)
-            .text(label);
+            .text(recordedStatusLabel(status));
+    }
+
+    function serviceEvidenceKind(row) {
+        var kind = String(row.evidence_kind || '').toLowerCase();
+        var confidence = String(row.confidence || '').toLowerCase();
+        var method = String(row.detection_method || '').toLowerCase();
+
+        if (
+            kind === 'authoritative' ||
+            confidence === 'authoritative' ||
+            method.indexOf('authoritative') !== -1
+        ) {
+            return 'authoritative';
+        }
+
+        if (kind === 'probe' || confidence === 'verified') {
+            return 'probe';
+        }
+
+        if (
+            kind === 'discovery' ||
+            confidence === 'discovered' ||
+            method === 'nmap_service'
+        ) {
+            return 'discovery';
+        }
+
+        return 'unknown';
+    }
+
+    function evidenceLabel(row) {
+        var kind = serviceEvidenceKind(row);
+
+        if (kind === 'authoritative') {
+            return {{ lang.query('Authoritative/configuration evidence')|json_encode(15) }};
+        }
+
+        if (kind === 'probe') {
+            return {{ lang.query('Probe-verified service')|json_encode(15) }};
+        }
+
+        if (kind === 'discovery') {
+            return {{ lang.query('Discovery evidence')|json_encode(15) }};
+        }
+
+        return {{ lang.query('Evidence classification not available')|json_encode(15) }};
+    }
+
+    function confidenceText(row) {
+        var confidence = String(row.confidence || '').trim();
+        var label = {{ lang.query('Service-evidence confidence')|json_encode(15) }};
+
+        if (!confidence) {
+            return label + ': ' +
+                {{ lang.query('Not recorded')|json_encode(15) }};
+        }
+
+        if (confidence.toLowerCase() === 'authoritative') {
+            confidence = {{ lang.query('Authoritative')|json_encode(15) }};
+        } else if (confidence.toLowerCase() === 'verified') {
+            confidence = {{ lang.query('Verified')|json_encode(15) }};
+        } else if (confidence.toLowerCase() === 'discovered') {
+            confidence = {{ lang.query('Discovered')|json_encode(15) }};
+        }
+
+        return label + ': ' + confidence;
     }
 
     function productText(row) {
@@ -667,43 +810,159 @@ $(document).ready(function() {
             parts.push(row.version);
         }
 
-        return parts.length ? parts.join(' ') : '\u2014';
+        return parts.length
+            ? parts.join(' ')
+            : {{ lang.query('Not recorded')|json_encode(15) }};
     }
 
     function locationText(row) {
-        var values = [];
+        var location = String(row.interface || '').trim();
 
-        if (row.interface) {
-            values.push(row.interface);
+        return location
+            ? location
+            : {{ lang.query('Interface not recorded')|json_encode(15) }};
+    }
+
+    function endpointText(row) {
+        var ip = String(row.ip || '').trim();
+        var port = String(row.port || '').trim();
+        var protocol = String(row.protocol || '').trim().toUpperCase();
+
+        if (!ip) {
+            return {{ lang.query('Endpoint not recorded')|json_encode(15) }};
         }
 
-        if (row.vlan && values.indexOf(row.vlan) === -1) {
-            values.push(row.vlan);
+        if (port && protocol) {
+            return ip + ':' + port + '/' + protocol;
         }
 
-        return values.length ? values.join(' / ') : '\u2014';
+        if (port) {
+            return ip + ':' + port;
+        }
+
+        return ip;
+    }
+
+    function serviceTypeText(row) {
+        var type = String(row.service_type || '').trim().toUpperCase();
+        return type || {{ lang.query('Service type not recorded')|json_encode(15) }};
+    }
+
+    function observationValues(row) {
+        var kind = serviceEvidenceKind(row);
+
+        if (kind === 'probe') {
+            return [
+                [
+                    {{ lang.query('Last successful response')|json_encode(15) }},
+                    dash(row.last_verified)
+                ],
+                [
+                    {{ lang.query('Last attempted check')|json_encode(15) }},
+                    dash(row.last_checked)
+                ]
+            ];
+        }
+
+        return [
+            [
+                {{ lang.query('Last evidence recorded')|json_encode(15) }},
+                dash(row.last_verified)
+            ],
+            [
+                {{ lang.query('Last evidence refresh')|json_encode(15) }},
+                dash(row.last_checked)
+            ]
+        ];
+    }
+
+    function inventoryCollection(row, key) {
+        var matches = row && row.inventory_matches;
+        return matches && Array.isArray(matches[key]) ? matches[key] : [];
+    }
+
+    function inventoryCountText(row) {
+        var byMac = inventoryCollection(row, 'by_mac').length;
+        var byIp = inventoryCollection(row, 'by_ip').length;
+
+        if (!byMac && !byIp) {
+            return {{ lang.query('No current inventory match')|json_encode(15) }};
+        }
+
+        var parts = [];
+        if (byIp) {
+            parts.push(
+                byIp + ' ' +
+                {{ lang.query('by endpoint IP')|json_encode(15) }}
+            );
+        }
+        if (byMac) {
+            parts.push(
+                byMac + ' ' +
+                {{ lang.query('by stored MAC')|json_encode(15) }}
+            );
+        }
+
+        return parts.join('; ');
+    }
+
+    function inventoryMatchText(match, source) {
+        var parts = [];
+        var mac = String(match.mac || '').trim();
+        var ip = String(match.ip || '').trim();
+        var name = String(
+            match.custom_hostname || match.hostname || ''
+        ).trim();
+        var vlan = String(match.vlan || '').trim();
+
+        if (source === 'mac') {
+            parts.push(
+                {{ lang.query('By stored MAC')|json_encode(15) }} + ':'
+            );
+        } else {
+            parts.push(
+                {{ lang.query('By endpoint IP')|json_encode(15) }} + ':'
+            );
+        }
+
+        if (mac) {
+            parts.push(mac);
+        }
+        if (ip) {
+            parts.push('@ ' + ip);
+        }
+        if (vlan) {
+            parts.push(
+                {{ lang.query('VLAN')|json_encode(15) }} + ': ' + vlan
+            );
+        }
+        if (name) {
+            parts.push(name);
+        }
+
+        return parts.join(' ');
     }
 
     function serviceChangeLabel(row) {
         var type = String(row.event_type || '');
 
         if (type === 'SERVICE_DISCOVERED') {
-            return 'New verified service';
+            return {{ lang.query('New verified service')|json_encode(15) }};
         }
 
         if (type === 'SERVICE_UNAVAILABLE') {
-            return 'Service unavailable';
+            return {{ lang.query('Service unavailable')|json_encode(15) }};
         }
 
         if (type === 'SERVICE_AVAILABLE') {
-            return 'Service recovered';
+            return {{ lang.query('Service recovered')|json_encode(15) }};
         }
 
         if (type === 'SERVICE_CHANGED') {
-            return 'Service changed';
+            return {{ lang.query('Service changed')|json_encode(15) }};
         }
 
-        return type || '\u2014';
+        return type || {{ lang.query('Not recorded')|json_encode(15) }};
     }
 
     function serviceChangeDetail(row) {
@@ -717,11 +976,9 @@ $(document).ready(function() {
         return '';
     }
 
-    function recentDeviceText(row) {
-        return row.custom_hostname ||
-            row.hostname ||
-            row.mac ||
-            '\u2014';
+    function recentStoredMacText(row) {
+        return String(row.mac || '').trim() ||
+            {{ lang.query('No stored MAC attribution')|json_encode(15) }};
     }
 
     function recentEndpointText(row) {
@@ -735,21 +992,16 @@ $(document).ready(function() {
             endpoint += '/' + String(row.protocol).toUpperCase();
         }
 
-        return endpoint || '\u2014';
+        if (row.interface) {
+            endpoint += ' \u00b7 ' + row.interface;
+        }
+
+        return endpoint ||
+            {{ lang.query('Endpoint not recorded')|json_encode(15) }};
     }
 
-    function recentEvidenceText(row) {
-        var parts = [];
-
-        if (row.detection_method) {
-            parts.push(row.detection_method);
-        }
-
-        if (row.confidence) {
-            parts.push(row.confidence);
-        }
-
-        return parts.length ? parts.join(' / ') : '\u2014';
+    function recentInventoryText(row) {
+        return inventoryCountText(row);
     }
 
     function renderRecentServiceChanges(rows) {
@@ -768,18 +1020,36 @@ $(document).ready(function() {
         var $table = $('<table>')
             .addClass(
                 'table table-condensed table-hover infrastructure-recent-table'
+            )
+            .attr(
+                'aria-label',
+                {{ lang.query('Recent service changes')|json_encode(15) }}
             );
 
         $('<thead>')
             .append(
                 $('<tr>').append(
-                    $('<th>').text({{ lang.query('Date / Time')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('Change')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('Service')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('Device')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('Endpoint')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('Evidence')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('History')|json_encode(15) }})
+                    $('<th>')
+                        .attr('scope', 'col')
+                        .text({{ lang.query('Date / Time')|json_encode(15) }}),
+                    $('<th>')
+                        .attr('scope', 'col')
+                        .text({{ lang.query('Change')|json_encode(15) }}),
+                    $('<th>')
+                        .attr('scope', 'col')
+                        .text({{ lang.query('Service')|json_encode(15) }}),
+                    $('<th>')
+                        .attr('scope', 'col')
+                        .text({{ lang.query('Stored MAC attribution')|json_encode(15) }}),
+                    $('<th>')
+                        .attr('scope', 'col')
+                        .text({{ lang.query('Endpoint')|json_encode(15) }}),
+                    $('<th>')
+                        .attr('scope', 'col')
+                        .text({{ lang.query('Inventory lookups in this response')|json_encode(15) }}),
+                    $('<th>')
+                        .attr('scope', 'col')
+                        .text({{ lang.query('History')|json_encode(15) }})
                 )
             )
             .appendTo($table);
@@ -812,13 +1082,22 @@ $(document).ready(function() {
                         '/ui/devicemonitor/index/activitytimeline?mac=' +
                             encodeURIComponent(row.mac)
                     )
-                    .attr('title', 'Open device activity')
+                    .attr(
+                        'title',
+                        {{ lang.query('Open device activity')|json_encode(15) }}
+                    )
+                    .attr(
+                        'aria-label',
+                        {{ lang.query('Open device activity')|json_encode(15) }}
+                    )
                     .append(
                         $('<i>').addClass('fa fa-history')
                     )
                     .appendTo($history);
             } else {
-                $history.text('\u2014');
+                $history.text(
+                    {{ lang.query('Not recorded')|json_encode(15) }}
+                );
             }
 
             $('<tr>')
@@ -830,9 +1109,9 @@ $(document).ready(function() {
                             String(row.service_type || 'OTHER').toUpperCase()
                         )
                     ),
-                    $('<td>').text(recentDeviceText(row)),
+                    $('<td>').text(recentStoredMacText(row)),
                     $('<td>').text(recentEndpointText(row)),
-                    $('<td>').text(recentEvidenceText(row)),
+                    $('<td>').text(recentInventoryText(row)),
                     $history
                 )
                 .appendTo($body);
@@ -852,148 +1131,50 @@ $(document).ready(function() {
             row.vendor,
             row.interface,
             row.vlan,
-            row.display_status || row.status,
+            row.status,
             row.detection_method,
             row.confidence,
             row.product,
             row.version,
             row.port,
-            row.protocol
+            row.protocol,
+            inventoryCollection(row, 'by_mac').map(function(match) {
+                return [
+                    match.mac,
+                    match.ip,
+                    match.hostname,
+                    match.custom_hostname,
+                    match.vendor,
+                    match.vlan
+                ].join(' ');
+            }).join(' '),
+            inventoryCollection(row, 'by_ip').map(function(match) {
+                return [
+                    match.mac,
+                    match.ip,
+                    match.hostname,
+                    match.custom_hostname,
+                    match.vendor,
+                    match.vlan
+                ].join(' ');
+            }).join(' ')
         ].join(' ').toLowerCase();
     }
-    function verifiedTime(value) {
-        if (!value) {
-            return 0;
-        }
 
-        var parsed = Date.parse(
-            value.replace(' ', 'T')
-        );
-
-        return isNaN(parsed) ? 0 : parsed;
-    }
-
-    function confidenceRank(value) {
-        var ranks = {
-            authoritative: 3,
-            verified: 2,
-            discovered: 1
-        };
-
-        return ranks[value] || 0;
-    }
-
-    function effectiveStatus(row) {
-        if (row.status !== 'available') {
-            return row.status;
-        }
-
-        var verified = verifiedTime(row.last_verified);
-
-        if (!verified) {
-            return 'stale';
-        }
-
-        /* Two missed hourly discovery windows = stale. */
-        if (
-            Date.now() - verified >
-            2 * 60 * 60 * 1000
-        ) {
-            return 'stale';
-        }
-
-        return 'available';
-    }
-
-    function consolidateServices(rows) {
-        var grouped = {};
-
-        (rows || []).forEach(function(row) {
-            var type =
+    function normalizeServices(rows) {
+        return (rows || []).map(function(row) {
+            var normalized = $.extend({}, row);
+            normalized.service_type =
                 (row.service_type || '').toUpperCase();
-
-            var key = [
-                type,
-                row.ip || '',
-                row.port || '',
-                (row.protocol || '').toLowerCase()
-            ].join('|');
-
-            var method = row.detection_method || '';
-
-            if (!grouped[key]) {
-                grouped[key] = $.extend({}, row);
-                grouped[key].service_type = type;
-                grouped[key].evidence = [];
-
-                if (method) {
-                    grouped[key].evidence.push(method);
-                }
-
-                return;
-            }
-
-            var current = grouped[key];
-
-            if (
-                method &&
-                current.evidence.indexOf(method) === -1
-            ) {
-                current.evidence.push(method);
-            }
-
-            if (
-                confidenceRank(row.confidence) >
-                confidenceRank(current.confidence)
-            ) {
-                current.confidence = row.confidence;
-
-                if (row.product) {
-                    current.product = row.product;
-                }
-
-                if (row.version) {
-                    current.version = row.version;
-                }
-            }
-
-            if (
-                verifiedTime(row.last_verified) >
-                verifiedTime(current.last_verified)
-            ) {
-                current.last_verified = row.last_verified;
-            }
-
-            if (row.status === 'available') {
-                current.status = 'available';
-            }
-            if (row.archived) {
-                current.archived = 1;
-            }
-
-            [
-                'hostname',
-                'vendor',
-                'mac',
-                'interface',
-                'vlan',
-                'product',
-                'version'
-            ].forEach(function(field) {
-                if (!current[field] && row[field]) {
-                    current[field] = row[field];
-                }
-            });
+            return normalized;
         });
+    }
 
-        return Object.keys(grouped).map(function(key) {
-            var row = grouped[key];
-
-            row.evidence.sort();
-            row.display_status = effectiveStatus(row);
-
-            return row;
-        });
+    function serviceArchiveRequest(row) {
+        return {
+            id: row.id,
+            archive: row.archived ? '0' : '1'
+        };
     }
 
     function filteredRows() {
@@ -1014,7 +1195,7 @@ $(document).ready(function() {
                 return false;
             }
 
-            if (status && (row.display_status || row.status) !== status) {
+            if (status && row.status !== status) {
                 return false;
             }
 
@@ -1242,6 +1423,97 @@ $(document).ready(function() {
             );
         });
     }
+    function appendLabeledCell($row, label, $content) {
+        var $cell = $('<td>').append(
+            $('<span>')
+                .addClass('dm-service-cell-label')
+                .text(label)
+        );
+
+        $content.appendTo($cell);
+        $cell.appendTo($row);
+        return $cell;
+    }
+
+    function serviceDetailsId(row) {
+        return 'infrastructure-service-details-' + String(row.id);
+    }
+
+    function buildServiceDetails(row) {
+        var $details = $('<div>')
+            .addClass('dm-service-details')
+            .attr('id', serviceDetailsId(row));
+        var $grid = $('<div>')
+            .addClass('dm-service-details-grid')
+            .appendTo($details);
+
+        var $attribution = $('<section>').appendTo($grid);
+        $('<h4>')
+            .text({{ lang.query('Stored MAC attribution')|json_encode(15) }})
+            .appendTo($attribution);
+        $('<div>')
+            .addClass('dm-service-mac')
+            .text(
+                String(row.mac || '').trim() ||
+                {{ lang.query('No stored MAC attribution')|json_encode(15) }}
+            )
+            .appendTo($attribution);
+        $('<p>')
+            .addClass('dm-service-note')
+            .text(
+                {{ lang.query('Used for alert correlation; not proof of endpoint ownership.')|json_encode(15) }}
+            )
+            .appendTo($attribution);
+
+        $('<h4>')
+            .text({{ lang.query('Product / Version')|json_encode(15) }})
+            .appendTo($attribution);
+        $('<div>')
+            .text(productText(row))
+            .appendTo($attribution);
+
+        var $matches = $('<section>').appendTo($grid);
+        $('<h4>')
+            .text(
+                {{ lang.query('Inventory lookups in this response')|json_encode(15) }}
+            )
+            .appendTo($matches);
+
+        var $list = $('<ul>')
+            .addClass('dm-service-match-list')
+            .appendTo($matches);
+        var byMac = inventoryCollection(row, 'by_mac');
+        var byIp = inventoryCollection(row, 'by_ip');
+
+        byMac.forEach(function(match) {
+            $('<li>')
+                .text(inventoryMatchText(match, 'mac'))
+                .appendTo($list);
+        });
+        byIp.forEach(function(match) {
+            $('<li>')
+                .text(inventoryMatchText(match, 'ip'))
+                .appendTo($list);
+        });
+
+        if (!byMac.length && !byIp.length) {
+            $('<li>')
+                .text(
+                    {{ lang.query('No current inventory match')|json_encode(15) }}
+                )
+                .appendTo($list);
+        }
+
+        $('<p>')
+            .addClass('dm-service-note')
+            .text(
+                {{ lang.query('Inventory lookups reflect rows read for this page response. They do not establish endpoint ownership or continuous observation.')|json_encode(15) }}
+            )
+            .appendTo($matches);
+
+        return $details;
+    }
+
     function renderServiceTable($pane, rows) {
         $pane.empty();
 
@@ -1265,20 +1537,33 @@ $(document).ready(function() {
                 'table table-condensed table-hover ' +
                 'infrastructure-service-table'
             )
+            .attr(
+                'aria-label',
+                {{ lang.query('Infrastructure services')|json_encode(15) }}
+            )
             .appendTo($panel);
 
         $('<thead>')
             .append(
                 $('<tr>').append(
-                    $('<th>').text({{ lang.query('IP Address')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('Hostname')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('Status')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('Port / Protocol')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('Interface / VLAN')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('Detection')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('Confidence')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('Product / Version')|json_encode(15) }}),
-                    $('<th>').text({{ lang.query('Last Verified')|json_encode(15) }})
+                    $('<th>')
+                        .attr('scope', 'col')
+                        .text({{ lang.query('Endpoint')|json_encode(15) }}),
+                    $('<th>')
+                        .attr('scope', 'col')
+                        .text({{ lang.query('Recorded status')|json_encode(15) }}),
+                    $('<th>')
+                        .attr('scope', 'col')
+                        .text({{ lang.query('Evidence')|json_encode(15) }}),
+                    $('<th>')
+                        .attr('scope', 'col')
+                        .text({{ lang.query('Observation times')|json_encode(15) }}),
+                    $('<th>')
+                        .attr('scope', 'col')
+                        .text({{ lang.query('Stored MAC / Inventory')|json_encode(15) }}),
+                    $('<th>')
+                        .attr('scope', 'col')
+                        .text({{ lang.query('Action')|json_encode(15) }})
                 )
             )
             .appendTo($table);
@@ -1286,89 +1571,154 @@ $(document).ready(function() {
         var $body = $('<tbody>');
 
         rows.forEach(function(row) {
-            var endpoint =
-                dash(row.port) +
-                ' / ' +
-                (row.protocol || '').toUpperCase();
-
-            var $hostname = $('<td>');
-            var friendly = row.custom_hostname || '';
-
-            if (friendly) {
-                var $friendly = $('<div>');
-                $('<i>')
-                    .addClass('fa fa-tag')
-                    .attr('title', 'Friendly name')
-                    .appendTo($friendly);
-                $friendly.append(document.createTextNode(' ' + friendly));
-                $friendly.appendTo($hostname);
-
-                $('<small>')
-                    .addClass('text-muted')
-                    .css('display', 'block')
-                    .text(dash(row.hostname))
-                    .appendTo($hostname);
-            } else {
-                $('<div>')
-                    .text(dash(row.hostname))
-                    .appendTo($hostname);
-            }
-
-            if (row.vendor) {
-                $('<small>')
-                    .addClass('text-muted')
-                    .css('display', 'block')
-                    .text(row.vendor)
-                    .appendTo($hostname);
-            }
-
-            $('<tr>')
-                .append(
-                    $('<td>').text(dash(row.ip)),
-                    $hostname,
-                    $('<td>').append(
-                        statusBadge(row.display_status || row.status)
-                    ),
-                    $('<td>').text(endpoint),
-                    $('<td>').text(locationText(row)),
-                    $('<td>').text(
-                        row.evidence && row.evidence.length
-                            ? row.evidence.join(' + ')
-                            : dash(row.detection_method)
-                    ),
-                    $('<td>').text(
-                        dash(row.confidence)
-                    ),
-                    $('<td>')
-                        .addClass(
-                            'infrastructure-service-product'
-                        )
-                        .text(productText(row)),
-                    $('<td>').text(
-                        dash(row.last_verified)
-                    ).append(' ').append($('<button type="button">')
-                        .addClass('btn btn-default btn-xs')
-                        .text(row.archived ? 'Restore' : 'Archive')
-                        .on('click', function() {
-                            var $button = $(this).prop('disabled', true);
-                            $.post('/api/devicemonitor/devices/archiveservice', {
-                                id: row.id,
-                                archive: row.archived ? '0' : '1'
-                            }).done(function(data) {
-                                if (data && data.result === 'ok') {
-                                    loadServices();
-                                } else {
-                                    alert(data && data.error ||
-                                          {{ lang.query('Unable to save service.')|json_encode(15) }});
-                                    $button.prop('disabled', false);
-                                }
-                            }).fail(function() {
-                                alert({{ lang.query('Unable to save service.')|json_encode(15) }});
-                                $button.prop('disabled', false);
-                            });
-                        }))
-                )
+            var detailsId = serviceDetailsId(row);
+            var $row = $('<tr>')
+                .addClass('dm-service-row')
+                .attr('data-service-id', row.id)
                 .appendTo($body);
+
+            var $endpoint = $('<div>');
+            $('<strong>')
+                .text(serviceTypeText(row))
+                .appendTo($endpoint);
+            $('<div>')
+                .addClass('dm-service-code dm-service-sub')
+                .text(endpointText(row))
+                .appendTo($endpoint);
+            $('<div>')
+                .addClass('dm-service-sub')
+                .text(
+                    {{ lang.query('Interface')|json_encode(15) }} +
+                    ': ' + locationText(row)
+                )
+                .appendTo($endpoint);
+            appendLabeledCell(
+                $row,
+                {{ lang.query('Endpoint')|json_encode(15) }},
+                $endpoint
+            );
+
+            var $status = $('<div>').append(statusBadge(row.status));
+            appendLabeledCell(
+                $row,
+                {{ lang.query('Recorded status')|json_encode(15) }},
+                $status
+            );
+
+            var $evidence = $('<div>');
+            $('<div>').text(evidenceLabel(row)).appendTo($evidence);
+            $('<div>')
+                .addClass('dm-service-sub')
+                .text(confidenceText(row))
+                .appendTo($evidence);
+            appendLabeledCell(
+                $row,
+                {{ lang.query('Evidence')|json_encode(15) }},
+                $evidence
+            );
+
+            var $times = $('<dl>').addClass('dm-service-times');
+            observationValues(row).forEach(function(entry) {
+                $('<dt>').text(entry[0]).appendTo($times);
+                $('<dd>').text(entry[1]).appendTo($times);
+            });
+            appendLabeledCell(
+                $row,
+                {{ lang.query('Observation times')|json_encode(15) }},
+                $times
+            );
+
+            var $attribution = $('<div>')
+                .addClass('dm-service-attribution');
+            $('<div>')
+                .addClass('dm-service-mac')
+                .text(
+                    String(row.mac || '').trim() ||
+                    {{ lang.query('No stored MAC attribution')|json_encode(15) }}
+                )
+                .appendTo($attribution);
+            $('<div>')
+                .addClass('dm-service-sub')
+                .text(inventoryCountText(row))
+                .appendTo($attribution);
+            $('<button type="button">')
+                .addClass('btn btn-default btn-xs')
+                .attr('aria-expanded', 'false')
+                .attr('aria-controls', detailsId)
+                .attr(
+                    'aria-label',
+                    {{ lang.query('Details')|json_encode(15) }} + ': ' +
+                    serviceTypeText(row) + ' ' + endpointText(row)
+                )
+                .text({{ lang.query('Details')|json_encode(15) }})
+                .appendTo($attribution);
+            appendLabeledCell(
+                $row,
+                {{ lang.query('Stored MAC / Inventory')|json_encode(15) }},
+                $attribution
+            );
+
+            var actionLabel = row.archived
+                ? {{ lang.query('Restore')|json_encode(15) }}
+                : {{ lang.query('Archive')|json_encode(15) }};
+            var $action = $('<button type="button">')
+                .addClass('btn btn-default btn-xs')
+                .text(actionLabel)
+                .attr(
+                    'aria-label',
+                    actionLabel + ': ' +
+                    serviceTypeText(row) + ' ' + endpointText(row)
+                )
+                .on('click', function() {
+                    var $button = $(this).prop('disabled', true);
+                    $.post(
+                        '/api/devicemonitor/devices/archiveservice',
+                        serviceArchiveRequest(row)
+                    ).done(function(data) {
+                        if (data && data.result === 'ok') {
+                            loadServices();
+                        } else {
+                            alert(data && data.error ||
+                                  {{ lang.query('Unable to save service.')|json_encode(15) }});
+                            $button.prop('disabled', false);
+                        }
+                    }).fail(function() {
+                        alert({{ lang.query('Unable to save service.')|json_encode(15) }});
+                        $button.prop('disabled', false);
+                    });
+                });
+            appendLabeledCell(
+                $row,
+                {{ lang.query('Action')|json_encode(15) }},
+                $action
+            );
+
+            var $details = buildServiceDetails(row);
+            var $detailsRow = $('<tr>')
+                .addClass('dm-service-details-row')
+                .attr('data-service-details-for', row.id)
+                .hide()
+                .append($('<td>').attr('colspan', '6').append($details))
+                .appendTo($body);
+
+            $attribution.find('button').on('click', function() {
+                var $button = $(this);
+                var expanded = $button.attr('aria-expanded') === 'true';
+                $button.attr('aria-expanded', expanded ? 'false' : 'true');
+                $button.text(
+                    expanded
+                        ? {{ lang.query('Details')|json_encode(15) }}
+                        : {{ lang.query('Hide details')|json_encode(15) }}
+                );
+                $button.attr(
+                    'aria-label',
+                    (expanded
+                        ? {{ lang.query('Details')|json_encode(15) }}
+                        : {{ lang.query('Hide details')|json_encode(15) }}) +
+                        ': ' + serviceTypeText(row) + ' ' + endpointText(row)
+                );
+                $detailsRow.toggle(!expanded);
+            });
         });
 
         $body.appendTo($table);
@@ -1407,7 +1757,7 @@ $(document).ready(function() {
             type: 'GET',
 
             success: function(data) {
-                allServices = consolidateServices(
+                allServices = normalizeServices(
                     data && Array.isArray(data.rows)
                         ? data.rows
                         : []
@@ -1415,20 +1765,16 @@ $(document).ready(function() {
 
                 var available = 0;
                 var unavailable = 0;
-                var stale = 0;
                 var unknown = 0;
 
                 allServices.forEach(function(row) {
                     if (row.archived) return;
-                    var status =
-                        row.display_status || row.status;
+                    var status = row.status;
 
                     if (status === 'available') {
                         available++;
                     } else if (status === 'unavailable') {
                         unavailable++;
-                    } else if (status === 'stale') {
-                        stale++;
                     } else if (status === 'unknown') {
                         unknown++;
                     }
@@ -1439,7 +1785,6 @@ $(document).ready(function() {
                 }).length);
                 $('#services-available').text(available);
                 $('#services-unavailable').text(unavailable);
-                $('#services-stale').text(stale);
                 $('#services-unknown').text(unknown);
 
                 populateTypes(

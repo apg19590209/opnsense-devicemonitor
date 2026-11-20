@@ -2119,3 +2119,112 @@ msgstr "View message"
 #: settings.volt
 msgid "Peer API key"
 msgstr "Peer API key"
+
+#: infrastructureservices.volt
+msgid "Archive"
+msgstr "Архивировать"
+
+msgid "Authoritative"
+msgstr "Авторитетный"
+
+msgid "Authoritative/configuration evidence"
+msgstr "Авторитетное/конфигурационное свидетельство"
+
+msgid "By endpoint IP"
+msgstr "По IP конечной точки"
+
+msgid "By stored MAC"
+msgstr "По сохранённому MAC"
+
+msgid "Discovered"
+msgstr "Обнаружено"
+
+msgid "Discovery evidence"
+msgstr "Свидетельство обнаружения"
+
+msgid "Endpoint not recorded"
+msgstr "Конечная точка не записана"
+
+msgid "Evidence classification not available"
+msgstr "Классификация свидетельств недоступна"
+
+msgid "Infrastructure services"
+msgstr "Инфраструктурные службы"
+
+msgid "Interface not recorded"
+msgstr "Интерфейс не записан"
+
+msgid "Inventory lookups in this response"
+msgstr "Поиск в инвентаре в этом ответе"
+
+msgid "Inventory lookups reflect rows read for this page response. They do not establish endpoint ownership or continuous observation."
+msgstr "Результаты поиска в инвентаре отражают строки, прочитанные для этого ответа страницы. Они не подтверждают принадлежность конечной точки или непрерывное наблюдение."
+
+msgid "Last attempted check"
+msgstr "Последняя попытка проверки"
+
+msgid "Last evidence recorded"
+msgstr "Последнее записанное свидетельство"
+
+msgid "Last evidence refresh"
+msgstr "Последнее обновление свидетельства"
+
+msgid "Last successful response"
+msgstr "Последний успешный ответ"
+
+msgid "No current inventory match"
+msgstr "Нет совпадений в текущем инвентаре"
+
+msgid "No stored MAC attribution"
+msgstr "Нет сохранённой атрибуции MAC"
+
+msgid "Not recorded"
+msgstr "Не записано"
+
+msgid "Observation times"
+msgstr "Время наблюдения"
+
+msgid "Open device activity"
+msgstr "Открыть активность устройства"
+
+msgid "Probe-verified service"
+msgstr "Служба подтверждена пробой"
+
+msgid "Recent service changes"
+msgstr "Последние изменения служб"
+
+msgid "Recorded status"
+msgstr "Записанный статус"
+
+msgid "Recorded status not available"
+msgstr "Записанный статус недоступен"
+
+msgid "Restore"
+msgstr "Восстановить"
+
+msgid "Service changed"
+msgstr "Служба изменена"
+
+msgid "Service type not recorded"
+msgstr "Тип службы не записан"
+
+msgid "Service-evidence confidence"
+msgstr "Достоверность свидетельства службы"
+
+msgid "Stored MAC / Inventory"
+msgstr "Сохранённый MAC / инвентарь"
+
+msgid "Stored MAC attribution"
+msgstr "Сохранённая атрибуция MAC"
+
+msgid "Used for alert correlation; not proof of endpoint ownership."
+msgstr "Используется для сопоставления оповещений; не доказывает принадлежность конечной точки."
+
+msgid "Verified"
+msgstr "Подтверждено"
+
+msgid "by endpoint IP"
+msgstr "по IP конечной точки"
+
+msgid "by stored MAC"
+msgstr "по сохранённому MAC"

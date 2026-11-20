@@ -407,8 +407,9 @@ category, plus a feed of recent service changes.
 
 ### 9.2 Header statistics
 
-**Total**, **Available**, **Unavailable**, **Stale**, and **Unknown** counts for the
-currently shown services.
+**Total**, **Available**, **Unavailable**, and **Unknown** counts for the currently
+shown services. These counts use the status recorded in Device Monitor; the page does
+not relabel a service as stale from elapsed browser time.
 
 ### 9.3 Toolbar controls
 
@@ -416,7 +417,7 @@ currently shown services.
 - **Discover Now** — trigger an immediate infrastructure-service discovery pass.
   **Changes state** (runs discovery).
 - **All Services** (type filter) — filter by service type.
-- **All Statuses** (status filter) — filter by **Available** / **Unavailable** / **Stale** /
+- **All Statuses** (status filter) — filter by **Available** / **Unavailable** /
   **Unknown**.
 - **Search services** — free-text filter.
 - **Show archived** — include services hidden with **Archive**.
@@ -444,20 +445,31 @@ reload data. Each tab shows a badge with its current service count.
 The page heading, common controls and the tab strip remain visible while you scroll,
 and the active table's column headings stay pinned beneath them.
 
-Each service row shows:
+Each displayed service row corresponds to one stored service record, so its
+**Archive** or **Restore** action applies to exactly that record. The row shows:
 
-- **IP Address** — the device IP.
-- **Hostname** — the device hostname.
-- **Status** — **Available** / **Unavailable** / **Stale** / **Unknown**.
-- **Port / Protocol** — e.g. `22/TCP`.
-- **Interface / VLAN** — where the service was detected.
-- **Detection** — how the service was detected (probe / Nmap / authoritative config).
-- **Confidence** — detection confidence.
-- **Product / Version** — service product/version when known.
-- **Last Verified** — when the service was last verified.
+- **Endpoint** — service type, IP, port, protocol and recorded interface.
+- **Recorded status** — **Available** / **Unavailable** / **Unknown**, or that no
+  recorded status is available.
+- **Evidence** — whether the service record is probe-verified, authoritative or
+  configuration-derived, or discovery evidence, with service-evidence confidence.
+- **Observation times** — labels vary by evidence source. Probe-backed evidence uses
+  **Last successful response** and **Last attempted check**. Authoritative and
+  discovery evidence use **Last evidence recorded** and **Last evidence refresh**.
+- **Stored MAC / Inventory** — the MAC stored for alert correlation and a count of
+  inventory lookups.
+- **Details** — the stored MAC attribution, product/version and every inventory row
+  matched by the stored MAC or endpoint IP in this page response.
 
-> **"Stale"** means the service has not been re-verified recently (rather than being
-> confirmed down). "Unavailable" means it was confirmed unreachable.
+The inventory lookup preserves all matching rows, including multiple inventory
+entries sharing one IP and entries with different recorded VLAN evidence. It is a
+page-response lookup only: it does not establish endpoint ownership or continuous
+observation. Timestamps are displayed as recorded and are not converted, labelled
+UTC, or turned into a live-freshness calculation.
+
+Stored MAC attribution is used for service and alert correlation. It is not proof
+that the MAC owns the endpoint.
+
 >
 > **"Unknown"** means the last confirmed verdict is older than a week: the endpoint is
 > neither known up nor known down. A service that stays unreachable for longer than that
@@ -467,8 +479,13 @@ Each service row shows:
 ### 9.5 Recent Service Changes tab
 
 The first tab shows a feed of the latest service events with columns: **Date / Time**,
-**Change** (discovered / unavailable / recovered / changed), **Service**, **Device**,
-**Endpoint**, **Evidence**, and **History**. **Read-only.**
+**Change** (discovered / unavailable / recovered / changed), **Service**,
+**Stored MAC attribution**, **Endpoint**, **Inventory lookups in this response**, and
+**History**. **Read-only.**
+
+The event time, MAC, endpoint and transition are stored event facts. Inventory
+matching is current page data shown for context and must not be read as proof of
+ownership during the historical event.
 
 ---
 
@@ -845,9 +862,10 @@ installer afterwards to merge the plugin's strings again.
 - **Active / Archived** (lifecycle) — the current vs. historical lifecycle for a device.
 - **Unresolved / Resolved** (identity event) — whether an identity anomaly has been
   acknowledged (resolved) by an administrator.
-- **Available / Unavailable / Stale / Unknown** (service) — confirmed reachable / confirmed
-  unreachable / not re-verified recently / last verdict older than a week, so neither
-  confirmed up nor confirmed down.
+- **Available / Unavailable / Unknown** (service) — confirmed reachable / confirmed
+  unreachable / last verdict older than a week, so neither confirmed up nor confirmed
+  down. Infrastructure Services displays the recorded value without deriving a separate
+  browser-time stale status.
 - **Pending / Failed n/5** (scan status) — a scan is queued or has failed after *n* of 5
   attempts.
 - **Running (PID: n) / Stopped** (widget) — the Device Monitor daemon state.
@@ -948,9 +966,10 @@ Services → **Device Monitor** → **Email Log** lists every notification attem
 - **A device shows "RETURNING".**
   This is expected when a previously removed MAC reappears. Resolve it in Network Identity Details →
   Lifecycle History.
-- **A service shows "Stale".**
-  The service has not been re-verified recently. Run **Discover Now** on Infrastructure
-  Services and re-check.
+- **A service shows "Unknown".**
+  Its last confirmed verdict is older than the ageing window. Review the separate
+  observation times shown in the row, then run **Discover Now** on Infrastructure
+  Services to refresh the best available evidence.
 - **Email/webhook test fails.**
   Check the recipient, the SMTP relay/credentials/port/encryption (for email), or the webhook
   URL and reachability (for webhooks). The test reports a failure reason where available.

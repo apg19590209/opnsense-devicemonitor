@@ -2119,3 +2119,112 @@ msgstr "View message"
 #: settings.volt
 msgid "Peer API key"
 msgstr "Peer API key"
+
+#: infrastructureservices.volt
+msgid "Archive"
+msgstr "アーカイブ"
+
+msgid "Authoritative"
+msgstr "権威"
+
+msgid "Authoritative/configuration evidence"
+msgstr "権威/設定証拠"
+
+msgid "By endpoint IP"
+msgstr "Endpoint IP 別"
+
+msgid "By stored MAC"
+msgstr "保存 MAC 別"
+
+msgid "Discovered"
+msgstr "検出済み"
+
+msgid "Discovery evidence"
+msgstr "検出証拠"
+
+msgid "Endpoint not recorded"
+msgstr "エンドポイント未記録"
+
+msgid "Evidence classification not available"
+msgstr "証拠分類は利用不可"
+
+msgid "Infrastructure services"
+msgstr "インフラサービス"
+
+msgid "Interface not recorded"
+msgstr "インターフェース未記録"
+
+msgid "Inventory lookups in this response"
+msgstr "この応答でのインベントリ検索"
+
+msgid "Inventory lookups reflect rows read for this page response. They do not establish endpoint ownership or continuous observation."
+msgstr "インベントリ検索は、このページ応答のために読み取った行を示します。エンドポイントの所有権や継続的な監視を証明するものではありません。"
+
+msgid "Last attempted check"
+msgstr "最後のチェック試行"
+
+msgid "Last evidence recorded"
+msgstr "最後に記録された証拠"
+
+msgid "Last evidence refresh"
+msgstr "最後の証拠更新"
+
+msgid "Last successful response"
+msgstr "最後の成功応答"
+
+msgid "No current inventory match"
+msgstr "現在のインベントリ一致なし"
+
+msgid "No stored MAC attribution"
+msgstr "保存 MAC の帰属なし"
+
+msgid "Not recorded"
+msgstr "未記録"
+
+msgid "Observation times"
+msgstr "観測時刻"
+
+msgid "Open device activity"
+msgstr "デバイスアクティビティを開く"
+
+msgid "Probe-verified service"
+msgstr "プローブ確認済みサービス"
+
+msgid "Recent service changes"
+msgstr "最近のサービス変更"
+
+msgid "Recorded status"
+msgstr "記録済みステータス"
+
+msgid "Recorded status not available"
+msgstr "記録済みステータスは利用不可"
+
+msgid "Restore"
+msgstr "復元"
+
+msgid "Service changed"
+msgstr "サービス変更"
+
+msgid "Service type not recorded"
+msgstr "サービスタイプ未記録"
+
+msgid "Service-evidence confidence"
+msgstr "サービス証拠の信頼度"
+
+msgid "Stored MAC / Inventory"
+msgstr "保存 MAC / インベントリ"
+
+msgid "Stored MAC attribution"
+msgstr "保存 MAC の帰属"
+
+msgid "Used for alert correlation; not proof of endpoint ownership."
+msgstr "アラート相関に使用されます。エンドポイントの所有権を証明するものではありません。"
+
+msgid "Verified"
+msgstr "確認済み"
+
+msgid "by endpoint IP"
+msgstr "Endpoint IP 別"
+
+msgid "by stored MAC"
+msgstr "保存 MAC 別"
