@@ -148,10 +148,13 @@
 #   03866ba4218f4836b55046ad2640096512332dffacab74ed23ec209f01da4a2d  12623319 bytes
 #       (first unreleased v2.15.2 candidate from source 82770c4; superseded by the reviewed
 #        service-presentation and timestamp-provenance replacement cut)
+#   fb9c3521c28f7a381b57515fca7bf5f102f3a89e860d36eed3a5242a8b601a94  12680156 bytes
+#       (reviewed service-presentation/timestamp-provenance candidate from source 6d8430f;
+#        superseded by the compact Infrastructure Services readability cut)
 version 2.15.2
-bytes 12680156
-sha256 fb9c3521c28f7a381b57515fca7bf5f102f3a89e860d36eed3a5242a8b601a94
-# source = 6d8430f4349ab2bdef5f52a2af72697c75aa6aeb
+bytes 12686300
+sha256 6ff6ed45c435a21c83ec12edec9f93b541d2dabcabb5cfedbf9d696525e48749
+# source = c6ec80c0d7a79d41790457159754e32102f6974a
 #   Measured from the committed source above under the declared build conditions:
 #   TZ=UTC0, canonical ustar with fixed ownership and mtime, deterministic stored-block gzip.
 #   96 members; the builder is not an archive member because it is a pinned release tool, not
