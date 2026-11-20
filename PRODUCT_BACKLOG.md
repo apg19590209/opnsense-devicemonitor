@@ -62,8 +62,9 @@ existing native control and filter semantics.
 
 **Status:** Implemented and packaged as frozen candidate
 `7feaabe39c20a1095304a20bf72de98debcb376864e24a9e2335fdd84253560a`
-from source `4c4bb12` on 20 November 2026. Browser acceptance remains pending.
-The candidate is not installed; `.23` remains on the prior accepted candidate.
+from source `4c4bb12` and accepted on `.23` on 20 November 2026. Browser
+acceptance remains pending. The prior accepted candidate and rollback evidence
+remain preserved.
 
 ### Deployment-entry-point release safeguards: **`CLOSED`**
 

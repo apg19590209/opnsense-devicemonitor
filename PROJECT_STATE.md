@@ -2,32 +2,20 @@
 
 ## Current state
 
-**v2.15.2 compact-layout candidate — FROZEN, NOT INSTALLED (20 November 2026).**
-The Infrastructure Services sticky/zoom and **Show archived** correction is committed as
-`0ec7d55`; its coherent v2.15.2 pins are `4c4bb12`, with identity record `98c818e`. Two
-independent clean-export builds produced the same 96-member archive from source
-`4c4bb12c1bc880ee372a8d2cf954fe583de0023c`: 12,687,324 bytes, SHA-256
-`7feaabe39c20a1095304a20bf72de98debcb376864e24a9e2335fdd84253560a`. Full
-preflight, manifest/input, reproducibility/determinism and all 13 supported
-predecessor-upgrade checks pass. The candidate is frozen at
-`/root/dm-backups/dm-v2.15.2-layout-candidate-20261120T122055Z`. `.23` remains on
-accepted candidate `6ff6ed45…`, and that candidate's rollback evidence is unchanged. Browser
-visual acceptance for the new candidate remains pending. Report:
-`.cline-reports/REPORT-20261120-232114-v2152-layout-candidate.md`.
-
-**v2.15.2 compact candidate — AUTOMATED `.23` ACCEPTANCE COMPLETE (20 November 2026).**
-Candidate source `c6ec80c`, 12,686,300 bytes, 96 members, SHA-256
-`6ff6ed45c435a21c83ec12edec9f93b541d2dabcabb5cfedbf9d696525e48749`, is installed
-on `OPNsense.internal` / `192.168.20.23` through the guarded local gate. Installation
-returned `INSTALL_OK` with 70 targets and 48 unchanged; all generated host checks and the
-candidate-bound `.23` acceptance passed. Data counts, activity history, alert state,
-settings, functional configuration, certificate and service health are preserved. The
-restart's normal scheduled discovery refreshed 36 current probe observations without
-adding markers or changing first-detected history. Temporary account/key/credential
-material was removed. Browser visual acceptance remains pending. Installer rollback:
-`/var/backups/devicemonitor/install-v214.miuM89`; evidence:
-`/root/dm-validation/v2.15.2-compact-23-install-20261120T071200Z/`. Report:
-`.cline-reports/REPORT-20261120-224016-v2152-compact-23-acceptance.md`.
+**v2.15.2 compact-layout candidate — AUTOMATED `.23` ACCEPTANCE COMPLETE (20 November 2026).**
+Source `4c4bb12c1bc880ee372a8d2cf954fe583de0023c`, 12,687,324 bytes, 96 members,
+SHA-256 `7feaabe39c20a1095304a20bf72de98debcb376864e24a9e2335fdd84253560a`,
+is installed on `OPNsense.internal` / `192.168.20.23` through the guarded local gate.
+Installation returned `INSTALL_OK` with 70 targets and 69 unchanged; all generated host
+checks and candidate-bound `.23` acceptance passed. Data counts, first-detected history,
+activity, alert state, settings, functional configuration, certificate and service
+health are preserved. Two current probe observations refreshed under the existing
+provenance markers. Temporary account/key/credential material was removed. Browser
+visual acceptance remains pending. Installer rollback:
+`/var/backups/devicemonitor/install-v214.8x12dw`; evidence:
+`/root/dm-validation/v2.15.2-layout-23-install-20261120T122300Z/`. The prior accepted
+`6ff6ed45…` candidate and its `install-v214.miuM89` rollback remain preserved. Report:
+`.cline-reports/REPORT-20261120-232545-v2152-layout-23-acceptance.md`.
 
 **v2.15.1 service-retirement release — PUBLISHED 19 November 2026.** PR #17 preserved the
 reviewed `b8de765`/`21f4262`/`2758ac6`/`b01712c` correction and merged normally as
