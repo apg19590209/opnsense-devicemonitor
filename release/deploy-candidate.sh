@@ -14,8 +14,8 @@ export LC_ALL
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 REPO=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 cd "$REPO"
-INSTALLER_SHA=af63e177474d39b0acc27005e6d8a023d4e18f361673a7e6e044247e12923c1b
-INPUTS_SHA=f062971e3eb543e003a2fb8935d2966855b1746cd218ecd34efafa36b4f9d2b5
+INSTALLER_SHA=e30bd40bfe5446b577499e903697625b9644cda6ef47be1b5004fec8c510d1fa
+INPUTS_SHA=761f62c91c34dab798187b586eb06921ff14768196a811b5f2bc68280871acd1
 [ "$#" -ge 2 ] || { echo 'usage: deploy-candidate.sh ARCHIVE IDENTITY --host HOST --source SHA [--check]' >&2; exit 2; }
 ARCHIVE=$1
 IDENTITY=$2
@@ -37,7 +37,10 @@ done
 [ "$(sha256 -q install-unattended.sh)" = "$INSTALLER_SHA" ] || { echo 'ABORT: installer digest' >&2; exit 1; }
 IDENT_SOURCE=$(sed -n 's/^source=//p' "$IDENTITY" | tail -1)
 IDENT_SHA=$(sed -n 's/^sha256=//p' "$IDENTITY" | tail -1)
+IDENT_VERSION=$(sed -n 's/^version=//p' "$IDENTITY" | tail -1)
 [ "$IDENT_SOURCE" = "$SOURCE" ] || { echo 'ABORT: archive identity source differs from --source' >&2; exit 1; }
+case "$IDENT_VERSION" in ''|*[!0-9.]*) echo 'ABORT: archive identity version is invalid' >&2; exit 1;; esac
+CANDIDATE_NAME=dm-v${IDENT_VERSION}-runtime.tar.gz
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     [ "$(git rev-parse HEAD)" = "$SOURCE" ] || { echo 'ABORT: worktree is not the declared source' >&2; exit 1; }
     [ -z "$(git status --porcelain)" ] || { echo 'ABORT: worktree is dirty' >&2; exit 1; }
@@ -205,10 +208,10 @@ if [ "$REMOTE" = 1 ]; then
     $SSH_CMD "$HOST" "rm -rf '$GATE_DIR' && mkdir -p '$GATE_DIR' && tar -xzf - -C '$GATE_DIR'" < "$GATE_ARCHIVE" || {
         echo 'ABORT: remote gate staging failed' >&2; exit 1; }
     # shellcheck disable=SC2086
-    $SSH_CMD "$HOST" "/bin/sh -c 'cd \"\$1\" && /bin/sh release/deploy-candidate.sh \"\$2\" \"\$3\" --host local --source \"\$4\"' sh '$GATE_DIR' '$REMOTE_DIR/dm-v2.15.1-runtime.tar.gz' '$REMOTE_DIR/dm-v2.15.1-runtime.tar.gz.identity' '$SOURCE'" > "$STAGE/install.log" 2>&1 || INSTALL_RESULT=$?
+    $SSH_CMD "$HOST" "/bin/sh -c 'cd \"\$1\" && /bin/sh release/deploy-candidate.sh \"\$2\" \"\$3\" --host local --source \"\$4\"' sh '$GATE_DIR' '$REMOTE_DIR/$CANDIDATE_NAME' '$REMOTE_DIR/$CANDIDATE_NAME.identity' '$SOURCE'" > "$STAGE/install.log" 2>&1 || INSTALL_RESULT=$?
 else
-    cp "$ARCHIVE" "$STAGE/dm-v2.15.1-runtime.tar.gz"
-    cp "$IDENTITY" "$STAGE/dm-v2.15.1-runtime.tar.gz.identity"
+    cp "$ARCHIVE" "$STAGE/$CANDIDATE_NAME"
+    cp "$IDENTITY" "$STAGE/$CANDIDATE_NAME.identity"
     /bin/sh install-unattended.sh --host "$HOST" > "$STAGE/install.log" 2>&1 || INSTALL_RESULT=$?
 fi
 if ! record_deploy "$([ "$INSTALL_RESULT" = 0 ] && echo PASS || echo FAIL)" "$STAGE/install.log"; then

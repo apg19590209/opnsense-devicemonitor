@@ -10,6 +10,7 @@ import builtins
 import importlib.util
 import ipaddress
 import json
+import re
 import sqlite3
 import tempfile
 from contextlib import closing
@@ -38,7 +39,9 @@ DEFAULTS = (
     / "DeviceMonitor"
     / "defaults.json"
 )
-MANIFEST = ROOT / "release" / "v2.15.1-runtime.manifest"
+INSTALLER = ROOT / 'install-unattended.sh'
+VERSION = re.search(r'^VERSION=([0-9.]+)$', INSTALLER.read_text(), re.M).group(1)
+MANIFEST = ROOT / "release" / ("v%s-runtime.manifest" % VERSION)
 
 IFCONFIG_BACKUP = """re0: flags=1008843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
 \tinet 192.168.20.24 netmask 0xffffff00 broadcast 192.168.20.255
@@ -84,7 +87,7 @@ def test_combined_defaults_and_config_loading():
     defaults = json.loads(DEFAULTS.read_text())
     config = defaults["config"]
 
-    assert defaults["version"] == "2.15.1"
+    assert defaults["version"] == VERSION
     for key in (
         "identity_email_enabled",
         "email_reminder_scan",

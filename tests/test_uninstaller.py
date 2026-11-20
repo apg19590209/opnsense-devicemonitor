@@ -24,7 +24,9 @@ CONFIG_XML = '/conf/config.xml'
 RC_LOCAL = '/etc/rc.conf.local'
 LOCALE_INC = '/usr/local/etc/inc/devicemonitor_locale.inc'
 ACTION_UPDATE = '/usr/local/opnsense/service/conf/actions.d/actions_devicemonitor_update.conf'
-PLUGIN_MANIFEST = ROOT / 'release/v2.15.1-runtime.manifest'
+VERSION = re.search(r'^VERSION=([0-9.]+)$', (ROOT / 'install-unattended.sh').read_text(),
+                    re.M).group(1)
+PLUGIN_MANIFEST = ROOT / ('release/v%s-runtime.manifest' % VERSION)
 
 
 def script(body):
