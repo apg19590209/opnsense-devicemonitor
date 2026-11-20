@@ -236,9 +236,10 @@ def seed_alert_events(module):
             """
             INSERT INTO device_activity_events (
                 mac, lifecycle_id, event_type, occurred_at,
-                old_value, new_value, details
+                old_value, new_value, details, service_id,
+                service_generation
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 "aa:aa:aa:aa:aa:12",
@@ -248,6 +249,8 @@ def seed_alert_events(module):
                 "available",
                 "degraded",
                 "DNS|192.168.50.12|53|udp|LAN|dns_query",
+                trusted_id,
+                1,
             ),
         )
         changed_id = conn.execute(
@@ -258,9 +261,10 @@ def seed_alert_events(module):
             """
             INSERT INTO device_activity_events (
                 mac, lifecycle_id, event_type, occurred_at,
-                old_value, new_value, details
+                old_value, new_value, details, service_id,
+                service_generation
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 "aa:aa:aa:aa:aa:12",
@@ -270,6 +274,8 @@ def seed_alert_events(module):
                 "available",
                 "unavailable",
                 "DNS|192.168.50.12|53|udp|LAN|dns_query",
+                trusted_id,
+                1,
             ),
         )
         unavailable_id = conn.execute(
@@ -280,9 +286,10 @@ def seed_alert_events(module):
             """
             INSERT INTO device_activity_events (
                 mac, lifecycle_id, event_type, occurred_at,
-                old_value, new_value, details
+                old_value, new_value, details, service_id,
+                service_generation
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 "aa:aa:aa:aa:aa:12",
@@ -292,6 +299,8 @@ def seed_alert_events(module):
                 "unavailable",
                 "available",
                 "DNS|192.168.50.12|53|udp|LAN|dns_query",
+                trusted_id,
+                1,
             ),
         )
         recovered_id = conn.execute(
@@ -344,6 +353,12 @@ def test_reader_filtering_and_global_gates():
         assert by_key[
             ("device_services", ids["trusted"])
         ]["alert_eligible"] is True
+        assert by_key[
+            ("device_services", ids["trusted"])
+        ]["service_id"] == ids["trusted"]
+        assert by_key[
+            ("device_services", ids["trusted"])
+        ]["service_generation"] == 1
 
         assert by_key[
             ("device_services", ids["out_of_scope"])
@@ -362,6 +377,8 @@ def test_reader_filtering_and_global_gates():
             assert event["confidence"] == "verified"
             assert event["product"] == "Test DNS"
             assert event["version"] == "1.0"
+            assert event["service_id"] == ids["trusted"]
+            assert event["service_generation"] == 1
 
         selected = module.select_service_alert_events(
             alert_config(),
@@ -391,6 +408,391 @@ def test_reader_filtering_and_global_gates():
     print("SERVICE_ALERT_READER_FILTERS=PASS")
     print("SERVICE_ALERT_GLOBAL_GATES=PASS")
     print("SERVICE_CHANGED_EMAIL_V1=NO")
+
+
+def test_current_discovery_and_legacy_activity_identity_are_distinct():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.LOG_FILE = str(Path(tmp) / "devicemonitor.log")
+        ids = seed_alert_events(module)
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            legacy_id = conn.execute(
+                """
+                INSERT INTO device_activity_events (
+                    mac, lifecycle_id, event_type, occurred_at,
+                    old_value, new_value, details
+                )
+                VALUES (?, 1, 'SERVICE_UNAVAILABLE', ?,
+                        'available', 'unavailable', ?)
+                """,
+                (
+                    "aa:aa:aa:aa:aa:12",
+                    "2026-09-12 06:00:00",
+                    "DNS|192.168.50.12|53|udp|LAN|dns_query",
+                ),
+            ).lastrowid
+            conn.commit()
+            events = module.get_pending_service_alert_events(
+                conn,
+                networks_fixture(),
+            )
+
+        by_key = {
+            (event["source"], event["record_id"]): event
+            for event in events
+        }
+        discovered = by_key[("device_services", ids["trusted"])]
+        legacy = by_key[("device_activity_events", legacy_id)]
+
+        assert discovered["service_id"] == ids["trusted"]
+        assert discovered["service_generation"] == 1
+        assert discovered["alert_eligible"] is True
+
+        assert legacy["service_id"] is None
+        assert legacy["service_generation"] is None
+        assert legacy["alert_eligible"] is False
+
+    print("SERVICE_DISCOVERED_CURRENT_PAIR=PASS")
+    print("LEGACY_ACTIVITY_PAIR_NOT_INFERRED=PASS")
+
+
+LEGACY_TRIGGER_SQL = '''
+CREATE TRIGGER trg_device_services_status_activity
+AFTER UPDATE OF status ON device_services
+WHEN NEW.mac IS NOT NULL
+  AND TRIM(NEW.mac) <> ''
+  AND COALESCE(OLD.status, '') <> COALESCE(NEW.status, '')
+BEGIN
+    INSERT INTO device_activity_events (
+        mac, lifecycle_id, event_type, old_value, new_value, details
+    )
+    VALUES (
+        LOWER(TRIM(NEW.mac)),
+        NULL,
+        CASE
+            WHEN LOWER(COALESCE(NEW.status, '')) = 'available'
+                THEN 'SERVICE_AVAILABLE'
+            WHEN LOWER(COALESCE(NEW.status, '')) = 'unavailable'
+                THEN 'SERVICE_UNAVAILABLE'
+            ELSE 'SERVICE_CHANGED'
+        END,
+        COALESCE(OLD.status, ''),
+        COALESCE(NEW.status, ''),
+        COALESCE(NEW.service_type, '') || '|' ||
+        COALESCE(NEW.ip, '') || '|' ||
+        CAST(COALESCE(NEW.port, 0) AS TEXT) || '|' ||
+        COALESCE(NEW.protocol, '') || '|' ||
+        COALESCE(NEW.interface, '') || '|' ||
+        COALESCE(NEW.detection_method, '')
+    );
+END
+'''
+
+
+def create_legacy_identity_db(module):
+    with closing(sqlite3.connect(module.DB_FILE)) as conn:
+        conn.execute(
+            '''
+            CREATE TABLE device_activity_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mac TEXT NOT NULL,
+                lifecycle_id INTEGER DEFAULT NULL,
+                event_type TEXT NOT NULL,
+                occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                old_value TEXT DEFAULT NULL,
+                new_value TEXT DEFAULT NULL,
+                details TEXT DEFAULT NULL
+            )
+            '''
+        )
+        conn.execute(
+            '''
+            CREATE TABLE device_services (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mac TEXT,
+                ip TEXT NOT NULL,
+                interface TEXT NOT NULL DEFAULT '',
+                service_type TEXT NOT NULL,
+                port INTEGER NOT NULL,
+                protocol TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'available',
+                detection_method TEXT NOT NULL,
+                confidence TEXT NOT NULL,
+                product TEXT,
+                version TEXT,
+                first_detected DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_verified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_checked DATETIME DEFAULT NULL,
+                miss_count INTEGER NOT NULL DEFAULT 0,
+                UNIQUE (
+                    ip, service_type, port, protocol,
+                    detection_method, interface
+                )
+            )
+            '''
+        )
+        conn.execute(
+            '''
+            INSERT INTO device_services (
+                mac, ip, interface, service_type, port, protocol, status,
+                detection_method, confidence, product, version
+            )
+            VALUES (
+                'aa:aa:aa:aa:aa:12', '192.168.50.12', 'LAN', 'DNS', 53,
+                'udp', 'available', 'dns_query', 'verified', 'Test DNS', '1.0'
+            )
+            '''
+        )
+        conn.execute(
+            '''
+            INSERT INTO device_activity_events (
+                mac, lifecycle_id, event_type, old_value, new_value, details
+            )
+            VALUES (
+                'aa:aa:aa:aa:aa:12', NULL, 'SERVICE_UNAVAILABLE',
+                'available', 'unavailable',
+                'DNS|192.168.50.12|53|udp|LAN|dns_query'
+            )
+            '''
+        )
+        conn.execute(LEGACY_TRIGGER_SQL)
+        conn.commit()
+
+
+def test_generation_migration_is_idempotent_and_replaces_trigger():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        create_legacy_identity_db(module)
+
+        module.init_db()
+        module.init_db()
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            activity_columns = {
+                row[1]
+                for row in conn.execute(
+                    "PRAGMA table_info(device_activity_events)"
+                )
+            }
+            service_columns = {
+                row[1]
+                for row in conn.execute(
+                    "PRAGMA table_info(device_services)"
+                )
+            }
+            triggers = conn.execute(
+                """
+                SELECT name, sql
+                FROM sqlite_master
+                WHERE type = 'trigger' AND name = ?
+                """,
+                (module.SERVICE_STATUS_ACTIVITY_TRIGGER,),
+            ).fetchall()
+            generation = conn.execute(
+                "SELECT alert_generation FROM device_services"
+            ).fetchone()[0]
+            legacy_pair = conn.execute(
+                """
+                SELECT service_id, service_generation
+                FROM device_activity_events
+                """
+            ).fetchone()
+
+        assert {"service_id", "service_generation"} <= activity_columns
+        assert "alert_generation" in service_columns
+        assert generation == 1
+        assert legacy_pair == (None, None)
+        assert len(triggers) == 1
+        assert (
+            module._normalise_schema_sql(triggers[0][1])
+            == module._normalise_schema_sql(
+                module.SERVICE_STATUS_ACTIVITY_TRIGGER_SQL
+            )
+        )
+
+    print("SERVICE_GENERATION_MIGRATION_IDEMPOTENT=PASS")
+    print("SERVICE_TRIGGER_CANONICAL_REPLACEMENT=PASS")
+
+
+def test_generation_migration_failure_rolls_back_and_aborts():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        create_legacy_identity_db(module)
+        real_normalise = module._normalise_schema_sql
+
+        def injected_failure(statement):
+            raise RuntimeError("injected generation migration failure")
+
+        module._normalise_schema_sql = injected_failure
+        try:
+            try:
+                module.init_db()
+            except RuntimeError as exc:
+                assert "injected generation migration failure" in str(exc)
+            else:
+                raise AssertionError("migration failure was swallowed")
+        finally:
+            module._normalise_schema_sql = real_normalise
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            activity_columns = {
+                row[1]
+                for row in conn.execute(
+                    "PRAGMA table_info(device_activity_events)"
+                )
+            }
+            service_columns = {
+                row[1]
+                for row in conn.execute(
+                    "PRAGMA table_info(device_services)"
+                )
+            }
+            trigger_sql = conn.execute(
+                """
+                SELECT sql
+                FROM sqlite_master
+                WHERE type = 'trigger' AND name = ?
+                """,
+                (module.SERVICE_STATUS_ACTIVITY_TRIGGER,),
+            ).fetchone()[0]
+
+        assert "service_id" not in activity_columns
+        assert "service_generation" not in activity_columns
+        assert "alert_generation" not in service_columns
+        assert (
+            module._normalise_schema_sql(trigger_sql)
+            == module._normalise_schema_sql(LEGACY_TRIGGER_SQL)
+        )
+
+    print("SERVICE_GENERATION_MIGRATION_FAILURE_ABORTS=PASS")
+    print("SERVICE_GENERATION_MIGRATION_FAILURE_ROLLS_BACK=PASS")
+
+
+def test_legacy_unpaired_event_advances_cursor_without_notification():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.LOG_FILE = str(Path(tmp) / "devicemonitor.log")
+        seed_alert_events(module)
+        sends = []
+
+        module.acquire_service_alert_lock = lambda: object()
+        module.release_service_alert_lock = lambda value: None
+        module.send_service_alert_email = lambda events: (
+            sends.append(events) or True
+        )
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            conn.execute(
+                '''
+                UPDATE service_alert_state
+                SET last_service_id = (
+                        SELECT COALESCE(MAX(id), 0) FROM device_services
+                    ),
+                    last_activity_event_id = (
+                        SELECT COALESCE(MAX(id), 0)
+                        FROM device_activity_events
+                    )
+                WHERE id = 1
+                '''
+            )
+            legacy_id = conn.execute(
+                '''
+                INSERT INTO device_activity_events (
+                    mac, lifecycle_id, event_type, old_value, new_value, details
+                )
+                VALUES (
+                    'aa:aa:aa:aa:aa:12', 1, 'SERVICE_UNAVAILABLE',
+                    'available', 'unavailable',
+                    'DNS|192.168.50.12|53|udp|LAN|dns_query'
+                )
+                '''
+            ).lastrowid
+            conn.commit()
+
+        before = read_cursor(module)
+        assert module.process_service_alerts(
+            alert_config(),
+            networks_fixture(),
+        ) is True
+        after = read_cursor(module)
+
+        assert sends == []
+        assert after == (before[0], legacy_id)
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            assert conn.execute(
+                '''
+                SELECT service_id, service_generation
+                FROM device_activity_events
+                WHERE id = ?
+                ''',
+                (legacy_id,),
+            ).fetchone() == (None, None)
+            assert conn.execute(
+                "SELECT COUNT(*) FROM service_alert_pending"
+            ).fetchone()[0] == 0
+
+    print("LEGACY_UNPAIRED_EVENT_CURSOR_ADVANCES=PASS")
+    print("LEGACY_UNPAIRED_EVENT_NO_NOTIFICATION=PASS")
+
+
+def test_delivery_stub_runs_outside_database_transaction():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.LOG_FILE = str(Path(tmp) / "devicemonitor.log")
+        module.init_db()
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            conn.execute(
+                '''
+                INSERT INTO device_services (
+                    mac, ip, interface, service_type, port, protocol,
+                    status, detection_method, confidence, product, version,
+                    first_detected, last_verified
+                )
+                VALUES (
+                    'aa:aa:aa:aa:aa:40', '192.168.50.40', 'LAN', 'DNS', 53,
+                    'udp', 'available', 'dns_query', 'verified',
+                    'Test DNS', '1.0', '2026-09-12 01:00:00',
+                    '2026-09-12 01:00:00'
+                )
+                '''
+            )
+            conn.commit()
+
+        module.acquire_service_alert_lock = lambda: object()
+        module.release_service_alert_lock = lambda value: None
+        sends = []
+
+        def send_after_commit(events):
+            with closing(
+                sqlite3.connect(module.DB_FILE, timeout=0.05)
+            ) as conn:
+                conn.execute('BEGIN IMMEDIATE')
+                conn.rollback()
+            sends.append(events)
+            return True
+
+        module.send_service_alert_email = send_after_commit
+
+        assert module.process_service_alerts(
+            alert_config(service_email_new=True),
+            networks_fixture(),
+        ) is True
+        assert len(sends) == 1
+        assert sends[0][0]["event_type"] == "SERVICE_DISCOVERED"
+
+    print("SERVICE_ALERT_DELIVERY_OUTSIDE_TRANSACTION=PASS")
 
 
 def test_helper_invocation_contract():
@@ -629,6 +1031,11 @@ def test_out_of_scope_events_do_not_starve_in_scope_alerts():
 def main():
     test_per_device_service_alert_preferences()
     test_reader_filtering_and_global_gates()
+    test_current_discovery_and_legacy_activity_identity_are_distinct()
+    test_generation_migration_is_idempotent_and_replaces_trigger()
+    test_generation_migration_failure_rolls_back_and_aborts()
+    test_legacy_unpaired_event_advances_cursor_without_notification()
+    test_delivery_stub_runs_outside_database_transaction()
     test_helper_invocation_contract()
     test_failure_retry_success_and_disabled_cursor_behavior()
     test_real_nonblocking_lock()

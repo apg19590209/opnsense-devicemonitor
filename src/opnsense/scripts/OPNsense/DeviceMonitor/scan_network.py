@@ -72,6 +72,57 @@ PORT_DISCOVERY_LOCK = '/var/run/devicemonitor-port-discovery.lock'
 # ================================================================
 DB_BUSY_TIMEOUT_MS = 30000
 
+# One canonical definition is used for fresh schemas and upgrades. Service
+# activity events persist both the service-row lifetime and its alert
+# generation, so an outage cannot later be matched to a recreated endpoint or
+# to a different MAC lifetime at the same endpoint.
+SERVICE_STATUS_ACTIVITY_TRIGGER = 'trg_device_services_status_activity'
+SERVICE_STATUS_ACTIVITY_TRIGGER_SQL = '''
+CREATE TRIGGER trg_device_services_status_activity
+AFTER UPDATE OF status ON device_services
+WHEN NEW.mac IS NOT NULL
+  AND TRIM(NEW.mac) <> ''
+  AND COALESCE(OLD.status, '') <> COALESCE(NEW.status, '')
+BEGIN
+    INSERT INTO device_activity_events (
+        mac,
+        lifecycle_id,
+        event_type,
+        old_value,
+        new_value,
+        details,
+        service_id,
+        service_generation
+    )
+    VALUES (
+        LOWER(TRIM(NEW.mac)),
+        (
+            SELECT lifecycle_id
+            FROM devices
+            WHERE LOWER(mac) = LOWER(TRIM(NEW.mac))
+            LIMIT 1
+        ),
+        CASE
+            WHEN LOWER(COALESCE(NEW.status, '')) = 'available'
+                THEN 'SERVICE_AVAILABLE'
+            WHEN LOWER(COALESCE(NEW.status, '')) = 'unavailable'
+                THEN 'SERVICE_UNAVAILABLE'
+            ELSE 'SERVICE_CHANGED'
+        END,
+        COALESCE(OLD.status, ''),
+        COALESCE(NEW.status, ''),
+        COALESCE(NEW.service_type, '') || '|' ||
+        COALESCE(NEW.ip, '') || '|' ||
+        CAST(COALESCE(NEW.port, 0) AS TEXT) || '|' ||
+        COALESCE(NEW.protocol, '') || '|' ||
+        COALESCE(NEW.interface, '') || '|' ||
+        COALESCE(NEW.detection_method, ''),
+        NEW.id,
+        NEW.alert_generation
+    );
+END
+'''
+
 # Presence and service-ageing state is stored as naive UTC text. Hostwatch
 # already supplies UTC in this shape, and SQLite's CURRENT_TIMESTAMP is UTC.
 # Legacy releases also wrote local wall time into service verification fields,
@@ -730,6 +781,73 @@ def init_db():
     _apply_db_schema()
 
 
+def _normalise_schema_sql(statement):
+    """Normalise full trigger text for exact semantic comparison."""
+    return ' '.join(str(statement or '').split())
+
+
+def _apply_service_identity_schema(c):
+    """Add service alert identity state and install the canonical trigger.
+
+    The savepoint makes the additive columns and trigger replacement atomic
+    whether SQLite placed the savepoint inside or outside an existing
+    transaction. Migration failures intentionally propagate to abort startup.
+    """
+    c.execute('SAVEPOINT service_alert_identity_migration')
+    try:
+        activity_columns = {
+            row[1]
+            for row in c.execute('PRAGMA table_info(device_activity_events)')
+        }
+        if 'service_id' not in activity_columns:
+            c.execute(
+                'ALTER TABLE device_activity_events '
+                'ADD COLUMN service_id INTEGER DEFAULT NULL'
+            )
+        if 'service_generation' not in activity_columns:
+            c.execute(
+                'ALTER TABLE device_activity_events '
+                'ADD COLUMN service_generation INTEGER DEFAULT NULL'
+            )
+
+        service_columns = {
+            row[1]
+            for row in c.execute('PRAGMA table_info(device_services)')
+        }
+        if 'alert_generation' not in service_columns:
+            c.execute(
+                'ALTER TABLE device_services '
+                'ADD COLUMN alert_generation INTEGER NOT NULL DEFAULT 1'
+            )
+
+        trigger_row = c.execute(
+            '''
+            SELECT sql
+            FROM sqlite_master
+            WHERE type = 'trigger' AND name = ?
+            ''',
+            (SERVICE_STATUS_ACTIVITY_TRIGGER,)
+        ).fetchone()
+        current_sql = trigger_row[0] if trigger_row else None
+
+        if (
+            current_sql is None
+            or _normalise_schema_sql(current_sql)
+            != _normalise_schema_sql(SERVICE_STATUS_ACTIVITY_TRIGGER_SQL)
+        ):
+            if current_sql is not None:
+                c.execute(
+                    f'DROP TRIGGER {SERVICE_STATUS_ACTIVITY_TRIGGER}'
+                )
+            c.execute(SERVICE_STATUS_ACTIVITY_TRIGGER_SQL)
+
+        c.execute('RELEASE service_alert_identity_migration')
+    except Exception:
+        c.execute('ROLLBACK TO service_alert_identity_migration')
+        c.execute('RELEASE service_alert_identity_migration')
+        raise
+
+
 def _apply_db_schema():
     """Apply the full schema, migrations and backfills to DB_FILE."""
     conn = sqlite3.connect(DB_FILE)
@@ -840,7 +958,9 @@ def _apply_db_schema():
         occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         old_value TEXT DEFAULT NULL,
         new_value TEXT DEFAULT NULL,
-        details TEXT DEFAULT NULL
+        details TEXT DEFAULT NULL,
+        service_id INTEGER DEFAULT NULL,
+        service_generation INTEGER DEFAULT NULL
     )''')
 
     # Per-MAC service email preferences. Existing devices inherit the global
@@ -1019,6 +1139,7 @@ def _apply_db_schema():
         last_verified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         last_checked DATETIME DEFAULT NULL,
         miss_count INTEGER NOT NULL DEFAULT 0,
+        alert_generation INTEGER NOT NULL DEFAULT 1,
         UNIQUE(ip, service_type, port, protocol, detection_method, interface)
     )''')
 
@@ -1060,48 +1181,9 @@ def _apply_db_schema():
 
     # Preserve meaningful service availability transitions without changing
     # each protocol-specific discovery path. Repeated writes of the same
-    # status deliberately produce no history event.
-    c.execute('''
-        CREATE TRIGGER IF NOT EXISTS trg_device_services_status_activity
-        AFTER UPDATE OF status ON device_services
-        WHEN NEW.mac IS NOT NULL
-          AND TRIM(NEW.mac) <> ''
-          AND COALESCE(OLD.status, '') <> COALESCE(NEW.status, '')
-        BEGIN
-            INSERT INTO device_activity_events (
-                mac,
-                lifecycle_id,
-                event_type,
-                old_value,
-                new_value,
-                details
-            )
-            VALUES (
-                LOWER(TRIM(NEW.mac)),
-                (
-                    SELECT lifecycle_id
-                    FROM devices
-                    WHERE LOWER(mac) = LOWER(TRIM(NEW.mac))
-                    LIMIT 1
-                ),
-                CASE
-                    WHEN LOWER(COALESCE(NEW.status, '')) = 'available'
-                        THEN 'SERVICE_AVAILABLE'
-                    WHEN LOWER(COALESCE(NEW.status, '')) = 'unavailable'
-                        THEN 'SERVICE_UNAVAILABLE'
-                    ELSE 'SERVICE_CHANGED'
-                END,
-                COALESCE(OLD.status, ''),
-                COALESCE(NEW.status, ''),
-                COALESCE(NEW.service_type, '') || '|' ||
-                COALESCE(NEW.ip, '') || '|' ||
-                CAST(COALESCE(NEW.port, 0) AS TEXT) || '|' ||
-                COALESCE(NEW.protocol, '') || '|' ||
-                COALESCE(NEW.interface, '') || '|' ||
-                COALESCE(NEW.detection_method, '')
-            );
-        END
-    ''')
+    # status deliberately produce no history event. The migration is atomic
+    # and replaces any predecessor trigger whose complete definition differs.
+    _apply_service_identity_schema(c)
 
     c.execute('''CREATE TABLE IF NOT EXISTS service_discovery_state (
         id INTEGER PRIMARY KEY CHECK(id = 1),
@@ -2396,7 +2478,8 @@ def upsert_device_service(
     advances an existing `devices.last_seen` only when the caller supplies a matching
     `presence_assoc` observed with that probe (DECISIONS.md 53 and its clarification).
     An IP-only answer, a historical MAC guess, or an `authoritative` row is not a
-    device-presence claim.
+    device-presence claim. If the stored MAC changes, the caller's transaction also
+    removes obsolete undelivered alert holds for the same endpoint.
     """
     mac = (mac or '').strip().lower() or None
     ip = (ip or '').strip()
@@ -2439,6 +2522,13 @@ def upsert_device_service(
         )
         DO UPDATE SET
             mac = COALESCE(excluded.mac, device_services.mac),
+            alert_generation = CASE
+                WHEN excluded.mac IS NOT NULL
+                 AND LOWER(TRIM(excluded.mac))
+                     <> LOWER(TRIM(COALESCE(device_services.mac, '')))
+                    THEN device_services.alert_generation + 1
+                ELSE device_services.alert_generation
+            END,
             status = excluded.status,
             confidence = excluded.confidence,
             product = excluded.product,
@@ -2464,6 +2554,51 @@ def upsert_device_service(
             verified_at,
         )
     )
+
+    # The service-key uniqueness deliberately excludes MAC, so a probe may replace
+    # the row's attribution without changing its endpoint identity. Reconcile only
+    # undelivered holds for this endpoint here, on the caller's connection and in the
+    # same transaction as the label update. Caller-owned transactions must not be
+    # nested, and a reconciliation failure must propagate so their commit cannot
+    # persist the label change alone.
+    current_row = conn.execute(
+        '''
+        SELECT id, alert_generation, mac, ip, interface, service_type, port,
+               protocol, detection_method, status
+        FROM device_services
+        WHERE ip = ?
+          AND service_type = ?
+          AND port = ?
+          AND protocol = ?
+          AND detection_method = ?
+          AND interface = ?
+        ''',
+        (
+            ip,
+            service_type,
+            int(port),
+            protocol,
+            detection_method,
+            interface,
+        )
+    ).fetchone()
+
+    if current_row:
+        reconcile_undelivered_service_alert_holds(
+            conn,
+            {
+                'service_id': current_row[0],
+                'service_generation': current_row[1],
+                'mac': current_row[2],
+                'ip': current_row[3],
+                'interface': current_row[4],
+                'service_type': current_row[5],
+                'port': current_row[6],
+                'protocol': current_row[7],
+                'detection_method': current_row[8],
+                'status': current_row[9],
+            },
+        )
 
     # Device presence (`devices.last_seen`) advances only for an association the caller
     # observed with this probe: a `presence_assoc` of the form (mac, ip) whose ip equals
@@ -6452,6 +6587,38 @@ def run_scheduled_service_discovery(interval_seconds=3600, networks=None):
         )
         return False
 
+def _service_alert_positive_integer(value):
+    """Return a positive integer identity component, or None."""
+    if isinstance(value, bool) or value is None:
+        return None
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    try:
+        number = int(text)
+    except (TypeError, ValueError):
+        return None
+
+    return number if number > 0 else None
+
+
+def _service_alert_identity(event):
+    """Return the complete service lifetime/generation pair, or None."""
+    service_id = _service_alert_positive_integer(
+        event.get('service_id')
+    )
+    service_generation = _service_alert_positive_integer(
+        event.get('service_generation')
+    )
+
+    if service_id is None or service_generation is None:
+        return None
+
+    return service_id, service_generation
+
+
 def get_pending_service_alert_events(conn, networks, limit_per_source=200):
     """
     Return infrastructure-service alert candidates newer than the persisted
@@ -6494,35 +6661,44 @@ def get_pending_service_alert_events(conn, networks, limit_per_source=200):
 
     trusted_rows = conn.execute(
         """
-        SELECT mac, ip, interface, service_type, port, protocol,
-               detection_method, confidence, product, version
+        SELECT id, alert_generation, mac, ip, interface, service_type, port,
+               protocol, detection_method, confidence, product, version
         FROM device_services
         WHERE LOWER(COALESCE(confidence, '')) IN ('verified', 'authoritative')
         """
     ).fetchall()
 
-    trusted_service_metadata = {
-        (
-            (row[0] or '').strip().lower(),
-            row[1] or '',
-            row[2] or '',
-            row[3] or '',
-            int(row[4] or 0),
-            row[5] or '',
-            row[6] or '',
-        ): {
-            'confidence': row[7] or '',
-            'product': row[8] or '',
-            'version': row[9] or '',
+    trusted_service_metadata = {}
+
+    for row in trusted_rows:
+        event = {
+            'service_id': row[0],
+            'service_generation': row[1],
+            'mac': row[2],
+            'ip': row[3],
+            'interface': row[4],
+            'service_type': row[5],
+            'port': row[6],
+            'protocol': row[7],
+            'detection_method': row[8],
         }
-        for row in trusted_rows
-    }
+        identity = _service_alert_identity(event)
+
+        if identity is None:
+            continue
+
+        trusted_service_metadata[identity] = {
+            'key': service_alert_key(event),
+            'confidence': row[9] or '',
+            'product': row[10] or '',
+            'version': row[11] or '',
+        }
 
     service_rows = conn.execute(
         """
-        SELECT id, mac, ip, interface, service_type, port, protocol,
-               status, detection_method, confidence, product, version,
-               first_detected
+        SELECT id, alert_generation, mac, ip, interface, service_type, port,
+               protocol, status, detection_method, confidence, product,
+               version, first_detected
         FROM device_services
         WHERE id > ?
         ORDER BY id ASC
@@ -6532,32 +6708,38 @@ def get_pending_service_alert_events(conn, networks, limit_per_source=200):
     ).fetchall()
 
     for row in service_rows:
-        confidence = (row[9] or '').strip().lower()
-        events.append({
+        confidence = (row[10] or '').strip().lower()
+        event = {
             'source': 'device_services',
             'record_id': int(row[0]),
+            'service_id': int(row[0]),
+            'service_generation': int(row[1] or 0),
             'event_type': 'SERVICE_DISCOVERED',
-            'occurred_at': row[12] or '',
-            'mac': (row[1] or '').strip().lower(),
-            'service_type': row[4] or '',
-            'ip': row[2] or '',
-            'port': int(row[5] or 0),
-            'protocol': row[6] or '',
-            'interface': row[3] or '',
-            'detection_method': row[8] or '',
+            'occurred_at': row[13] or '',
+            'mac': (row[2] or '').strip().lower(),
+            'service_type': row[5] or '',
+            'ip': row[3] or '',
+            'port': int(row[6] or 0),
+            'protocol': row[7] or '',
+            'interface': row[4] or '',
+            'detection_method': row[9] or '',
             'old_value': '',
-            'new_value': row[7] or '',
-            'confidence': row[9] or '',
-            'product': row[10] or '',
-            'version': row[11] or '',
+            'new_value': row[8] or '',
+            'confidence': row[10] or '',
+            'product': row[11] or '',
+            'version': row[12] or '',
             'alert_eligible': confidence in ('verified', 'authoritative'),
-            'in_scope': ip_is_in_scope(row[2] or '', networks),
-        })
+            'in_scope': ip_is_in_scope(row[3] or '', networks),
+        }
+        # Unlike queued activity, SERVICE_DISCOVERED is a fresh event built
+        # directly from the current inventory row, so its pair is current.
+        events.append(event)
 
     activity_rows = conn.execute(
         """
         SELECT id, mac, lifecycle_id, event_type, occurred_at,
-               old_value, new_value, details
+               old_value, new_value, details, service_id,
+               service_generation
         FROM device_activity_events
         WHERE id > ?
           AND event_type IN (
@@ -6581,25 +6763,15 @@ def get_pending_service_alert_events(conn, networks, limit_per_source=200):
         except (TypeError, ValueError):
             port = 0
 
-        service_key = (
-            (row[1] or '').strip().lower(),
-            ip,
-            interface,
-            service_type,
-            port,
-            protocol,
-            detection_method,
-        )
-
-        service_metadata = trusted_service_metadata.get(service_key, {})
-
-        events.append({
+        event = {
             'source': 'device_activity_events',
             'record_id': int(row[0]),
             'event_type': row[3] or '',
             'occurred_at': row[4] or '',
             'mac': (row[1] or '').strip().lower(),
             'lifecycle_id': row[2],
+            'service_id': row[8],
+            'service_generation': row[9],
             'service_type': service_type,
             'ip': ip,
             'port': port,
@@ -6608,12 +6780,33 @@ def get_pending_service_alert_events(conn, networks, limit_per_source=200):
             'detection_method': detection_method,
             'old_value': row[5] or '',
             'new_value': row[6] or '',
-            'confidence': service_metadata.get('confidence', ''),
-            'product': service_metadata.get('product', ''),
-            'version': service_metadata.get('version', ''),
-            'alert_eligible': bool(service_metadata),
+            'confidence': '',
+            'product': '',
+            'version': '',
+            'alert_eligible': False,
             'in_scope': ip_is_in_scope(ip, networks),
-        })
+        }
+
+        # Activity events use only the pair persisted when they were created.
+        # A current row with the same endpoint/MAC is not evidence that an
+        # older queued event belongs to its lifetime.
+        identity = _service_alert_identity(event)
+        service_metadata = (
+            trusted_service_metadata.get(identity)
+            if identity is not None
+            else None
+        )
+
+        if (
+            service_metadata is not None
+            and service_metadata.get('key') == service_alert_key(event)
+        ):
+            event['confidence'] = service_metadata['confidence']
+            event['product'] = service_metadata['product']
+            event['version'] = service_metadata['version']
+            event['alert_eligible'] = True
+
+        events.append(event)
 
     events.sort(key=lambda event: (
         event.get('occurred_at') or '',
@@ -6679,14 +6872,14 @@ def select_service_alert_events(config, events, preferences=None):
     return selected
 
 
-def service_alert_key(event):
-    """Return the stable identity of the service an alert event belongs to."""
+def _service_alert_key_parts(event):
+    """Return the normalised components of an infrastructure-service alert key."""
     try:
         port = int(event.get('port') or 0)
     except (TypeError, ValueError):
         port = 0
 
-    return '|'.join((
+    return (
         str(event.get('mac') or '').strip().lower(),
         str(event.get('service_type') or ''),
         str(event.get('ip') or ''),
@@ -6694,7 +6887,191 @@ def service_alert_key(event):
         str(event.get('protocol') or '').lower(),
         str(event.get('interface') or ''),
         str(event.get('detection_method') or ''),
-    ))
+    )
+
+
+def service_alert_key(event):
+    """Return the stable identity of the service an alert event belongs to."""
+    return '|'.join(_service_alert_key_parts(event))
+
+
+def service_alert_endpoint_key(event):
+    """Return the MAC-independent endpoint portion of a service alert key."""
+    return '|'.join(_service_alert_key_parts(event)[1:])
+
+
+def _service_alert_event_matches_state(event, state):
+    """Return whether an event's full service identity is the current state."""
+    if not isinstance(state, dict):
+        return False
+
+    identity = _service_alert_identity(event)
+    if identity is None:
+        return False
+
+    return identity == (
+        state.get('service_id'),
+        state.get('service_generation'),
+    )
+
+
+def _service_alert_hold_event(payload):
+    """Decode a stored service-alert hold payload, or return None."""
+    try:
+        event = json.loads(payload)
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+    return event if isinstance(event, dict) else None
+
+
+def _service_alert_endpoint_from_stored_key(key):
+    """Extract the MAC-independent endpoint from a stored alert key."""
+    parts = str(key or '').split('|', 1)
+    return parts[1] if len(parts) == 2 else None
+
+
+def _remove_undelivered_hold_for_event(conn, key, event):
+    """Remove an undelivered hold only when its identity matches the event."""
+    row = conn.execute(
+        '''
+        SELECT notified, event_json
+        FROM service_alert_pending
+        WHERE service_key = ?
+        ''',
+        (key,)
+    ).fetchone()
+
+    if row is None or int(row[0] or 0):
+        return False
+
+    hold_event = _service_alert_hold_event(row[1])
+    event_identity = _service_alert_identity(event)
+    hold_identity = (
+        _service_alert_identity(hold_event)
+        if hold_event is not None
+        else None
+    )
+
+    if hold_identity is not None and hold_identity != event_identity:
+        return False
+
+    conn.execute(
+        '''
+        DELETE FROM service_alert_pending
+        WHERE service_key = ? AND notified = 0
+        ''',
+        (key,)
+    )
+    return True
+
+
+def reconcile_undelivered_service_alert_holds(conn, current_event=None):
+    """Remove undelivered holds that no longer match current service state.
+
+    The current seven-field key remains the operator-facing service identity.
+    An event or hold must additionally match the current service-row ID and
+    alert generation. Legacy undelivered holds without that complete pair are
+    suppressed because their lifetime cannot be established safely.
+
+    With `current_event`, only the same endpoint is considered; this is the
+    service upsert path. Without it, every undelivered row is checked against
+    current service rows. Delivered rows and activity history are never changed.
+    """
+    if current_event is None:
+        current_states = _service_alert_current_states(conn)
+        target_endpoint = None
+        target_state = None
+    else:
+        current_states = None
+        target_endpoint = service_alert_endpoint_key(current_event)
+        target_state = {
+            'service_id': _service_alert_positive_integer(
+                current_event.get('service_id')
+            ),
+            'service_generation': _service_alert_positive_integer(
+                current_event.get('service_generation')
+            ),
+            'status': str(
+                current_event.get('status') or ''
+            ).strip().lower(),
+        }
+    obsolete = set()
+
+    rows = conn.execute(
+        '''
+        SELECT service_key, event_json
+        FROM service_alert_pending
+        WHERE notified = 0
+        '''
+    ).fetchall()
+
+    for stored_key, payload in rows:
+        event = _service_alert_hold_event(payload)
+
+        if event is None:
+            if (
+                target_endpoint is None
+                or _service_alert_endpoint_from_stored_key(stored_key)
+                    == target_endpoint
+            ):
+                obsolete.add(stored_key)
+            continue
+
+        if str(event.get('event_type') or '') != 'SERVICE_UNAVAILABLE':
+            if (
+                target_endpoint is None
+                or _service_alert_endpoint_from_stored_key(stored_key)
+                    == target_endpoint
+            ):
+                obsolete.add(stored_key)
+            continue
+
+        if (
+            target_endpoint is not None
+            and service_alert_endpoint_key(event) != target_endpoint
+        ):
+            continue
+
+        identity = _service_alert_identity(event)
+        state = (
+            target_state
+            if target_endpoint is not None
+            else current_states.get(service_alert_key(event))
+        )
+
+        if identity is None:
+            obsolete.add(stored_key)
+            continue
+
+        if (
+            target_endpoint is not None
+            and service_alert_key(event) != service_alert_key(current_event)
+        ):
+            obsolete.add(stored_key)
+            continue
+
+        if (
+            not _service_alert_event_matches_state(event, state)
+            or str((state or {}).get('status') or '').strip().lower()
+                != 'unavailable'
+        ):
+            obsolete.add(stored_key)
+
+    if obsolete:
+        conn.executemany(
+            '''
+            DELETE FROM service_alert_pending
+            WHERE service_key = ? AND notified = 0
+            ''',
+            [(key,) for key in sorted(obsolete)]
+        )
+        log(
+            '[SERVICE-EMAIL] Dropped '
+            f'{len(obsolete)} stale or legacy undelivered hold(s)'
+        )
+
+    return len(obsolete)
 
 
 def _service_alert_timestamp(value):
@@ -6731,14 +7108,15 @@ def collect_expired_service_alert_holds(conn, now=None):
     Return held outage events whose confirmation window has elapsed.
 
     A hold is created the first time a service is reported unavailable and is
-    deleted by the matching recovery event. One that survives the whole window
-    is a real outage, so the original event is released for delivery. Holds are
-    stored with their original event payload, so a released outage still
-    reports the address, port and product that were observed.
+    deleted by the matching recovery event. Only a hold whose exact current key
+    and lifetime/generation pair still exist and are `unavailable` is eligible
+    for release. Holds are stored with their original event payload, so a
+    released outage still reports the address, port and product observed.
     """
     now = now or datetime.now()
 
     try:
+        current_states = _service_alert_current_states(conn)
         rows = conn.execute(
             '''
             SELECT event_json, held_at
@@ -6757,15 +7135,52 @@ def collect_expired_service_alert_holds(conn, now=None):
         if age is None or age < SERVICE_ALERT_CONFIRM_SECONDS:
             continue
 
-        try:
-            event = json.loads(payload)
-        except (json.JSONDecodeError, TypeError):
+        event = _service_alert_hold_event(payload)
+        if event is None:
             continue
 
-        if isinstance(event, dict):
-            due.append(event)
+        state = current_states.get(service_alert_key(event))
+        if (
+            not _service_alert_event_matches_state(event, state)
+            or str((state or {}).get('status') or '').strip().lower()
+                != 'unavailable'
+        ):
+            continue
+
+        due.append(event)
 
     return due
+
+
+def _service_alert_current_states(conn):
+    """Map each current full alert key to its lifetime and status."""
+    rows = conn.execute(
+        '''
+        SELECT id, alert_generation, mac, ip, interface, service_type, port,
+               protocol, detection_method, status
+        FROM device_services
+        '''
+    ).fetchall()
+
+    states = {}
+
+    for row in rows:
+        key = service_alert_key({
+            'mac': row[2],
+            'ip': row[3],
+            'interface': row[4],
+            'service_type': row[5],
+            'port': row[6],
+            'protocol': row[7],
+            'detection_method': row[8],
+        })
+        states[key] = {
+            'service_id': _service_alert_positive_integer(row[0]),
+            'service_generation': _service_alert_positive_integer(row[1]),
+            'status': str(row[9] or '').strip().lower(),
+        }
+
+    return states
 
 
 def apply_service_alert_confirmation(conn, selected, now=None):
@@ -6787,24 +7202,82 @@ def apply_service_alert_confirmation(conn, selected, now=None):
     held = {}
     suppressed = []
     handled = set()
+    current_states = _service_alert_current_states(conn)
 
     for event in selected:
         key = service_alert_key(event)
         event_type = str(event.get('event_type') or '')
 
-        # A held outage and its recovery are separate events for the same
-        # service, so only the same (key, type) pair is deduplicated.
-        identity = (key, event_type)
+        event_service_id, event_generation = (
+            _service_alert_identity(event) or (None, None)
+        )
 
-        if identity in handled:
+        # Include the complete lifetime/generation pair in batch deduplication.
+        # An older queued event cannot displace the current lifetime's event
+        # merely because the endpoint key and event type are unchanged.
+        if event_service_id is not None and event_generation is not None:
+            dedupe_identity = (
+                key,
+                event_type,
+                'identity',
+                event_service_id,
+                event_generation,
+            )
+        else:
+            dedupe_identity = (
+                key,
+                event_type,
+                'invalid',
+                repr(event.get('service_id')),
+                repr(event.get('service_generation')),
+            )
+
+        if dedupe_identity in handled:
             continue
 
-        handled.add(identity)
+        handled.add(dedupe_identity)
         mac = str(event.get('mac') or '').strip().lower()
+        current_state = current_states.get(key)
+        current_matches = _service_alert_event_matches_state(
+            event,
+            current_state,
+        )
+
+        if (
+            event_type in ('SERVICE_UNAVAILABLE', 'SERVICE_AVAILABLE')
+            and (event_service_id is None or event_generation is None)
+        ):
+            _remove_undelivered_hold_for_event(conn, key, event)
+            suppressed.append(event)
+            continue
+
+        if event_type == 'SERVICE_DISCOVERED':
+            if not current_matches:
+                suppressed.append(event)
+                continue
+
+            deliverable.append(event)
+            continue
+
+        if (
+            event_type == 'SERVICE_UNAVAILABLE'
+            and (
+                not current_matches
+                or str((current_state or {}).get('status') or '').strip().lower()
+                    != 'unavailable'
+            )
+        ):
+            # An expired event can remain in memory after its service was deleted
+            # or relabelled. Remove only an undelivered row with this event's
+            # identity and refuse to recreate it; delivered state and activity
+            # history remain untouched.
+            _remove_undelivered_hold_for_event(conn, key, event)
+            suppressed.append(event)
+            continue
 
         row = conn.execute(
             '''
-            SELECT notified, notified_at, held_at
+            SELECT notified, notified_at, held_at, event_json
             FROM service_alert_pending
             WHERE service_key = ?
             ''',
@@ -6812,6 +7285,39 @@ def apply_service_alert_confirmation(conn, selected, now=None):
         ).fetchone()
 
         if event_type == 'SERVICE_UNAVAILABLE':
+            hold_event = (
+                _service_alert_hold_event(row[3])
+                if row is not None
+                else None
+            )
+            hold_identity = (
+                _service_alert_identity(hold_event)
+                if hold_event is not None
+                else None
+            )
+
+            if (
+                row is not None
+                and hold_identity != (
+                    event_service_id,
+                    event_generation,
+                )
+            ):
+                if int(row[0] or 0):
+                    # A delivered row for an older lifetime no longer describes
+                    # the current outage. Replace only this operational state;
+                    # the new event becomes a fresh undelivered hold.
+                    row = None
+                else:
+                    conn.execute(
+                        '''
+                        DELETE FROM service_alert_pending
+                        WHERE service_key = ? AND notified = 0
+                        ''',
+                        (key,)
+                    )
+                    row = None
+
             if row is None:
                 conn.execute(
                     '''
@@ -6854,11 +7360,40 @@ def apply_service_alert_confirmation(conn, selected, now=None):
             continue
 
         if event_type == 'SERVICE_AVAILABLE':
+            if (
+                not current_matches
+                or str((current_state or {}).get('status') or '').strip().lower()
+                    != 'available'
+            ):
+                _remove_undelivered_hold_for_event(conn, key, event)
+                suppressed.append(event)
+                continue
+
             if row is None:
                 suppressed.append(event)
                 continue
 
             if not int(row[0] or 0):
+                hold_event = _service_alert_hold_event(row[3])
+                hold_identity = (
+                    _service_alert_identity(hold_event)
+                    if hold_event is not None
+                    else None
+                )
+
+                if hold_identity != (
+                    event_service_id,
+                    event_generation,
+                ):
+                    if hold_identity is None:
+                        _remove_undelivered_hold_for_event(
+                            conn,
+                            key,
+                            event,
+                        )
+                    suppressed.append(event)
+                    continue
+
                 conn.execute(
                     'DELETE FROM service_alert_pending WHERE service_key = ?',
                     (key,)
@@ -7222,6 +7757,10 @@ def process_service_alerts(config, networks):
 
     A non-blocking process lock serialises this read/send/cursor sequence so
     overlapping full scans cannot normally deliver the same pending alert.
+    Within it, a short `BEGIN IMMEDIATE` transaction reconciles orphaned
+    undelivered holds and validates current identities before deciding what may
+    be delivered. Delivery occurs after that transaction commits, so this is an
+    eligibility guarantee at decision time, not throughout the external send.
     """
     lock_fd = acquire_service_alert_lock()
 
@@ -7235,6 +7774,12 @@ def process_service_alerts(config, networks):
 
         conn = sqlite3.connect(DB_FILE)
         try:
+            # Serialise identity validation, stale-hold reconciliation and the
+            # confirmation decision against service upserts. The transaction ends
+            # before external delivery, so eligibility is guaranteed at this
+            # decision point rather than throughout the later mail-helper call.
+            conn.execute('BEGIN IMMEDIATE')
+            reconcile_undelivered_service_alert_holds(conn)
             events = get_pending_service_alert_events(conn, networks)
             expired = collect_expired_service_alert_holds(conn, now)
             preferences = load_service_alert_preferences(
