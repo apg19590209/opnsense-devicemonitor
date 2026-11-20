@@ -2341,3 +2341,19 @@ msgstr "Timezone unknown"
 #: infrastructureservices.volt
 msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
 msgstr "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
+
+#: infrastructureservices.volt
+msgid "All Service Types"
+msgstr "All Service Types"
+
+#: infrastructureservices.volt
+msgid "These filters apply to service inventory, not Recent Service Changes."
+msgstr "These filters apply to service inventory, not Recent Service Changes."
+
+#: infrastructureservices.volt
+msgid "No services match the selected filters"
+msgstr "No services match the selected filters"
+
+#: infrastructureservices.volt
+msgid "Service Inventory"
+msgstr "Service Inventory"

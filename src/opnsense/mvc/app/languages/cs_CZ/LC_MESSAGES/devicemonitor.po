@@ -2341,3 +2341,19 @@ msgstr "Časové pásmo neznámé"
 #: infrastructureservices.volt
 msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
 msgstr "Hodnoty s neznámým časovým pásmem zůstávají přesně ve uložené podobě, protože původ UTC není k dispozici."
+
+#: infrastructureservices.volt
+msgid "All Service Types"
+msgstr "Všechny typy služeb"
+
+#: infrastructureservices.volt
+msgid "These filters apply to service inventory, not Recent Service Changes."
+msgstr "Tyto filtry se vztahují na inventář služeb, nikoli na Nedávné změny služeb."
+
+#: infrastructureservices.volt
+msgid "No services match the selected filters"
+msgstr "Žádné služby neodpovídají vybraným filtrům"
+
+#: infrastructureservices.volt
+msgid "Service Inventory"
+msgstr "Inventář služeb"

@@ -2366,3 +2366,19 @@ msgstr "时区未知"
 #: infrastructureservices.volt
 msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
 msgstr "时区未知的值因无法确认 UTC 来源而按存储原样显示。"
+
+#: infrastructureservices.volt
+msgid "All Service Types"
+msgstr "所有服务类型"
+
+#: infrastructureservices.volt
+msgid "These filters apply to service inventory, not Recent Service Changes."
+msgstr "这些筛选条件适用于服务清单，不适用于“最近的服务变更”。"
+
+#: infrastructureservices.volt
+msgid "No services match the selected filters"
+msgstr "没有符合所选筛选条件的服务"
+
+#: infrastructureservices.volt
+msgid "Service Inventory"
+msgstr "服务清单"

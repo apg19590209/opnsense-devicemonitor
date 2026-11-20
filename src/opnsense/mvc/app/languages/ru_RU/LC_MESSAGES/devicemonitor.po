@@ -2366,3 +2366,19 @@ msgstr "Часовой пояс неизвестен"
 #: infrastructureservices.volt
 msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
 msgstr "Значения с неизвестным часовым поясом отображаются точно в сохранённом виде, поскольку происхождение UTC недоступно."
+
+#: infrastructureservices.volt
+msgid "All Service Types"
+msgstr "Все типы служб"
+
+#: infrastructureservices.volt
+msgid "These filters apply to service inventory, not Recent Service Changes."
+msgstr "Эти фильтры применяются к инвентарю служб, а не к разделу «Последние изменения служб»."
+
+#: infrastructureservices.volt
+msgid "No services match the selected filters"
+msgstr "Нет служб, соответствующих выбранным фильтрам"
+
+#: infrastructureservices.volt
+msgid "Service Inventory"
+msgstr "Инвентарь служб"

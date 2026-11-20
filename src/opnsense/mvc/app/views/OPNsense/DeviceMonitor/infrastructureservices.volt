@@ -54,7 +54,7 @@
                     data-width="180px"
                 >
                     <option value="">
-                        {{ devicemonitor_t('All Services') }}
+                        {{ devicemonitor_t('All Service Types') }}
                     </option>
                 </select>
 
@@ -95,6 +95,9 @@
                         {{ devicemonitor_t('Show archived') }}
                     </label>
                 </span>
+            </div>
+            <div class="dm-service-filter-scope text-muted">
+                {{ devicemonitor_t('These filters apply to service inventory, not Recent Service Changes.') }}
             </div>
 
             <ul id="infrastructure-tabs"
@@ -304,8 +307,10 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: nowrap;
     max-width: 100%;
     margin: 0;
+    margin-left: 16px;
 }
 
 .infrastructure-toolbar .dm-show-archived-toggle > input[type="checkbox"] {
@@ -324,6 +329,11 @@
     white-space: normal;
     overflow-wrap: break-word;
     cursor: pointer;
+}
+
+.dm-service-filter-scope {
+    margin: -4px 4px 10px 4px;
+    font-size: 13px;
 }
 
 .port-discovery-controls {
@@ -767,6 +777,8 @@ $(document).ready(function() {
         if (event.key === 'Escape') { $(this).popover('hide').trigger('blur'); }
     });
     var allServices = [];
+    var inventoryFallbackCategory =
+        {{ lang.query('Service Inventory')|json_encode(15) }};
 
     function dash(value) {
         if (value === undefined || value === null || value === '') {
@@ -774,6 +786,10 @@ $(document).ready(function() {
         }
 
         return value;
+    }
+
+    function serviceTypeLabel(type) {
+        return String(type || '').toUpperCase();
     }
 
     function groupTitle(type) {
@@ -1332,34 +1348,68 @@ $(document).ready(function() {
         };
     }
 
-    function filteredRows() {
-        var type = $('#services-type-filter').val();
-        var status = $('#services-status-filter').val();
-        var search = ($('#services-search').val() || '')
-            .toLowerCase()
-            .trim();
+    function selectedServiceType() {
+        return String($('#services-type-filter').val() || '').toUpperCase();
+    }
 
-        return allServices.filter(function(row) {
-            if (row.archived && !$('#services-show-archived').prop('checked')) {
+    function currentInventoryFilters() {
+        return {
+            type: selectedServiceType(),
+            status: $('#services-status-filter').val(),
+            search: ($('#services-search').val() || '')
+                .toLowerCase()
+                .trim(),
+            includeArchived: $('#services-show-archived').prop('checked')
+        };
+    }
+
+    function filterServices(rows, filters) {
+        return (rows || []).filter(function(row) {
+            if (row.archived && !filters.includeArchived) {
                 return false;
             }
             if (
-                type &&
-                (row.service_type || '').toUpperCase() !== type
+                filters.type &&
+                (row.service_type || '').toUpperCase() !== filters.type
             ) {
                 return false;
             }
 
-            if (status && row.status !== status) {
+            if (filters.status && row.status !== filters.status) {
                 return false;
             }
 
-            if (search && searchText(row).indexOf(search) === -1) {
+            if (
+                filters.search &&
+                searchText(row).indexOf(filters.search) === -1
+            ) {
                 return false;
             }
 
             return true;
         });
+    }
+
+    function filteredRows() {
+        return filterServices(allServices, currentInventoryFilters());
+    }
+
+    function groupServicesByCategory(rows) {
+        var grouped = {};
+
+        (rows || []).forEach(function(row) {
+            var category = categoryForType(
+                String(row.service_type || 'OTHER').toUpperCase()
+            );
+
+            if (!grouped[category]) {
+                grouped[category] = [];
+            }
+
+            grouped[category].push(row);
+        });
+
+        return grouped;
     }
 
     var preferredOrder = [
@@ -1399,6 +1449,44 @@ $(document).ready(function() {
         return groupTitle(type);
     }
 
+    function resolveInventoryCategory(
+        type,
+        activeCategory,
+        grouped,
+        categoryNames
+    ) {
+        if (type) {
+            return categoryForType(type);
+        }
+
+        if (
+            activeCategory &&
+            (grouped[activeCategory] || []).length
+        ) {
+            return activeCategory;
+        }
+
+        var matching = (categoryNames || []).filter(function(name) {
+            return (
+                name !== inventoryFallbackCategory &&
+                (grouped[name] || []).length
+            );
+        });
+
+        if (matching.length) {
+            return matching[0];
+        }
+
+        if (
+            activeCategory &&
+            (categoryNames || []).indexOf(activeCategory) !== -1
+        ) {
+            return activeCategory;
+        }
+
+        return (categoryNames || [])[0] || inventoryFallbackCategory;
+    }
+
     function categoryRank(category) {
         var index = categoryOrder.indexOf(category);
 
@@ -1435,6 +1523,57 @@ $(document).ready(function() {
                 .replace(/^-+|-+$/g, '');
     }
 
+    function categoryPaneId(name) {
+        return name === inventoryFallbackCategory
+            ? 'tab-services-inventory'
+            : categorySlug(name);
+    }
+
+    function activeInventoryCategory() {
+        var href = $('#infrastructure-tabs li.active > a').attr('href') || '';
+        var paneId = href.replace(/^#/, '');
+        var found = '';
+
+        Object.keys(servicePaneIds).some(function(name) {
+            if (servicePaneIds[name] === paneId) {
+                found = name;
+                return true;
+            }
+
+            return false;
+        });
+
+        return found;
+    }
+
+    function activateInventoryCategory(name) {
+        if (!name || !servicePaneIds[name]) {
+            return;
+        }
+
+        $('#infrastructure-tabs a[href="#' + servicePaneIds[name] + '"]')
+            .tab('show');
+    }
+
+    function applyInventoryFilters(refreshTabs) {
+        var activeCategory = activeInventoryCategory();
+
+        if (refreshTabs) {
+            renderTabs();
+        }
+
+        var rows = renderServices();
+        var desiredCategory = resolveInventoryCategory(
+            selectedServiceType(),
+            activeCategory,
+            groupServicesByCategory(rows),
+            Object.keys(servicePaneIds)
+        );
+
+        activateInventoryCategory(desiredCategory);
+        return desiredCategory;
+    }
+
     function renderTabs() {
         var categories = {};
 
@@ -1454,6 +1593,21 @@ $(document).ready(function() {
         });
 
         var names = Object.keys(categories);
+        var selectedType = selectedServiceType();
+
+        if (selectedType) {
+            var selectedCategory = categoryForType(selectedType);
+
+            if (!Object.prototype.hasOwnProperty.call(categories, selectedCategory)) {
+                categories[selectedCategory] = 0;
+                names.push(selectedCategory);
+            }
+        }
+
+        if (!names.length) {
+            categories[inventoryFallbackCategory] = 0;
+            names.push(inventoryFallbackCategory);
+        }
 
         names.sort(function(a, b) {
             var ai = categoryRank(a);
@@ -1482,7 +1636,7 @@ $(document).ready(function() {
         $content.find('[data-service-pane]').remove();
 
         names.forEach(function(name) {
-            var paneId = categorySlug(name);
+            var paneId = categoryPaneId(name);
 
             servicePaneIds[name] = paneId;
 
@@ -1531,19 +1685,7 @@ $(document).ready(function() {
 
         $('#services-visible').text(rows.length);
 
-        var grouped = {};
-
-        rows.forEach(function(row) {
-            var category = categoryForType(
-                String(row.service_type || 'OTHER').toUpperCase()
-            );
-
-            if (!grouped[category]) {
-                grouped[category] = [];
-            }
-
-            grouped[category].push(row);
-        });
+        var grouped = groupServicesByCategory(rows);
 
         Object.keys(servicePaneIds).forEach(function(name) {
             var categoryRows = grouped[name] || [];
@@ -1577,6 +1719,8 @@ $(document).ready(function() {
                 categoryRows
             );
         });
+
+        return rows;
     }
     function appendLabeledCell($row, label, $content) {
         var $cell = $('<td>').append(
@@ -1675,7 +1819,7 @@ $(document).ready(function() {
         if (!rows.length) {
             $('<div>')
                 .addClass('alert alert-info')
-                .text({{ lang.query('No infrastructure services match the current filter.')|json_encode(15) }})
+                .text({{ lang.query('No services match the selected filters')|json_encode(15) }})
                 .appendTo($pane);
 
             return;
@@ -1900,7 +2044,7 @@ $(document).ready(function() {
         (types || []).forEach(function(type) {
             $('<option>')
                 .attr('value', type)
-                .text(groupTitle(type))
+                .text(serviceTypeLabel(type))
                 .appendTo($select);
         });
 
@@ -2042,15 +2186,21 @@ $(document).ready(function() {
         });
     });
 
-    $('#services-type-filter, #services-status-filter')
-        .on('change', renderServices);
-
-    $('#services-show-archived').on('change', function() {
-        renderTabs();
-        renderServices();
+    $('#services-type-filter').on('change', function() {
+        applyInventoryFilters(true);
     });
 
-    $('#services-search').on('input', renderServices);
+    $('#services-status-filter').on('change', function() {
+        applyInventoryFilters(false);
+    });
+
+    $('#services-show-archived').on('change', function() {
+        applyInventoryFilters(true);
+    });
+
+    $('#services-search').on('input', function() {
+        applyInventoryFilters(false);
+    });
 
     var portDiscoveryDevices = {};
     var portDiscoveryPending = {};

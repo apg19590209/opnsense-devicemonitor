@@ -15,17 +15,20 @@ or approved for future development.
 
 ## Open backlog
 
-### Infrastructure Services visual follow-up: **`OPEN / SOURCE COMPLETE; PACKAGING + BROWSER PENDING`**
+### Infrastructure Services visual follow-up: **OPEN — SOURCE, PACKAGING, AND `.23` AUTOMATED ACCEPTANCE COMPLETE; BROWSER REVIEW PARTIAL**
 
 **Description:** Complete the confirmed visual follow-up:
 
 1. The **Show archived** checkbox is detached from its associated label by
    roughly 90 px in the latest rendered screenshot.
-2. The original 200% zoom/scroll overlap is observed corrected in the latest
-   screenshot: the local summary/filter/tab stack scrolls away and service
-   content/actions remain visible. Full visual acceptance remains pending.
+2. The compact summary/filter/tab stack is operator-confirmed at 200% to scroll
+   away while service content/actions remain visible. The full viewport/zoom
+   matrix remains pending.
 3. Infrastructure Services and Device Activity use `dd.mm.YYYY - HH:mm:ss T`
    instead of the requested common `YYYY-MM-DD HH:mm:ss` display format.
+4. The **Showing n** count and complete **Show archived** control need 24 px
+   separation, while retaining the 8 px checkbox-to-label gap and keeping the
+   checkbox and label together when the toolbar wraps.
 
 The checkbox correction must use an explicit `id`/`for` association, an 8 px
 gap and vertical centring. The sticky-control correction must let summary,
@@ -33,16 +36,31 @@ toolbar and tabs scroll normally at narrow effective widths or high zoom while
 retaining useful desktop sticky behaviour. Every service field and action must
 remain reachable by page scrolling and keyboard navigation.
 
-**Confirmed evidence:** operator review on `.23` reports the remaining checkbox
-spacing and the partial scroll result. The latest 200% Firefox screenshot is
-normal rendered output, not screenshot-stitching uncertainty. The checkbox now
-uses the intended explicit `id`/`for` relationship and local inline flex, but
-the earlier rule `.infrastructure-toolbar input { width: 230px; }` applies to
-all descendants, including this checkbox. The checkbox is `flex: 0 0 auto`, so
-it reserves a 230 px flex item while painting only the native control at its
-leading edge. The 8 px flex gap therefore begins after the invisible reserved
-remainder. Local margins and padding are already reset; the remaining excess is
-the inherited view-local width.
+**Confirmed evidence:** earlier operator screenshots on `.23` established the
+detached checkbox and compact-control scroll overlap. The 200% Firefox
+screenshot is normal rendered output, not screenshot-stitching uncertainty.
+Source inspection found that the earlier rule
+`.infrastructure-toolbar input { width: 230px; }` applied to all descendants,
+including the checkbox. The checkbox is now `flex: 0 0 auto` with `width: auto`,
+`min-width: 0` and a scoped inline-flex wrapper; current screenshots show one
+checkbox/label control without an exact rendered pixel claim.
+
+Visual-review evidence from Tony on 21 November 2026 confirms that **Details**
+opens with Enter and closes with Space. Screenshots demonstrate readable
+expanded Details, final DNS-row controls reachable at 200%, compact controls
+scrolling away, and **Show archived** rendering as one checkbox/label control.
+The screenshot viewport widths were not supplied, and no exact pixel measurement
+is claimed.
+
+Focused automated and fixture evidence demonstrates separate Recorded
+State/Evidence presentation, stackable observation labels and values, compact
+timezone labels and explanations, the requested proven-timestamp form in both
+pages, complete shared-IP inventory matches, and verbatim malformed values.
+Malformed handling remains fixture-only; no live malformed database value is
+required. The evidence sources are the previously passing
+`test_infrastructure_presentation.php`, `test_infrastructure_stale.js`, and
+`test_device_timeline.php` checks; the focused JavaScript test also passes with
+the current source-only spacing correction.
 
 Source inspection finds that `.infrastructure-sticky-controls` is
 `position: sticky; z-index: 20`, with a runtime-calculated top and an opaque
@@ -52,15 +70,19 @@ following rows pass behind it. The local page-content header is sticky at
 `z-index: 30`, and table headers are sticky at `z-index: 10` beneath it. No
 non-visible `overflow` container was found on the body, page-content or
 content-box ancestors; the nested recent-changes scroller is a sibling rather
-than an ancestor of the service controls. Browser geometry has not yet been
-captured, so the precise height/offset threshold and exact share of the overlap
-caused by each sticky element remain unproven.
+than an ancestor of the service controls. Browser geometry at the unrecorded
+screenshot widths, the precise height/offset threshold and the exact share of
+the overlap caused by each sticky element remain unproven.
 
-The remaining compact-layout acceptance checks are Recorded State/Evidence
-separation, compact timezone labels and table explanations, stacked observation
-values, complete shared-IP inventory details, keyboard Details operation and
-non-activating Archive/Restore label inspection. They remain pending checks,
-not confirmed defects unless the operator reports them as such.
+The remaining compact-layout browser check is non-activating Archive/Restore
+label inspection. This remains a pending interaction check, not a confirmed
+defect unless the operator reports one.
+
+Operator review on 21 November 2026 added the toolbar grouping adjustment:
+preserve the internal 8 px checkbox-to-label gap, add 16 px left margin to the
+toggle so the outer 8 px toolbar gap produces 24 px total separation from
+**Showing n**, and use `flex-wrap: nowrap` on the toggle so the checkbox and
+label remain one control when the outer toolbar wraps.
 
 **Timestamp typography correction:** Use one shared display-only formatter with
 `Y-m-d H:i:s T` for proven UTC values after conversion to the OPNsense-configured
@@ -75,10 +97,44 @@ existing native control and filter semantics.
 **Status:** Implemented and packaged as frozen candidate
 `7feaabe39c20a1095304a20bf72de98debcb376864e24a9e2335fdd84253560a`
 from source `4c4bb12` and accepted on `.23` on 20 November 2026. Browser
-acceptance remains pending. The prior accepted candidate and rollback evidence
+acceptance is partial. The prior accepted candidate and rollback evidence
 remain preserved. Checkbox spacing and timestamp typography source corrections
-are complete locally but are not part of the installed candidate or packaged
-for installation yet.
+are packaged in candidate
+`59e7bc98a36679627d2410b074ad461f0f7e162ab0f5a2a1a0ce1b28921e67f4`
+from source `e9fd166`, installed and automatically accepted on `.23` on
+21 November 2026 with rollback
+`/var/backups/devicemonitor/install-v214.43OARv`. All 12 host checks pass,
+including authenticated API checks. The additional toolbar grouping correction
+is source-complete with a focused regression in the worktree, but is not built,
+packaged or installed. Browser visual acceptance, including same-line spacing
+and wrapped placement without overflow, remains pending. The untested viewport
+widths, checkbox mouse/Tab/Space/filter interaction and desktop sticky reading
+space remain outstanding. The uninstalled 24 px toolbar spacing adjustment
+remains pending browser review.
+
+### Infrastructure Services filter control scope: **SOURCE COMPLETE; PACKAGING PENDING**
+
+**Description:** Make the inventory filters visibly effective without changing
+the unfiltered historical feed:
+
+- label the dropdown **All Service Types** and show exact types such as SMB,
+  NFS, RDP and VNC;
+- activate the relevant service-category tab whenever an inventory filter is
+  changed;
+- select a specific type's category even when it has no matching rows;
+- retain the active matching category, choose another matching category, or
+  keep a stable fallback inventory tab when no row matches;
+- preserve other active filters when the type is cleared; and
+- state that these filters do not apply to Recent Service Changes.
+
+**Benefit:** Filter selections produce an immediate, unambiguous inventory
+result instead of appearing to do nothing while Recent Service Changes remains
+visible.
+
+**Status:** Source, focused regression, manual and all ten shipped catalogues
+are updated in the worktree. The disposable filter fixtures, presentation test,
+translated-JavaScript test and isolated source-rendering language acceptance
+pass. No build, packaging, installation or browser acceptance occurred.
 
 ### Deployment-entry-point release safeguards: **`CLOSED`**
 

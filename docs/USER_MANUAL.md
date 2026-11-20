@@ -420,12 +420,21 @@ current health. The page does not relabel a service as stale from elapsed browse
 - **Refresh View** — reload the service data. **Read-only.**
 - **Discover Now** — trigger an immediate infrastructure-service discovery pass.
   **Changes state** (runs discovery).
-- **All Services** (type filter) — filter by service type.
+- **All Service Types** (type filter) — filter by the exact stored service type.
+  Similar types remain distinct: **SMB** and **NFS**, or **RDP**, **VNC** and
+  **WinRM**.
 - **All Recorded States** (state filter) — filter by **Available** / **Unavailable** /
   **Unknown** as recorded.
 - **Search services** — free-text filter.
 - **Show archived** — include services hidden with **Archive**.
 - **Showing n** — number of services currently displayed.
+
+These inventory filters apply to the service-category tabs, not to **Recent
+Service Changes**. Changing a filter opens a relevant inventory category, even
+when no service currently matches. If none matches, the selected, currently
+active or stable fallback inventory tab shows **No services match the selected
+filters**. Clearing the type keeps the state, search and archive filters active
+and makes every service type eligible again.
 
 Each service row has **Archive** (or **Restore** when archived). Archive hides
 the endpoint from the normal tabs without deleting its discovery or activity
@@ -599,6 +608,9 @@ The first tab shows a feed of the latest service events with columns: **Event Ti
 **Change** (discovered / unavailable / recovered / changed), **Service**,
 **Stored MAC attribution**, **Endpoint**, **Stored inventory matches at page load**, and
 **History**. **Read-only.**
+
+The toolbar’s type, state, search and archive filters do not alter this
+historical feed.
 
 The event time, MAC, endpoint and transition are stored event facts. Event times with
 proven UTC provenance are displayed in the OPNsense-configured timezone and the zone is

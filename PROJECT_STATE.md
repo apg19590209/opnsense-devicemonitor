@@ -2,6 +2,32 @@
 
 ## Current state
 
+**v2.15.2 timestamp/checkbox candidate — `.23` AUTOMATED ACCEPTANCE COMPLETE (21 November 2026).**
+The shared `YYYY-MM-DD HH:mm:ss ZONE` display formatter and final **Show archived**
+width correction are committed as `b3cf5df`; coherent v2.15.2 inputs are `e9fd166`,
+with identity record `23c725c`. Two independent clean-export builds produced the same
+96-member archive from source `e9fd166db73a3ff4d056d985097d66161190a652`:
+12,688,348 bytes, SHA-256
+`59e7bc98a36679627d2410b074ad461f0f7e162ab0f5a2a1a0ce1b28921e67f4`.
+Full preflight, manifest/input, reproducibility/determinism, bundle verification and all
+13 supported predecessor-upgrade checks pass. The candidate is frozen at
+`/root/dm-backups/dm-v2.15.2-timestamp-checkbox-candidate-20261120T124958Z`.
+The guarded local installation completed with 70 targets, 66 unchanged, zero prunes and
+zero repairs. All 12 host checks, including authenticated API checks, pass and acceptance
+is recorded under
+`/root/dm-validation/v2.15.2-timestamp-checkbox-23-acceptance-20261120T125830Z/`.
+The temporary account and credential were removed. Installer rollback is
+`/var/backups/devicemonitor/install-v214.43OARv`. The prior `7feaabe3…` candidate and
+rollback evidence remain preserved. Browser visual acceptance remains pending. Report:
+`.cline-reports/REPORT-20261120-235011-v2152-timestamp-checkbox-candidate.md`.
+
+An additional filter-scope correction is source-complete but not built or installed: the
+type control is now **All Service Types**, inventory filters activate category tabs, zero
+matches use a translated stable inventory state, and Recent Service Changes remains
+unfiltered. Focused filter, presentation, catalogue, translated-JavaScript and isolated
+source-rendering language checks pass. The installed `.23` candidate and rollback evidence
+above remain unchanged.
+
 **v2.15.2 compact-layout candidate — AUTOMATED `.23` ACCEPTANCE COMPLETE (20 November 2026).**
 Source `4c4bb12c1bc880ee372a8d2cf954fe583de0023c`, 12,687,324 bytes, 96 members,
 SHA-256 `7feaabe39c20a1095304a20bf72de98debcb376864e24a9e2335fdd84253560a`,

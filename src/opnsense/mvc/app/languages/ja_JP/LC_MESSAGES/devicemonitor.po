@@ -2366,3 +2366,19 @@ msgstr "タイムゾーン不明"
 #: infrastructureservices.volt
 msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
 msgstr "タイムゾーンが不明な値は、UTC の由来を確認できないため、保存された形式のまま表示されます。"
+
+#: infrastructureservices.volt
+msgid "All Service Types"
+msgstr "すべてのサービスタイプ"
+
+#: infrastructureservices.volt
+msgid "These filters apply to service inventory, not Recent Service Changes."
+msgstr "これらのフィルターはサービスインベントリに適用され、「最近のサービス変更」には適用されません。"
+
+#: infrastructureservices.volt
+msgid "No services match the selected filters"
+msgstr "選択したフィルターに一致するサービスはありません"
+
+#: infrastructureservices.volt
+msgid "Service Inventory"
+msgstr "サービスインベントリ"

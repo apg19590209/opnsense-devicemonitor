@@ -2366,3 +2366,19 @@ msgstr "Fuseau horaire inconnu"
 #: infrastructureservices.volt
 msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
 msgstr "Les valeurs dont le fuseau horaire est inconnu restent exactement telles qu’enregistrées, car leur provenance UTC n’est pas disponible."
+
+#: infrastructureservices.volt
+msgid "All Service Types"
+msgstr "Tous les types de services"
+
+#: infrastructureservices.volt
+msgid "These filters apply to service inventory, not Recent Service Changes."
+msgstr "Ces filtres s’appliquent à l’inventaire des services, et non aux Changements de service récents."
+
+#: infrastructureservices.volt
+msgid "No services match the selected filters"
+msgstr "Aucun service ne correspond aux filtres sélectionnés"
+
+#: infrastructureservices.volt
+msgid "Service Inventory"
+msgstr "Inventaire des services"

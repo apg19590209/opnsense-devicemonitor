@@ -24,6 +24,14 @@ const timeEnd = text.indexOf('    function recentStoredMacText(row) {', timeStar
 const normalizeStart = text.indexOf('    function normalizeServices(rows) {');
 const archiveStart = text.indexOf('    function serviceArchiveRequest(row) {');
 const archiveEnd = text.indexOf('    function filteredRows() {', archiveStart);
+const serviceTypeStart = text.indexOf('    function serviceTypeLabel(type) {');
+const groupEnd = text.indexOf('    function recordedStatusLabel(status) {', serviceTypeStart);
+const filterStart = text.indexOf('    function filterServices(rows, filters) {');
+const filterEnd = text.indexOf('    var preferredOrder = [', filterStart);
+const categoryStart = filterEnd;
+const categoryEnd = text.indexOf('    function categoryRank(category) {', categoryStart);
+const applyStart = text.indexOf('    function applyInventoryFilters(refreshTabs) {');
+const applyEnd = text.indexOf('    function renderTabs() {', applyStart);
 
 if (
     start < 0 ||
@@ -32,7 +40,15 @@ if (
     timeEnd < 0 ||
     normalizeStart < 0 ||
     archiveStart < 0 ||
-    archiveEnd < 0
+    archiveEnd < 0 ||
+    serviceTypeStart < 0 ||
+    groupEnd < 0 ||
+    filterStart < 0 ||
+    filterEnd < 0 ||
+    categoryStart < 0 ||
+    categoryEnd < 0 ||
+    applyStart < 0 ||
+    applyEnd < 0
 ) {
     throw new Error('Unable to extract Infrastructure Services presentation helpers');
 }
@@ -67,6 +83,25 @@ if (text.includes('text-overflow') || text.includes('letter-spacing:')) {
 if (!text.includes("lang.query('Event Time')")) {
     throw new Error('Recent Service Changes must use the Event Time heading');
 }
+if (!text.includes("devicemonitor_t('All Service Types')")) {
+    throw new Error('All Service Types label is missing');
+}
+if (
+    !text.includes(
+        "devicemonitor_t('These filters apply to service inventory, not Recent Service Changes.')"
+    )
+) {
+    throw new Error('Service inventory filter scope is not stated');
+}
+if (!text.includes(".text(serviceTypeLabel(type))")) {
+    throw new Error('Type filter does not show exact service types');
+}
+if (!text.includes("lang.query('No services match the selected filters')")) {
+    throw new Error('Explicit no-match inventory state is missing');
+}
+if (!text.includes("lang.query('Service Inventory')")) {
+    throw new Error('Stable inventory fallback label is missing');
+}
 if (!text.includes('class="dm-show-archived-toggle"')) {
     throw new Error('Show archived must use the scoped inline control');
 }
@@ -81,14 +116,20 @@ if (
 ) {
     throw new Error('Show archived must not use inherited checkbox-inline positioning');
 }
+const showArchivedRule = text.match(
+    /\.infrastructure-toolbar \.dm-show-archived-toggle \{([\s\S]*?)\}/
+);
 if (
-    !text.includes('.infrastructure-toolbar .dm-show-archived-toggle {') ||
-    !text.includes('gap: 8px;') ||
-    !text.includes('align-items: center;') ||
+    !showArchivedRule ||
+    !showArchivedRule[1].includes('display: inline-flex;') ||
+    !showArchivedRule[1].includes('align-items: center;') ||
+    !showArchivedRule[1].includes('gap: 8px;') ||
+    !showArchivedRule[1].includes('flex-wrap: nowrap;') ||
+    !showArchivedRule[1].includes('margin: 0;') ||
+    !showArchivedRule[1].includes('margin-left: 16px;') ||
     !text.includes('flex: 0 0 auto;') ||
     !text.includes('width: auto;') ||
-    !text.includes('min-width: 0;') ||
-    !text.includes('margin: 0;')
+    !text.includes('min-width: 0;')
 ) {
     throw new Error('Show archived control lacks scoped alignment and spacing');
 }
@@ -363,3 +404,215 @@ vm.runInNewContext(
         })()
     }
 );
+
+const filterSource =
+    text.slice(serviceTypeStart, groupEnd) +
+    '\n' +
+    text.slice(filterStart, filterEnd) +
+    '\n' +
+    text.slice(categoryStart, categoryEnd);
+const filterContext = {
+    console: console,
+    inventoryFallbackCategory: 'Service Inventory',
+    searchText: function(row) {
+        return [
+            row.service_type,
+            row.ip,
+            row.hostname,
+            row.mac
+        ].join(' ').toLowerCase();
+    },
+    $: function() {
+        throw new Error('DOM should not be used by pure filter tests');
+    }
+};
+vm.runInNewContext(
+    filterSource +
+    '\nthis.filterServices = filterServices;' +
+    '\nthis.groupServicesByCategory = groupServicesByCategory;' +
+    '\nthis.resolveInventoryCategory = resolveInventoryCategory;' +
+    '\nthis.serviceTypeLabel = serviceTypeLabel;' +
+    '\nthis.categoryForType = categoryForType;',
+    filterContext
+);
+
+function filterCheck(name, actual, expected) {
+    if (actual !== expected) {
+        throw new Error(
+            name + '=FAIL actual=' + JSON.stringify(actual) +
+            ' expected=' + JSON.stringify(expected)
+        );
+    }
+
+    console.log(name + '=PASS');
+}
+
+const filterFixture = [
+    {id: 1, service_type: 'DNS', status: 'available', archived: 0, ip: '192.0.2.1'},
+    {id: 2, service_type: 'DNS', status: 'unavailable', archived: 0, ip: '192.0.2.2'},
+    {id: 3, service_type: 'VPN', status: 'available', archived: 0, ip: '192.0.2.3'},
+    {id: 4, service_type: 'SSH', status: 'unknown', archived: 0, ip: '192.0.2.4'},
+    {id: 5, service_type: 'SMB', status: 'available', archived: 0, ip: '192.0.2.5'},
+    {id: 6, service_type: 'NFS', status: 'available', archived: 0, ip: '192.0.2.6'},
+    {id: 7, service_type: 'RDP', status: 'available', archived: 0, ip: '192.0.2.7'},
+    {id: 8, service_type: 'DNS', status: 'available', archived: 1, ip: '192.0.2.8'}
+];
+const baseFilters = {
+    type: '',
+    status: '',
+    search: '',
+    includeArchived: false
+};
+function filteredIds(overrides) {
+    return filterContext.filterServices(
+        filterFixture,
+        Object.assign({}, baseFilters, overrides)
+    ).map(function(row) { return row.id; }).join(',');
+}
+
+filterCheck('FILTER_ALL_ACTIVE', filteredIds({}), '1,2,3,4,5,6,7');
+filterCheck('FILTER_DNS', filteredIds({type: 'DNS'}), '1,2');
+filterCheck('FILTER_DNS_ARCHIVED', filteredIds({type: 'DNS', includeArchived: true}), '1,2,8');
+filterCheck('FILTER_STATUS_AVAILABLE', filteredIds({status: 'available'}), '1,3,5,6,7');
+filterCheck('FILTER_SEARCH_SSH', filteredIds({search: 'ssh'}), '4');
+filterCheck(
+    'FILTER_CLEAR_TYPE_PRESERVES_STATUS',
+    filteredIds({type: '', status: 'available'}),
+    '1,3,5,6,7'
+);
+filterCheck('FILTER_EXACT_SMB', filteredIds({type: 'SMB'}), '5');
+filterCheck('FILTER_EXACT_NFS', filteredIds({type: 'NFS'}), '6');
+filterCheck('FILTER_EXACT_RDP', filteredIds({type: 'RDP'}), '7');
+filterCheck('TYPE_LABEL_SMB', filterContext.serviceTypeLabel('SMB'), 'SMB');
+filterCheck('TYPE_LABEL_NFS', filterContext.serviceTypeLabel('NFS'), 'NFS');
+filterCheck('TYPE_LABEL_RDP', filterContext.serviceTypeLabel('RDP'), 'RDP');
+
+const duplicateGroups = filterContext.groupServicesByCategory(
+    filterFixture.filter(function(row) {
+        return row.service_type === 'SMB' || row.service_type === 'NFS';
+    })
+);
+filterCheck(
+    'DUPLICATE_GROUP_TITLE_DISTINCT_TYPES',
+    duplicateGroups['File / NAS Services'].map(function(row) {
+        return row.service_type;
+    }).join(','),
+    'SMB,NFS'
+);
+
+filterCheck(
+    'TYPE_SELECTS_EMPTY_CATEGORY',
+    filterContext.resolveInventoryCategory(
+        'DNS',
+        'Recent Service Changes',
+        {},
+        ['DNS Servers', 'File / NAS Services']
+    ),
+    'DNS Servers'
+);
+filterCheck(
+    'STATUS_RETAINS_ACTIVE_CATEGORY',
+    filterContext.resolveInventoryCategory(
+        '',
+        'DNS Servers',
+        {'DNS Servers': [{id: 1}]},
+        ['DNS Servers', 'File / NAS Services']
+    ),
+    'DNS Servers'
+);
+filterCheck(
+    'STATUS_CHOOSES_MATCHING_CATEGORY',
+    filterContext.resolveInventoryCategory(
+        '',
+        'DNS Servers',
+        {'VPN Endpoints': [{id: 3}]},
+        ['DNS Servers', 'VPN Endpoints']
+    ),
+    'VPN Endpoints'
+);
+filterCheck(
+    'NO_MATCH_RETAINS_STABLE_CATEGORY',
+    filterContext.resolveInventoryCategory(
+        '',
+        'DNS Servers',
+        {},
+        ['DNS Servers', 'VPN Endpoints']
+    ),
+    'DNS Servers'
+);
+filterCheck(
+    'NO_CATEGORY_USES_STABLE_FALLBACK',
+    filterContext.resolveInventoryCategory('', '', {}, []),
+    'Service Inventory'
+);
+
+const applyCalls = [];
+const applyContext = {
+    servicePaneIds: {'DNS Servers': 'tab-services-dns-servers'},
+    activeInventoryCategory: function() {
+        applyCalls.push('active');
+        return '';
+    },
+    renderTabs: function() {
+        applyCalls.push('tabs');
+    },
+    renderServices: function() {
+        applyCalls.push('render');
+        return [{id: 1}];
+    },
+    selectedServiceType: function() {
+        return 'DNS';
+    },
+    groupServicesByCategory: function() {
+        applyCalls.push('group');
+        return {'DNS Servers': [{id: 1}]};
+    },
+    resolveInventoryCategory: function() {
+        applyCalls.push('resolve');
+        return 'DNS Servers';
+    },
+    activateInventoryCategory: function(name) {
+        applyCalls.push('activate:' + name);
+    }
+};
+vm.runInNewContext(
+    text.slice(applyStart, applyEnd) +
+    '\nthis.applyInventoryFilters = applyInventoryFilters;',
+    applyContext
+);
+filterCheck(
+    'APPLY_TYPE_REFRESHES_TABS_AND_RENDERS',
+    applyContext.applyInventoryFilters(true),
+    'DNS Servers'
+);
+filterCheck(
+    'APPLY_TYPE_CALL_ORDER',
+    applyCalls.join(','),
+    'active,tabs,render,group,resolve,activate:DNS Servers'
+);
+
+applyCalls.length = 0;
+applyContext.applyInventoryFilters(false);
+filterCheck(
+    'APPLY_STATUS_SEARCH_RETAINS_TAB_SET',
+    applyCalls.join(','),
+    'active,render,group,resolve,activate:DNS Servers'
+);
+
+const handlerStart = text.indexOf("    $('#services-type-filter').on('change'");
+const handlerEnd = text.indexOf(
+    '    var portDiscoveryDevices = {};',
+    handlerStart
+);
+const handlerBlock = text.slice(handlerStart, handlerEnd);
+if (
+    handlerStart < 0 ||
+    handlerEnd < 0 ||
+    !handlerBlock.includes('applyInventoryFilters(true);') ||
+    !handlerBlock.includes('applyInventoryFilters(false);') ||
+    (handlerBlock.match(/applyInventoryFilters\(/g) || []).length !== 4 ||
+    handlerBlock.includes('renderRecentServiceChanges(')
+) {
+    throw new Error('Inventory filter handlers are not wired to inventory navigation');
+}
+console.log('INFRASTRUCTURE_FILTER_SCOPE=PASS');
