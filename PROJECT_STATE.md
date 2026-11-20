@@ -2,6 +2,19 @@
 
 ## Current state
 
+**v2.15.2 compact replacement candidate — FROZEN, NOT INSTALLED (20 November 2026).**
+The reviewed compact Infrastructure Services readability change is committed as
+`3b4e40d`, its v2.15.2 inputs are coherent at `c6ec80c`, and the measured identity is
+recorded at `f45ae21`. Two independent clean-export builds produced the same 96-member
+archive, 12,686,300 bytes, SHA-256
+`6ff6ed45c435a21c83ec12edec9f93b541d2dabcabb5cfedbf9d696525e48749`, from source
+`c6ec80c0d7a79d41790457159754e32102f6974a`. Full preflight, manifest/input, bundle
+reproducibility/determinism and all 13 supported predecessor-upgrade checks passed. The
+candidate is frozen at
+`/root/dm-backups/dm-v2.15.2-compact-candidate-20261120T070043Z`; `.23` remains on
+candidate `fb9c3521…` and was not contacted. Browser visual acceptance remains pending.
+Report: `.cline-reports/REPORT-20261120-180707-v2152-compact-candidate.md`.
+
 **v2.15.1 service-retirement release — PUBLISHED 19 November 2026.** PR #17 preserved the
 reviewed `b8de765`/`21f4262`/`2758ac6`/`b01712c` correction and merged normally as
 `3168ef88f212605ca8ccde2146133663022eb70a`; annotated tag `v2.15.1` points to that merge.
