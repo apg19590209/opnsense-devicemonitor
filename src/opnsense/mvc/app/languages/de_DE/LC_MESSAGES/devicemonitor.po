@@ -2355,3 +2355,14 @@ msgstr "übereinstimmende Endpoint-IP"
 #: activitytimeline.volt / infrastructureservices.volt
 msgid "matching stored MAC"
 msgstr "übereinstimmende gespeicherte MAC"
+
+# ============================================
+# [compact timezone presentation]
+# ============================================
+#: infrastructureservices.volt
+msgid "Timezone unknown"
+msgstr "Zeitzone unbekannt"
+
+#: infrastructureservices.volt
+msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
+msgstr "Werte mit unbekannter Zeitzone bleiben exakt in ihrer gespeicherten Form, da ihre UTC-Herkunft nicht verfügbar ist."

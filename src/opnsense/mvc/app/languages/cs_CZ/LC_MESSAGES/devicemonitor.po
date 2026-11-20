@@ -2330,3 +2330,14 @@ msgstr "odpovídající IP koncového bodu"
 #: activitytimeline.volt / infrastructureservices.volt
 msgid "matching stored MAC"
 msgstr "odpovídající uložená MAC"
+
+# ============================================
+# [compact timezone presentation]
+# ============================================
+#: infrastructureservices.volt
+msgid "Timezone unknown"
+msgstr "Časové pásmo neznámé"
+
+#: infrastructureservices.volt
+msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
+msgstr "Hodnoty s neznámým časovým pásmem zůstávají přesně ve uložené podobě, protože původ UTC není k dispozici."

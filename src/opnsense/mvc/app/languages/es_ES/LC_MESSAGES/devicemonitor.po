@@ -2355,3 +2355,14 @@ msgstr "IP de extremo coincidente"
 #: activitytimeline.volt / infrastructureservices.volt
 msgid "matching stored MAC"
 msgstr "MAC registrada coincidente"
+
+# ============================================
+# [compact timezone presentation]
+# ============================================
+#: infrastructureservices.volt
+msgid "Timezone unknown"
+msgstr "Zona horaria desconocida"
+
+#: infrastructureservices.volt
+msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
+msgstr "Los valores con una zona horaria desconocida permanecen exactamente como se almacenaron porque su procedencia UTC no está disponible."

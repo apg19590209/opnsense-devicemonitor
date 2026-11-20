@@ -437,37 +437,42 @@
 
 .infrastructure-service-table th:nth-child(1),
 .infrastructure-service-table td:nth-child(1) {
-    width: 24%;
+    width: 23%;
 }
 
 .infrastructure-service-table th:nth-child(2),
 .infrastructure-service-table td:nth-child(2) {
-    width: 12%;
+    width: 11%;
+    padding-right: 14px;
+    border-right: 1px solid #e2e6ea;
 }
 
 .infrastructure-service-table th:nth-child(3),
 .infrastructure-service-table td:nth-child(3) {
-    width: 16%;
+    width: 17%;
+    padding-left: 14px;
 }
 
 .infrastructure-service-table th:nth-child(4),
 .infrastructure-service-table td:nth-child(4) {
-    width: 18%;
+    width: 23%;
 }
 
 .infrastructure-service-table th:nth-child(5),
 .infrastructure-service-table td:nth-child(5) {
-    width: 20%;
+    width: 17%;
 }
 
 .infrastructure-service-table th:nth-child(6),
 .infrastructure-service-table td:nth-child(6) {
-    width: 10%;
+    width: 9%;
+    text-align: center;
 }
 
 .infrastructure-service-table th,
 .infrastructure-service-table td {
     overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .infrastructure-service-table td,
@@ -490,22 +495,44 @@
 }
 
 .dm-service-times {
-    display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
-    column-gap: 8px;
-    row-gap: 3px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
     font-variant-numeric: tabular-nums;
 }
 
-.dm-service-times dt,
-.dm-service-times dd {
-    margin: 0;
+.dm-service-time-entry {
+    min-width: 0;
 }
 
-.dm-service-times dd {
+.dm-service-time-entry dt {
+    margin: 0;
+    font-weight: 600;
+}
+
+.dm-service-time-entry dd {
+    margin: 2px 0 0;
     font-family: monospace;
+    line-height: 1.35;
     overflow-wrap: normal;
     word-break: normal;
+    white-space: normal;
+}
+
+.dm-service-timezone-note {
+    margin: 0 0 10px;
+    color: #666;
+}
+
+.dm-timezone-unknown {
+    display: inline-block;
+    max-width: 100%;
+    margin-top: 4px;
+    color: #4f5d6b;
+    background: #f4f6f8;
+    border: 1px solid #cbd2d8;
+    white-space: normal;
 }
 
 .dm-service-attribution {
@@ -582,6 +609,24 @@
     .dm-service-row > td {
         padding: 6px 0 !important;
         border: 0 !important;
+    }
+
+    .dm-service-row > td + td {
+        border-top: 1px solid #edf0f2 !important;
+    }
+
+    .dm-service-row > td:nth-child(2) {
+        padding-right: 0 !important;
+        border-right: 0 !important;
+    }
+
+    .dm-service-row > td:nth-child(3) {
+        padding-left: 0 !important;
+    }
+
+    .dm-service-row .btn-xs {
+        min-height: 32px;
+        padding: 6px 10px;
     }
 
     .dm-service-cell-label {
@@ -712,15 +757,15 @@ $(document).ready(function() {
     }
     function recordedStatusLabel(status) {
         if (status === 'available') {
-            return {{ lang.query('Last recorded state: Available')|json_encode(15) }};
+            return {{ lang.query('Available')|json_encode(15) }};
         }
 
         if (status === 'unavailable') {
-            return {{ lang.query('Last recorded state: Unavailable')|json_encode(15) }};
+            return {{ lang.query('Unavailable')|json_encode(15) }};
         }
 
         if (status === 'unknown') {
-            return {{ lang.query('Last recorded state: Unknown')|json_encode(15) }};
+            return {{ lang.query('Unknown')|json_encode(15) }};
         }
 
         return {{ lang.query('Recorded state not available')|json_encode(15) }};
@@ -851,15 +896,9 @@ $(document).ready(function() {
         return row[field + '_display'] || row[field];
     }
 
-    function observationTimestampNote(row, field) {
-        if (!String(row[field] || '').trim()) {
-            return '';
-        }
-
-        return eventTimeNote({
-            timestamp_domain: row[field + '_timestamp_domain'],
-            timezone: row.timestamp_timezone
-        });
+    function observationTimestampIsUnknown(row, field) {
+        return !!String(row[field] || '').trim() &&
+            String(row[field + '_timestamp_domain'] || 'unknown') !== 'utc';
     }
 
     function observationValues(row) {
@@ -870,12 +909,12 @@ $(document).ready(function() {
                 [
                     {{ lang.query('Last successful probe')|json_encode(15) }},
                     dash(observationTimestampText(row, 'last_verified')),
-                    observationTimestampNote(row, 'last_verified')
+                    observationTimestampIsUnknown(row, 'last_verified')
                 ],
                 [
                     {{ lang.query('Last probe attempt')|json_encode(15) }},
                     dash(observationTimestampText(row, 'last_checked')),
-                    observationTimestampNote(row, 'last_checked')
+                    observationTimestampIsUnknown(row, 'last_checked')
                 ]
             ];
         }
@@ -884,12 +923,12 @@ $(document).ready(function() {
             [
                 {{ lang.query('Evidence recorded')|json_encode(15) }},
                 dash(observationTimestampText(row, 'last_verified')),
-                observationTimestampNote(row, 'last_verified')
+                observationTimestampIsUnknown(row, 'last_verified')
             ],
             [
                 {{ lang.query('Evidence refreshed')|json_encode(15) }},
                 dash(observationTimestampText(row, 'last_checked')),
-                observationTimestampNote(row, 'last_checked')
+                observationTimestampIsUnknown(row, 'last_checked')
             ]
         ];
     }
@@ -1003,17 +1042,41 @@ $(document).ready(function() {
             row.occurred_at;
     }
 
-    function eventTimeNote(row) {
-        var domain = String(row.timestamp_domain || 'unknown');
+    function timezoneUnknownLabel() {
+        return {{ lang.query('Timezone unknown')|json_encode(15) }};
+    }
 
-        if (domain === 'utc') {
-            var zone = String(row.timezone || '').trim();
-            return zone
-                ? {{ lang.query('Displayed in')|json_encode(15) }} + ' ' + zone
-                : {{ lang.query('Converted from UTC')|json_encode(15) }};
+    function timezoneTableText(rows) {
+        var text =
+            {{ lang.query('Unknown timezone values remain exactly as stored because UTC provenance is unavailable.')|json_encode(15) }};
+        var zone = '';
+
+        (Array.isArray(rows) ? rows : []).some(function(row) {
+            zone = String(
+                row.timestamp_timezone || row.timezone || ''
+            ).trim();
+            return zone !== '';
+        });
+
+        if (zone) {
+            text += ' ' +
+                {{ lang.query('Displayed in')|json_encode(15) }} +
+                ' ' + zone + '.';
         }
 
-        return {{ lang.query('Stored time — timezone provenance not recorded')|json_encode(15) }};
+        return text;
+    }
+
+    function timezoneTableNote(rows) {
+        return $('<p>')
+            .addClass('dm-service-timezone-note')
+            .text(timezoneTableText(rows));
+    }
+
+    function timezoneUnknownBadge() {
+        return $('<span>')
+            .addClass('label label-default dm-timezone-unknown')
+            .text(timezoneUnknownLabel());
     }
 
     function recentStoredMacText(row) {
@@ -1057,6 +1120,8 @@ $(document).ready(function() {
             return;
         }
 
+        timezoneTableNote(changes).appendTo($root);
+
         var $table = $('<table>')
             .addClass(
                 'table table-condensed table-hover infrastructure-recent-table'
@@ -1071,7 +1136,7 @@ $(document).ready(function() {
                 $('<tr>').append(
                     $('<th>')
                         .attr('scope', 'col')
-                        .text({{ lang.query('Date / Time')|json_encode(15) }}),
+                        .text({{ lang.query('Event Time')|json_encode(15) }}),
                     $('<th>')
                         .attr('scope', 'col')
                         .text({{ lang.query('Change')|json_encode(15) }}),
@@ -1104,11 +1169,9 @@ $(document).ready(function() {
             $('<div>')
                 .text(dash(storedEventTimeText(row)))
                 .appendTo($time);
-            $('<small>')
-                .addClass('text-muted')
-                .css('display', 'block')
-                .text(eventTimeNote(row))
-                .appendTo($time);
+            if (String(row.timestamp_domain || 'unknown') !== 'utc') {
+                timezoneUnknownBadge().appendTo($time);
+            }
 
             $('<div>')
                 .text(serviceChangeLabel(row))
@@ -1576,6 +1639,8 @@ $(document).ready(function() {
             return;
         }
 
+        timezoneTableNote(rows).appendTo($pane);
+
         var $panel = $('<div>')
             .addClass(
                 'panel panel-default infrastructure-service-group'
@@ -1669,18 +1734,18 @@ $(document).ready(function() {
 
             var $times = $('<dl>').addClass('dm-service-times');
             observationValues(row).forEach(function(entry) {
-                $('<dt>').text(entry[0]).appendTo($times);
+                var $entry = $('<div>')
+                    .addClass('dm-service-time-entry');
+                $('<dt>').text(entry[0]).appendTo($entry);
                 var $value = $('<dd>').text(entry[1]);
 
                 if (entry[2]) {
-                    $('<small>')
-                        .addClass('text-muted')
-                        .css('display', 'block')
-                        .text(entry[2])
+                    timezoneUnknownBadge()
                         .appendTo($value);
                 }
 
-                $value.appendTo($times);
+                $value.appendTo($entry);
+                $entry.appendTo($times);
             });
             appendLabeledCell(
                 $row,

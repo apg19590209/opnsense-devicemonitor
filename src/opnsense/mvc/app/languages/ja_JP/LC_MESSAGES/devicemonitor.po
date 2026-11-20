@@ -2355,3 +2355,14 @@ msgstr "一致するエンドポイント IP"
 #: activitytimeline.volt / infrastructureservices.volt
 msgid "matching stored MAC"
 msgstr "一致する保存済み MAC"
+
+# ============================================
+# [compact timezone presentation]
+# ============================================
+#: infrastructureservices.volt
+msgid "Timezone unknown"
+msgstr "タイムゾーン不明"
+
+#: infrastructureservices.volt
+msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
+msgstr "タイムゾーンが不明な値は、UTC の由来を確認できないため、保存された形式のまま表示されます。"

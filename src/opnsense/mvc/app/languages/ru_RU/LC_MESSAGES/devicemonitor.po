@@ -2355,3 +2355,14 @@ msgstr "совпадающий IP конечной точки"
 #: activitytimeline.volt / infrastructureservices.volt
 msgid "matching stored MAC"
 msgstr "совпадающий сохранённый MAC"
+
+# ============================================
+# [compact timezone presentation]
+# ============================================
+#: infrastructureservices.volt
+msgid "Timezone unknown"
+msgstr "Часовой пояс неизвестен"
+
+#: infrastructureservices.volt
+msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
+msgstr "Значения с неизвестным часовым поясом отображаются точно в сохранённом виде, поскольку происхождение UTC недоступно."

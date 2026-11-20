@@ -52,6 +52,21 @@ if (
 if (text.includes('.html(') || text.includes('innerHTML')) {
     throw new Error('Dynamic service values must use text nodes');
 }
+if (!text.includes('dm-service-time-entry')) {
+    throw new Error('Observation labels and values must use stackable entries');
+}
+if (!text.includes('border-right: 1px solid #e2e6ea')) {
+    throw new Error('Recorded State and Evidence lack a desktop separator');
+}
+if (!text.includes('min-height: 32px')) {
+    throw new Error('Narrow-width action controls lack a usable target height');
+}
+if (text.includes('text-overflow') || text.includes('letter-spacing:')) {
+    throw new Error('Presentation must not truncate or manipulate letter spacing');
+}
+if (!text.includes("lang.query('Event Time')")) {
+    throw new Error('Recent Service Changes must use the Event Time heading');
+}
 
 const helpers = renderTranslations(
     text.slice(start, end) +
@@ -76,17 +91,17 @@ function check(name, actual, expected) {
 check(
     'RECORDED_STATUS_AVAILABLE',
     recordedStatusLabel('available'),
-    'Last recorded state: Available'
+    'Available'
 );
 check(
     'RECORDED_STATUS_UNAVAILABLE',
     recordedStatusLabel('unavailable'),
-    'Last recorded state: Unavailable'
+    'Unavailable'
 );
 check(
     'RECORDED_STATUS_UNKNOWN',
     recordedStatusLabel('unknown'),
-    'Last recorded state: Unknown'
+    'Unknown'
 );
 check(
     'RECORDED_STATUS_MISSING',
@@ -130,16 +145,8 @@ check(
         last_checked: '2026-11-20 00:10:02'
     })),
     JSON.stringify([
-        [
-            'Last successful probe',
-            '2026-11-19 23:10:02',
-            'Stored time — timezone provenance not recorded'
-        ],
-        [
-            'Last probe attempt',
-            '2026-11-20 00:10:02',
-            'Stored time — timezone provenance not recorded'
-        ]
+        ['Last successful probe', '2026-11-19 23:10:02', true],
+        ['Last probe attempt', '2026-11-20 00:10:02', true]
     ])
 );
 check(
@@ -150,16 +157,8 @@ check(
         last_checked: '2026-11-20 00:10:02'
     })),
     JSON.stringify([
-        [
-            'Evidence recorded',
-            '2026-11-19 23:10:02',
-            'Stored time — timezone provenance not recorded'
-        ],
-        [
-            'Evidence refreshed',
-            '2026-11-20 00:10:02',
-            'Stored time — timezone provenance not recorded'
-        ]
+        ['Evidence recorded', '2026-11-19 23:10:02', true],
+        ['Evidence refreshed', '2026-11-20 00:10:02', true]
     ])
 );
 check(
@@ -178,16 +177,8 @@ check(
         timestamp_timezone: 'Australia/Sydney'
     })),
     JSON.stringify([
-        [
-            'Last successful probe',
-            '20.11.2026 - 10:10:02 AEDT',
-            'Displayed in Australia/Sydney'
-        ],
-        [
-            'Last probe attempt',
-            '20.11.2026 - 11:10:02 AEDT',
-            'Displayed in Australia/Sydney'
-        ]
+        ['Last successful probe', '20.11.2026 - 10:10:02 AEDT', false],
+        ['Last probe attempt', '20.11.2026 - 11:10:02 AEDT', false]
     ])
 );
 check(
@@ -198,8 +189,8 @@ check(
         last_checked: ''
     })),
     JSON.stringify([
-        ['Last successful probe', '—', ''],
-        ['Last probe attempt', '—', '']
+        ['Last successful probe', '—', false],
+        ['Last probe attempt', '—', false]
     ])
 );
 
@@ -251,17 +242,21 @@ check(
     '2026-11-16 21:52:36'
 );
 check(
-    'AMBIGUOUS_EVENT_TIME_LABEL',
-    eventTimeNote({timestamp_domain: 'unknown'}),
-    'Stored time — timezone provenance not recorded'
+    'TIMEZONE_UNKNOWN_LABEL',
+    timezoneUnknownLabel(),
+    'Timezone unknown'
 );
 check(
-    'UTC_EVENT_TIME_ZONE_VISIBLE',
-    eventTimeNote({
-        timestamp_domain: 'utc',
-        timezone: 'Australia/Sydney'
-    }),
-    'Displayed in Australia/Sydney'
+    'TIMEZONE_TABLE_EXPLANATION_WITH_ZONE',
+    timezoneTableText([
+        {timestamp_timezone: 'Australia/Sydney'}
+    ]),
+    'Unknown timezone values remain exactly as stored because UTC provenance is unavailable. Displayed in Australia/Sydney.'
+);
+check(
+    'TIMEZONE_TABLE_EXPLANATION_WITHOUT_ROWS',
+    timezoneTableText([]),
+    'Unknown timezone values remain exactly as stored because UTC provenance is unavailable.'
 );
 
 const first = {id: 41, archived: 0};

@@ -452,16 +452,17 @@ Each displayed service row corresponds to one stored service record, so its
 **Archive** or **Restore** action applies to exactly that record. The row shows:
 
 - **Endpoint** — service type, IP, port, protocol and recorded interface.
-- **Recorded State** — the last recorded **Available** / **Unavailable** /
-  **Unknown** observation, or that no recorded state is available. The badge does not
-  claim present reachability.
+- **Recorded State** — **Available**, **Unavailable**, or **Unknown**, or that no
+  recorded state is available. These are neutral labels for the last stored observation;
+  the heading and badge do not claim present reachability.
 - **Evidence** — the evidence source: **Reachability probe**,
   **Authoritative/configuration record**, **Discovery evidence**, or an unclassified
   source. **Recorded evidence confidence** identifies the stored confidence; it is not
   proof of endpoint ownership or current health.
 - **Observation times** — labels vary by evidence source. Probe-backed evidence uses
   **Last successful probe** and **Last probe attempt**. Authoritative and discovery
-  evidence use **Evidence recorded** and **Evidence refreshed**.
+  evidence use **Evidence recorded** and **Evidence refreshed**. Each label appears above
+  its value so long translations and timestamps remain readable in narrow views.
 - **Stored MAC / Inventory** — the MAC stored for alert correlation and a count of
   stored inventory matches at page load.
 - **Details** — the stored MAC attribution, product/version and every inventory row
@@ -480,6 +481,11 @@ marked as UTC when written by the supported scanner. Each marked value is displa
 the OPNsense-configured timezone using that event date's daylight-saving rules. Unmarked
 legacy values and malformed values remain in their stored form and are labelled as
 having no recorded timezone provenance.
+
+Each service table has one timezone explanation above it. A compact **Timezone unknown**
+badge marks an individual stored value whose UTC provenance is unavailable. Values without
+that badge are shown in the named OPNsense-configured timezone, including the abbreviation
+for the event date's daylight-saving state.
 
 Stored MAC attribution is used for service and alert correlation. It is not proof
 that the MAC owns the endpoint.

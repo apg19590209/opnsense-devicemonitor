@@ -2355,3 +2355,14 @@ msgstr "IP endpoint corrispondente"
 #: activitytimeline.volt / infrastructureservices.volt
 msgid "matching stored MAC"
 msgstr "MAC memorizzata corrispondente"
+
+# ============================================
+# [compact timezone presentation]
+# ============================================
+#: infrastructureservices.volt
+msgid "Timezone unknown"
+msgstr "Fuso orario sconosciuto"
+
+#: infrastructureservices.volt
+msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
+msgstr "I valori con fuso orario sconosciuto restano esattamente come memorizzati perché la loro provenienza UTC non è disponibile."

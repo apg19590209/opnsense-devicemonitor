@@ -2330,3 +2330,14 @@ msgstr "matching endpoint IP"
 #: activitytimeline.volt / infrastructureservices.volt
 msgid "matching stored MAC"
 msgstr "matching stored MAC"
+
+# ============================================
+# [compact timezone presentation]
+# ============================================
+#: infrastructureservices.volt
+msgid "Timezone unknown"
+msgstr "Timezone unknown"
+
+#: infrastructureservices.volt
+msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
+msgstr "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."

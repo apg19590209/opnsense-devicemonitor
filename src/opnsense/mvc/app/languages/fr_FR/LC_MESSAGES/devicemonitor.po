@@ -2355,3 +2355,14 @@ msgstr "correspondant à l’IP du point de terminaison"
 #: activitytimeline.volt / infrastructureservices.volt
 msgid "matching stored MAC"
 msgstr "correspondant à la MAC enregistrée"
+
+# ============================================
+# [compact timezone presentation]
+# ============================================
+#: infrastructureservices.volt
+msgid "Timezone unknown"
+msgstr "Fuseau horaire inconnu"
+
+#: infrastructureservices.volt
+msgid "Unknown timezone values remain exactly as stored because UTC provenance is unavailable."
+msgstr "Les valeurs dont le fuseau horaire est inconnu restent exactement telles qu’enregistrées, car leur provenance UTC n’est pas disponible."
