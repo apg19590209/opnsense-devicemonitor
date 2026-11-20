@@ -154,10 +154,13 @@
 #   6ff6ed45c435a21c83ec12edec9f93b541d2dabcabb5cfedbf9d696525e48749  12686300 bytes
 #       (compact Infrastructure Services readability candidate from source c6ec80c; installed
 #        and accepted on .23, superseded by the compact-layout accessibility cut)
+#   7feaabe39c20a1095304a20bf72de98debcb376864e24a9e2335fdd84253560a  12687324 bytes
+#       (compact-layout accessibility candidate from source 4c4bb12; installed and accepted on
+#        .23, superseded by the timestamp typography and checkbox spacing cut)
 version 2.15.2
-bytes 12687324
-sha256 7feaabe39c20a1095304a20bf72de98debcb376864e24a9e2335fdd84253560a
-# source = 4c4bb12c1bc880ee372a8d2cf954fe583de0023c
+bytes 12688348
+sha256 59e7bc98a36679627d2410b074ad461f0f7e162ab0f5a2a1a0ce1b28921e67f4
+# source = e9fd166db73a3ff4d056d985097d66161190a652
 #   Measured from the committed source above under the declared build conditions:
 #   TZ=UTC0, canonical ustar with fixed ownership and mtime, deterministic stored-block gzip.
 #   96 members; the builder is not an archive member because it is a pinned release tool, not
