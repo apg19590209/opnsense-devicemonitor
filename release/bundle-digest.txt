@@ -145,10 +145,13 @@
 #       (recorded at 6c322f6 from source b0e8355 with release/build-bundle.sh in the allow-list;
 #        that combined pin was never independently verified and its packaged builder made
 #        verify-release-inputs.sh fail, superseded by this cut)
+#   03866ba4218f4836b55046ad2640096512332dffacab74ed23ec209f01da4a2d  12623319 bytes
+#       (first unreleased v2.15.2 candidate from source 82770c4; superseded by the reviewed
+#        service-presentation and timestamp-provenance replacement cut)
 version 2.15.2
-bytes 12623319
-sha256 03866ba4218f4836b55046ad2640096512332dffacab74ed23ec209f01da4a2d
-# source = 82770c4c9c3e8d5d88048bfcbf625fe46f82c8f1
+bytes 12680156
+sha256 fb9c3521c28f7a381b57515fca7bf5f102f3a89e860d36eed3a5242a8b601a94
+# source = 6d8430f4349ab2bdef5f52a2af72697c75aa6aeb
 #   Measured from the committed source above under the declared build conditions:
 #   TZ=UTC0, canonical ustar with fixed ownership and mtime, deterministic stored-block gzip.
 #   96 members; the builder is not an archive member because it is a pinned release tool, not
