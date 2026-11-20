@@ -402,6 +402,9 @@ jobs:
       - name: Validate translated JavaScript
         run: python3 tests/test_translated_javascript.py
 
+      - name: Validate language JavaScript context isolation
+        run: python3 tests/test_language_context_isolation.py
+
       - name: Validate core catalogue merge and header repair (DM-BL-008c/DM-BL-010)
         run: python3 tests/test_locale_merge.py
 

@@ -301,6 +301,23 @@ def identity_scores(rendered, keys, catalogues, reference):
     return scores
 
 
+def runtime_js_context_values(page_js_keys, rendered_by_page):
+    """Return resolved values only from each page's actual JS contexts.
+
+    A key can resolve through escaped static HTML on one page and raw
+    ``lang.query()`` on another. A global value map incorrectly lets the static
+    occurrence overwrite the JS occurrence. Keeping page ownership prevents that
+    cross-context collision without relaxing the entity check.
+    """
+    contexts = {}
+    for page, keys in page_js_keys.items():
+        values = rendered_by_page.get(page) or {}
+        for key in keys:
+            if key in values:
+                contexts.setdefault(key, []).append(values[key])
+    return contexts
+
+
 def accept_page(language, page, template, variables, catalogue, engine, directory):
     """Render one page and compare every resolved string with the catalogue value."""
     result = render(template, language, variables, catalogue['values'], engine, directory)
@@ -394,13 +411,19 @@ def main():
     if args.engine == 'interpolate' or (args.engine == 'auto' and missing_shared):
         engine = 'interpolate'
 
-    templates, union, js_keys, escaped_js = {}, set(), set(), {}
+    templates = {}
+    page_js_keys = {}
+    union, js_keys, escaped_js = set(), set(), {}
     for page, view, variables in PAGES:
         template = (views / view).read_text(encoding='utf-8')
         templates[page] = (template, variables)
         union |= page_keys(template)
         scripts = script_bodies(template)
-        js_keys |= {unquote(match.group(1)) for match in JSON_CALL.finditer(scripts)}
+        page_js_keys[page] = {
+            unquote(match.group(1))
+            for match in JSON_CALL.finditer(scripts)
+        }
+        js_keys |= page_js_keys[page]
         unsafe = {unquote(match.group(1)) for match in UNSAFE_JS_CALL.finditer(scripts)}
         if unsafe:
             escaped_js.setdefault(view, set()).update(unsafe)
@@ -420,7 +443,9 @@ def main():
     for language in languages:
         catalogue = catalogues[language]
         identical, missing = audit_catalogue(language, catalogue, union)
-        rendered, pages_ok = {}, True
+        rendered = {}
+        rendered_by_page = {}
+        pages_ok = True
         for page, (template, variables) in templates.items():
             try:
                 markup, page_values = accept_page(language, page, template, variables, catalogue,
@@ -430,16 +455,22 @@ def main():
                 pages_ok = False
                 continue
             rendered.update(page_values)
+            rendered_by_page[page] = page_values
             check_page_text(language, page, markup, page_values, catalogues, reference, engine)
 
         if engine == 'runtime':
             # The defect is language specific, so it is measured on the values that reached the
-            # script contexts, not on the source form of the call sites.
-            escaped = sorted(key for key in js_keys
-                             if key in rendered and ENTITY.search(rendered[key]))
+            # script contexts, not on the source form of the call sites or a global value map
+            # where an HTML occurrence on another page can overwrite the JS occurrence.
+            js_contexts = runtime_js_context_values(page_js_keys, rendered_by_page)
+            escaped = sorted(
+                key
+                for key, values in js_contexts.items()
+                if any(ENTITY.search(value) for value in values)
+            )
             if escaped:
                 fail(f'{language}: {len(escaped)} JavaScript translation(s) arrive HTML-escaped, '
-                     f'e.g. {escaped[0]!r} as {rendered[escaped[0]]!r}; use the raw lang.query() '
+                     f'e.g. {escaped[0]!r} as {js_contexts[escaped[0]][0]!r}; use the raw lang.query() '
                      f'or devicemonitor_raw()')
 
         scores = identity_scores(rendered, union, catalogues, reference)
