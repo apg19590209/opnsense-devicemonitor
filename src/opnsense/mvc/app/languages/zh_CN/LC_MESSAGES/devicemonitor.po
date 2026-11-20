@@ -2228,3 +2228,130 @@ msgstr "按端点 IP"
 
 msgid "by stored MAC"
 msgstr "按存储的 MAC"
+
+# ============================================
+# [service presentation amendments]
+# ============================================
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "All Recorded States"
+msgstr "所有已记录状态"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Authoritative/configuration record"
+msgstr "权威/配置记录"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Converted from UTC"
+msgstr "从 UTC 转换"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Counts describe stored observations, not current health."
+msgstr "计数描述已存储的观测，不代表当前健康状况。"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Displayed in"
+msgstr "显示于"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Event Time"
+msgstr "事件时间"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Evidence recorded"
+msgstr "证据记录"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Evidence refreshed"
+msgstr "证据刷新"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Evidence source not classified"
+msgstr "证据来源未分类"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Last probe attempt"
+msgstr "最后探测尝试"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Last recorded state: Available"
+msgstr "最后记录状态：可用"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Last recorded state: Unavailable"
+msgstr "最后记录状态：不可用"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Last recorded state: Unknown"
+msgstr "最后记录状态：未知"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Last successful probe"
+msgstr "最后成功探测"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Matching endpoint IP"
+msgstr "匹配的端点 IP"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Matching stored MAC"
+msgstr "匹配的已存储 MAC"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Monitored interface label"
+msgstr "受监控接口标签"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "No stored inventory matches"
+msgstr "没有匹配的已存储清单记录"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Reachability probe"
+msgstr "可达性探测"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Recorded Available"
+msgstr "已记录可用"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Recorded State"
+msgstr "已记录状态"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Recorded Unavailable"
+msgstr "已记录不可用"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Recorded Unknown"
+msgstr "已记录未知"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Recorded evidence confidence"
+msgstr "已记录证据可信度"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Recorded state not available"
+msgstr "已记录状态不可用"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Stored inventory matches at page load"
+msgstr "页面加载时匹配的已存储清单记录"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Stored time — timezone provenance not recorded"
+msgstr "存储时间 — 未记录时区来源"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Stored timestamps; timezone not asserted"
+msgstr "已存储时间戳；未声明时区"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "These matches come from stored device inventory. They do not identify which device answered the service probe. They are page-load lookups, not historical ownership evidence."
+msgstr "这些匹配来自已存储的设备清单。它们不能确定是哪台设备响应了服务探测。这些匹配是页面加载时的查询，不是历史所有权证据。"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "matching endpoint IP"
+msgstr "匹配的端点 IP"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "matching stored MAC"
+msgstr "匹配的已存储 MAC"

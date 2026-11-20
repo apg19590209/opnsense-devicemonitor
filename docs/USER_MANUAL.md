@@ -297,12 +297,15 @@ for the device (see below).
 
 **Path:** Network Identity Details → **Device Activity**
 
-Shows the device's activity history in a table with columns: **Date / time**, **Activity**
+Shows the device's activity history in a table with columns: **Event Time**, **Activity**
 (colour-coded label), **Details**, and **Lifecycle** (the lifecycle number).
 
 Activity labels include (among others): **Lifecycle started**, **Lifecycle archived**,
 **Lifecycle relinked**, **Friendly name changed**, **Note created**, **Note edited**,
-and identity changes (IP/hostname/source changes). **Read-only.**
+and identity changes (IP/hostname/source changes). Proven UTC event times are displayed
+in the OPNsense-configured timezone, with the timezone named beneath the value. Legacy
+values without reliable timezone provenance remain in their stored form and are labelled
+as ambiguous. **Read-only.**
 
 ---
 
@@ -407,9 +410,9 @@ category, plus a feed of recent service changes.
 
 ### 9.2 Header statistics
 
-**Total**, **Available**, **Unavailable**, and **Unknown** counts for the currently
-shown services. These counts use the status recorded in Device Monitor; the page does
-not relabel a service as stale from elapsed browser time.
+**Total**, **Recorded Available**, **Recorded Unavailable**, and **Recorded Unknown**
+counts for the currently shown services. These counts describe stored observations, not
+current health. The page does not relabel a service as stale from elapsed browser time.
 
 ### 9.3 Toolbar controls
 
@@ -417,8 +420,8 @@ not relabel a service as stale from elapsed browser time.
 - **Discover Now** — trigger an immediate infrastructure-service discovery pass.
   **Changes state** (runs discovery).
 - **All Services** (type filter) — filter by service type.
-- **All Statuses** (status filter) — filter by **Available** / **Unavailable** /
-  **Unknown**.
+- **All Recorded States** (state filter) — filter by **Available** / **Unavailable** /
+  **Unknown** as recorded.
 - **Search services** — free-text filter.
 - **Show archived** — include services hidden with **Archive**.
 - **Showing n** — number of services currently displayed.
@@ -449,26 +452,132 @@ Each displayed service row corresponds to one stored service record, so its
 **Archive** or **Restore** action applies to exactly that record. The row shows:
 
 - **Endpoint** — service type, IP, port, protocol and recorded interface.
-- **Recorded status** — **Available** / **Unavailable** / **Unknown**, or that no
-  recorded status is available.
-- **Evidence** — whether the service record is probe-verified, authoritative or
-  configuration-derived, or discovery evidence, with service-evidence confidence.
+- **Recorded State** — the last recorded **Available** / **Unavailable** /
+  **Unknown** observation, or that no recorded state is available. The badge does not
+  claim present reachability.
+- **Evidence** — the evidence source: **Reachability probe**,
+  **Authoritative/configuration record**, **Discovery evidence**, or an unclassified
+  source. **Recorded evidence confidence** identifies the stored confidence; it is not
+  proof of endpoint ownership or current health.
 - **Observation times** — labels vary by evidence source. Probe-backed evidence uses
-  **Last successful response** and **Last attempted check**. Authoritative and
-  discovery evidence use **Last evidence recorded** and **Last evidence refresh**.
+  **Last successful probe** and **Last probe attempt**. Authoritative and discovery
+  evidence use **Evidence recorded** and **Evidence refreshed**.
 - **Stored MAC / Inventory** — the MAC stored for alert correlation and a count of
-  inventory lookups.
+  stored inventory matches at page load.
 - **Details** — the stored MAC attribution, product/version and every inventory row
-  matched by the stored MAC or endpoint IP in this page response.
+  matching the stored MAC or endpoint IP.
 
 The inventory lookup preserves all matching rows, including multiple inventory
-entries sharing one IP and entries with different recorded VLAN evidence. It is a
-page-response lookup only: it does not establish endpoint ownership or continuous
-observation. Timestamps are displayed as recorded and are not converted, labelled
-UTC, or turned into a live-freshness calculation.
+entries sharing one IP and entries with different monitored-interface labels. The field
+shown as **Monitored interface label** is a recorded interface label; it is not
+automatically interpreted as a numeric VLAN ID.
+
+These matches come from stored device inventory. They do not identify which device
+answered the service probe. They are page-load lookups, not historical ownership
+evidence or a claim of continuous observation. Service-row timestamps are classified
+independently. New first-detection, last-successful-probe and last-attempt values are
+marked as UTC when written by the supported scanner. Each marked value is displayed in
+the OPNsense-configured timezone using that event date's daylight-saving rules. Unmarked
+legacy values and malformed values remain in their stored form and are labelled as
+having no recorded timezone provenance.
 
 Stored MAC attribution is used for service and alert correlation. It is not proof
 that the MAC owns the endpoint.
+
+> **Rollback limit.** The timestamp markers are additive columns. Older code ignores
+> them, but code predating this change can update a service timestamp without updating
+> its marker. A runtime-only rollback must therefore clear all three marker columns
+> before older monitoring writers resume. Restoring a pre-marker database snapshot also
+> avoids stale markers, but discards all later database changes.
+>
+> Use this sequence for a runtime-only rollback; do not delete WAL or SHM files by hand:
+>
+> 1. Stop Device Monitor and close all Device Monitor write screens. Run no manual scan
+>    or port-discovery job. Confirm that no `monitor_daemon.py` or `scan_network.py`
+>    process remains before continuing.
+>
+> ```sh
+> configctl devicemonitor stop
+> sleep 2
+> ps -axo pid,command |
+>     grep -E '/(monitor_daemon|scan_network)\.py' |
+>     grep -v grep || true
+> ```
+>
+> The final command must print no process. If it prints one, stop and investigate before
+> creating the backup or changing the database.
+> 2. Create and verify a consistent SQLite backup of the current database:
+>
+> ```sh
+> mkdir -p /var/backups/devicemonitor
+> backup=$(mktemp /var/backups/devicemonitor/pre-old-writer.XXXXXX)
+> python3 - "$backup" <<'PY'
+> import sqlite3
+> import sys
+>
+> source = sqlite3.connect(
+>     "file:/var/db/devicemonitor/devices.db?mode=ro",
+>     uri=True,
+> )
+> target = sqlite3.connect(sys.argv[1])
+> source.backup(target)
+> assert target.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+> target.close()
+> source.close()
+> PY
+> ```
+>
+> 3. Clear all marker values without changing any timestamp value:
+>
+> ```sh
+> python3 - <<'PY'
+> import sqlite3
+>
+> path = "/var/db/devicemonitor/devices.db"
+> markers = (
+>     "first_detected_utc",
+>     "last_verified_utc",
+>     "last_checked_utc",
+> )
+> connection = sqlite3.connect(path, timeout=30)
+> connection.execute("PRAGMA busy_timeout=30000")
+> try:
+>     columns = {
+>         row[1]
+>         for row in connection.execute(
+>             "PRAGMA table_info(device_services)"
+>         )
+>     }
+>     if not set(markers) <= columns:
+>         raise SystemExit("required marker columns are absent")
+>     connection.execute("BEGIN IMMEDIATE")
+>     connection.execute(
+>         "UPDATE device_services "
+>         "SET first_detected_utc = NULL, "
+>         "last_verified_utc = NULL, "
+>         "last_checked_utc = NULL"
+>     )
+>     assert connection.execute(
+>         "SELECT COUNT(*) FROM device_services "
+>         "WHERE first_detected_utc IS NOT NULL "
+>         "OR last_verified_utc IS NOT NULL "
+>         "OR last_checked_utc IS NOT NULL"
+>     ).fetchone()[0] == 0
+>     assert connection.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+>     connection.commit()
+> except Exception:
+>     if connection.in_transaction:
+>         connection.rollback()
+>     raise
+> finally:
+>     connection.close()
+> PY
+> ```
+>
+> Start the older runtime only after the clear has completed and been verified. Retain
+> the backup until rollback validation succeeds. If supported recovery instead restores
+> a pre-marker snapshot, it supersedes the current database and loses changes made after
+> that snapshot.
 
 >
 > **"Unknown"** means the last confirmed verdict is older than a week: the endpoint is
@@ -478,14 +587,19 @@ that the MAC owns the endpoint.
 
 ### 9.5 Recent Service Changes tab
 
-The first tab shows a feed of the latest service events with columns: **Date / Time**,
+The first tab shows a feed of the latest service events with columns: **Event Time**,
 **Change** (discovered / unavailable / recovered / changed), **Service**,
-**Stored MAC attribution**, **Endpoint**, **Inventory lookups in this response**, and
+**Stored MAC attribution**, **Endpoint**, **Stored inventory matches at page load**, and
 **History**. **Read-only.**
 
-The event time, MAC, endpoint and transition are stored event facts. Inventory
-matching is current page data shown for context and must not be read as proof of
-ownership during the historical event.
+The event time, MAC, endpoint and transition are stored event facts. Event times with
+proven UTC provenance are displayed in the OPNsense-configured timezone and the zone is
+named. The same proven event is shown consistently in Recent Service Changes and Device
+Activity. Legacy service-discovery times without reliable UTC provenance remain in
+their stored form and are explicitly labelled ambiguous.
+
+Inventory matching is current page data shown for context and must not be read as proof
+of ownership during the historical event.
 
 ---
 
@@ -862,10 +976,10 @@ installer afterwards to merge the plugin's strings again.
 - **Active / Archived** (lifecycle) — the current vs. historical lifecycle for a device.
 - **Unresolved / Resolved** (identity event) — whether an identity anomaly has been
   acknowledged (resolved) by an administrator.
-- **Available / Unavailable / Unknown** (service) — confirmed reachable / confirmed
-  unreachable / last verdict older than a week, so neither confirmed up nor confirmed
-  down. Infrastructure Services displays the recorded value without deriving a separate
-  browser-time stale status.
+- **Recorded Available / Recorded Unavailable / Recorded Unknown** (service) — the
+  last stored reachability observation. Infrastructure Services displays these as
+  recorded states, not present health, without deriving a separate browser-time stale
+  status.
 - **Pending / Failed n/5** (scan status) — a scan is queued or has failed after *n* of 5
   attempts.
 - **Running (PID: n) / Stopped** (widget) — the Device Monitor daemon state.

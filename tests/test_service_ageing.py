@@ -1618,11 +1618,25 @@ def test_init_db_adds_and_backfills_last_checked():
             }
 
         assert "last_checked" in columns, columns
+        assert {
+            "first_detected_utc",
+            "last_verified_utc",
+            "last_checked_utc",
+        } <= columns
         assert read_checked(module, FRESH_IP) == stamp(-timedelta(days=9))
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            markers = conn.execute(
+                "SELECT first_detected_utc, last_verified_utc, "
+                "last_checked_utc FROM device_services WHERE ip = ?",
+                (FRESH_IP,),
+            ).fetchone()
+        assert markers == (None, None, None)
 
         # Backfilled from last_verified, so the old row still ages.
         assert module.age_stale_service_state(now=NOW) == (1, 0)
 
     print("AGE_LAST_CHECKED_MIGRATION=PASS")
+    print("AGE_TIMESTAMP_PROVENANCE_MIGRATION=PASS")
 if __name__ == "__main__":
     main()

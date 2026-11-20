@@ -12,17 +12,20 @@
                         <strong id="services-total">0</strong>
                     </span>
                     <span>
-                        {{ devicemonitor_t('Available') }}:
+                        {{ devicemonitor_t('Recorded Available') }}:
                         <strong id="services-available">0</strong>
                     </span>
                     <span>
-                        {{ devicemonitor_t('Unavailable') }}:
+                        {{ devicemonitor_t('Recorded Unavailable') }}:
                         <strong id="services-unavailable">0</strong>
                     </span>
                     <span>
-                        {{ devicemonitor_t('Unknown') }}:
+                        {{ devicemonitor_t('Recorded Unknown') }}:
                         <strong id="services-unknown">0</strong>
                     </span>
+                </div>
+                <div class="text-muted">
+                    {{ devicemonitor_t('Counts describe stored observations, not current health.') }}
                 </div>
             </div>
 
@@ -62,7 +65,7 @@
                     data-width="180px"
                 >
                     <option value="">
-                        {{ devicemonitor_t('All Statuses') }}
+                        {{ devicemonitor_t('All Recorded States') }}
                     </option>
                     <option value="available">
                         {{ devicemonitor_t('Available') }}
@@ -512,6 +515,12 @@
     gap: 5px;
 }
 
+.dm-recorded-state {
+    color: #4f5d6b;
+    background: #fff;
+    border: 1px solid #aeb9c4;
+}
+
 .dm-service-details-row > td {
     padding: 0 !important;
     background: #f7f9fb;
@@ -703,33 +712,23 @@ $(document).ready(function() {
     }
     function recordedStatusLabel(status) {
         if (status === 'available') {
-            return {{ lang.query('Available')|json_encode(15) }};
+            return {{ lang.query('Last recorded state: Available')|json_encode(15) }};
         }
 
         if (status === 'unavailable') {
-            return {{ lang.query('Unavailable')|json_encode(15) }};
+            return {{ lang.query('Last recorded state: Unavailable')|json_encode(15) }};
         }
 
         if (status === 'unknown') {
-            return {{ lang.query('Unknown')|json_encode(15) }};
+            return {{ lang.query('Last recorded state: Unknown')|json_encode(15) }};
         }
 
-        return {{ lang.query('Recorded status not available')|json_encode(15) }};
+        return {{ lang.query('Recorded state not available')|json_encode(15) }};
     }
 
     function statusBadge(status) {
-        var className = 'label-default';
-
-        if (status === 'available') {
-            className = 'label-success';
-        } else if (status === 'unavailable') {
-            className = 'label-danger';
-        } else if (status === 'unknown') {
-            className = 'label-default';
-        }
-
         return $('<span>')
-            .addClass('label ' + className)
+            .addClass('label label-default dm-recorded-state')
             .text(recordedStatusLabel(status));
     }
 
@@ -765,23 +764,23 @@ $(document).ready(function() {
         var kind = serviceEvidenceKind(row);
 
         if (kind === 'authoritative') {
-            return {{ lang.query('Authoritative/configuration evidence')|json_encode(15) }};
+            return {{ lang.query('Authoritative/configuration record')|json_encode(15) }};
         }
 
         if (kind === 'probe') {
-            return {{ lang.query('Probe-verified service')|json_encode(15) }};
+            return {{ lang.query('Reachability probe')|json_encode(15) }};
         }
 
         if (kind === 'discovery') {
             return {{ lang.query('Discovery evidence')|json_encode(15) }};
         }
 
-        return {{ lang.query('Evidence classification not available')|json_encode(15) }};
+        return {{ lang.query('Evidence source not classified')|json_encode(15) }};
     }
 
     function confidenceText(row) {
         var confidence = String(row.confidence || '').trim();
-        var label = {{ lang.query('Service-evidence confidence')|json_encode(15) }};
+        var label = {{ lang.query('Recorded evidence confidence')|json_encode(15) }};
 
         if (!confidence) {
             return label + ': ' +
@@ -848,30 +847,49 @@ $(document).ready(function() {
         return type || {{ lang.query('Service type not recorded')|json_encode(15) }};
     }
 
+    function observationTimestampText(row, field) {
+        return row[field + '_display'] || row[field];
+    }
+
+    function observationTimestampNote(row, field) {
+        if (!String(row[field] || '').trim()) {
+            return '';
+        }
+
+        return eventTimeNote({
+            timestamp_domain: row[field + '_timestamp_domain'],
+            timezone: row.timestamp_timezone
+        });
+    }
+
     function observationValues(row) {
         var kind = serviceEvidenceKind(row);
 
         if (kind === 'probe') {
             return [
                 [
-                    {{ lang.query('Last successful response')|json_encode(15) }},
-                    dash(row.last_verified)
+                    {{ lang.query('Last successful probe')|json_encode(15) }},
+                    dash(observationTimestampText(row, 'last_verified')),
+                    observationTimestampNote(row, 'last_verified')
                 ],
                 [
-                    {{ lang.query('Last attempted check')|json_encode(15) }},
-                    dash(row.last_checked)
+                    {{ lang.query('Last probe attempt')|json_encode(15) }},
+                    dash(observationTimestampText(row, 'last_checked')),
+                    observationTimestampNote(row, 'last_checked')
                 ]
             ];
         }
 
         return [
             [
-                {{ lang.query('Last evidence recorded')|json_encode(15) }},
-                dash(row.last_verified)
+                {{ lang.query('Evidence recorded')|json_encode(15) }},
+                dash(observationTimestampText(row, 'last_verified')),
+                observationTimestampNote(row, 'last_verified')
             ],
             [
-                {{ lang.query('Last evidence refresh')|json_encode(15) }},
-                dash(row.last_checked)
+                {{ lang.query('Evidence refreshed')|json_encode(15) }},
+                dash(observationTimestampText(row, 'last_checked')),
+                observationTimestampNote(row, 'last_checked')
             ]
         ];
     }
@@ -886,20 +904,20 @@ $(document).ready(function() {
         var byIp = inventoryCollection(row, 'by_ip').length;
 
         if (!byMac && !byIp) {
-            return {{ lang.query('No current inventory match')|json_encode(15) }};
+            return {{ lang.query('No stored inventory matches')|json_encode(15) }};
         }
 
         var parts = [];
         if (byIp) {
             parts.push(
                 byIp + ' ' +
-                {{ lang.query('by endpoint IP')|json_encode(15) }}
+                {{ lang.query('matching endpoint IP')|json_encode(15) }}
             );
         }
         if (byMac) {
             parts.push(
                 byMac + ' ' +
-                {{ lang.query('by stored MAC')|json_encode(15) }}
+                {{ lang.query('matching stored MAC')|json_encode(15) }}
             );
         }
 
@@ -913,15 +931,17 @@ $(document).ready(function() {
         var name = String(
             match.custom_hostname || match.hostname || ''
         ).trim();
-        var vlan = String(match.vlan || '').trim();
+        var interfaceLabel = String(
+            match.monitored_interface_label || match.vlan || ''
+        ).trim();
 
         if (source === 'mac') {
             parts.push(
-                {{ lang.query('By stored MAC')|json_encode(15) }} + ':'
+                {{ lang.query('Matching stored MAC')|json_encode(15) }} + ':'
             );
         } else {
             parts.push(
-                {{ lang.query('By endpoint IP')|json_encode(15) }} + ':'
+                {{ lang.query('Matching endpoint IP')|json_encode(15) }} + ':'
             );
         }
 
@@ -931,9 +951,10 @@ $(document).ready(function() {
         if (ip) {
             parts.push('@ ' + ip);
         }
-        if (vlan) {
+        if (interfaceLabel) {
             parts.push(
-                {{ lang.query('VLAN')|json_encode(15) }} + ': ' + vlan
+                {{ lang.query('Monitored interface label')|json_encode(15) }} +
+                ': ' + interfaceLabel
             );
         }
         if (name) {
@@ -974,6 +995,25 @@ $(document).ready(function() {
         }
 
         return '';
+    }
+
+    function storedEventTimeText(row) {
+        return row.occurred_at_display ||
+            row.occurred_at_stored ||
+            row.occurred_at;
+    }
+
+    function eventTimeNote(row) {
+        var domain = String(row.timestamp_domain || 'unknown');
+
+        if (domain === 'utc') {
+            var zone = String(row.timezone || '').trim();
+            return zone
+                ? {{ lang.query('Displayed in')|json_encode(15) }} + ' ' + zone
+                : {{ lang.query('Converted from UTC')|json_encode(15) }};
+        }
+
+        return {{ lang.query('Stored time — timezone provenance not recorded')|json_encode(15) }};
     }
 
     function recentStoredMacText(row) {
@@ -1046,7 +1086,7 @@ $(document).ready(function() {
                         .text({{ lang.query('Endpoint')|json_encode(15) }}),
                     $('<th>')
                         .attr('scope', 'col')
-                        .text({{ lang.query('Inventory lookups in this response')|json_encode(15) }}),
+                        .text({{ lang.query('Stored inventory matches at page load')|json_encode(15) }}),
                     $('<th>')
                         .attr('scope', 'col')
                         .text({{ lang.query('History')|json_encode(15) }})
@@ -1058,7 +1098,17 @@ $(document).ready(function() {
 
         changes.forEach(function(row) {
             var $change = $('<td>');
+            var $time = $('<td>');
             var detail = serviceChangeDetail(row);
+
+            $('<div>')
+                .text(dash(storedEventTimeText(row)))
+                .appendTo($time);
+            $('<small>')
+                .addClass('text-muted')
+                .css('display', 'block')
+                .text(eventTimeNote(row))
+                .appendTo($time);
 
             $('<div>')
                 .text(serviceChangeLabel(row))
@@ -1102,7 +1152,7 @@ $(document).ready(function() {
 
             $('<tr>')
                 .append(
-                    $('<td>').text(dash(row.occurred_at)),
+                    $time,
                     $change,
                     $('<td>').text(
                         groupTitle(
@@ -1475,7 +1525,7 @@ $(document).ready(function() {
         var $matches = $('<section>').appendTo($grid);
         $('<h4>')
             .text(
-                {{ lang.query('Inventory lookups in this response')|json_encode(15) }}
+                {{ lang.query('Stored inventory matches at page load')|json_encode(15) }}
             )
             .appendTo($matches);
 
@@ -1499,7 +1549,7 @@ $(document).ready(function() {
         if (!byMac.length && !byIp.length) {
             $('<li>')
                 .text(
-                    {{ lang.query('No current inventory match')|json_encode(15) }}
+                    {{ lang.query('No stored inventory matches')|json_encode(15) }}
                 )
                 .appendTo($list);
         }
@@ -1507,7 +1557,7 @@ $(document).ready(function() {
         $('<p>')
             .addClass('dm-service-note')
             .text(
-                {{ lang.query('Inventory lookups reflect rows read for this page response. They do not establish endpoint ownership or continuous observation.')|json_encode(15) }}
+                {{ lang.query('These matches come from stored device inventory. They do not identify which device answered the service probe. They are page-load lookups, not historical ownership evidence.')|json_encode(15) }}
             )
             .appendTo($matches);
 
@@ -1551,7 +1601,7 @@ $(document).ready(function() {
                         .text({{ lang.query('Endpoint')|json_encode(15) }}),
                     $('<th>')
                         .attr('scope', 'col')
-                        .text({{ lang.query('Recorded status')|json_encode(15) }}),
+                        .text({{ lang.query('Recorded State')|json_encode(15) }}),
                     $('<th>')
                         .attr('scope', 'col')
                         .text({{ lang.query('Evidence')|json_encode(15) }}),
@@ -1601,7 +1651,7 @@ $(document).ready(function() {
             var $status = $('<div>').append(statusBadge(row.status));
             appendLabeledCell(
                 $row,
-                {{ lang.query('Recorded status')|json_encode(15) }},
+                {{ lang.query('Recorded State')|json_encode(15) }},
                 $status
             );
 
@@ -1620,7 +1670,17 @@ $(document).ready(function() {
             var $times = $('<dl>').addClass('dm-service-times');
             observationValues(row).forEach(function(entry) {
                 $('<dt>').text(entry[0]).appendTo($times);
-                $('<dd>').text(entry[1]).appendTo($times);
+                var $value = $('<dd>').text(entry[1]);
+
+                if (entry[2]) {
+                    $('<small>')
+                        .addClass('text-muted')
+                        .css('display', 'block')
+                        .text(entry[2])
+                        .appendTo($value);
+                }
+
+                $value.appendTo($times);
             });
             appendLabeledCell(
                 $row,

@@ -82,7 +82,9 @@ $db->exec(
     'detection_method TEXT NOT NULL, confidence TEXT NOT NULL, ' .
     'product TEXT, version TEXT, ' .
     'first_detected DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ' .
+    'first_detected_utc INTEGER DEFAULT NULL, ' .
     'last_verified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ' .
+    'last_verified_utc INTEGER DEFAULT NULL, ' .
     'UNIQUE(ip, service_type, port, protocol, detection_method, interface))'
 );
 
@@ -232,6 +234,45 @@ check(
     'Identity resolution was duplicated'
 );
 
+$discoveries = array_values(array_filter(
+    $result['events'],
+    static function ($event) {
+        return $event['event_type'] === 'SERVICE_DISCOVERED';
+    }
+));
+check(
+    count($discoveries) === 1 &&
+    $discoveries[0]['timestamp_domain'] === 'unknown' &&
+    $discoveries[0]['occurred_at_display'] ===
+        $discoveries[0]['occurred_at_stored'],
+    'unmarked service timestamp was not kept ambiguous'
+);
+
+$markerDb = new SQLite3($model->getDbFilePath());
+check(
+    $markerDb->exec(
+        "UPDATE device_services SET first_detected_utc = 1"
+    ) !== false,
+    'Unable to mark the service timestamp fixture'
+);
+$markerDb->close();
+
+$markedResult = $model->getChangeSummary($WINDOW_START, $WINDOW_END);
+$markedDiscoveries = array_values(array_filter(
+    $markedResult['events'],
+    static function ($event) {
+        return $event['event_type'] === 'SERVICE_DISCOVERED';
+    }
+));
+check(
+    count($markedDiscoveries) === 1 &&
+    $markedDiscoveries[0]['timestamp_domain'] === 'utc' &&
+    $markedDiscoveries[0]['occurred_at_display'] !==
+        $markedDiscoveries[0]['occurred_at_stored'] &&
+    $markedDiscoveries[0]['timezone'] !== '',
+    'marked service timestamp did not acquire UTC presentation'
+);
+
 /* Ordering is newest-first and deterministic. */
 $events = $result['events'];
 $sorted = true;
@@ -260,6 +301,10 @@ foreach (
         'event_type',
         'occurred_at',
         'occurred_at_utc',
+        'occurred_at_stored',
+        'occurred_at_display',
+        'timestamp_domain',
+        'timezone',
         'severity',
         'subject',
         'mac',

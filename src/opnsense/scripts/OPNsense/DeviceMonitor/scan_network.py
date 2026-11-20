@@ -787,7 +787,7 @@ def _normalise_schema_sql(statement):
 
 
 def _apply_service_identity_schema(c):
-    """Add service alert identity state and install the canonical trigger.
+    """Add service identity/provenance state and install the canonical trigger.
 
     The savepoint makes the additive columns and trigger replacement atomic
     whether SQLite placed the savepoint inside or outside an existing
@@ -814,6 +814,19 @@ def _apply_service_identity_schema(c):
             row[1]
             for row in c.execute('PRAGMA table_info(device_services)')
         }
+
+        for column in (
+            'first_detected_utc',
+            'last_verified_utc',
+            'last_checked_utc'
+        ):
+            if column not in service_columns:
+                c.execute(
+                    f'ALTER TABLE device_services '
+                    f'ADD COLUMN {column} INTEGER DEFAULT NULL '
+                    f'CHECK ({column} IS NULL OR {column} = 1)'
+                )
+
         if 'alert_generation' not in service_columns:
             c.execute(
                 'ALTER TABLE device_services '
@@ -1136,8 +1149,14 @@ def _apply_db_schema():
         product TEXT,
         version TEXT,
         first_detected DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        first_detected_utc INTEGER DEFAULT NULL
+            CHECK (first_detected_utc IS NULL OR first_detected_utc = 1),
         last_verified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_verified_utc INTEGER DEFAULT NULL
+            CHECK (last_verified_utc IS NULL OR last_verified_utc = 1),
         last_checked DATETIME DEFAULT NULL,
+        last_checked_utc INTEGER DEFAULT NULL
+            CHECK (last_checked_utc IS NULL OR last_checked_utc = 1),
         miss_count INTEGER NOT NULL DEFAULT 0,
         alert_generation INTEGER NOT NULL DEFAULT 1,
         UNIQUE(ip, service_type, port, protocol, detection_method, interface)
@@ -2508,10 +2527,13 @@ def upsert_device_service(
             product,
             version,
             first_detected,
+            first_detected_utc,
             last_verified,
-            last_checked
+            last_verified_utc,
+            last_checked,
+            last_checked_utc
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(
             ip,
             service_type,
@@ -2534,7 +2556,9 @@ def upsert_device_service(
             product = excluded.product,
             version = excluded.version,
             last_verified = excluded.last_verified,
+            last_verified_utc = excluded.last_verified_utc,
             last_checked = excluded.last_checked,
+            last_checked_utc = excluded.last_checked_utc,
             miss_count = 0
         ''',
         (
@@ -2550,8 +2574,11 @@ def upsert_device_service(
             product or '',
             version or '',
             verified_at,
+            1,
             verified_at,
+            1,
             verified_at,
+            1,
         )
     )
 
@@ -3410,6 +3437,7 @@ def record_service_miss(
         UPDATE device_services
         SET miss_count = COALESCE(miss_count, 0) + 1,
             last_checked = ?,
+            last_checked_utc = 1,
             status = CASE
                          WHEN COALESCE(miss_count, 0) + 1 >= ?
                              THEN 'unavailable'

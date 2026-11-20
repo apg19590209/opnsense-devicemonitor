@@ -455,6 +455,280 @@ def test_service_status_transitions_are_historical_and_deduplicated():
     print("DEVICE_ACTIVITY_SERVICE_TRANSITIONS=PASS")
 
 
+def test_current_service_writer_persists_utc_first_detected():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.LOG_FILE = str(Path(tmp) / "devicemonitor.log")
+        module.init_db()
+
+        mac = "aa:bb:cc:dd:ee:21"
+        first = datetime(2026, 9, 12, 9, 0, 0, tzinfo=UTC)
+        later = datetime(2026, 9, 12, 10, 0, 0, tzinfo=UTC)
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            assert module.upsert_device_service(
+                conn,
+                mac,
+                "192.168.50.21",
+                "LAN",
+                "DNS",
+                53,
+                "udp",
+                "dns_query",
+                "verified",
+                first,
+            )
+            conn.commit()
+
+            inserted = conn.execute(
+                """
+                SELECT first_detected, last_verified, last_checked
+                FROM device_services
+                WHERE ip = ?
+                """,
+                ("192.168.50.21",),
+            ).fetchone()
+
+            assert inserted == (
+                "2026-09-12 09:00:00",
+                "2026-09-12 09:00:00",
+                "2026-09-12 09:00:00",
+            )
+
+            assert module.upsert_device_service(
+                conn,
+                mac,
+                "192.168.50.21",
+                "LAN",
+                "DNS",
+                53,
+                "udp",
+                "dns_query",
+                "verified",
+                later,
+            )
+            conn.commit()
+
+            updated = conn.execute(
+                """
+                SELECT first_detected, last_verified, last_checked
+                FROM device_services
+                WHERE ip = ?
+                """,
+                ("192.168.50.21",),
+            ).fetchone()
+
+        assert updated == (
+            "2026-09-12 09:00:00",
+            "2026-09-12 10:00:00",
+            "2026-09-12 10:00:00",
+        )
+
+    print("DEVICE_SERVICE_FIRST_DETECTED_UTC=PASS")
+    print("DEVICE_SERVICE_FIRST_DETECTED_IMMUTABLE=PASS")
+
+
+def test_service_timestamp_provenance_is_per_field_and_atomic():
+    module = load_module()
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        module.DB_FILE = str(Path(tmp) / "devices.db")
+        module.LOG_FILE = str(Path(tmp) / "devicemonitor.log")
+        module.init_db()
+
+        mac = "aa:bb:cc:dd:ee:22"
+        ip = "192.168.50.22"
+
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            columns = {
+                row[1]
+                for row in conn.execute("PRAGMA table_info(device_services)")
+            }
+            assert {
+                "first_detected_utc",
+                "last_verified_utc",
+                "last_checked_utc",
+            } <= columns
+
+            # An upgraded historical row has unchanged timestamps and no
+            # unsupported provenance markers.
+            conn.execute(
+                """
+                INSERT INTO device_services (
+                    mac, ip, interface, service_type, port, protocol, status,
+                    detection_method, confidence, product, version,
+                    first_detected, last_verified, last_checked
+                )
+                VALUES (?, ?, 'LAN', 'SSH', 22, 'tcp', 'available',
+                        'ssh_banner', 'verified', '', '', ?, ?, ?)
+                """,
+                (
+                    mac,
+                    ip,
+                    "2026-09-01 00:00:00",
+                    "2026-09-02 00:00:00",
+                    "2026-09-03 00:00:00",
+                ),
+            )
+            conn.commit()
+
+            legacy = conn.execute(
+                """
+                SELECT first_detected, first_detected_utc,
+                       last_verified, last_verified_utc,
+                       last_checked, last_checked_utc
+                FROM device_services
+                WHERE ip = ?
+                """,
+                (ip,),
+            ).fetchone()
+            assert legacy == (
+                "2026-09-01 00:00:00",
+                None,
+                "2026-09-02 00:00:00",
+                None,
+                "2026-09-03 00:00:00",
+                None,
+            )
+
+            verified = datetime(2026, 9, 4, 0, 0, 0, tzinfo=UTC)
+            assert module.upsert_device_service(
+                conn,
+                mac,
+                ip,
+                "LAN",
+                "SSH",
+                22,
+                "tcp",
+                "ssh_banner",
+                "verified",
+                verified,
+            )
+            conn.commit()
+
+            mixed = conn.execute(
+                """
+                SELECT first_detected, first_detected_utc,
+                       last_verified, last_verified_utc,
+                       last_checked, last_checked_utc
+                FROM device_services
+                WHERE ip = ?
+                """,
+                (ip,),
+            ).fetchone()
+            assert mixed == (
+                "2026-09-01 00:00:00",
+                None,
+                "2026-09-04 00:00:00",
+                1,
+                "2026-09-04 00:00:00",
+                1,
+            )
+
+            checked = datetime(2026, 9, 5, 0, 0, 0, tzinfo=UTC)
+            assert module.record_service_miss(
+                conn,
+                "SSH",
+                "ssh_banner",
+                ip,
+                port=22,
+                interface="LAN",
+                threshold=1,
+                checked_at=checked,
+            ) == 1
+            conn.commit()
+
+            missed = conn.execute(
+                """
+                SELECT first_detected_utc, last_verified,
+                       last_verified_utc, last_checked, last_checked_utc,
+                       status
+                FROM device_services
+                WHERE ip = ?
+                """,
+                (ip,),
+            ).fetchone()
+            assert missed == (
+                None,
+                "2026-09-04 00:00:00",
+                1,
+                "2026-09-05 00:00:00",
+                1,
+                "unavailable",
+            )
+
+            old_id = conn.execute(
+                "SELECT id FROM device_services WHERE ip = ?",
+                (ip,),
+            ).fetchone()[0]
+            conn.execute("DELETE FROM device_services WHERE id = ?", (old_id,))
+            conn.commit()
+
+            recreated = datetime(2026, 9, 6, 0, 0, 0, tzinfo=UTC)
+            assert module.upsert_device_service(
+                conn,
+                mac,
+                ip,
+                "LAN",
+                "SSH",
+                22,
+                "tcp",
+                "ssh_banner",
+                "verified",
+                recreated,
+            )
+            conn.commit()
+
+            recreated_row = conn.execute(
+                """
+                SELECT id, first_detected, first_detected_utc,
+                       last_verified_utc, last_checked_utc
+                FROM device_services
+                WHERE ip = ?
+                """,
+                (ip,),
+            ).fetchone()
+            assert recreated_row[0] != old_id
+            assert recreated_row[1:] == (
+                "2026-09-06 00:00:00",
+                1,
+                1,
+                1,
+            )
+
+            # A non-canonical direct insert gets no trusted marker even though
+            # the schema default supplies timestamp text.
+            conn.execute(
+                """
+                INSERT INTO device_services (
+                    mac, ip, interface, service_type, port, protocol, status,
+                    detection_method, confidence
+                )
+                VALUES (?, '192.168.50.23', 'LAN', 'DNS', 53, 'udp',
+                        'available', 'dns_query', 'verified')
+                """,
+                ("aa:bb:cc:dd:ee:23",),
+            )
+            defaults = conn.execute(
+                """
+                SELECT first_detected_utc, last_verified_utc,
+                       last_checked_utc
+                FROM device_services
+                WHERE ip = '192.168.50.23'
+                """
+            ).fetchone()
+            assert defaults == (None, None, None)
+
+    print("SERVICE_TIMESTAMP_MARKER_SCHEMA=PASS")
+    print("SERVICE_TIMESTAMP_LEGACY_ROWS_PRESERVED=PASS")
+    print("SERVICE_TIMESTAMP_MIXED_PROVENANCE=PASS")
+    print("SERVICE_TIMESTAMP_MISS_MARKER=PASS")
+    print("SERVICE_TIMESTAMP_DELETE_RECREATE=PASS")
+    print("SERVICE_TIMESTAMP_DEFAULT_ROWS_UNMARKED=PASS")
+
+
 def test_out_of_scope_rows_are_not_reset():
     module = load_module()
 
@@ -752,6 +1026,8 @@ def test_full_scan_reports_scoped_totals():
 def main():
     test_device_state_changes_are_historical_and_deduplicated()
     test_service_status_transitions_are_historical_and_deduplicated()
+    test_current_service_writer_persists_utc_first_detected()
+    test_service_timestamp_provenance_is_per_field_and_atomic()
     test_out_of_scope_rows_are_not_reset()
     test_out_of_scope_queue_does_not_starve_in_scope_scan()
     test_out_of_scope_kea_does_not_trigger_identity()

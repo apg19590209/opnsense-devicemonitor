@@ -46,7 +46,7 @@
                     <thead>
                         <tr>
                             <th style="width:190px;">
-                                {{ devicemonitor_t('Date / time') }}
+                                {{ devicemonitor_t('Event Time') }}
                             </th>
                             <th style="width:220px;">
                                 {{ devicemonitor_t('Activity') }}
@@ -361,6 +361,31 @@ $(document).ready(function() {
         }
 
         rows.forEach(function(row) {
+            var $time = $('<td>').css('white-space', 'nowrap');
+            var occurred = row.occurred_at_display ||
+                row.occurred_at_utc ||
+                row.occurred_at;
+            $('<div>').text(dash(occurred)).appendTo($time);
+
+            if (String(row.timestamp_domain || 'unknown') !== 'utc') {
+                $('<small>')
+                    .addClass('text-muted')
+                    .css('display', 'block')
+                    .text(
+                        {{ lang.query('Stored time — timezone provenance not recorded')|json_encode(15) }}
+                    )
+                    .appendTo($time);
+            } else {
+                $('<small>')
+                    .addClass('text-muted')
+                    .css('display', 'block')
+                    .text(
+                        {{ lang.query('Displayed in')|json_encode(15) }} +
+                        ' ' + (row.timezone || 'UTC')
+                    )
+                    .appendTo($time);
+            }
+
             var $label = $('<span>')
                 .addClass(
                     'label ' +
@@ -369,9 +394,7 @@ $(document).ready(function() {
                 .text(activityLabel(row.event_type));
 
             $('<tr>').append(
-                $('<td>')
-                    .css('white-space', 'nowrap')
-                    .text(dash(row.occurred_at)),
+                $time,
                 $('<td>').append($label),
                 $('<td>')
                     .css({

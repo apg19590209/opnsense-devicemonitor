@@ -34,21 +34,43 @@ class DeviceMonitor
         return isset($paths[$key]) ? $paths[$key] : null;
     }
 
-    private static function formatUtcForDisplay($value)
+    private static function isStoredUtcTimestamp($value)
     {
         $value = trim((string)$value);
 
         if ($value === '') {
+            return false;
+        }
+
+        $parsed = \DateTimeImmutable::createFromFormat(
+            '!Y-m-d H:i:s',
+            $value,
+            new \DateTimeZone('UTC')
+        );
+
+        return $parsed !== false &&
+            $parsed->format('Y-m-d H:i:s') === $value;
+    }
+
+    private static function formatUtcForDisplay($value)
+    {
+        $value = trim((string)$value);
+
+        if (!self::isStoredUtcTimestamp($value)) {
             return $value;
         }
 
         try {
-            $utc = new \DateTimeZone('UTC');
-            $local = new \DateTimeZone(date_default_timezone_get());
-            $date = new \DateTimeImmutable($value, $utc);
+            $date = \DateTimeImmutable::createFromFormat(
+                '!Y-m-d H:i:s',
+                $value,
+                new \DateTimeZone('UTC')
+            );
 
             return $date
-                ->setTimezone($local)
+                ->setTimezone(
+                    new \DateTimeZone(date_default_timezone_get())
+                )
                 ->format('d.m.Y - H:i:s T');
         } catch (\Exception $e) {
             return $value;
@@ -1000,7 +1022,8 @@ class DeviceMonitor
             $timestamp,
             $lifecycleId,
             $recordId,
-            array $data = []
+            array $data = [],
+            $timestampDomain = 'unknown'
         ) use (&$events) {
             $timestamp = trim((string)$timestamp);
 
@@ -1008,11 +1031,30 @@ class DeviceMonitor
                 return;
             }
 
+            $timestampDomain = (string)$timestampDomain;
+
+            if (
+                $timestampDomain === 'utc' &&
+                !self::isStoredUtcTimestamp($timestamp)
+            ) {
+                $timestampDomain = 'unknown';
+            }
+
+            $timestampDisplay = $timestampDomain === 'utc'
+                ? self::formatUtcForDisplay($timestamp)
+                : $timestamp;
+
             $events[] = [
                 'source' => (string)$source,
                 'event_type' => (string)$eventType,
                 'occurred_at_utc' => $timestamp,
                 'occurred_at' => self::formatUtcForDisplay($timestamp),
+                'occurred_at_stored' => $timestamp,
+                'occurred_at_display' => $timestampDisplay,
+                'timestamp_domain' => $timestampDomain,
+                'timezone' => $timestampDomain === 'utc'
+                    ? date_default_timezone_get()
+                    : '',
                 'lifecycle_id' =>
                     $lifecycleId === null || $lifecycleId === ''
                         ? null
@@ -1192,7 +1234,8 @@ class DeviceMonitor
                                 $row['new_value'] ?? null,
                             'details' =>
                                 $row['details'] ?? null
-                        ]
+                        ],
+                        'utc'
                     );
                 }
             }
@@ -1388,7 +1431,7 @@ class DeviceMonitor
         if ($tableExists($db, 'device_services')) {
             $stmt = $db->prepare(
                 'SELECT id, ip, interface, service_type, port, protocol, ' .
-                'detection_method, first_detected ' .
+                'detection_method, first_detected, first_detected_utc ' .
                 'FROM device_services ' .
                 'WHERE lower(trim(mac)) = :mac ' .
                 'ORDER BY first_detected DESC, id DESC LIMIT :limit'
@@ -1423,7 +1466,10 @@ class DeviceMonitor
                                 $row['protocol'] ?? null,
                             'detection_method' =>
                                 $row['detection_method'] ?? null
-                        ]
+                        ],
+                        (string)($row['first_detected_utc'] ?? '') === '1'
+                            ? 'utc'
+                            : 'unknown'
                     );
                 }
             }
@@ -1715,7 +1761,8 @@ class DeviceMonitor
             $current,
             $detail,
             $action,
-            $subjectOverride = null
+            $subjectOverride = null,
+            $timestampDomain = 'unknown'
         ) use (&$events, $deviceSubjects) {
             $timestamp = trim((string)$timestamp);
 
@@ -1736,6 +1783,15 @@ class DeviceMonitor
                 $subject = $deviceSubjects[$mac]['subject'];
             }
 
+            $timestampDomain = (string)$timestampDomain;
+
+            if (
+                $timestampDomain === 'utc' &&
+                !self::isStoredUtcTimestamp($timestamp)
+            ) {
+                $timestampDomain = 'unknown';
+            }
+
             $events[] = [
                 'id' => implode(':', [
                     (string)$source,
@@ -1748,6 +1804,14 @@ class DeviceMonitor
                 'event_type' => (string)$eventType,
                 'occurred_at_utc' => $timestamp,
                 'occurred_at' => self::formatUtcForDisplay($timestamp),
+                'occurred_at_stored' => $timestamp,
+                'occurred_at_display' => $timestampDomain === 'utc'
+                    ? self::formatUtcForDisplay($timestamp)
+                    : $timestamp,
+                'timestamp_domain' => $timestampDomain,
+                'timezone' => $timestampDomain === 'utc'
+                    ? date_default_timezone_get()
+                    : '',
                 'severity' => (string)$severity,
                 'subject' => (string)$subject,
                 'mac' => $mac,
@@ -2299,7 +2363,7 @@ class DeviceMonitor
         if ($tableExists($db, 'device_services')) {
             $stmt = $db->prepare(
                 'SELECT id, mac, ip, service_type, port, protocol, ' .
-                'first_detected ' .
+                'first_detected, first_detected_utc ' .
                 'FROM device_services ' .
                 'WHERE first_detected >= :start AND first_detected <= :end ' .
                 'ORDER BY first_detected DESC, id DESC LIMIT :limit'
@@ -2344,7 +2408,11 @@ class DeviceMonitor
                             'service',
                             'infrastructure',
                             $mac
-                        )
+                        ),
+                        null,
+                        (string)($row['first_detected_utc'] ?? '') === '1'
+                            ? 'utc'
+                            : 'unknown'
                     );
                 }
             }

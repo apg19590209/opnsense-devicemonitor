@@ -125,8 +125,11 @@ namespace {
             product TEXT,
             version TEXT,
             first_detected DATETIME,
+            first_detected_utc INTEGER,
             last_verified DATETIME,
-            last_checked DATETIME
+            last_verified_utc INTEGER,
+            last_checked DATETIME,
+            last_checked_utc INTEGER
         )'
     );
     $db->exec(
@@ -164,18 +167,22 @@ namespace {
         'INSERT INTO device_services
          (mac, ip, interface, service_type, port, protocol, status,
           detection_method, confidence, product, version, first_detected,
-          last_verified, last_checked)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          first_detected_utc, last_verified, last_verified_utc,
+          last_checked, last_checked_utc)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     $services = [
-        ['aa:bb:cc:dd:ee:20', '192.168.50.20', 'LAN', 'DNS', 53, 'udp', 'unavailable', 'dns_query', 'verified', 'Test DNS', '1.0', '2026-11-19 22:00:00', '2026-11-19 23:10:02', '2026-11-20 00:10:02'],
-        ['aa:bb:cc:dd:ee:20', '192.168.50.20', 'LAN', 'DNS', 53, 'udp', 'available', 'dns_query_alt', 'verified', 'Test DNS', '1.0', '2026-11-19 22:00:00', '2026-11-19 23:20:02', '2026-11-20 00:20:02'],
-        ['aa:bb:cc:dd:ee:23', '192.168.50.23', 'opt1', 'VPN', 51820, 'udp', 'available', 'authoritative_runtime', 'verified', 'WireGuard', 'wg0', '2026-11-19 22:00:00', '2026-11-19 23:30:00', '2026-11-20 00:30:00'],
-        ['aa:bb:cc:dd:ee:24', '192.168.50.24', '', 'SSH', 22, 'tcp', '', '', '', '', '', '', '', ''],
+        ['aa:bb:cc:dd:ee:20', '192.168.50.20', 'LAN', 'DNS', 53, 'udp', 'unavailable', 'dns_query', 'verified', 'Test DNS', '1.0', '2026-11-19 22:00:00', null, '2026-11-19 23:10:02', 1, '2026-11-20 00:10:02', 1],
+        ['aa:bb:cc:dd:ee:20', '192.168.50.20', 'LAN', 'DNS', 53, 'udp', 'available', 'dns_query_alt', 'verified', 'Test DNS', '1.0', '2026-11-19 22:00:00', 1, '2026-11-19 23:20:02', 1, '2026-11-20 00:20:02', 1],
+        ['aa:bb:cc:dd:ee:23', '192.168.50.23', 'opt1', 'VPN', 51820, 'udp', 'available', 'authoritative_runtime', 'verified', 'WireGuard', 'wg0', '2026-11-19 22:00:00', 1, '2026-11-19 23:30:00', 1, '2026-11-20 00:30:00', 1],
+        ['aa:bb:cc:dd:ee:24', '192.168.50.24', '', 'SSH', 22, 'tcp', '', '', '', '', '', '', null, '', null, '', null],
+        ['aa:bb:cc:dd:ee:25', '192.168.50.25', '', 'SSH', 2222, 'tcp', 'unknown', 'ssh_banner', 'verified', '', '', 'not-a-timestamp', 1, 'malformed-verified', 1, 'malformed-checked', 1],
     ];
     foreach ($services as $service) {
         foreach ($service as $index => $value) {
-            $type = is_int($value) ? SQLITE3_INTEGER : SQLITE3_TEXT;
+            $type = is_int($value)
+                ? SQLITE3_INTEGER
+                : ($value === null ? SQLITE3_NULL : SQLITE3_TEXT);
             $insertService->bindValue($index + 1, $value, $type);
         }
         $insertService->execute();
@@ -191,6 +198,15 @@ namespace {
             'DNS|192.168.50.20|53|udp|LAN|dns_query'
          )"
     );
+    $db->exec(
+        "INSERT INTO device_activity_events
+         (mac, lifecycle_id, event_type, occurred_at, old_value, new_value, details)
+         VALUES (
+            'aa:bb:cc:dd:ee:20', 1, 'SERVICE_CHANGED',
+            'not-a-timestamp', 'verified', 'changed',
+            'DNS|192.168.50.20|53|udp|LAN|dns_query'
+         )"
+    );
     $db->close();
 
     require_once(
@@ -201,16 +217,36 @@ namespace {
 
     $controller =
         new \OPNsense\DeviceMonitor\Api\DevicesController();
+    $originalTimezone = date_default_timezone_get();
+    date_default_timezone_set('Australia/Sydney');
     $response = $controller->servicesAction();
     $rows = [];
     foreach ($response['rows'] ?? [] as $row) {
         $rows[(int)$row['id']] = $row;
     }
 
-    check_presentation(count($rows) === 4, 'service row count changed');
+    check_presentation(count($rows) === 5, 'service row count changed');
     check_presentation(
         $rows[1]['last_checked'] === '2026-11-20 00:10:02',
         'last_checked was not exposed'
+    );
+    check_presentation(
+        $rows[1]['first_detected'] === '2026-11-19 22:00:00' &&
+        $rows[1]['first_detected_timestamp_domain'] === 'unknown' &&
+        $rows[1]['first_detected_display'] ===
+            '2026-11-19 22:00:00' &&
+        $rows[1]['last_verified_timestamp_domain'] === 'utc' &&
+        $rows[1]['last_verified_display'] ===
+            '20.11.2026 - 10:10:02 AEDT' &&
+        $rows[1]['last_checked_timestamp_domain'] === 'utc',
+        'mixed service timestamp provenance was not preserved per field'
+    );
+    check_presentation(
+        $rows[2]['first_detected_timestamp_domain'] === 'utc' &&
+        $rows[2]['first_detected_display'] ===
+            '20.11.2026 - 09:00:00 AEDT' &&
+        $rows[2]['timestamp_timezone'] === 'Australia/Sydney',
+        'marked first-detection timestamp was not converted'
     );
     check_presentation(
         $rows[1]['evidence_kind'] === 'probe',
@@ -244,10 +280,105 @@ namespace {
         'hostile inventory text was changed by the API'
     );
     check_presentation(
+        $rows[1]['inventory_matches']['by_ip'][0]['monitored_interface_label']
+            === 'LAN',
+        'monitored interface presentation alias is missing'
+    );
+
+    $activityChange = null;
+    $discoveryChange = null;
+    $markedDiscoveryChange = null;
+    $malformedActivityChange = null;
+    foreach ($response['recent_changes'] as $change) {
+        if (($change['event_type'] ?? '') === 'SERVICE_UNAVAILABLE') {
+            $activityChange = $change;
+        }
+        if (
+            ($change['event_type'] ?? '') === 'SERVICE_CHANGED' &&
+            ($change['occurred_at_stored'] ?? '') === 'not-a-timestamp'
+        ) {
+            $malformedActivityChange = $change;
+        }
+        if (
+            ($change['event_type'] ?? '') === 'SERVICE_DISCOVERED' &&
+            ($change['service_type'] ?? '') === 'DNS'
+        ) {
+            $discoveryChange = $change;
+        }
+        if (
+            ($change['event_type'] ?? '') === 'SERVICE_DISCOVERED' &&
+            ($change['service_type'] ?? '') === 'VPN'
+        ) {
+            $markedDiscoveryChange = $change;
+        }
+    }
+    check_presentation(
+        $activityChange['timestamp_domain'] === 'utc' &&
+        $activityChange['occurred_at_stored'] === '2026-11-20 00:10:02' &&
+        $activityChange['occurred_at_display'] ===
+            '20.11.2026 - 11:10:02 AEDT' &&
+        $activityChange['timezone'] === 'Australia/Sydney',
+        'proven UTC activity timestamp was not converted with the configured zone'
+    );
+    check_presentation(
+        $discoveryChange['timestamp_domain'] === 'unknown' &&
+        $discoveryChange['occurred_at_display'] ===
+            $discoveryChange['occurred_at_stored'],
+        'ambiguous service discovery timestamp was converted'
+    );
+    check_presentation(
+        $markedDiscoveryChange['timestamp_domain'] === 'utc' &&
+        $markedDiscoveryChange['occurred_at_display'] ===
+            '20.11.2026 - 09:00:00 AEDT' &&
+        $markedDiscoveryChange['timezone'] === 'Australia/Sydney',
+        'marked service discovery timestamp was not converted'
+    );
+    check_presentation(
+        $malformedActivityChange['timestamp_domain'] === 'unknown' &&
+        $malformedActivityChange['occurred_at_display'] ===
+            'not-a-timestamp' &&
+        $malformedActivityChange['timezone'] === '',
+        'malformed activity timestamp was labelled as proven UTC'
+    );
+
+    date_default_timezone_set('America/New_York');
+    $newYorkResponse = $controller->servicesAction();
+    $newYorkActivity = null;
+    $newYorkRows = [];
+    foreach ($newYorkResponse['rows'] ?? [] as $row) {
+        $newYorkRows[(int)$row['id']] = $row;
+    }
+    foreach ($newYorkResponse['recent_changes'] as $change) {
+        if (($change['event_type'] ?? '') === 'SERVICE_UNAVAILABLE') {
+            $newYorkActivity = $change;
+        }
+    }
+    check_presentation(
+        $newYorkActivity['occurred_at_display'] ===
+            '19.11.2026 - 19:10:02 EST' &&
+        $newYorkActivity['timezone'] === 'America/New_York',
+        'activity conversion did not use the configured display timezone'
+    );
+    check_presentation(
+        $newYorkRows[1]['last_verified_display'] ===
+            '19.11.2026 - 18:10:02 EST' &&
+        $newYorkRows[1]['timestamp_timezone'] === 'America/New_York',
+        'service timestamp conversion did not use the configured zone'
+    );
+    date_default_timezone_set($originalTimezone);
+    check_presentation(
         $rows[4]['inventory_matches']['by_mac'] === [] &&
         $rows[4]['inventory_matches']['by_ip'] === [] &&
         in_array($rows[4]['last_checked'], [null, ''], true),
         'missing inventory and timestamp data were not preserved'
+    );
+    check_presentation(
+        $rows[5]['first_detected_timestamp_domain'] === 'unknown' &&
+        $rows[5]['first_detected_display'] === 'not-a-timestamp' &&
+        $rows[5]['last_verified_timestamp_domain'] === 'unknown' &&
+        $rows[5]['last_verified_display'] === 'malformed-verified' &&
+        $rows[5]['last_checked_timestamp_domain'] === 'unknown',
+        'malformed marked service timestamps were treated as UTC'
     );
     check_presentation(
         array_key_exists('hostname', $rows[1]) &&
@@ -306,6 +437,11 @@ namespace {
     echo "INFRASTRUCTURE_API_EVIDENCE_KIND=PASS\n";
     echo "INFRASTRUCTURE_API_COMPAT_FIELDS=PASS\n";
     echo "INFRASTRUCTURE_API_HOSTILE_TEXT=PASS\n";
+    echo "INFRASTRUCTURE_API_INTERFACE_LABEL=PASS\n";
+    echo "INFRASTRUCTURE_API_SERVICE_TIMESTAMP_PROVENANCE=PASS\n";
+    echo "INFRASTRUCTURE_API_UTC_ACTIVITY_TIME=PASS\n";
+    echo "INFRASTRUCTURE_API_AMBIGUOUS_DISCOVERY_TIME=PASS\n";
+    echo "INFRASTRUCTURE_API_MALFORMED_SERVICE_TIME=PASS\n";
     echo "SERVICE_ALERT_EMAIL_PRESENTATION=PASS\n";
     echo "SERVICE_ALERT_EMAIL_RENDER_ONLY=NO_SEND\n";
     echo "INFRASTRUCTURE_PRESENTATION=PASS\n";

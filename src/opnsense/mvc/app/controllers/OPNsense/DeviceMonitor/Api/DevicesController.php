@@ -1669,6 +1669,8 @@ class DevicesController extends ApiControllerBase
      */
     private function inventoryMatchEntry($device)
     {
+        $interfaceLabel = trim((string)($device['vlan'] ?? ''));
+
         return [
             'mac' => strtolower(trim((string)($device['mac'] ?? ''))),
             'ip' => trim((string)($device['ip'] ?? '')),
@@ -1677,7 +1679,8 @@ class DevicesController extends ApiControllerBase
                 (string)($device['custom_hostname'] ?? '')
             ),
             'vendor' => trim((string)($device['vendor'] ?? '')),
-            'vlan' => trim((string)($device['vlan'] ?? ''))
+            'vlan' => $interfaceLabel,
+            'monitored_interface_label' => $interfaceLabel
         ];
     }
 
@@ -1769,6 +1772,71 @@ class DevicesController extends ApiControllerBase
         return 'unknown';
     }
 
+    /** Return whether a value is the canonical stored UTC timestamp form. */
+    private function isStoredUtcTimestamp($value)
+    {
+        $value = trim((string)$value);
+
+        if ($value === '') {
+            return false;
+        }
+
+        $parsed = \DateTimeImmutable::createFromFormat(
+            '!Y-m-d H:i:s',
+            $value,
+            new \DateTimeZone('UTC')
+        );
+
+        return $parsed !== false &&
+            $parsed->format('Y-m-d H:i:s') === $value;
+    }
+
+    /**
+     * Convert an explicitly UTC stored timestamp with the configured GUI zone.
+     */
+    private function formatConfiguredZone($value)
+    {
+        $value = trim((string)$value);
+        $zone = date_default_timezone_get();
+
+        if (
+            !$this->isStoredUtcTimestamp($value) ||
+            $zone === ''
+        ) {
+            return $value;
+        }
+
+        try {
+            return \DateTimeImmutable::createFromFormat(
+                '!Y-m-d H:i:s',
+                $value,
+                new \DateTimeZone('UTC')
+            )
+                ->setTimezone(new \DateTimeZone($zone))
+                ->format('d.m.Y - H:i:s T');
+        } catch (\Throwable $e) {
+            return $value;
+        }
+    }
+
+    /**
+     * Classify and prepare one service timestamp without guessing provenance.
+     */
+    private function serviceTimestampPresentation($value, $marker)
+    {
+        $value = trim((string)$value);
+        $proven =
+            (string)$marker === '1' &&
+            $this->isStoredUtcTimestamp($value);
+
+        return [
+            'display' => $proven
+                ? $this->formatConfiguredZone($value)
+                : $value,
+            'domain' => $proven ? 'utc' : 'unknown'
+        ];
+    }
+
     /**
      * Return discovered infrastructure services.
      * GET /api/devicemonitor/devices/services
@@ -1852,7 +1920,8 @@ class DevicesController extends ApiControllerBase
                 'SELECT s.id, s.mac, s.ip, s.interface, s.service_type, s.port, ' .
                 's.protocol, s.status, s.detection_method, s.confidence, ' .
                 's.product, s.version, s.first_detected, s.last_verified, ' .
-                's.last_checked, ' .
+                's.last_checked, s.first_detected_utc, ' .
+                's.last_verified_utc, s.last_checked_utc, ' .
                 ($archiveExists
                     ? "CASE WHEN a.archived_at >= (SELECT MAX(v.last_verified) " .
                       "FROM device_services v WHERE v.ip=s.ip AND " .
@@ -1906,6 +1975,25 @@ class DevicesController extends ApiControllerBase
                     $row['confidence'] ?? '',
                     $row['detection_method'] ?? ''
                 );
+
+                foreach (
+                    [
+                        'first_detected' => 'first_detected_utc',
+                        'last_verified' => 'last_verified_utc',
+                        'last_checked' => 'last_checked_utc'
+                    ] as $field => $marker
+                ) {
+                    $presentation = $this->serviceTimestampPresentation(
+                        $row[$field] ?? '',
+                        $row[$marker] ?? null
+                    );
+                    $row[$field . '_display'] =
+                        $presentation['display'];
+                    $row[$field . '_timestamp_domain'] =
+                        $presentation['domain'];
+                }
+                $row['timestamp_timezone'] =
+                    date_default_timezone_get();
 
                 if ($device !== null) {
                     $custom = trim(
@@ -1977,6 +2065,11 @@ class DevicesController extends ApiControllerBase
                     );
 
                     if ($firstDetected !== '') {
+                        $firstDetectedPresentation =
+                            $this->serviceTimestampPresentation(
+                                $firstDetected,
+                                $row['first_detected_utc'] ?? null
+                            );
                         $logicalKey = implode('|', [
                             $mac,
                             $ip,
@@ -1990,6 +2083,15 @@ class DevicesController extends ApiControllerBase
                             'record_id' => (int)$row['id'],
                             'event_type' => 'SERVICE_DISCOVERED',
                             'occurred_at' => $firstDetected,
+                            'occurred_at_stored' => $firstDetected,
+                            'occurred_at_display' =>
+                                $firstDetectedPresentation['display'],
+                            'timestamp_domain' =>
+                                $firstDetectedPresentation['domain'],
+                            'timezone' =>
+                                $firstDetectedPresentation['domain'] === 'utc'
+                                    ? date_default_timezone_get()
+                                    : '',
                             'mac' => $mac,
                             'lifecycle_id' => null,
                             'service_type' => $type,
@@ -2120,13 +2222,30 @@ class DevicesController extends ApiControllerBase
                     }
 
                     $trusted = $trustedServiceByKey[$serviceKey];
+                    $occurredAtStored = (string)(
+                        $activity['occurred_at'] ?? ''
+                    );
+                    $timestampDomain =
+                        $this->isStoredUtcTimestamp($occurredAtStored)
+                            ? 'utc'
+                            : 'unknown';
 
                     $change = [
                         'source' => 'activity',
                         'record_id' => (int)$activity['id'],
                         'event_type' => $eventType,
-                        'occurred_at' =>
-                            (string)($activity['occurred_at'] ?? ''),
+                        'occurred_at' => $occurredAtStored,
+                        'occurred_at_stored' => $occurredAtStored,
+                        'occurred_at_display' =>
+                            $timestampDomain === 'utc'
+                                ? $this->formatConfiguredZone(
+                                    $occurredAtStored
+                                )
+                                : $occurredAtStored,
+                        'timestamp_domain' => $timestampDomain,
+                        'timezone' => $timestampDomain === 'utc'
+                            ? date_default_timezone_get()
+                            : '',
                         'mac' => $eventMac,
                         'lifecycle_id' =>
                             isset($activity['lifecycle_id'])

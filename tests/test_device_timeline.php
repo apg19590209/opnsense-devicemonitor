@@ -143,6 +143,7 @@ check(
         "product TEXT, " .
         "version TEXT, " .
         "first_detected DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, " .
+        "first_detected_utc INTEGER DEFAULT NULL, " .
         "last_verified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, " .
         "UNIQUE(ip, service_type, port, protocol, " .
         "detection_method, interface)" .
@@ -234,13 +235,15 @@ check(
         "INSERT INTO device_services " .
         "(mac, ip, interface, service_type, port, " .
         "protocol, status, detection_method, confidence, " .
-        "product, version, first_detected, last_verified) " .
+        "product, version, first_detected, first_detected_utc, " .
+        "last_verified) " .
         "VALUES (" .
         "'aa:bb:cc:dd:ee:ff', " .
         "'192.168.20.10', 'LAN', 'SSH', 22, 'tcp', " .
         "'available', 'ssh_banner', 'verified', " .
         "'OpenSSH', '9', " .
         "'2026-09-12 08:30:00', " .
+        "1, " .
         "'2026-09-12 08:30:00')"
     ),
     'Unable to seed service discovery'
@@ -329,6 +332,8 @@ check(
 
 $db->close();
 
+$originalTimezone = date_default_timezone_get();
+date_default_timezone_set('Australia/Sydney');
 $timeline =
     $model->getDeviceTimeline($mac, 50);
 
@@ -379,6 +384,47 @@ check(
     'Activity transition values missing'
 );
 
+$activityEvent = $timeline[4];
+$discoveryEvent = $timeline[7];
+
+check(
+    $activityEvent['timestamp_domain'] === 'utc' &&
+    $activityEvent['occurred_at_stored'] === '2026-09-12 09:00:00' &&
+    $activityEvent['occurred_at_display'] ===
+        '12.09.2026 - 19:00:00 AEST' &&
+    $activityEvent['timezone'] === 'Australia/Sydney',
+    'activity timestamp provenance or configured zone missing'
+);
+
+check(
+    $discoveryEvent['timestamp_domain'] === 'utc' &&
+    $discoveryEvent['occurred_at_display'] ===
+        '12.09.2026 - 18:30:00 AEST' &&
+    $discoveryEvent['timezone'] === 'Australia/Sydney',
+    'marked service timestamp was not converted'
+);
+
+date_default_timezone_set('America/New_York');
+$newYorkTimeline = $model->getDeviceTimeline($mac, 50);
+
+check(
+    $newYorkTimeline[4]['occurred_at_display'] !==
+        $activityEvent['occurred_at_display'] &&
+    $newYorkTimeline[4]['occurred_at_display'] ===
+        '12.09.2026 - 05:00:00 EDT' &&
+    $newYorkTimeline[4]['timezone'] === 'America/New_York',
+    'activity timestamp did not follow the configured display zone'
+);
+
+check(
+    $newYorkTimeline[7]['occurred_at_display'] ===
+        '12.09.2026 - 04:30:00 EDT' &&
+    $newYorkTimeline[7]['timestamp_domain'] === 'utc',
+    'service timestamp did not follow the configured display zone'
+);
+
+date_default_timezone_set($originalTimezone);
+
 $limited =
     $model->getDeviceTimeline($mac, 3);
 
@@ -412,3 +458,5 @@ check(
 @unlink($tmpModel);
 
 echo "DEVICE_TIMELINE_AGGREGATION=PASS\n";
+echo "DEVICE_TIMELINE_TIMESTAMP_DOMAIN=PASS\n";
+echo "DEVICE_TIMELINE_CONFIGURED_ZONE=PASS\n";

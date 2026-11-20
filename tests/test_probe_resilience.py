@@ -299,7 +299,8 @@ def test_dns_probe_retransmits_identical_query():
                     detection_method TEXT NOT NULL,
                     confidence TEXT NOT NULL,
                     miss_count INTEGER NOT NULL DEFAULT 0,
-                    last_checked DATETIME DEFAULT NULL
+                    last_checked DATETIME DEFAULT NULL,
+                    last_checked_utc INTEGER DEFAULT NULL
                 )
                 '''
             )

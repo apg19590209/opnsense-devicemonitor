@@ -2228,3 +2228,130 @@ msgstr "por IP do endpoint"
 
 msgid "by stored MAC"
 msgstr "por MAC armazenado"
+
+# ============================================
+# [service presentation amendments]
+# ============================================
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "All Recorded States"
+msgstr "Todos os estados registrados"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Authoritative/configuration record"
+msgstr "Registro autoritativo/de configuração"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Converted from UTC"
+msgstr "Convertido de UTC"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Counts describe stored observations, not current health."
+msgstr "Os contadores descrevem observações registradas, não o estado atual."
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Displayed in"
+msgstr "Exibido em"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Event Time"
+msgstr "Horário do evento"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Evidence recorded"
+msgstr "Evidência registrada"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Evidence refreshed"
+msgstr "Evidência atualizada"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Evidence source not classified"
+msgstr "Origem da evidência não classificada"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Last probe attempt"
+msgstr "Última tentativa de sondagem"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Last recorded state: Available"
+msgstr "Último estado registrado: Disponível"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Last recorded state: Unavailable"
+msgstr "Último estado registrado: Indisponível"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Last recorded state: Unknown"
+msgstr "Último estado registrado: Desconhecido"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Last successful probe"
+msgstr "Última sondagem bem-sucedida"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Matching endpoint IP"
+msgstr "IP do endpoint correspondente"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Matching stored MAC"
+msgstr "MAC armazenada correspondente"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Monitored interface label"
+msgstr "Rótulo da interface monitorada"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "No stored inventory matches"
+msgstr "Nenhuma correspondência no inventário armazenado"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Reachability probe"
+msgstr "Sondagem de alcance"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Recorded Available"
+msgstr "Disponível (registrado)"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Recorded State"
+msgstr "Estado registrado"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Recorded Unavailable"
+msgstr "Indisponível (registrado)"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Recorded Unknown"
+msgstr "Desconhecido (registrado)"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Recorded evidence confidence"
+msgstr "Confiança da evidência registrada"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Recorded state not available"
+msgstr "Estado registrado não disponível"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Stored inventory matches at page load"
+msgstr "Correspondências de inventário armazenadas no carregamento da página"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Stored time — timezone provenance not recorded"
+msgstr "Horário armazenado — proveniência do fuso horário não registrada"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "Stored timestamps; timezone not asserted"
+msgstr "Carimbos de data/hora armazenados; fuso horário não declarado"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "These matches come from stored device inventory. They do not identify which device answered the service probe. They are page-load lookups, not historical ownership evidence."
+msgstr "Estas correspondências vêm do inventário de dispositivos armazenado. Elas não identificam qual dispositivo respondeu à sondagem do serviço. São consultas feitas no carregamento da página, não evidências históricas de propriedade."
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "matching endpoint IP"
+msgstr "IP do endpoint correspondente"
+
+#: activitytimeline.volt / infrastructureservices.volt
+msgid "matching stored MAC"
+msgstr "MAC armazenada correspondente"

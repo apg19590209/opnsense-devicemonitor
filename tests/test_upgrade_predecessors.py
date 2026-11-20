@@ -150,6 +150,41 @@ def upgrade_one(version, tag):
                 "SELECT last_checked FROM device_services WHERE ip = '203.0.113.10'"
             ).fetchone()[0]
             assert backfilled == '2026-09-02 00:00:00', (version, backfilled)
+            assert {
+                'first_detected_utc',
+                'last_verified_utc',
+                'last_checked_utc',
+            } <= after, (version, after)
+            preserved = conn.execute(
+                """
+                SELECT ip, first_detected, last_verified, last_checked,
+                       first_detected_utc, last_verified_utc, last_checked_utc
+                FROM device_services
+                ORDER BY ip
+                """
+            ).fetchall()
+            assert preserved == [
+                (
+                    '203.0.113.10',
+                    '2026-09-01 00:00:00',
+                    '2026-09-02 00:00:00',
+                    '2026-09-02 00:00:00',
+                    None,
+                    None,
+                    None,
+                ),
+                (
+                    '203.0.113.11',
+                    '2026-09-01 00:00:00',
+                    '2026-11-02 00:00:00',
+                    None
+                    if 'last_checked' in before
+                    else '2026-11-02 00:00:00',
+                    None,
+                    None,
+                    None,
+                ),
+            ], (version, preserved)
 
         aged, retired = new.age_stale_service_state()
         assert (aged, retired) == (1, 0), (version, aged, retired)
@@ -160,11 +195,35 @@ def upgrade_one(version, tag):
         assert statuses['203.0.113.11'] == 'available', (version, statuses)
 
         new.init_db()
+
+        with sqlite3.connect(db) as conn:
+            repeated_before = conn.execute(
+                """
+                SELECT ip, first_detected, last_verified, last_checked,
+                       first_detected_utc, last_verified_utc, last_checked_utc
+                FROM device_services
+                ORDER BY ip
+                """
+            ).fetchall()
+
         new.init_db()
 
         with sqlite3.connect(db) as conn:
             assert conn.execute('SELECT count(*) FROM devices').fetchone()[0] == 1
             assert conn.execute('SELECT count(*) FROM device_services').fetchone()[0] == 2
+            repeated_after = conn.execute(
+                """
+                SELECT ip, first_detected, last_verified, last_checked,
+                       first_detected_utc, last_verified_utc, last_checked_utc
+                FROM device_services
+                ORDER BY ip
+                """
+            ).fetchall()
+            assert repeated_after == repeated_before, (
+                version,
+                repeated_before,
+                repeated_after,
+            )
 
     return 'PASS'
 

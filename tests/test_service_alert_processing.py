@@ -605,6 +605,11 @@ def test_generation_migration_is_idempotent_and_replaces_trigger():
 
         assert {"service_id", "service_generation"} <= activity_columns
         assert "alert_generation" in service_columns
+        assert {
+            "first_detected_utc",
+            "last_verified_utc",
+            "last_checked_utc",
+        } <= service_columns
         assert generation == 1
         assert legacy_pair == (None, None)
         assert len(triggers) == 1
@@ -666,6 +671,9 @@ def test_generation_migration_failure_rolls_back_and_aborts():
         assert "service_id" not in activity_columns
         assert "service_generation" not in activity_columns
         assert "alert_generation" not in service_columns
+        assert "first_detected_utc" not in service_columns
+        assert "last_verified_utc" not in service_columns
+        assert "last_checked_utc" not in service_columns
         assert (
             module._normalise_schema_sql(trigger_sql)
             == module._normalise_schema_sql(LEGACY_TRIGGER_SQL)
