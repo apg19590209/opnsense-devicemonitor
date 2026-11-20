@@ -89,10 +89,12 @@
                     {{ devicemonitor_t('Showing') }}
                     <strong id="services-visible">0</strong>
                 </span>
-                <label class="checkbox-inline">
+                <span class="dm-show-archived-toggle">
                     <input id="services-show-archived" type="checkbox">
-                    {{ devicemonitor_t('Show archived') }}
-                </label>
+                    <label for="services-show-archived">
+                        {{ devicemonitor_t('Show archived') }}
+                    </label>
+                </span>
             </div>
 
             <ul id="infrastructure-tabs"
@@ -296,6 +298,30 @@
 
 .infrastructure-toolbar input {
     width: 230px;
+}
+
+.infrastructure-toolbar .dm-show-archived-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+    margin: 0;
+}
+
+.infrastructure-toolbar .dm-show-archived-toggle > input[type="checkbox"] {
+    position: static;
+    float: none;
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.infrastructure-toolbar .dm-show-archived-toggle > label {
+    min-width: 0;
+    margin: 0;
+    font-weight: normal;
+    white-space: normal;
+    overflow-wrap: break-word;
+    cursor: pointer;
 }
 
 .port-discovery-controls {
@@ -696,6 +722,20 @@ header.page-content-head {
 .infrastructure-tab-content thead th {
     position: sticky;
     z-index: 10;
+}
+
+@media (max-width: 991px), (max-height: 640px) {
+    .infrastructure-sticky-controls {
+        position: static;
+    }
+
+    .infrastructure-sticky-controls::before {
+        display: none;
+    }
+
+    .infrastructure-tab-content thead th {
+        position: static !important;
+    }
 }
 
 @media (max-width: 1100px) {

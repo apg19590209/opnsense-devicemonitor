@@ -67,6 +67,58 @@ if (text.includes('text-overflow') || text.includes('letter-spacing:')) {
 if (!text.includes("lang.query('Event Time')")) {
     throw new Error('Recent Service Changes must use the Event Time heading');
 }
+if (!text.includes('class="dm-show-archived-toggle"')) {
+    throw new Error('Show archived must use the scoped inline control');
+}
+if (!text.includes('<input id="services-show-archived" type="checkbox">')) {
+    throw new Error('Show archived checkbox ID changed');
+}
+if (!text.includes('<label for="services-show-archived">')) {
+    throw new Error('Show archived label is not explicitly associated');
+}
+if (
+    /<label[^>]*class=["'][^"']*checkbox-inline[^"']*["'][^>]*>\s*<input[^>]+id=["']services-show-archived/.test(text)
+) {
+    throw new Error('Show archived must not use inherited checkbox-inline positioning');
+}
+if (
+    !text.includes('.infrastructure-toolbar .dm-show-archived-toggle {') ||
+    !text.includes('gap: 8px;') ||
+    !text.includes('align-items: center;') ||
+    !text.includes('flex: 0 0 auto;') ||
+    !text.includes('margin: 0;')
+) {
+    throw new Error('Show archived control lacks scoped alignment and spacing');
+}
+if (!text.includes('@media (max-width: 991px), (max-height: 640px)')) {
+    throw new Error('Compact sticky breakpoint is missing');
+}
+if (
+    !text.includes('.infrastructure-sticky-controls {\n        position: static;') ||
+    !text.includes('.infrastructure-sticky-controls::before {\n        display: none;') ||
+    !text.includes('.infrastructure-tab-content thead th {\n        position: static !important;')
+) {
+    throw new Error('Compact mode does not fully disable the sticky stack');
+}
+if (
+    !text.includes('.infrastructure-sticky-controls {\n    position: sticky;') ||
+    !text.includes('.infrastructure-tab-content thead th {\n    position: sticky;')
+) {
+    throw new Error('Desktop sticky behaviour was removed');
+}
+if (
+    /\.css\(\s*['"]position['"]|\.style\.position\s*=/.test(text)
+) {
+    throw new Error('Runtime JavaScript must not re-enable sticky positioning');
+}
+if (
+    text.includes('body {') ||
+    text.includes('.page-head {') ||
+    text.includes('.page-foot {') ||
+    text.includes('.page-side {')
+) {
+    throw new Error('Infrastructure Services must not override global layout');
+}
 
 const helpers = renderTranslations(
     text.slice(start, end) +

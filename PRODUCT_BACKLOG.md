@@ -15,6 +15,54 @@ or approved for future development.
 
 ## Open backlog
 
+### Infrastructure Services compact visual follow-up: **`OPEN / PLANNED`**
+
+**Description:** Correct two confirmed compact-layout defects:
+
+1. The **Show archived** checkbox touches its label.
+2. At 200% zoom in a normal Firefox viewport, service-row content passes above
+   and behind the summary/toolbar/tab group, which occupies most of the
+   viewport.
+
+The checkbox correction must use an explicit `id`/`for` association, an 8 px
+gap and vertical centring. The sticky-control correction must let summary,
+toolbar and tabs scroll normally at narrow effective widths or high zoom while
+retaining useful desktop sticky behaviour. Every service field and action must
+remain reachable by page scrolling and keyboard navigation.
+
+**Confirmed evidence:** operator review on `.23` reports both visual defects.
+The zoom/scroll result is normal Firefox rendering, not screenshot-stitching
+uncertainty. The current markup nests the checkbox inside `.checkbox-inline`.
+Inherited OPNsense theme rules set `.checkbox-inline input[type=checkbox]` to
+`position: absolute` with `margin-left: -20px`, set `.checkbox-inline` to
+`padding-left: 20px`, and set general checkbox margins to `4px 0 0`. The local
+toolbar also applies 8 px gaps between its flex items, but no reliable gap
+inside this label.
+
+Source inspection finds that `.infrastructure-sticky-controls` is
+`position: sticky; z-index: 20`, with a runtime-calculated top and an opaque
+background. The controls' natural height grows as the summary and toolbar wrap.
+At high zoom that pinned block can consume most or all of the viewport while
+following rows pass behind it. The local page-content header is sticky at
+`z-index: 30`, and table headers are sticky at `z-index: 10` beneath it. No
+non-visible `overflow` container was found on the body, page-content or
+content-box ancestors; the nested recent-changes scroller is a sibling rather
+than an ancestor of the service controls. Browser geometry has not yet been
+captured, so the precise height/offset threshold and exact share of the overlap
+caused by each sticky element remain unproven.
+
+The remaining compact-layout acceptance checks are Recorded State/Evidence
+separation, compact timezone labels and table explanations, stacked observation
+values, complete shared-IP inventory details, keyboard Details operation and
+non-activating Archive/Restore label inspection. They remain pending checks,
+not confirmed defects unless the operator reports them as such.
+
+**Benefit:** Improve legibility and pointer targeting while preserving the
+existing native control and filter semantics.
+
+**Status:** Planned 20 November 2026. No implementation, package or host change
+has been made for either correction.
+
 ### Deployment-entry-point release safeguards: **`CLOSED`**
 
 **Description:** Enforce explicit source identity, required feature completeness, exact archive
