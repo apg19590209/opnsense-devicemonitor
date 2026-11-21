@@ -88,14 +88,14 @@ def test_every_named_suite_exists():
     print('  suites referenced     %d (all present)' % len(names))
 
 
-def test_predecessor_step_requires_twelve_passes():
+def test_predecessor_step_requires_thirteen_passes():
     step = re.search(r'name: Validate every accepted predecessor upgrade\n(.*?)(?=^      - name:)',
                      WORKFLOW, re.M | re.S)
     assert step, 'no predecessor step'
     body = step.group(1)
-    assert "grep -q '^UPGRADE_PREDECESSORS=PASS passed=12 skipped=0$'" in body, body
+    assert "grep -q '^UPGRADE_PREDECESSORS=PASS passed=13 skipped=0$'" in body, body
     assert 'DM_ALLOW_SKIPPED_PREDECESSORS' not in body, body
-    print('  predecessor step      asserts passed=12 skipped=0')
+    print('  predecessor step      asserts passed=13 skipped=0')
 
 
 def test_determinism_step_is_wired():
@@ -134,7 +134,7 @@ CASES = [
     test_dm_bl_012_branch_can_be_tested,
     test_existing_branches_are_preserved,
     test_every_named_suite_exists,
-    test_predecessor_step_requires_twelve_passes,
+    test_predecessor_step_requires_thirteen_passes,
     test_determinism_step_is_wired,
     test_uninstaller_step_is_wired,
     test_guard_step_requires_thirty_five_tests,
