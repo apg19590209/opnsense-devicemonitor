@@ -626,7 +626,7 @@
     display: none;
 }
 
-@media (max-width: 991px) {
+@media (max-width: 1199px) {
     .infrastructure-service-table,
     .infrastructure-service-table tbody,
     .infrastructure-service-table tr,

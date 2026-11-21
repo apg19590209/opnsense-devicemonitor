@@ -71,14 +71,87 @@ if (text.includes('.html(') || text.includes('innerHTML')) {
 if (!text.includes('dm-service-time-entry')) {
     throw new Error('Observation labels and values must use stackable entries');
 }
-if (!text.includes('border-right: 1px solid #e2e6ea')) {
+const serviceStackStart = text.indexOf('@media (max-width: 1199px) {');
+const serviceStackEnd = text.indexOf(
+    '\n}\n\n/* Tabbed Infrastructure Services layout.',
+    serviceStackStart
+);
+if (serviceStackStart < 0 || serviceStackEnd < 0) {
+    throw new Error('Service table stacked breakpoint is missing');
+}
+const serviceStack = text.slice(serviceStackStart, serviceStackEnd + 2);
+const desktopDivider = text.indexOf('border-right: 1px solid #e2e6ea');
+if (desktopDivider < 0 || desktopDivider > serviceStackStart) {
     throw new Error('Recorded State and Evidence lack a desktop separator');
 }
-if (!text.includes('min-height: 32px')) {
+if (
+    !serviceStack.includes(
+        '.infrastructure-service-table td {\n' +
+        '        display: block;\n' +
+        '        width: 100% !important;'
+    ) ||
+    !serviceStack.includes(
+        '.infrastructure-service-table thead {\n' +
+        '        display: none;'
+    ) ||
+    !serviceStack.includes(
+        '.dm-service-cell-label {\n' +
+        '        display: block;'
+    ) ||
+    !serviceStack.includes(
+        '.dm-service-details-grid {\n' +
+        '        grid-template-columns: 1fr;'
+    ) ||
+    !serviceStack.includes(
+        '.dm-service-row > td:nth-child(2) {\n' +
+        '        padding-right: 0 !important;\n' +
+        '        border-right: 0 !important;'
+    )
+) {
+    throw new Error('Service table stacked row presentation is incomplete');
+}
+if (!serviceStack.includes('min-height: 32px;')) {
     throw new Error('Narrow-width action controls lack a usable target height');
+}
+if (
+    !text.includes(".addClass('dm-service-time-entry')") ||
+    !text.includes('timezoneUnknownBadge()') ||
+    !text.includes('.text(inventoryCountText(row))')
+) {
+    throw new Error('Stacked rows lost timestamp provenance or inventory values');
 }
 if (text.includes('text-overflow') || text.includes('letter-spacing:')) {
     throw new Error('Presentation must not truncate or manipulate letter spacing');
+}
+const detailsControls = text.indexOf(".attr('aria-controls', detailsId)");
+const detailsButtonStart = text.lastIndexOf(
+    "$('<button type=\"button\">')",
+    detailsControls
+);
+const detailsButtonEnd = text.indexOf(
+    '.appendTo($attribution);',
+    detailsControls
+);
+const detailsButton = text.slice(detailsButtonStart, detailsButtonEnd);
+if (
+    detailsControls < 0 ||
+    detailsButtonStart < 0 ||
+    detailsButtonEnd < 0 ||
+    !detailsButton.includes(".attr('aria-expanded', 'false')") ||
+    !detailsButton.includes(".text({{ lang.query('Details')|json_encode(15) }})") ||
+    !text.includes(
+        "$attribution.find('button').on('click', function() {"
+    ) ||
+    !text.includes("$detailsRow.toggle(!expanded);")
+) {
+    throw new Error('Keyboard-operable Details disclosure was removed');
+}
+if (
+    !text.includes(".attr('data-service-id', row.id)") ||
+    !text.includes("actionLabel + ': ' +") ||
+    !text.includes('serviceArchiveRequest(row)')
+) {
+    throw new Error('Exact-row action wiring was removed');
 }
 if (!text.includes("lang.query('Event Time')")) {
     throw new Error('Recent Service Changes must use the Event Time heading');
