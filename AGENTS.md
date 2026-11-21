@@ -14,8 +14,14 @@ This file is the shared project instruction file for Codex and Cline. It supplem
 - **Keep verification claims distinct.** A pinned digest checks expected identity; reproducibility
   compares independent builds; syntax, unit, packaged-path and live acceptance prove different
   things. One never substitutes for another.
-- **Track running work.** Before waiting or polling, confirm the process or session exists and
-  identify where its output goes; retain its exit status. Never assume a build is running.
+- **Make potentially long work observable.** Before starting, state its purpose, expected
+  duration and log/progress location. Confirm the process or session exists, retain its exit
+  status, and use bounded polling where supported to report progress approximately every 60
+  seconds, distinguishing `RUNNING COMMAND`, `WAITING FOR RESULT`, `ANALYSING RESULT` and
+  `BLOCKED`. After completion, report the exit status and next action. Never rerun or interrupt
+  work merely to produce an update, expose credentials or claim a heartbeat the tool cannot
+  provide; if a blocking call cannot yield updates, explain that before starting and provide a
+  separate observation command where practical.
 - **Avoid blind retries.** Retry a failed operation only after a relevant change or evidence of a
   transient failure. After two failures with the same unresolved cause, stop that approach and
   reassess while independent work continues.
