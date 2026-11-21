@@ -19,8 +19,17 @@ checks, pass, and candidate-bound acceptance is recorded under
 Data, schemas, activity, alert state, email log, timestamp provenance,
 configuration, certificate identity and service health are preserved. The
 temporary acceptance account, key and credential were removed. Installed-target
-rollback is `/var/backups/devicemonitor/install-v214.otWiJE`. Browser visual
-acceptance remains pending. Report:
+rollback is `/var/backups/devicemonitor/install-v214.otWiJE`. Post-install CI
+`44852932307` passed at later commit `cfb3449`; archive validation against that
+tree confirmed all 96 packaged members and 10 required features were unchanged
+from source `e5b6d4e`. Tony's operator review of this installed candidate
+confirmed that DNS selection activated DNS Servers with Showing 7, a DNS badge
+of 7 and zero badges for other categories; a no-match search showed Showing 0
+while retaining DNS and the no-match state; and clearing the type preserved the
+search and no-match state. These observations do not establish browser
+acceptance for a replacement. The source-only 1199px service-table correction
+is committed as `b010428`; replacement packaging and browser acceptance remain
+pending. Report:
 `.cline-reports/REPORT-20261121-000907.md`.
 
 **v2.15.2 timestamp/checkbox candidate — `.23` AUTOMATED ACCEPTANCE COMPLETE (21 November 2026).**

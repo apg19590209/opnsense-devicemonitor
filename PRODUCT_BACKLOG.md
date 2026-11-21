@@ -107,10 +107,16 @@ from source `e9fd166`, installed and automatically accepted on `.23` on
 including authenticated API checks. The additional toolbar grouping correction
 is included in candidate `c9703915…`, installed and automatically accepted on
 `.23` on 21 November 2026 with rollback
-`/var/backups/devicemonitor/install-v214.otWiJE`. Browser visual acceptance,
+`/var/backups/devicemonitor/install-v214.otWiJE`. Post-install CI
+`44852932307` passed at later commit `cfb3449`; validation against that tree
+confirmed the archive's 96 members and 10 required features were unchanged from
+candidate source `e5b6d4e`. Browser visual acceptance,
 including same-line spacing and wrapped placement without overflow, remains
 pending. The untested viewport widths, checkbox mouse/Tab/Space/filter
-interaction and desktop sticky reading space remain outstanding.
+interaction and desktop sticky reading space remain outstanding. A source-only
+1199px service-table stacking correction is committed as `b010428`; its
+replacement candidate, exact 1199/1200px boundary, spacing, wrapping and
+remaining browser checks are not yet accepted.
 
 ### Infrastructure Services filter control scope: **INSTALLED + AUTOMATED ACCEPTANCE COMPLETE; BROWSER PENDING**
 
@@ -137,7 +143,14 @@ visible.
 spacing correction. Focused filter/presentation tests, all ten catalogues,
 translated JavaScript, isolated language acceptance and the remaining release
 preflight component gates pass. The candidate installed once on `.23` and all 12
-host checks passed; browser acceptance remains pending. Rollback:
+host checks passed. CI `44852932307` subsequently passed at `cfb3449`, and the
+archive was verified unchanged against all packaged files in that tree. Browser
+acceptance remains partial: on the installed candidate, Tony observed DNS
+selection activate DNS Servers with Showing 7, a DNS badge of 7 and zero badges
+for other categories; a no-match search showed Showing 0 while retaining DNS
+and the no-match state; and clearing the type preserved the search and no-match
+state. These observations do not establish acceptance for the replacement
+candidate. Rollback:
 `/var/backups/devicemonitor/install-v214.otWiJE`.
 
 ### Deployment-entry-point release safeguards: **`CLOSED`**
