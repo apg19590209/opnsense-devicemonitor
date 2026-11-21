@@ -2,6 +2,20 @@
 
 ## Current state
 
+**v2.15.2 filter/spacing candidate — FROZEN, NOT INSTALLED (21 November 2026).**
+The filter-scope, exact-type and 24 px toolbar-group corrections are committed as
+`e4307ee`; coherent v2.15.2 inputs are `e5b6d4e`, with identity record `5613320`.
+Two independent clean exports produced the same 96-member archive from source
+`e5b6d4e006f88dce5adf5e7cb2f70b270b615275`: 12,697,564 bytes, SHA-256
+`c97039156375e470895ad4d58efb76d30c038e5522489aef28db109fbea81e30`.
+The release manifest/input checks, deployment safeguards, execution ledger,
+bundle safety, reproducibility, determinism and archive verification pass. The
+candidate is frozen at
+`/root/dm-backups/dm-v2.15.2-filter-spacing-candidate-20261121T000019Z`.
+`.23` remains on accepted candidate `59e7bc98…`; installation and browser
+acceptance for this candidate remain pending. Report:
+`.cline-reports/REPORT-20261121-000043.md`.
+
 **v2.15.2 timestamp/checkbox candidate — `.23` AUTOMATED ACCEPTANCE COMPLETE (21 November 2026).**
 The shared `YYYY-MM-DD HH:mm:ss ZONE` display formatter and final **Show archived**
 width correction are committed as `b3cf5df`; coherent v2.15.2 inputs are `e9fd166`,
@@ -20,13 +34,6 @@ The temporary account and credential were removed. Installer rollback is
 `/var/backups/devicemonitor/install-v214.43OARv`. The prior `7feaabe3…` candidate and
 rollback evidence remain preserved. Browser visual acceptance remains pending. Report:
 `.cline-reports/REPORT-20261120-235011-v2152-timestamp-checkbox-candidate.md`.
-
-An additional filter-scope correction is source-complete but not built or installed: the
-type control is now **All Service Types**, inventory filters activate category tabs, zero
-matches use a translated stable inventory state, and Recent Service Changes remains
-unfiltered. Focused filter, presentation, catalogue, translated-JavaScript and isolated
-source-rendering language checks pass. The installed `.23` candidate and rollback evidence
-above remain unchanged.
 
 **v2.15.2 compact-layout candidate — AUTOMATED `.23` ACCEPTANCE COMPLETE (20 November 2026).**
 Source `4c4bb12c1bc880ee372a8d2cf954fe583de0023c`, 12,687,324 bytes, 96 members,

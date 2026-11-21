@@ -112,7 +112,7 @@ widths, checkbox mouse/Tab/Space/filter interaction and desktop sticky reading
 space remain outstanding. The uninstalled 24 px toolbar spacing adjustment
 remains pending browser review.
 
-### Infrastructure Services filter control scope: **SOURCE COMPLETE; PACKAGING PENDING**
+### Infrastructure Services filter control scope: **FROZEN CANDIDATE; INSTALLATION + BROWSER PENDING**
 
 **Description:** Make the inventory filters visibly effective without changing
 the unfiltered historical feed:
@@ -131,10 +131,13 @@ the unfiltered historical feed:
 result instead of appearing to do nothing while Recent Service Changes remains
 visible.
 
-**Status:** Source, focused regression, manual and all ten shipped catalogues
-are updated in the worktree. The disposable filter fixtures, presentation test,
-translated-JavaScript test and isolated source-rendering language acceptance
-pass. No build, packaging, installation or browser acceptance occurred.
+**Status:** Source `e5b6d4e` is packaged as frozen v2.15.2 candidate
+`c97039156375e470895ad4d58efb76d30c038e5522489aef28db109fbea81e30`
+(12,697,564 bytes, 96 members). It also contains the approved 24 px toolbar-group
+spacing correction. Focused filter/presentation tests, all ten catalogues,
+translated JavaScript, isolated language acceptance and the remaining release
+preflight component gates pass. The candidate is not installed; browser and
+post-install acceptance remain pending.
 
 ### Deployment-entry-point release safeguards: **`CLOSED`**
 
