@@ -2,6 +2,44 @@
 
 ## Current state
 
+**v2.15.2 constrained-width candidate — `.23` ACCEPTANCE AND AGREED BROWSER SCOPE COMPLETE (21 November 2026).**
+The source-only 1199px service-table correction is committed as `b010428`;
+coherent unpublished v2.15.2 packaging inputs are `1ffe2ca`, with identity
+record `8c8b0af`. Two independent plain exports produced the same 96-member
+archive from source `1ffe2ca305116ed4555e06750a3d6e594752a714`: 12,697,564
+bytes, SHA-256
+`0a5e3db2219861f0d36f54b6087ad327d817a55cf8ea82b0dde63b4704406cc7`.
+The four determinism assertion groups were covered using plain exports,
+frozen-archive metadata and GNU-header canonicalisation without creating clones
+or an additional checkout. The candidate is frozen at
+`/root/dm-backups/dm-v2.15.2-constrained-width-candidate-20261121T031451Z`.
+The guarded local installation completed once with 70 targets, 69 unchanged,
+zero prunes and zero repairs. All 12 host checks, including authenticated API
+checks, pass, and candidate-bound acceptance is recorded under
+`/root/dm-validation/v2.15.2-constrained-width-gate-install-20261121T031938Z/`.
+Data, schemas, activity, alert state, email log, timestamp provenance,
+configuration, certificate identity and service health are preserved. The
+temporary acceptance account, key and credential were removed. Current rollback
+is `/var/backups/devicemonitor/install-v214.OfOKOQ`; the previous candidate,
+acceptance evidence and `/var/backups/devicemonitor/install-v214.otWiJE` remain
+preserved. Browser acceptance is complete within the agreed fixture-backed
+scope. Live operator evidence covers DNS activation, no-match and filter
+clearing, 200% scrolling, pointer and keyboard Details operation, Show archived
+keyboard operation, shared-IP Details, and the 1199/1200px layout boundary at
+100% zoom; rendered same-line spacing was measured as an 8px internal gap and a
+24px count-to-toggle separation. The Windows Playwright review covered all 13
+cases through a composed `12 passed + final corrected 1 passed` sequence, not
+one all-green run. It used reviewed fixtures for archived and malformed values
+across the recorded widths, sidebar states, filter transitions, toolbar spacing,
+keyboard controls and shared-IP inventory. All 13 screenshots were readable and
+account labels were masked. Host cleanup is verified: the temporary account,
+credential and configuration references are absent. Fixture-backed coverage is
+not claimed as live archived or malformed data. The previous candidate,
+acceptance records and rollback evidence remain preserved. No mandatory blocker
+remains for this Infrastructure Services scope; the separate DM-BL-013
+monitoring/delivery umbrella remains open. Report:
+`.cline-reports/REPORT-20261121-172315.md`.
+
 **v2.15.2 filter/spacing candidate — `.23` AUTOMATED ACCEPTANCE COMPLETE (21 November 2026).**
 The filter-scope, exact-type and 24 px toolbar-group corrections are committed as
 `e4307ee`; coherent v2.15.2 inputs are `e5b6d4e`, with identity record `5613320`.
@@ -28,8 +66,9 @@ of 7 and zero badges for other categories; a no-match search showed Showing 0
 while retaining DNS and the no-match state; and clearing the type preserved the
 search and no-match state. These observations do not establish browser
 acceptance for a replacement. The source-only 1199px service-table correction
-is committed as `b010428`; replacement packaging and browser acceptance remain
-pending. Report:
+is committed as `b010428`; the replacement was subsequently packaged,
+installed and accepted within the agreed browser scope; see the current state
+above. Report:
 `.cline-reports/REPORT-20261121-000907.md`.
 
 **v2.15.2 timestamp/checkbox candidate — `.23` AUTOMATED ACCEPTANCE COMPLETE (21 November 2026).**

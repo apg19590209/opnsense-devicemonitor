@@ -13,17 +13,16 @@ or approved for future development.
 - Architectural constraints remain in `DECISIONS.md`.
 - Environment and component facts remain in `SYSTEM_MAP.md`.
 
-## Open backlog
+## Completed work
 
-### Infrastructure Services visual follow-up: **OPEN — SOURCE, PACKAGING, AND `.23` AUTOMATED ACCEPTANCE COMPLETE; BROWSER REVIEW PARTIAL**
+### Infrastructure Services visual follow-up: **`CLOSED`** (21 November 2026)
 
 **Description:** Complete the confirmed visual follow-up:
 
 1. The **Show archived** checkbox is detached from its associated label by
    roughly 90 px in the latest rendered screenshot.
 2. The compact summary/filter/tab stack is operator-confirmed at 200% to scroll
-   away while service content/actions remain visible. The full viewport/zoom
-   matrix remains pending.
+   away while service content/actions remain visible.
 3. Infrastructure Services and Device Activity use `dd.mm.YYYY - HH:mm:ss T`
    instead of the requested common `YYYY-MM-DD HH:mm:ss` display format.
 4. The **Showing n** count and complete **Show archived** control need 24 px
@@ -52,6 +51,72 @@ scrolling away, and **Show archived** rendering as one checkbox/label control.
 The screenshot viewport widths were not supplied, and no exact pixel measurement
 is claimed.
 
+**Replacement-candidate browser evidence (21 November 2026):** these
+observations apply to installed candidate `0a5e3db2…` from source `1ffe2ca`.
+
+Screenshot observations:
+
+- DNS was selected, DNS Servers was active, Showing was 7 and the DNS badge was
+  7.
+- A no-match search produced Showing 0 and the inventory no-match message.
+- Desktop columns remained visually readable with the sidebar expanded and
+  collapsed.
+- Narrow captures showed labelled stacked service fields and a grouped
+  checkbox/label control wrapping together. The screenshots were supplied after
+  requested 768px and 360px settings, but their dimensions were not
+  independently measured.
+- After the requested mouse-label test, Show archived was visibly checked while
+  Showing and the DNS badge remained 7.
+- At the requested 200% zoom, the summary/filter/tab controls scrolled away and
+  the final DNS row's Details and Archive controls were visible and reachable.
+- Expanded final-row Details was readable without visible clipping.
+- Complete configured-zone timestamps and raw legacy timestamps with Timezone
+  unknown badges were visible.
+- Screenshot `image(20261121-042219).png` shows expanded Details for
+  `192.168.50.1:53/UDP`, Interface VLAN50. The visible page-load inventory
+  entries are a stored-MAC match and endpoint-IP match for
+  `18:60:24:6a:64:8c` at 192.168.50.1, plus an endpoint-IP match for
+  `f0:42:1c:f6:d2:18` at 192.168.50.1. All three show the VLAN50 interface
+  label, and the stored-attribution and page-load lookup explanations are
+  visible. Shared-IP expanded Details completeness is observed and complete for
+  this candidate; this does not establish ownership or identify which device
+  answered the probe.
+
+Tony explicitly confirmed:
+
+- changing DNS to All Service Types preserved the search and no-match state;
+- Tab/Space unchecked Show archived;
+- at 200% zoom, the compact controls scrolled away while the final DNS row's
+  Details and Archive remained reachable; and
+- Space closed Details and Enter reopened it.
+
+Firefox diagnostic results at operator-recorded 100% zoom:
+
+- At 1199px with the sidebar collapsed, page `clientWidth` and `scrollWidth`
+  were both 1199, horizontal overflow was zero and the 1199px stacking query
+  matched. The service table was 1077px; table, first row and all six cells were
+  `display: block`, and the header was `display: none`.
+- At 1200px with the sidebar collapsed, the service table was 1078px. Table,
+  header, row and all six cells used `table`, `table-header-group`, `table-row`
+  and `table-cell`.
+- At 1200px with the sidebar expanded, the service table was 948px with the same
+  desktop display values.
+- At 1199px, the toolbar's computed and rendered checkbox-to-label gap was 8px,
+  their vertical-centre difference was 0px, and the rendered count-to-toggle
+  edge separation was 24px with both on the same line.
+
+The original diagnostic reported `tableFound=false` despite visible rows. A
+follow-up query scoped to tables in the active tab pane succeeded; this was a
+diagnostic-query limitation, not a product defect. Earlier console syntax
+errors from copied preview ellipses were also copy artefacts. The final valid
+measurements are authoritative.
+
+Those live captures predated the browser harness: archived-row inclusion and
+malformed values were subsequently covered by reviewed fixtures, and the
+recorded 360px through 1440px layouts completed the remaining responsive-width
+checks. Fixture coverage is not presented as live archived or malformed data.
+Full-page stitching was not treated as evidence of a live header/footer overlap.
+
 Focused automated and fixture evidence demonstrates separate Recorded
 State/Evidence presentation, stackable observation labels and values, compact
 timezone labels and explanations, the requested proven-timestamp form in both
@@ -74,9 +139,8 @@ than an ancestor of the service controls. Browser geometry at the unrecorded
 screenshot widths, the precise height/offset threshold and the exact share of
 the overlap caused by each sticky element remain unproven.
 
-The remaining compact-layout browser check is non-activating Archive/Restore
-label inspection. This remains a pending interaction check, not a confirmed
-defect unless the operator reports one.
+The subsequent fixture-backed review confirmed the compact-layout response and
+action reachability without activating Archive or Restore.
 
 Operator review on 21 November 2026 added the toolbar grouping adjustment:
 preserve the internal 8 px checkbox-to-label gap, add 16 px left margin to the
@@ -94,31 +158,19 @@ fields and existing raw API transport fields do not change.
 **Benefit:** Improve legibility and pointer targeting while preserving the
 existing native control and filter semantics.
 
-**Status:** Implemented and packaged as frozen candidate
-`7feaabe39c20a1095304a20bf72de98debcb376864e24a9e2335fdd84253560a`
-from source `4c4bb12` and accepted on `.23` on 20 November 2026. Browser
-acceptance is partial. The prior accepted candidate and rollback evidence
-remain preserved. Checkbox spacing and timestamp typography source corrections
-are packaged in candidate
-`59e7bc98a36679627d2410b074ad461f0f7e162ab0f5a2a1a0ce1b28921e67f4`
-from source `e9fd166`, installed and automatically accepted on `.23` on
-21 November 2026 with rollback
-`/var/backups/devicemonitor/install-v214.43OARv`. All 12 host checks pass,
-including authenticated API checks. The additional toolbar grouping correction
-is included in candidate `c9703915…`, installed and automatically accepted on
-`.23` on 21 November 2026 with rollback
-`/var/backups/devicemonitor/install-v214.otWiJE`. Post-install CI
-`44852932307` passed at later commit `cfb3449`; validation against that tree
-confirmed the archive's 96 members and 10 required features were unchanged from
-candidate source `e5b6d4e`. Browser visual acceptance,
-including same-line spacing and wrapped placement without overflow, remains
-pending. The untested viewport widths, checkbox mouse/Tab/Space/filter
-interaction and desktop sticky reading space remain outstanding. A source-only
-1199px service-table stacking correction is committed as `b010428`; its
-replacement candidate, exact 1199/1200px boundary, spacing, wrapping and
-remaining browser checks are not yet accepted.
+**Status:** Closed 21 November 2026. The final constrained-width candidate is
+`0a5e3db2219861f0d36f54b6087ad327d817a55cf8ea82b0dde63b4704406cc7`
+from source `1ffe2ca`, installed and automatically accepted on `.23` with
+rollback `/var/backups/devicemonitor/install-v214.OfOKOQ`. Live operator checks
+covered the desktop, constrained-width, 200%-zoom, filter and keyboard flows;
+the fixture-backed Windows harness covered all 13 remaining presentation cases
+as a composed `12 passed + final corrected 1 passed` sequence. Archived and
+malformed values are accepted through reviewed fixtures, not live-data claims.
+The 1199/1200px boundary, 8px checkbox/label gap and 24px toolbar-group
+separation are measured complete. Report:
+`.cline-reports/REPORT-20261121-172315.md`.
 
-### Infrastructure Services filter control scope: **INSTALLED + AUTOMATED ACCEPTANCE COMPLETE; BROWSER PENDING**
+### Infrastructure Services filter control scope: **`CLOSED`** (21 November 2026)
 
 **Description:** Make the inventory filters visibly effective without changing
 the unfiltered historical feed:
@@ -137,21 +189,17 @@ the unfiltered historical feed:
 result instead of appearing to do nothing while Recent Service Changes remains
 visible.
 
-**Status:** Source `e5b6d4e` is packaged as frozen v2.15.2 candidate
-`c97039156375e470895ad4d58efb76d30c038e5522489aef28db109fbea81e30`
-(12,697,564 bytes, 96 members). It also contains the approved 24 px toolbar-group
-spacing correction. Focused filter/presentation tests, all ten catalogues,
-translated JavaScript, isolated language acceptance and the remaining release
-preflight component gates pass. The candidate installed once on `.23` and all 12
-host checks passed. CI `44852932307` subsequently passed at `cfb3449`, and the
-archive was verified unchanged against all packaged files in that tree. Browser
-acceptance remains partial: on the installed candidate, Tony observed DNS
-selection activate DNS Servers with Showing 7, a DNS badge of 7 and zero badges
-for other categories; a no-match search showed Showing 0 while retaining DNS
-and the no-match state; and clearing the type preserved the search and no-match
-state. These observations do not establish acceptance for the replacement
-candidate. Rollback:
-`/var/backups/devicemonitor/install-v214.otWiJE`.
+**Status:** Closed 21 November 2026 on the installed replacement candidate
+`0a5e3db2…` from source `1ffe2ca`. Live operator evidence confirms DNS
+activation, exact-type display, no-match state and preservation of other
+filters when the type is cleared. Fixture-backed browser coverage confirms the
+same transitions plus a zero-result Remote Access category and complete
+archived filtering. Focused filter/presentation tests, all ten catalogues,
+translated JavaScript and isolated language acceptance pass. The unfiltered
+Recent Service Changes feed, exact-row actions and raw timestamp semantics are
+unchanged. Current rollback:
+`/var/backups/devicemonitor/install-v214.OfOKOQ`. Report:
+`.cline-reports/REPORT-20261121-172315.md`.
 
 ### Deployment-entry-point release safeguards: **`CLOSED`**
 
@@ -524,7 +572,9 @@ evidenced by the preserved pre-merge fr_FR core catalogue returning the English 
 the merged catalogue translates. Remaining caveat: the merge writes core package-owned files, so a core
 `pkg upgrade` can replace them until the installer is re-run.
 
-## O3/O4 sidecar translation — 28 September 2026
+## Open backlog
+
+### O3/O4 sidecar translation — 28 September 2026
 
 Recorded by the O4 view-migration workstream (branch `feature/o4-sidecar-views-20260928`, branch
 commit `43891db` plus the installer-layout change and this record). Appended, not merged into the
