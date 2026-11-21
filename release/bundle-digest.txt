@@ -157,10 +157,13 @@
 #   7feaabe39c20a1095304a20bf72de98debcb376864e24a9e2335fdd84253560a  12687324 bytes
 #       (compact-layout accessibility candidate from source 4c4bb12; installed and accepted on
 #        .23, superseded by the timestamp typography and checkbox spacing cut)
+#   c97039156375e470895ad4d58efb76d30c038e5522489aef28db109fbea81e30  12697564 bytes
+#       (filter-scope/exact-type/toolbar-group candidate from source e5b6d4e; installed and
+#        automatically accepted on .23, superseded by the constrained-width layout correction)
 version 2.15.2
 bytes 12697564
-sha256 c97039156375e470895ad4d58efb76d30c038e5522489aef28db109fbea81e30
-# source = e5b6d4e006f88dce5adf5e7cb2f70b270b615275
+sha256 0a5e3db2219861f0d36f54b6087ad327d817a55cf8ea82b0dde63b4704406cc7
+# source = 1ffe2ca305116ed4555e06750a3d6e594752a714
 #   Measured from the committed source above under the declared build conditions:
 #   TZ=UTC0, canonical ustar with fixed ownership and mtime, deterministic stored-block gzip.
 #   96 members; the builder is not an archive member because it is a pinned release tool, not
