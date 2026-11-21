@@ -2,7 +2,7 @@
 
 ## Current state
 
-**v2.15.2 filter/spacing candidate — FROZEN, NOT INSTALLED (21 November 2026).**
+**v2.15.2 filter/spacing candidate — `.23` AUTOMATED ACCEPTANCE COMPLETE (21 November 2026).**
 The filter-scope, exact-type and 24 px toolbar-group corrections are committed as
 `e4307ee`; coherent v2.15.2 inputs are `e5b6d4e`, with identity record `5613320`.
 Two independent clean exports produced the same 96-member archive from source
@@ -12,9 +12,16 @@ The release manifest/input checks, deployment safeguards, execution ledger,
 bundle safety, reproducibility, determinism and archive verification pass. The
 candidate is frozen at
 `/root/dm-backups/dm-v2.15.2-filter-spacing-candidate-20261121T000019Z`.
-`.23` remains on accepted candidate `59e7bc98…`; installation and browser
-acceptance for this candidate remain pending. Report:
-`.cline-reports/REPORT-20261121-000043.md`.
+The guarded local installation completed once with 70 targets, 48 unchanged,
+zero prunes and zero repairs. All 12 host checks, including authenticated API
+checks, pass, and candidate-bound acceptance is recorded under
+`/root/dm-validation/v2.15.2-filter-spacing-23-install-20261121T000451Z/`.
+Data, schemas, activity, alert state, email log, timestamp provenance,
+configuration, certificate identity and service health are preserved. The
+temporary acceptance account, key and credential were removed. Installed-target
+rollback is `/var/backups/devicemonitor/install-v214.otWiJE`. Browser visual
+acceptance remains pending. Report:
+`.cline-reports/REPORT-20261121-000907.md`.
 
 **v2.15.2 timestamp/checkbox candidate — `.23` AUTOMATED ACCEPTANCE COMPLETE (21 November 2026).**
 The shared `YYYY-MM-DD HH:mm:ss ZONE` display formatter and final **Show archived**

@@ -105,14 +105,14 @@ from source `e9fd166`, installed and automatically accepted on `.23` on
 21 November 2026 with rollback
 `/var/backups/devicemonitor/install-v214.43OARv`. All 12 host checks pass,
 including authenticated API checks. The additional toolbar grouping correction
-is source-complete with a focused regression in the worktree, but is not built,
-packaged or installed. Browser visual acceptance, including same-line spacing
-and wrapped placement without overflow, remains pending. The untested viewport
-widths, checkbox mouse/Tab/Space/filter interaction and desktop sticky reading
-space remain outstanding. The uninstalled 24 px toolbar spacing adjustment
-remains pending browser review.
+is included in candidate `c9703915…`, installed and automatically accepted on
+`.23` on 21 November 2026 with rollback
+`/var/backups/devicemonitor/install-v214.otWiJE`. Browser visual acceptance,
+including same-line spacing and wrapped placement without overflow, remains
+pending. The untested viewport widths, checkbox mouse/Tab/Space/filter
+interaction and desktop sticky reading space remain outstanding.
 
-### Infrastructure Services filter control scope: **FROZEN CANDIDATE; INSTALLATION + BROWSER PENDING**
+### Infrastructure Services filter control scope: **INSTALLED + AUTOMATED ACCEPTANCE COMPLETE; BROWSER PENDING**
 
 **Description:** Make the inventory filters visibly effective without changing
 the unfiltered historical feed:
@@ -136,8 +136,9 @@ visible.
 (12,697,564 bytes, 96 members). It also contains the approved 24 px toolbar-group
 spacing correction. Focused filter/presentation tests, all ten catalogues,
 translated JavaScript, isolated language acceptance and the remaining release
-preflight component gates pass. The candidate is not installed; browser and
-post-install acceptance remain pending.
+preflight component gates pass. The candidate installed once on `.23` and all 12
+host checks passed; browser acceptance remains pending. Rollback:
+`/var/backups/devicemonitor/install-v214.otWiJE`.
 
 ### Deployment-entry-point release safeguards: **`CLOSED`**
 
