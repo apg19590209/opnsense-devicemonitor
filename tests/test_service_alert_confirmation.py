@@ -924,6 +924,8 @@ def test_a_to_b_to_a_starts_fresh_hold():
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         module.DB_FILE = str(Path(tmp) / "devices.db")
         seed(module)
+        # CI runs unprivileged, so the real process lock is unavailable.
+        sends = stub_delivery(module)
 
         add_activity(
             module,
@@ -959,6 +961,20 @@ def test_a_to_b_to_a_starts_fresh_hold():
         key = holds[0][0]
         row = read_hold_row(module, key)
         assert row[2] != "2020-01-01 00:00:00"
+        service_id, generation, status = current_identity(module)
+        assert (generation, status) == (3, "unavailable")
+        with closing(sqlite3.connect(module.DB_FILE)) as conn:
+            payload = conn.execute(
+                "SELECT event_json FROM service_alert_pending "
+                "WHERE service_key = ?",
+                (key,),
+            ).fetchone()[0]
+        held_event = json.loads(payload)
+        assert (
+            held_event["service_id"],
+            held_event["service_generation"],
+        ) == (service_id, generation)
+        assert sends == []
 
     print("ALERT_A_TO_B_TO_A_STARTS_FRESH_HOLD=PASS")
 
